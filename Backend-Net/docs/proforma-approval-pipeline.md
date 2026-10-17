@@ -82,3 +82,23 @@ a sale line), `ReleaseReservationAsync` (line's RESERVED -> IN_STOCK), and a con
 
 **Caveat found:** `GetInventoryValuation` reads `Product.Stock`; once reserved units leave Stock, valuation must count
 `Stock + reserved` (the goods are still ours).
+
+## Reservation expiry (added 2026-10-17)
+
+A reservation is held for the customer's payment for a limited time, set on the settings page
+(`Sale.ReservationMinutes`, default 10, 0 = never; `api/Setting`).
+
+- **Clock:** every successful `CheckSaleWarehouse` sets `Sale.ReservationExpiresAt = now + setting`, including lines kept
+  reserved from an earlier check. The first payment (`SaleInvoiceFinalizer`) clears it: paid goods wait for shipping, not for
+  the customer. Changing the setting affects later reservations only.
+- **Payment refused from the deadline** (`SaleProformaPipeline.EnsureReadyForPayment`), whether or not the sweep has run.
+  `ApproveSaleProforma` no longer jumps straight to WAREHOUSE_CHECKED on an expired reservation.
+- **Sweep:** `WMS/BackgroundJobs/SaleReservationExpiryJob` (every 60 s, `BackgroundJobs:SaleReservationExpiry` in
+  appsettings) sends one `ReleaseExpiredSaleReservationCommand` per sale whose deadline passed more than
+  `ExpirySweepGrace` (1 minute) ago. That grace means a payment that passed its check just before the deadline can never race
+  the sweep. The command releases every RESERVED unit (Stock back up), moves WAREHOUSE_CHECKED to CUSTOMER_APPROVED (the
+  customer's approval of this revision still stands) and writes `RESERVATION_EXPIRED = 5`. It is idempotent.
+- **IIS:** the job does not run while the app pool is asleep. Correctness does not depend on it (payment is refused at the
+  deadline); only the moment units become free for other proformas is delayed.
+- Migration `reservation-expiry-and-system-settings` gives proformas already holding reservations 10 minutes from the moment
+  it runs. Generated, not applied.

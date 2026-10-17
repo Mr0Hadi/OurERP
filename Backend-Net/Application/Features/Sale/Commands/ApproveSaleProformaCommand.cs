@@ -84,7 +84,8 @@ namespace Application.Features.Sale.Commands
 
             var userId = int.TryParse(_userContextService.GetUserId(), out var id) ? id : (int?)null;
             await SaleProformaPipeline.RecordAsync(_context, sale, SaleProformaEventEnum.CUSTOMER_APPROVED, SaleProformaStageEnum.CUSTOMER_APPROVED, userId, null, cancellationToken);
-            if (fullyReserved)
+            // An expired reservation (not swept yet) does not count: the warehouse checks again, which restarts the clock.
+            if (fullyReserved && !SaleProformaPipeline.IsReservationExpired(sale, DateTime.Now))
                 await SaleProformaPipeline.RecordAsync(_context, sale, SaleProformaEventEnum.WAREHOUSE_CHECKED, SaleProformaStageEnum.WAREHOUSE_CHECKED, userId,
                     "کالای همه‌ی اقلام از بررسی قبلی انبار رزرو مانده است.", cancellationToken);
 

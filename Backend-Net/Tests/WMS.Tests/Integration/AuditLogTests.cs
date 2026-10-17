@@ -41,6 +41,7 @@ namespace WMS.Tests.Integration
             services.AddSingleton(scope.SaleReturnCalculation);
             services.AddSingleton(scope.PurchaseReturnCalculation);
             services.AddSingleton(scope.PosPaymentGuard);
+            services.AddSingleton(scope.SystemSettings);
             services.AddSingleton<IObjectStorageService>(FakeObjectStorage.Instance);
             services.AddSingleton(FakeUserContext.WithUserId(userId));
             return services.BuildServiceProvider().GetRequiredService<IMediator>();

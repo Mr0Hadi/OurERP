@@ -16,6 +16,19 @@ namespace Application.Features.Sale.Dtos
         public SaleProformaStageEnum ProformaStage { get; set; }
         public string? ProformaStageTitle { get; set; }
 
+        /// <summary>
+        /// While a proforma's units are reserved: when the reservation runs out (payment is refused from then on and the units
+        /// go back on the shelf about a minute later). Null when nothing is reserved, after the invoice is issued, or when the
+        /// Sale.ReservationMinutes setting is 0.
+        /// </summary>
+        public DateTime? ReservationExpiresAt { get; set; }
+
+        /// <summary>
+        /// Seconds left on the reservation when the server answered (0 = expired), null with <see cref="ReservationExpiresAt"/>.
+        /// Drive a countdown from this rather than from the device clock.
+        /// </summary>
+        public int? ReservationSecondsLeft { get; set; }
+
         /// <summary>Send it back with ApproveSaleProforma / CheckSaleWarehouse: an approval is for the revision the screen showed.</summary>
         public int Revision { get; set; }
 

@@ -363,6 +363,16 @@ namespace Domain.Enums
         /// <summary>The audit log (api/Audit): every change, by whom and when, with old and new values.</summary>
         [PermissionGroup(PermissionGroupEnum.Audit)]
         [Description("مشاهده تاریخچه تغییرات")]
-        AuditLogView = 270
+        AuditLogView = 270,
+
+        // --- تنظیمات سامانه ---
+        /// <summary>The system settings page (api/Setting): read only.</summary>
+        [PermissionGroup(PermissionGroupEnum.Settings)]
+        [Description("مشاهده تنظیمات سامانه")]
+        SettingView = 280,
+
+        [PermissionGroup(PermissionGroupEnum.Settings)]
+        [Description("ویرایش تنظیمات سامانه")]
+        SettingManage = 281
     }
 }

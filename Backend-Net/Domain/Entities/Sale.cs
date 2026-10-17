@@ -17,6 +17,13 @@ namespace Domain.Entities
 
         /// <summary>Bumped by every edit that changes what was approved; each approval records the revision it approved.</summary>
         public int Revision { get; set; }
+
+        /// <summary>
+        /// When the units the warehouse reserved for this proforma stop being held for it: set by a successful warehouse check
+        /// (now + the Sale.ReservationMinutes setting; null when that setting is 0), cleared when the invoice is issued or the
+        /// reservation expires. Past it no payment is accepted, and the background sweep puts the units back on the shelf.
+        /// </summary>
+        public DateTime? ReservationExpiresAt { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetail> PaymentDetails { get; set; } = new();
         public UInt64 PaidAmount { get; set; }

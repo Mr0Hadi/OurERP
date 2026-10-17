@@ -52,6 +52,9 @@ namespace Domain.Enums
         Accounting = 14,
 
         [Description("تاریخچه تغییرات")]
-        Audit = 15
+        Audit = 15,
+
+        [Description("تنظیمات سامانه")]
+        Settings = 16
     }
 }

@@ -32,6 +32,8 @@
 18. [گزارش‌ها و سود خالص (Report)](#18-گزارش‌ها-و-سود-خالص-report)
 19. [ورود و خروجِ اطلاعات با CSV/Excel (DataTransfer)](#19-ورود-و-خروجِ-اطلاعات-با-csvexcel-datatransfer)
 20. [داشبورد و دفترهای حسابداری (Accounting)](#20-داشبورد-و-دفترهای-حسابداری-accounting)
+21. [تاریخچه تغییرات (Audit)](#21-تاریخچه-تغییرات-audit)
+22. [تنظیمات سامانه (Setting)](#22-تنظیمات-سامانه-setting)
 
 ---
 
@@ -693,6 +695,7 @@ Authorization: Bearer {accessToken}
 | حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
 | حسابداری | تمام `Accounting/*` و خروجی‌های اکسلِ آن‌ها | `AccountingView` |
 | تاریخچه تغییرات | تمام `Audit/*` | `AuditLogView` |
+| تنظیمات سامانه | `Setting/GetSystemSettings` / `Setting/UpdateSystemSettings` | `SettingView` **یا** `SettingManage` / `SettingManage` |
 
 `CompleteInPersonSale`، `ResolveSaleWarehouseIssue` و `Shipment/*` داخل خودشان چند کامند دیگر را اجرا می‌کنند؛ فقط همان یک دسترسیِ بالا لازم است، نه دسترسی‌های کامندهای داخلی.
 
@@ -2067,6 +2070,15 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 > (جزئیات زیر `UpdateSale`). دانه‌های رزروشده از `stock` کالا بیرون می‌روند و `ShipSale` دقیقاً همان‌ها را می‌فرستد. کالای معیوب/مفقودی که
 > انبار در این بررسی گزارش می‌کند به قرنطینه و صفِ حسابداری (`GetSaleWarehouseIssueList`) می‌رود و پیش‌فاکتور را **متوقف نمی‌کند**.
 >
+> **مهلت رزرو (از ۲۰۲۶-۱۰-۱۷):** هر `CheckSaleWarehouse` موفق برای رزرو مهلت می‌گذارد: `reservationExpiresAt` = اکنون + تنظیمِ
+> `Sale.ReservationMinutes` (پیش‌فرض **۱۰ دقیقه**، در صفحه‌ی تنظیمات قابل تغییر، بخش ۲۲؛ `0` یعنی بدون انقضا). از همان لحظه‌ی پایان مهلت
+> **پرداخت ۴۰۰ می‌گیرد** («مهلت رزرو تمام شده…»)؛ حدود یک دقیقه بعد سرویسِ پس‌زمینه دانه‌ها را به موجودی آزاد برمی‌گرداند، پیش‌فاکتورِ
+> `WAREHOUSE_CHECKED` را به `CUSTOMER_APPROVED` (صفِ انبار) برمی‌گرداند و رویداد `RESERVATION_EXPIRED` (۵) می‌نویسد. تأیید مشتری سر جایش
+> است؛ فقط انبار باید دوباره بررسی کند (هر دانه‌ی سالمی از همان کالا کافی است) که ساعت را از نو شروع می‌کند. پرداختِ اول (صدور فاکتور)
+> مهلت را برمی‌دارد: کالای پرداخت‌شده تا ارسال رزرو می‌ماند. جزئیات و لیست `reservationExpiresAt` و **`reservationSecondsLeft`** (ثانیه‌های
+> باقی‌مانده در لحظه‌ی پاسخ سرور؛ برای شمارش معکوس از این استفاده کنید نه از ساعت دستگاه) دارند؛ هر دو `null` یعنی مهلتی در کار نیست.
+> تغییر تنظیم فقط روی رزروهای بعدی اثر دارد.
+>
 > **مبالغ:** همان قاعده‌ی ابتدای بخش ۹ — `totalAmount` از اقلام و مالیات حساب می‌شود و فرستاده نمی‌شود. **`payableAmount`** (تازه، در
 > جزئیات و لیست) مبلغی است که مشتری در کل می‌پردازد: در فروش عادی برابر `totalAmount`، در فروش اقساطیِ دارای قرارداد جاری
 > `totalAmount + سود اقساط`. **بدهی مشتری همیشه `payableAmount − paidAmount` است.**
@@ -2270,7 +2282,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
   همان کالا (`GetProductUnitList`) انتخابش کند. دانه‌ی گزارش‌شده همان لحظه `QUARANTINED` با علت `WAREHOUSE_HOLD` می‌شود (با میانگین جاری، مثل
   `ApplyProductUnitAction`)، از `stock` کم می‌شود و در صفِ حسابداری می‌نشیند. همان دانه را نمی‌شود هم‌زمان در `lines` آورد.
 - **نتیجه:**
-  - همه‌ی ردیف‌ها کامل ⇒ دانه‌ها `RESERVED` (و از `stock` کم)، مرحله `WAREHOUSE_CHECKED` — مشتری حالا می‌تواند پرداخت کند.
+  - همه‌ی ردیف‌ها کامل ⇒ دانه‌ها `RESERVED` (و از `stock` کم)، مرحله `WAREHOUSE_CHECKED` — مشتری حالا می‌تواند پرداخت کند، تا
+    `reservationExpiresAt` (پیش‌فرض ۱۰ دقیقه؛ بالای همین بخش). ردیف‌هایی که از قبل رزرو بودند هم با همین بررسی مهلت تازه می‌گیرند.
   - هر ردیفی کم ⇒ **کسری**: هیچ دانه‌ای رزرو نمی‌شود، مرحله ⇒ `DRAFT` با رویداد `WAREHOUSE_SHORTAGE` که `note` آن کسری هر ردیف را می‌گوید
     (««نام کالا»: ۱ از ۲»). فروش با مشتری اصلاح می‌شود و دوباره چرخه را طی می‌کند. گزارش‌های `issues` در هر دو حالت ثبت می‌مانند.
 - **data خروجی:** جزئیات کامل فروش.
@@ -3062,6 +3075,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 13 | حساب اشخاص |
 | 14 | حسابداری |
 | 15 | تاریخچه تغییرات |
+| 16 | تنظیمات سامانه |
 
 گروه فقط برای چیدمان صفحه‌ی مدیریت دسترسی است؛ هیچ‌وقت خودِ گروه به کسی داده نمی‌شود.
 
@@ -3147,6 +3161,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 260 | AccountingView | مشاهده داشبورد و دفترهای حسابداری (`Accounting/*`) |
 | 261 | SaleWarehouseIssueResolve | رسیدگی به کالای معیوب/مفقودِ گزارش‌شده‌ی انبار |
 | 270 | AuditLogView | مشاهده تاریخچه تغییرات (`Audit/*`) |
+| 280 | SettingView | مشاهده تنظیمات سامانه (`Setting/GetSystemSettings`) |
+| 281 | SettingManage | ویرایش تنظیمات سامانه (`Setting/UpdateSystemSettings`) |
 
 ### `OrgRoleEnum` (نقش کاربر در چارت سازمانی)
 | مقدار | معنی |
@@ -3363,6 +3379,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 2 | تأیید انبار (WAREHOUSE_CHECKED) |
 | 3 | کسری در انبار (WAREHOUSE_SHORTAGE) — `note` کسری هر ردیف را دارد |
 | 4 | بازگشت به پیش‌نویس به‌خاطر ویرایش (RESET_BY_EDIT) |
+| 5 | پایان مهلت رزرو (RESERVATION_EXPIRED) — از ۲۰۲۶-۱۰-۱۷؛ دانه‌ها آزاد شدند، `WAREHOUSE_CHECKED` ⇒ `CUSTOMER_APPROVED`؛ `userId` خالی (سرویس پس‌زمینه) |
 
 ### `SaleWarehouseIssueResolutionEnum` (تصمیم حسابداری روی گزارش انبار)
 | مقدار | معنی |
@@ -3523,6 +3540,23 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۷ (مهلت رزرو پیش‌فاکتور و تنظیمات سامانه) — افزودنی، با یک تغییر رفتار
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `CheckSaleWarehouse` | رزرو بی‌مهلت | رزرو تا `reservationExpiresAt` (اکنون + تنظیم `Sale.ReservationMinutes`، پیش‌فرض ۱۰ دقیقه، `0` = بی‌مهلت) |
+| `AddSalePayment`، پیش‌پرداختِ `CreateSaleInstallmentPlan`، `CompleteInPersonSale` | روی هر پیش‌فاکتورِ `WAREHOUSE_CHECKED` | بعد از پایان مهلت ۴۰۰ (**تغییر رفتار**) |
+| `ApproveSaleProforma` | ردیف‌های کاملاً رزرو ⇒ مستقیم `WAREHOUSE_CHECKED` | فقط اگر مهلت رزرو تمام نشده باشد؛ وگرنه `CUSTOMER_APPROVED` |
+| سرویس پس‌زمینه | — | هر ۶۰ ثانیه رزروهای منقضی (بیش از یک دقیقه گذشته) را آزاد می‌کند؛ رویداد `RESERVATION_EXPIRED = 5` |
+| `GetSaleDetail`/`GetSaleList` | — | `reservationExpiresAt`، `reservationSecondsLeft` |
+| `GET api/Setting/GetSystemSettings`، `PUT api/Setting/UpdateSystemSettings` | — | تازه (بخش ۲۲) |
+| `PermissionEnum` / `PermissionGroupEnum` | — | `SettingView = 280`، `SettingManage = 281` در گروه تازه‌ی `16` |
+| `AuditActionEnum` | — | `414 ReleaseExpiredSaleReservation`، `1000 UpdateSystemSettings` |
+| enumهای تازه | — | `SystemSettingGroupEnum`، `SystemSettingTypeEnum` (بخش ۲۲) |
+
+**برای فرانت:** روی صفحه‌ی صندوق/پرداخت شمارش معکوس را از `reservationSecondsLeft` بسازید و با رسیدن به صفر دکمه‌ی پرداخت را غیرفعال کنید؛
+پیش‌فاکتورهایی که با `RESERVATION_EXPIRED` برگشته‌اند دوباره در صفِ انبار (`?proformaStages=1`) دیده می‌شوند.
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۶ (چرخه‌ی تأیید پیش‌فاکتور فروش) — **شکستنی**
 
@@ -4570,6 +4604,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 411 | `ApproveSaleProforma` | تأیید مشتری روی پیش‌فاکتور |
 | 412 | `CheckSaleWarehouse` | تأیید انبار و رزرو کالای پیش‌فاکتور |
 | 413 | `ResolveSaleWarehouseIssue` | رسیدگی به گزارش انبار |
+| 414 | `ReleaseExpiredSaleReservation` | پایان مهلت رزرو پیش‌فاکتور (سرویس پس‌زمینه؛ `userId` خالی) |
 | 500 | `CreateSaleInstallmentPlan` | ایجاد طرح اقساط |
 | 501 | `UpdateSaleInstallmentPlan` | ویرایش طرح اقساط |
 | 502 | `DeleteSaleInstallmentPlan` | حذف طرح اقساط |
@@ -4596,3 +4631,75 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 901 | `CreatePosTerminal` | ایجاد کارت‌خوان |
 | 902 | `UpdatePosTerminal` | ویرایش کارت‌خوان |
 | 903 | `DeletePosTerminal` | حذف کارت‌خوان |
+| 1000 | `UpdateSystemSettings` | ویرایش تنظیمات سامانه |
+
+---
+
+## 22. تنظیمات سامانه (Setting)
+
+> از ۲۰۲۶-۱۰-۱۷. کنترلر: `api/Setting`. دسترسی خواندن: `SettingView` **یا** `SettingManage`؛ ویرایش: `SettingManage`.
+
+فهرستِ تنظیم‌ها در کد تعریف شده است (کلید، نوع، مقدار پیش‌فرض، حد پایین/بالا، عنوان و توضیح فارسی)؛ از صفحه نمی‌شود تنظیم تازه‌ای ساخت،
+فقط مقدارِ تنظیم‌های موجود را عوض کرد. صفحه را **از روی پاسخ سرور بسازید** (گروه‌ها، عنوان، توضیح، نوع، حدود، واحد) تا تنظیمِ تازه‌ای که بعداً
+اضافه می‌شود بدون تغییر فرانت ظاهر شود. هر تغییر در تاریخچه تغییرات (بخش ۲۱) هم ثبت می‌شود.
+
+**تنظیم‌های موجود:**
+
+| کلید | نوع | پیش‌فرض | حدود | معنی |
+|---|---|---|---|---|
+| `Sale.ReservationMinutes` | INTEGER | `10` | `0`–`10080` دقیقه | مهلت رزرو کالای پیش‌فاکتور پس از تأیید انبار (بخش ۱۱)؛ `0` = بدون انقضا؛ فقط روی رزروهای بعدی اثر دارد |
+
+### `GET api/Setting/GetSystemSettings`
+
+بدون پارامتر. **data:** آرایه‌ای از گروه‌ها:
+```json
+[
+  {
+    "group": 1,
+    "groupTitle": "فروش",
+    "settings": [
+      {
+        "key": "Sale.ReservationMinutes",
+        "title": "مهلت رزرو کالای پیش‌فاکتور",
+        "description": "پس از تأیید انبار، کالای پیش‌فاکتور تا این مدت ...",
+        "type": 1,
+        "value": "10",
+        "defaultValue": "10",
+        "isDefault": true,
+        "minValue": 0,
+        "maxValue": 10080,
+        "unit": "دقیقه",
+        "updatedAt": null,
+        "updatedByUserId": null,
+        "updatedByName": null
+      }
+    ]
+  }
+]
+```
+- `value` و `defaultValue` همیشه **رشته**اند (فرمت invariant: `"10"`، `"true"`)؛ بر اساس `type` تبدیلشان کنید.
+- `isDefault = true` یعنی چیزی ذخیره نشده و مقدارِ پیش‌فرض اعمال است؛ `updatedAt`/`updatedByName` فقط برای مقدارِ ذخیره‌شده پر است.
+- `minValue`/`maxValue` فقط برای `INTEGER`.
+
+### `PUT api/Setting/UpdateSystemSettings`
+
+```json
+{ "settings": [ { "key": "Sale.ReservationMinutes", "value": "15" } ] }
+```
+- فقط تنظیم‌های فرستاده‌شده عوض می‌شوند؛ بقیه دست نمی‌خورند.
+- `value` خالی یا `null` ⇒ **بازگشت به پیش‌فرض**.
+- همه یا هیچ: کلید ناشناخته، مقدارِ غیرعددی برای `INTEGER`، بیرون از حدود، یا کلیدِ تکراری ⇒ ۴۰۰ و هیچ چیزی ذخیره نمی‌شود.
+- **data خروجی:** همان شکلِ `GetSystemSettings` (همه‌ی گروه‌ها، با مقدارهای تازه).
+- اثرِ تغییر بلافاصله است (کش سرور با ذخیره پاک می‌شود).
+
+### `SystemSettingTypeEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | عدد صحیح (INTEGER) |
+| 2 | بله/خیر (BOOLEAN) — `"true"`/`"false"` |
+| 3 | متن (TEXT) |
+
+### `SystemSettingGroupEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | فروش (SALE) |

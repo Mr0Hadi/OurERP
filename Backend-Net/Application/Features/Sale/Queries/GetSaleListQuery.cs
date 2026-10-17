@@ -2,6 +2,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Common.Sales;
 using Application.Features.Sale.Dtos;
 using Application.Features.SaleInstallment.Mappings;
 using Common.Extensions;
@@ -149,6 +150,7 @@ namespace Application.Features.Sale.Queries
                 PaymentDate = x.PaymentDate,
                 Status = x.Status,
                 ProformaStage = x.ProformaStage,
+                ReservationExpiresAt = x.ReservationExpiresAt,
                 OpenWarehouseIssueCount = _context.SaleWarehouseIssues.Count(i => i.SaleId == x.Id && i.ResolvedAt == null),
                 PaymentType = x.PaymentType,
                 TotalAmount = x.TotalAmount,
@@ -164,9 +166,11 @@ namespace Application.Features.Sale.Queries
             // همان جایی و به همان دلیلی که امضای URL تصاویر در بقیه‌ی لیست‌ها انجام می‌شود.
             var summaries = await SaleInstallmentSummaryReader.ReadForSalesAsync(
                 _context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
+            var now = DateTime.Now;
             foreach (var item in paged.Items)
             {
                 item.ProformaStageTitle = item.Status == SalesStatusEnum.PROFORMA ? item.ProformaStage.GetDescription() : null;
+                item.ReservationSecondsLeft = SaleProformaPipeline.SecondsLeft(item.ReservationExpiresAt, now);
                 if (summaries.TryGetValue(item.Id, out var summary))
                     item.InstallmentSummary = summary;
             }

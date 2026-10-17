@@ -169,6 +169,7 @@ namespace Infrastructure.Persistence
         public DbSet<DepartmentPermissionTemplate> DepartmentPermissionTemplates => Set<DepartmentPermissionTemplate>();
         public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
         public DbSet<AuditEntityChange> AuditEntityChanges => Set<AuditEntityChange>();
+        public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -610,6 +611,19 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<SaleProformaStageEvent>()
                 .Property(x => x.Note)
                 .HasMaxLength(1000);
+
+            // The background sweep looks for proformas whose reservation has run out.
+            modelBuilder.Entity<Sale>()
+                .HasIndex(x => x.ReservationExpiresAt)
+                .HasFilter("[ReservationExpiresAt] IS NOT NULL");
+
+            // System settings: the catalogue is in code (SystemSettingCatalog); a row is a value that differs from its default.
+            modelBuilder.Entity<SystemSetting>(entry =>
+            {
+                entry.HasKey(x => x.Key);
+                entry.Property(x => x.Key).HasMaxLength(100);
+                entry.Property(x => x.Value).HasMaxLength(1000).IsRequired();
+            });
 
             modelBuilder.Entity<SaleWarehouseIssue>()
                 .HasOne(x => x.Sale)

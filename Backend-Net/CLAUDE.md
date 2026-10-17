@@ -139,6 +139,7 @@ Backend-Net/
 │   │   ├── Account/     # Command/ (login, logout, refresh, logout-by-id; forget-password/otp removed 2026-10-04)
 │   │   ├── Accounting/  # Queries/, Dtos/, DataTransfer/ (read-only dashboard + journals, 2026-10-12)
 │   │   ├── Audit/       # Queries/, Dtos/ (audit log read side, 2026-10-15)
+│   │   ├── Setting/     # Commands/, Queries/, Dtos/ (system settings, 2026-10-17; catalogue in Common/Settings)
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -175,6 +176,7 @@ Backend-Net/
     ├── Middlewares/     # ExceptionHandlingMiddleware, RequestLoggingMiddleware, CachingMiddleware
     ├── ResponseHandler/ # ResponseHandler.HandleExceptionAsync
     ├── Services/        # EnvironmentService, UserContextService
+    ├── BackgroundJobs/  # SaleReservationExpiryJob (the only hosted service)
     ├── Logging/         # SerilogConfiguration
     ├── Program.cs       # DI composition + JWT + CORS + OpenAPI/Scalar
     └── appsettings.json
@@ -2096,6 +2098,36 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
   units through the real service, since `Seed.MintUnits` payloads don't parse); `SaleCrudTests` adapted (`Seed.Proforma`).
   Older tests that pay a seeded proforma now seed it at WAREHOUSE_CHECKED. **Verified:** build clean, suite 967/970 - the 3 documented
   environmental failures (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder).
+
+**Proforma reservation expiry + system settings (2026-10-17).** API: `docs/api-guide.fa.md` section 11 (header block,
+`CheckSaleWarehouse`), section 22 (settings) and the 2026-10-17 table in section 16; design: `docs/proforma-approval-pipeline.md`
+«Reservation expiry».
+
+- **Settings store (minimal PRE-01).** `SystemSetting` (string `Key` PK, `Value` text, `UpdatedAt`/`UpdatedByUserId`, no IsActive): a
+  row is a value that differs from the default; resetting deletes it. **The catalogue is code**, `Application/Common/Settings/
+  SystemSettingCatalog` (key, `SystemSettingTypeEnum`, default, min/max, Persian title/description, unit) - the PermissionEnum
+  decision again; keys are persisted and a frontend contract. Reads go through `ISystemSettingService` (`Infrastructure/Services/
+  SystemSettingService`, Scoped, one `IMemoryCache` entry invalidated by `UpdateSystemSettings`, 5-minute safety expiry; a stored
+  value outside the catalogue's limits reads as the default). `api/Setting/GetSystemSettings` (`SettingView` or `SettingManage`) and
+  `UpdateSystemSettings` (`SettingManage`, partial, all-or-nothing, blank = reset). Permissions 280/281 in group `Settings = 16`;
+  audit action `UpdateSystemSettings = 1000`. Only one setting exists: `Sale.ReservationMinutes`. Add a setting only when code needs it.
+- **Reservation expiry.** `Sale.ReservationExpiresAt`, set by every successful `CheckSaleWarehouse` (now + setting, default 10 min,
+  0 = null = never), cleared by `SaleInvoiceFinalizer`. Payment is refused from the deadline (`EnsureReadyForPayment`);
+  `ApproveSaleProforma` does not jump to WAREHOUSE_CHECKED on an expired reservation. `ReleaseExpiredSaleReservationCommand`
+  (audit 414, one sale, idempotent, not on a controller) releases the units, WAREHOUSE_CHECKED -> CUSTOMER_APPROVED, event
+  `RESERVATION_EXPIRED = 5`. Logic in `SaleProformaPipeline` (`ReservationDueForRelease`, `ExpireReservationAsync`,
+  `ExpirySweepGrace` = 1 minute after the deadline, so a payment just before it cannot race the sweep).
+- **First background job (minimal PRE-02):** `WMS/BackgroundJobs/SaleReservationExpiryJob`, a plain `BackgroundService` +
+  `PeriodicTimer` (no Hangfire/Quartz - one IIS instance), config `BackgroundJobs:SaleReservationExpiry` (Enabled, IntervalSeconds 60,
+  BatchSize 100), one DI scope per sale, errors logged and retried next tick. Disabled in `WmsApiFactory`. Correctness never depends on
+  it running (IIS idle shutdown only delays freeing units).
+- DTOs: `reservationExpiresAt` + `reservationSecondsLeft` (server-computed, for the countdown) on sale detail and list.
+- Migration `20261017184939_reservation-expiry-and-system-settings` (column + filtered index, `SystemSettings` table, backfill:
+  proformas already holding RESERVED units get 10 minutes from when it runs). **Generated, not applied.**
+- Tests: `Integration/ReservationExpiryTests.cs` (default deadline, setting changes it and 0 disables, payment refused past the
+  deadline but swept only after the grace, sweep releases and the warehouse can reserve again, paid sales never swept, settings
+  read/update/reset, four invalid inputs). **Verified:** build clean, suite 977/980 - the 3 documented environmental failures
+  (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder).
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

@@ -1,6 +1,7 @@
 ﻿using Application.Common.Contracts.Environment;
 using Application.Common.Contracts.UserContextService;
 using Microsoft.Extensions.Caching.Memory;
+using WMS.BackgroundJobs;
 using WMS.Idempotency;
 using WMS.Logging;
 using WMS.Services;
@@ -27,6 +28,9 @@ namespace WMS.Ioc
             services.AddSingleton(new LogRedactor(configuration["LogRedaction:HashKey"]));
 
             services.AddScoped<IEnvironmentService, EnvironmentService>();
+
+            services.Configure<SaleReservationExpiryJobOptions>(configuration.GetSection(SaleReservationExpiryJobOptions.SectionName));
+            services.AddHostedService<SaleReservationExpiryJob>();
 
 
             return services;

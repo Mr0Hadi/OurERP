@@ -248,6 +248,9 @@ namespace Domain.Enums
         [Description("رسیدگی به گزارش انبار")]
         ResolveSaleWarehouseIssue = 413,
 
+        [Description("پایان مهلت رزرو پیش‌فاکتور")]
+        ReleaseExpiredSaleReservation = 414,
+
         // --- اقساط ---
         [Description("ایجاد طرح اقساط")]
         CreateSaleInstallmentPlan = 500,
@@ -330,5 +333,9 @@ namespace Domain.Enums
 
         [Description("حذف کارت‌خوان")]
         DeletePosTerminal = 903,
+
+        // --- تنظیمات سامانه ---
+        [Description("ویرایش تنظیمات سامانه")]
+        UpdateSystemSettings = 1000,
     }
 }
