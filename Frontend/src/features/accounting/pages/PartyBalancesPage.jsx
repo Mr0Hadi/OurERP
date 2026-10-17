@@ -10,7 +10,7 @@ import AgingBar from "../components/AgingBar";
 import SummaryStrip from "../components/SummaryStrip";
 import PartyBalanceFilters from "../components/filters/PartyBalanceFilters";
 import PartyBalanceTable from "../components/table/PartyBalanceTable";
-import { useUrlPreset } from "../hooks/useUrlPreset";
+import { useUrlPreset } from "@/shared/hooks/useUrlPreset";
 import { usePartyBalancesQuery } from "../services/queries";
 import { usePartyBalanceFilterStore } from "../store/accountingFilterStores";
 

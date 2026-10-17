@@ -13,7 +13,7 @@ import SummaryStrip from "../components/SummaryStrip";
 import IdFilterChips from "../components/filters/IdFilterChips";
 import SaleLineFilters from "../components/filters/SaleLineFilters";
 import SaleLineTable from "../components/table/SaleLineTable";
-import { useUrlPreset } from "../hooks/useUrlPreset";
+import { useUrlPreset } from "@/shared/hooks/useUrlPreset";
 import { useSaleLineJournalQuery } from "../services/queries";
 import { useSaleLineFilterStore } from "../store/accountingFilterStores";
 

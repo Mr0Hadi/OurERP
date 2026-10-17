@@ -57,7 +57,7 @@
 
 ## importهای بیرونی
 
-`auth` (`usePermission` در صفحه‌ها)، `customers` (`useCustomersOptionsQuery`، `useCustomerQuery`، `useCustomerSearchQuery`، `customerKeys`)، `warehouse` (`useDocumentProducts`، `UnitsPageLink`، `UNIT_SEGMENTS`، `shippingKeys`، `productKeys`، `productUnitKeys`)، `partyAccount` (`partyDisplayName`)، `dashboard` (`dashboardKeys` در `src/features/sales/installments/services/mutations.js`).
+`auth` (`usePermission` در صفحه‌ها)، `customers` (`useCustomersOptionsQuery`، `useCustomerQuery`، `useCustomerSearchQuery`، `customerKeys`)، `warehouse` (`useDocumentProducts`، `UnitsPageLink`، `UNIT_SEGMENTS`، `shippingKeys`، `productKeys`، `productUnitKeys`)، `partyAccount` (`partyDisplayName`)، `dashboard` (`dashboardKeys` در `src/features/sales/installments/services/mutations.js`)؛ `audit` (`AuditHistoryButton` در هدرِ صفحه‌ی جزئیات): `SaleDetailPage` و `SalesReturnDetailPage` با `documentKind` ۲ و ۴.
 
 ## نکته‌ها و بدهی
 

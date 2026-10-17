@@ -21,6 +21,8 @@
 - teams: `/Team/*`؛ `useTeamOptionsQuery(departmentId)`؛ `teamKeys` (`["teams"]`).
 - مشترکِ دو زیرماژولِ سازمان: `src/features/organization/components/OrgLeadershipForm.jsx`، `OrgDetailLoading.jsx`، `src/features/organization/hooks/useEmployeeOptions.js`، `useSyncLeadershipValues.js`.
 
+`src/features/employees/components/UserFilterSelect.jsx` — انتخابِ کارمند در فیلترها (`useAllUsersQuery`، کارمندانِ غیرفعال هم)؛ مصرف: `accounting` و `audit`.
+
 فرم‌ها react-hook-form با هوکِ `use<X>Form`: `src/features/employees/hooks/useEmployeeForm.js`، `src/features/organization/departments/hooks/useDepartmentForm.js`، `src/features/organization/teams/hooks/useTeamForm.js`.
 
 ## جریان‌ها
@@ -37,7 +39,7 @@
 
 ## importهای بیرونی
 
-`employees` → `organization` (گزینه‌های واحد/تیم، کلیدها)، `auth` (`useCurrentUser`، `usePermission`، `authKeys`)، `permissions` (`EmployeeAccessSummaryCard`). `organization` → `employees` (`useDepartmentUserCountQuery`، `useTeamMembersQuery`، `useChangeUserTeamMutation`، `useAllUsersQuery`، `userKeys`)، `permissions` (`DepartmentTemplateSummaryCard`). وابستگیِ دوطرفه‌ی `employees` ↔ `organization`.
+`employees` → `organization` (گزینه‌های واحد/تیم، کلیدها)، `auth` (`useCurrentUser`، `usePermission`، `authKeys`)، `permissions` (`EmployeeAccessSummaryCard`). `organization` → `employees` (`useDepartmentUserCountQuery`، `useTeamMembersQuery`، `useChangeUserTeamMutation`، `useAllUsersQuery`، `userKeys`)، `permissions` (`DepartmentTemplateSummaryCard`). وابستگیِ دوطرفه‌ی `employees` ↔ `organization`. هر دو → `audit`: دکمه‌ی «تاریخچه» (`AuditHistoryButton`) در `EmployeeDetailPage`، `DepartmentDetailPage`، `TeamDetailPage` و «فعالیت‌ها» (`UserActivityButton` → `/audit?userId=`) در `EmployeeDetailPage`.
 
 ## نکته‌ها و بدهی
 

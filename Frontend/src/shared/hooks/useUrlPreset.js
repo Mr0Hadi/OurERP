@@ -9,18 +9,23 @@ import { useSearchParams } from "react-router-dom";
  * بعد از اولین واکشی اجرا می‌شد و یک درخواستِ بی‌فایده با فیلترهای قبلی می‌رفت). همان الگوی
  * صفحه‌ی اقساط؛ تکرارش در StrictMode بی‌خطر است. بعد از آن فیلترها دستِ کاربر است.
  *
- * @param useStore استوری با اکشنِ `applyPreset` (`accountingFilterStores`)
+ * @param useStore استوری با اکشنِ `applyPreset` (مثلِ `accountingFilterStores` و `auditEventFilterStore`)
  * @param keys     نام‌هایی که از نشانی خوانده می‌شوند (همان نامِ پارامترِ سرور)؛ همه عددی‌اند
  *                 جز `search` و تاریخ‌ها (`fromDate`، `toDueDate`، … به شکلِ `YYYY-MM-DD`)
+ * @param options.textKeys کلیدهای متنیِ دیگر که دست‌نخورده خوانده می‌شوند (مثلِ `entityType`)
  */
 const DATE_KEY = /Date$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
-export function useUrlPreset(useStore, keys) {
+export function useUrlPreset(useStore, keys, { textKeys = [] } = {}) {
   const [searchParams] = useSearchParams();
 
   useState(() => {
     const values = {};
+    for (const key of textKeys) {
+      const raw = searchParams.get(key);
+      if (raw) values[key] = raw;
+    }
     for (const key of keys) {
       const raw = searchParams.get(key);
       if (raw == null || raw === "") continue;

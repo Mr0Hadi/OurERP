@@ -33,6 +33,8 @@ import EmployeeDetailLoading from "../components/forms/EmployeeDetailLoading";
 import ResetPasswordDialog from "../components/forms/ResetPasswordDialog";
 import EmployeeAccessSummaryCard from "@/features/permissions/components/EmployeeAccessSummaryCard";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import UserActivityButton from "@/features/audit/components/UserActivityButton";
 
 const fullNameOf = (employee) =>
   `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
@@ -314,5 +316,11 @@ export default function EmployeeDetailPage() {
     );
   }
 
-  return <EmployeeDetailForm key={employee.id} employee={employee} />;
+  return (
+    <>
+      <UserActivityButton userId={employee.id} />
+      <AuditHistoryButton entityType="User" entityKey={employee.id} title={`کارمند ${fullNameOf(employee)}`} />
+      <EmployeeDetailForm key={employee.id} employee={employee} />
+    </>
+  );
 }

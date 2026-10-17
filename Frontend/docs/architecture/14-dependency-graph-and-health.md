@@ -18,7 +18,7 @@ echo "module.exports={resolve:{alias:{'@':process.cwd()+'/src'},extensions:['.js
 npx madge --circular --extensions js,jsx --webpack-config /tmp/madge-alias.cjs src
 ```
 
-نتیجه (2026-10-16): **۷۲۱ فایل، ۳۰۷۰ یال، هیچ حلقه‌ای نیست.** ۱۴ هشدارِ باقی‌مانده importهای CSS هستند. graphviz نصب نیست؛ برای تصویر از `--json` و نمودارهای Mermaidِ همین اسناد استفاده کنید.
+نتیجه (2026-10-17، بعد از فیچرِ `audit`): **۷۴۴ فایل، هیچ حلقه‌ای نیست.** ۱۴ هشدارِ باقی‌مانده importهای CSS هستند. graphviz نصب نیست؛ برای تصویر از `--json` و نمودارهای Mermaidِ همین اسناد استفاده کنید.
 
 پرمصرف‌ترین ماژول‌ها (fan-in، تعدادِ فایل‌های واردکننده):
 

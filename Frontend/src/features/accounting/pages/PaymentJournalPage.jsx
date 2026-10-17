@@ -14,7 +14,7 @@ import SummaryStrip from "../components/SummaryStrip";
 import IdFilterChips from "../components/filters/IdFilterChips";
 import PaymentJournalFilters from "../components/filters/PaymentJournalFilters";
 import PaymentJournalTable from "../components/table/PaymentJournalTable";
-import { useUrlPreset } from "../hooks/useUrlPreset";
+import { useUrlPreset } from "@/shared/hooks/useUrlPreset";
 import { usePaymentJournalQuery } from "../services/queries";
 import { usePaymentJournalFilterStore } from "../store/accountingFilterStores";
 

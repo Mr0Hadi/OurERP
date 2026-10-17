@@ -32,6 +32,7 @@ import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
 import DepartmentTemplateSummaryCard from "@/features/permissions/components/DepartmentTemplateSummaryCard";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function DepartmentDetailForm({ department }) {
   const navigate = useNavigate();
@@ -256,5 +257,10 @@ export default function DepartmentDetailPage() {
     );
   }
 
-  return <DepartmentDetailForm key={department.id} department={department} />;
+  return (
+    <>
+      <AuditHistoryButton entityType="Department" entityKey={department.id} title={`واحد ${department.name}`} />
+      <DepartmentDetailForm key={department.id} department={department} />
+    </>
+  );
 }

@@ -8,7 +8,7 @@
 
 | مسیر | محتوا |
 | --- | --- |
-| `src/shared/domain/enums/` | ۱۵ فایل enum (`purchaseStatus.js`، `saleStatus.js`، `paymentType.js`، `unitStatus.js`، `saleInstallment.js`، …) |
+| `src/shared/domain/enums/` | ۱۶ فایل enum (`purchaseStatus.js`، `saleStatus.js`، `paymentType.js`، `unitStatus.js`، `saleInstallment.js`، `documentKind.js`، …) |
 | `src/shared/domain/returns/` | مدلِ مرجوعیِ مشترکِ خرید/فروش (۱۲ فایل) |
 | `src/shared/domain/payments/` | `paymentRows.js`، `paymentSplit.js` |
 | `src/shared/domain/invoice/` | `lineMath.js`، `lineFromProduct.js` |
@@ -37,6 +37,8 @@ export function isPurchaseProforma(status) { /* ... */ }
 
 نام‌گذاری: `<Name>Enum`، `<NAME>_LABELS`، `<NAME>_TONES`. نگاشتِ اعداد لازم نیست؛ کامنتِ هر فایل می‌گوید با کدام enumِ بکند هم‌خوان است (مثلاً «بکند از ۲۰۲۶-۰۹-۰۲ دقیقاً همین شماره‌گذاری را دارد»).
 
+`src/shared/domain/enums/documentKind.js` (`DocumentKindEnum`، `DOCUMENT_KIND_LABELS`، `documentRouteOf(kind, id)`) سندی است که یک ردیف به آن تعلق دارد؛ در دانه‌ها (`warehouse/units`) و تاریخچه (`audit`) مشترک است.
+
 enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً کامنت دارند: `RETURN_SIDES` در `src/shared/domain/returns/sides.js`، `CLAIM_SCOPES` و `OFF_SCOPE_KINDS` در `src/shared/domain/returns/scopes.js`.
 
 ### ۲. قواعدِ فیچر
@@ -49,6 +51,7 @@ enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً ک�
 - `src/features/warehouse/receiving/domain/receivingVocabulary.js`، `src/features/warehouse/shipping/domain/shippingVocabulary.js` — کدام وضعیت‌ها در صفِ دریافت/ارسال‌اند
 - `src/features/warehouse/units/domain/unitVocabulary.js`، `labelTemplate.js` — بخش‌بندیِ دانه‌ها و قالبِ برچسب
 - `src/features/dashboard/domain/widgetRegistry.js` — `WIDGETS`، `defaultLayout`، `resolveLayout` (معماریِ ویجتِ داشبورد؛ [12-features](12-features/README.md))
+- `src/features/audit/domain/auditVocabulary.js` — برچسبِ فارسیِ نوعِ سطر و نامِ ستون، `formatAuditValue` (enum/تاریخ/شناسه)، `changeTargetOf` (پیوند به سند یا رکورد)؛ `auditEnums.js` — `AuditOperationEnum`، گروهِ عملیات
 
 این‌ها پیش‌نمایش/UX هستند؛ سرور قاعده را دوباره اجرا می‌کند.
 

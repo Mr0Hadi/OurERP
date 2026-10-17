@@ -72,6 +72,7 @@ node scripts/check-docs-paths.mjs
 - `dark:` برای رنگ لازم نیست؛ هر تم توکن‌های خودش را دارد (`src/index.css`، `src/shared/styles/themes/`).
 - enum: شیءِ عددیِ `Object.freeze` با همان اعدادِ بکند + `_LABELS` + `_TONES`.
 - صفحه‌ی لیست: `ListPageLayout` + `ResponsiveFilters` + `ServerTable`؛ جزئیات: `DetailErrorState`؛ حذف: `ConfirmDialog`؛ عنوانِ هدر: `usePageHeader`.
+- دکمه کنارِ عنوانِ هدر: `PageHeaderActions`؛ تاریخچه‌ی یک سند/رکورد: `AuditHistoryButton` از `src/features/audit/components/` (خودش `AuditLogView` را می‌سنجد).
 - قبل از ساختنِ کامپوننت `docs/architecture/10-shared-components-catalog.md` را ببینید. فایل‌های `src/shared/components/ui/` تولیدِ shadcn هستند.
 - راهنمای زنده: `pnpm dev` → `/dev/ui`.
 
@@ -83,7 +84,7 @@ node scripts/check-docs-paths.mjs
 
 | کار | سند |
 | --- | --- |
-| دستورالعملِ گام‌به‌گام (لیست، فرم، mutation، enum، فیچر، ویجت) | `docs/architecture/13-recipes.md` |
+| دستورالعملِ گام‌به‌گام (لیست، فرم، mutation، enum، فیچر، ویجت، تاریخچه) | `docs/architecture/13-recipes.md` |
 | ورود، توکن، refresh | `docs/architecture/04-auth-and-session.md` |
 | مجوزها | `docs/architecture/05-permissions.md` |
 | لایه‌ی API و ایدمپوتنسی | `docs/architecture/06-api-layer.md` |

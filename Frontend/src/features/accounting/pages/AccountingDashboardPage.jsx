@@ -29,7 +29,7 @@ import AgingCard from "../components/dashboard/AgingCard";
 import AttentionCard from "../components/dashboard/AttentionCard";
 import { agingOverdue } from "../domain/aging";
 import { AccountingPartyTypeEnum, PartyBalanceStateEnum } from "../domain/accountingEnums";
-import { withFilters } from "../hooks/useUrlPreset";
+import { withFilters } from "@/shared/hooks/useUrlPreset";
 import { useAccountingDashboardQuery } from "../services/queries";
 import { useAccountingDashboardStore } from "../store/accountingFilterStores";
 

@@ -37,6 +37,7 @@ import {
   Users,
   Warehouse,
   Car,
+  History,
 } from "lucide-react";
 
 export const navigationData = {
@@ -164,6 +165,22 @@ export const navigationData = {
           permission: "PermissionView",
           icon: LayoutTemplate,
           description: "دسترسی‌هایی که معمولاً به کارمندانِ هر واحد داده می‌شود",
+        },
+      ],
+    },
+    {
+      // تاریخچه‌ی تغییرات (`api/Audit`)؛ تاریخچه‌ی هر سند/رکورد هم از دکمه‌ی «تاریخچه»ِ صفحه‌اش.
+      title: "تاریخچه تغییرات",
+      url: ROUTES.AUDIT,
+      icon: History,
+      isActive: false,
+      items: [
+        {
+          title: "گزارش فعالیت کاربران",
+          url: ROUTES.AUDIT,
+          permission: "AuditLogView",
+          icon: History,
+          description: "هر ثبت، ویرایش و حذف با نامِ کاربر، زمان و مقدارهای قبل و بعد",
         },
       ],
     },

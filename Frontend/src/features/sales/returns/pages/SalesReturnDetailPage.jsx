@@ -39,6 +39,8 @@ import DeleteReturnAction from "@/shared/components/returns/DeleteReturnAction";
 import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import { FollowUpReturnAction, PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import { DocumentKindEnum } from "@/shared/domain/enums/documentKind";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
@@ -205,5 +207,14 @@ export default function SalesReturnDetailPage() {
     );
   }
 
-  return <SalesReturnDetailContent key={salesReturn.id} salesReturn={salesReturn} />;
+  return (
+    <>
+      <AuditHistoryButton
+        documentKind={DocumentKindEnum.SALE_RETURN}
+        documentId={salesReturn.id}
+        title={`مرجوعی فروش ${salesReturn.returnNumber ?? salesReturn.id}`}
+      />
+      <SalesReturnDetailContent key={salesReturn.id} salesReturn={salesReturn} />
+    </>
+  );
 }

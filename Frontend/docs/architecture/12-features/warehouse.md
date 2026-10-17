@@ -39,7 +39,7 @@
 - `useProductFilterStore` (`src/features/warehouse/products/store/productFilterStore.js`، با اکشنِ `setPriceRange`).
 - `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`، و **`useLabelTemplateStore`** (persist `unit-label-template`).
 - `useReceivingFormStore`، `useShippingFormStore`، `useReceivingFilterStore`، `useShippingFilterStore`؛ hookها `useReceivingForm`، `useShippingForm`.
-- دامنه: `src/features/warehouse/units/domain/unitVocabulary.js` (`UNIT_SEGMENTS`، `UnitActionEnum`، `REASONS_BY_ACTION`، `allowedActionsOf`، `canApply`، `documentRouteOf`، …)، `labelTemplate.js` (هندسه‌ی برگه و قالب)، `receivingVocabulary.js`، `shippingVocabulary.js`.
+- دامنه: `src/features/warehouse/units/domain/unitVocabulary.js` (`UNIT_SEGMENTS`، `UnitActionEnum`، `REASONS_BY_ACTION`، `allowedActionsOf`، `canApply`، …؛ `DocumentKindEnum`/`documentRouteOf` از `src/shared/domain/enums/documentKind.js`)، `labelTemplate.js` (هندسه‌ی برگه و قالب)، `receivingVocabulary.js`، `shippingVocabulary.js`.
 - `src/features/warehouse/shared/`: `useQueueRows.js`، `queueFilters.js`، `shipmentCache.js` (`applyShipmentResult`)، `productInfo.js`، `QueueTable.jsx`، `QueueFilters.jsx`، `NothingPending.jsx`، `WarehouseSubmitBar.jsx`، `returnRowCells.jsx`.
 
 ## جریان‌ها
@@ -59,7 +59,7 @@
 
 ## importهای بیرونی
 
-`auth`؛ `purchases` (`PURCHASE_SORT_COLUMNS`، `fetchPurchaseById`، `invalidatePurchaseEcosystem`، `purchaseReturnKeys`، `useExecuteGoodsRoundMutation`، `purchaseKeys`)؛ `sales` (`SALE_SORT_COLUMNS`، `invalidateSalesEcosystem`، `salesReturnKeys`، `useSalesReturnQuery`، `useExecuteGoodsRoundMutation`)؛ `suppliers`؛ `customers`. این وابستگیِ «داده‌ی پایه → اسناد» است ([02](../02-folder-structure.md)).
+`auth`؛ `purchases` (`PURCHASE_SORT_COLUMNS`، `fetchPurchaseById`، `invalidatePurchaseEcosystem`، `purchaseReturnKeys`، `useExecuteGoodsRoundMutation`، `purchaseKeys`)؛ `sales` (`SALE_SORT_COLUMNS`، `invalidateSalesEcosystem`، `salesReturnKeys`، `useSalesReturnQuery`، `useExecuteGoodsRoundMutation`)؛ `suppliers`؛ `customers`؛ `audit` (`AuditHistoryButton` در `ProductDetailPage`). این وابستگیِ «داده‌ی پایه → اسناد» است ([02](../02-folder-structure.md)).
 
 ## نکته‌ها و بدهی
 

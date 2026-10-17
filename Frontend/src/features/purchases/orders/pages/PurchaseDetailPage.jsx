@@ -8,6 +8,8 @@ import { isPurchaseProforma } from "@/shared/domain/enums/purchaseStatus";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import { DocumentKindEnum } from "@/shared/domain/enums/documentKind";
 
 export default function PurchaseDetailPage() {
   const { id } = useParams();
@@ -46,8 +48,18 @@ export default function PurchaseDetailPage() {
   }
 
   // قفل پیش‌فاکتور: فقط پیش‌فاکتور ویرایش می‌شود؛ خریدِ صادرشده فقط‌خواندنی است.
-  if (!isPurchaseProforma(purchase.status)) {
-    return <PurchaseIssuedView key={purchase.id} purchase={purchase} />;
-  }
-  return <PurchaseForm key={purchase.id} purchase={purchase} />;
+  return (
+    <>
+      <AuditHistoryButton
+        documentKind={DocumentKindEnum.PURCHASE}
+        documentId={purchase.id}
+        title={purchase.invoiceNumber ? `فاکتور خرید ${purchase.invoiceNumber}` : "پیش‌فاکتور خرید"}
+      />
+      {isPurchaseProforma(purchase.status) ? (
+        <PurchaseForm key={purchase.id} purchase={purchase} />
+      ) : (
+        <PurchaseIssuedView key={purchase.id} purchase={purchase} />
+      )}
+    </>
+  );
 }

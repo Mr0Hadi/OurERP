@@ -8,7 +8,7 @@ import StatusChoice from "@/shared/components/forms/StatusChoice";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
 import { PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import PartyFilterSelect from "./PartyFilterSelect";
-import UserFilterSelect from "./UserFilterSelect";
+import UserFilterSelect from "@/features/employees/components/UserFilterSelect";
 import {
   AccountingPartyTypeEnum,
   DOCUMENT_SIDE_LABELS,

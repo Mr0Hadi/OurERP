@@ -20,13 +20,12 @@ import {
 } from "@/shared/domain/enums/unitStatus";
 
 import {
-  DocumentKindEnum,
-  documentRouteOf,
   daysSince,
   formatDate,
   canLocate,
   needsLabel,
 } from "../domain/unitVocabulary";
+import { DocumentKindEnum, documentRouteOf } from "@/shared/domain/enums/documentKind";
 import { formatDigits, formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import UnitStatusBadge from "./UnitStatusBadge";
 import { UnitWhereabouts } from "./UnitCells";

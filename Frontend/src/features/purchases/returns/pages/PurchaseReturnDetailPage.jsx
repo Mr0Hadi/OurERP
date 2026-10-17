@@ -38,6 +38,8 @@ import OrderInvoiceCard from "@/shared/components/returns/OrderInvoiceCard";
 import RelatedReturnsCard from "@/shared/components/returns/RelatedReturnsCard";
 import ReceivingReportCard, { ReceivingReportLines } from "@/shared/components/returns/ReceivingReport";
 import { FollowUpReturnAction, PreviousReturnBadge } from "@/shared/components/returns/ReturnChain";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import { DocumentKindEnum } from "@/shared/domain/enums/documentKind";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
 
@@ -191,5 +193,14 @@ export default function PurchaseReturnDetailPage() {
     );
   }
 
-  return <PurchaseReturnDetailContent key={purchaseReturn.id} purchaseReturn={purchaseReturn} />;
+  return (
+    <>
+      <AuditHistoryButton
+        documentKind={DocumentKindEnum.PURCHASE_RETURN}
+        documentId={purchaseReturn.id}
+        title={`مرجوعی خرید ${purchaseReturn.returnNumber ?? purchaseReturn.id}`}
+      />
+      <PurchaseReturnDetailContent key={purchaseReturn.id} purchaseReturn={purchaseReturn} />
+    </>
+  );
 }

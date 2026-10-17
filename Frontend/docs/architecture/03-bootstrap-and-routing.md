@@ -98,7 +98,7 @@ flowchart LR
 | پوسته | مسیر | مسیرهای فرزند | گارد |
 | --- | --- | --- | --- |
 | `AuthLayout` (`src/app/layouts/AuthLayout.jsx`) | `ROUTES.AUTH` = `/auth` | `authRoutes` (`login`) | ندارد؛ `LoginPage` خودش نشست را می‌سنجد |
-| `AppLayout` (`src/app/layouts/AppLayout.jsx`) | `ROUTES.ROOT` = `/` | `dashboardRoutes`، `customersRoutes`، `employeesRoutes`، `organizationRoutes`، `permissionsRoutes`، `purchasesRoutes`، `warehouseRoutes`، `invoiceRoutes`، `salesRoutes`، `suppliersRoutes`، `accountingRoutes`، `settingsRoutes`، `transactionsRoutes` | `protectedLoader` + `isAuthenticated` در خودِ layout + `PermissionGate` |
+| `AppLayout` (`src/app/layouts/AppLayout.jsx`) | `ROUTES.ROOT` = `/` | `dashboardRoutes`، `customersRoutes`، `employeesRoutes`، `organizationRoutes`، `permissionsRoutes`، `auditRoutes`، `purchasesRoutes`، `warehouseRoutes`، `invoiceRoutes`، `salesRoutes`، `suppliersRoutes`، `accountingRoutes`، `settingsRoutes`، `transactionsRoutes` | `protectedLoader` + `isAuthenticated` در خودِ layout + `PermissionGate` |
 | بدونِ پوسته | `/dev/ui` (فقط `import.meta.env.DEV`) | `StyleGuidePage` | ندارد |
 | بدونِ پوسته | `*` | `NotFoundPage` | — |
 
@@ -153,7 +153,7 @@ flowchart LR
 | صفحه‌ی ۴۰۴ | `src/app/layouts/NotFoundPage.jsx` |
 | صفحه‌ی خطای رندر/loader | `src/app/layouts/RouteErrorPage.jsx` |
 | صفحه‌ی «دسترسی ندارید» | `src/app/layouts/ForbiddenPage.jsx` |
-| هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx`؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`) |
+| هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx`؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`)؛ دکمه‌های صفحه در هدر با `PageHeaderActions` (`src/shared/components/layout/PageHeaderActions.jsx`، پورتال به `actionsSlot`) |
 | رفتارِ اسپینرِ جابه‌جایی | `src/shared/components/layout/RouteLoadingOverlay.jsx` |
 | مقصدِ پیش‌فرض بعد از ورود | `from` در `src/features/auth/pages/LoginPage.jsx` (پیش‌فرض `ROUTES.DASHBOARD`) |
 | splash یا رنگِ پیش از React | `index.html` |

@@ -14,6 +14,7 @@
 | [permissions](permissions.md) | `/access` | `UserAccessPage`، `DepartmentTemplatesPage` | `src/features/permissions/services/` | — (`usePermissionDraft`) | `/Permission/*` |
 | [dashboard](dashboard.md) | `/`، `/dashboard` | `DashboardPage` (ویجتی) | `src/features/dashboard/services/` | `useDashboardLayoutStore` (persist)، `useDashboardFilterStore` | `/Report/GetSaleReport`، `GetPurchaseReport`، `GetScopePerformance` + شمارشِ لیست‌ها |
 | [accounting](accounting.md) | `/accounting` (+ ریدایرکتِ `/reports/*`) | `AccountingDashboardPage`، `PartyBalancesPage`، `PartyLedgerPage`، `InvoiceJournalPage`، … ، `*ActivityPage` | `src/features/accounting/services/`، `src/features/accounting/activity/services/` | `accountingFilterStores.js`، `activityFilterStore.js` | `/Accounting/*`، `/Report/*` |
+| [audit](audit.md) | `/audit` | `AuditEventsPage`، `AuditEventDetailPage` + `AuditHistoryButton` در صفحه‌های جزئیات | `src/features/audit/services/` | `useAuditEventFilterStore` | `/Audit/*` |
 | [auth](auth.md) | `/auth` | `LoginPage` | `src/features/auth/services/` | `useAuthStore` (persist) | `/Account/Login`، `Logout`، `RefreshToken`؛ `/User/GetUserInfo`؛ `/Permission/GetMyPermissions` |
 | [placeholders](placeholders.md) (invoice، transactions، settings، reports) | `/invoice`، `/transactions`، `/settings` | placeholderهای ۶خطی | — | — | — |
 
@@ -44,6 +45,16 @@ flowchart LR
   accounting --> suppliers
   accounting --> employees
   accounting --> warehouse
+  audit --> employees
+  sales -.-> audit
+  purchases -.-> audit
+  customers -.-> audit
+  suppliers -.-> audit
+  warehouse -.-> audit
+  employees -.-> audit
+  organization -.-> audit
 ```
+
+خط‌چین‌ها فقط دکمه‌ی «تاریخچه» (`AuditHistoryButton`) در صفحه‌های جزئیات‌اند.
 
 همه‌ی فیچرها به `auth` وابسته‌اند (رسم نشده). شمارشِ دقیقِ importها در [02-folder-structure.md](../02-folder-structure.md). در سطحِ فایل حلقه‌ای وجود ندارد ([14](../14-dependency-graph-and-health.md)).

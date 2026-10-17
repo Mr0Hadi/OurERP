@@ -128,7 +128,16 @@
 1. در `actions`ِ `ListPageLayout`: `<DataTransferActions resource="<x>" filters={filters} invalidateKey={<x>Keys.all} />` (`src/shared/components/dataTransfer/DataTransferActions.jsx`).
 2. نامِ `resource` باید در پاسخِ `GET /DataTransfer/GetResources` باشد (`src/shared/services/dataTransfer/api-v1.js`)؛ اگر نیست، درخواست در `Backend-Net/docs/frontend-requests.fa.md`.
 
-## ۱۲. نیازی که فقط بکند می‌تواند برآورد
+## ۱۲. دکمه‌ی «تاریخچه» برای صفحه‌ی جزئیات
+
+**الگو:** `src/features/customers/pages/CustomerDetailPage.jsx` و `src/features/sales/orders/pages/SaleDetailPage.jsx`.
+
+1. در لایه‌ی بیرونیِ صفحه (بعد از بارگذاری و خطا) کنارِ فرم: `<AuditHistoryButton … />` از `src/features/audit/components/AuditHistoryButton.jsx`.
+2. هدف: سند با `documentKind={DocumentKindEnum.X}` (`src/shared/domain/enums/documentKind.js`) و `documentId`؛ رکوردِ بی‌سند با `entityType` (نامِ کلاسِ بکند، مثل `"Customer"`) و `entityKey`. `title` متنِ زیرِ عنوانِ شیت است.
+3. مجوز (`AuditLogView`) و جای دکمه در هدر (`PageHeaderActions`) را خودِ کامپوننت می‌گیرد؛ کارِ دیگری لازم نیست. برای دکمه‌ی دیگری در هدر همان `PageHeaderActions` (`src/shared/components/layout/PageHeaderActions.jsx`) را بپیچید.
+4. نوعِ سطرِ تازه یا ستونی که برچسبِ فارسی ندارد → `src/features/audit/domain/auditVocabulary.js`.
+
+## ۱۳. نیازی که فقط بکند می‌تواند برآورد
 
 فرانت کدِ `Backend-Net/` را تغییر نمی‌دهد. بخشِ شماره‌دارِ تازه در `Backend-Net/docs/frontend-requests.fa.md` بنویسید و در کد با `TODO` به همان شماره ارجاع دهید (قالبِ موجود: `TODO(بکند): ... (بندِ ۱۳.۵ frontend-requests.fa.md)` در `src/features/warehouse/products/services/queries.js`).
 

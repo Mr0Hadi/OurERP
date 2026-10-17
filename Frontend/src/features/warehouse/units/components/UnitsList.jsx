@@ -9,11 +9,10 @@ import { Button } from "@/shared/components/ui/button";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 
 import {
-  DocumentKindEnum,
   LABEL_FILTERS,
   UNIT_SEGMENTS,
-  documentRouteOf,
 } from "../domain/unitVocabulary";
+import { DocumentKindEnum, documentRouteOf } from "@/shared/domain/enums/documentKind";
 import { formatDigits } from "@/shared/lib/numberFormat";
 import UnitStatusBadge from "./UnitStatusBadge";
 import UnitSelectCheckbox from "./UnitSelectCheckbox";

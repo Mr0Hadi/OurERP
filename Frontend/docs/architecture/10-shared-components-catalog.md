@@ -57,6 +57,7 @@ flowchart LR
 | --- | --- | --- |
 | `ListPageLayout` | پوسته‌ی هر صفحه‌ی لیست: `title`، `icon`، `description`، `create`، `actions` | ۱۱ |
 | `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها) | ۴ |
+| `PageHeaderActions` | دکمه‌ی صفحه در هدرِ اپ کنارِ عنوان (پورتال به `headerStore.actionsSlot`)؛ مثلاً «تاریخچه» در صفحه‌های جزئیات ([08](08-client-state-zustand.md)) | ۲ |
 | `AppSidebar`، `NavMain`، `NavSecondary`، `NavTools`، `NavUser`، `NavWorkspace`، `AppBreadcrumb`، `RouteLoadingOverlay` | فقط پوسته‌ی برنامه ([03](03-bootstrap-and-routing.md)) | ۱–۲ |
 
 ### `filters/`
@@ -151,6 +152,8 @@ flowchart LR
 | رفتارِ خطا/بارگذاریِ لیست‌ها | `src/shared/components/table/ServerTable.jsx` |
 | فیلترِ تازه با ظاهرِ مشترک | `src/shared/components/filters/` (الگو: `PartyListFilters` در `src/features/partyAccount/components/PartyListFilters.jsx`) |
 | ورود/خروجی برای یک لیست | `<DataTransferActions resource="…" filters={filters} invalidateKey={…Keys.all} />` در `actions`ِ `ListPageLayout` |
+| دکمه در هدرِ صفحه‌ی جزئیات | `<PageHeaderActions>` (`src/shared/components/layout/PageHeaderActions.jsx`) |
+| تاریخچه‌ی تغییراتِ یک سند/رکورد | `AuditHistoryButton` از `src/features/audit/components/AuditHistoryButton.jsx` ([12-features/audit](12-features/audit.md)) |
 | کامپوننتِ پایه‌ی shadcn | CLIِ shadcn → `src/shared/components/ui/` |
 
 ## سؤال‌های باز / بدهی
