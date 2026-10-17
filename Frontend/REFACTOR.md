@@ -222,7 +222,8 @@
         `domain/saleRules.js`؛ کارتخوان به `hooks/useSaleFormPos.js` (نسخه‌ی فرم پیش از کارت‌کشیدن، ثبتِ فروشِ تازه
         یا صدورِ پیش‌فاکتور). وضعیت‌های دستی و `canCancelSale` از نمای صادرشده به `saleRules`.
       - `domain/salePricing.js` (خرده/همکار). باگ: کالای تازه‌ای که از «کالای جدید» برمی‌گشت در حالتِ «همکار» هم با
-        قیمتِ خرده اضافه می‌شد.
+        قیمتِ خرده اضافه می‌شد. باگِ دوم: جابه‌جایی خرده↔همکار قیمتِ اقلامِ موجود را عوض نمی‌کرد، چون `SaleForm`
+        پراپِ `products` را به `SaleItemsSection` نمی‌داد؛ حالا `productMap` (`useDocumentProducts`) پاس داده می‌شود.
       - re-exportهای تغییرِ نامِ `api-v1` و کامنتِ تکراری حذف شد؛ ستون‌های `SaleTable` ثابتِ ماژول.
     - [x] ۲.۵ مرجوعی‌ها (خرید و فروش):
       - `shared/services/returns/createReturnMutations.js`: یک تعریف برای mutationهای هر دو سمت (دو فایلِ ۱۷۹ خطیِ

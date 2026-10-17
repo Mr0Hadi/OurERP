@@ -376,6 +376,7 @@ export default function SaleForm({ sale }) {
               <SaleItemsSection
                 items={items}
                 onItemsChange={setItems}
+                products={[...productMap.values()]}
                 priceMode={formData.priceMode}
                 onPriceModeChange={(priceMode) => setFormData({ priceMode })}
                 onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}

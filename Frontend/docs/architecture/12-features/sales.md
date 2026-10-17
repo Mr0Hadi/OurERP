@@ -32,7 +32,7 @@
 ## state و دامنه
 
 - store: `useSaleFormStore` (`createDocumentFormStore`، `src/features/sales/orders/store/saleFormStore.js`)، `useSaleFilterStore`، `useSalesReturnFormStore` (`create` مستقیم)، `useSalesReturnFilterStore`، `useInstallmentFilterStore`.
-- دامنه: `src/features/sales/orders/domain/saleRules.js`، `salePricing.js` (`SALE_PRICE_MODES` خرده/همکار)، `salePayments.js`؛ `src/features/sales/installments/domain/installmentPlan.js`، `installmentViews.js`؛ `src/features/sales/returns/domain/salesReturnVocabulary.js`. مدلِ مرجوعی: [11-domain-layer.md](../11-domain-layer.md).
+- دامنه: `src/features/sales/orders/domain/saleRules.js`، `salePricing.js` (`SALE_PRICE_MODES` خرده/همکار؛ جابه‌جایی حالت قیمتِ اقلامِ هنوز-پیش‌فرض را از روی `products` (جزئیاتِ کالاهای فاکتور، `useDocumentProducts`) که `SaleForm` به `SaleItemsSection` می‌دهد عوض می‌کند)، `salePayments.js`؛ `src/features/sales/installments/domain/installmentPlan.js`، `installmentViews.js`؛ `src/features/sales/returns/domain/salesReturnVocabulary.js`. مدلِ مرجوعی: [11-domain-layer.md](../11-domain-layer.md).
 - hook: `src/features/sales/orders/hooks/useSaleFormPos.js` (کارتخوان در فرم)، `src/features/sales/returns/hooks/useSalesReturnForm.js`.
 
 ## جریان‌ها
