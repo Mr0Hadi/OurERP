@@ -24,6 +24,8 @@ namespace WMS.Tests.Functional
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             builder.UseEnvironment("Development");
+            // The sweep would race the tests' own data; tests that need it run it directly.
+            builder.UseSetting("BackgroundJobs:SaleReservationExpiry:Enabled", "false");
 
             builder.ConfigureServices(services =>
             {

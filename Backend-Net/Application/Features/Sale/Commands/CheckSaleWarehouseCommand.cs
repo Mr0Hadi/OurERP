@@ -4,12 +4,14 @@ using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Settings;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Sales;
+using Application.Common.Settings;
 using Application.Features.Sale.Queries;
 using Common.Exceptions;
 using Common.Extensions;
@@ -34,6 +36,9 @@ namespace Application.Features.Sale.Commands
     /// Outcome: every line covered -> WAREHOUSE_CHECKED (the customer may pay). Any line short -> nothing is reserved, the
     /// shortage is recorded and the proforma goes back to DRAFT for sales and the customer; reported issues stand either way.
     /// All or nothing otherwise: any refusal leaves stock and units as they were.
+    ///
+    /// A successful check sets Sale.ReservationExpiresAt from the Sale.ReservationMinutes setting (default 10, 0 = never):
+    /// past it payment is refused and the background sweep (ReleaseExpiredSaleReservationCommand) puts the units back.
     /// </summary>
     [AuditAction(AuditActionEnum.CheckSaleWarehouse)]
     public class CheckSaleWarehouseCommand : IRequest<ResponseDto>
@@ -95,10 +100,12 @@ namespace Application.Features.Sale.Commands
         private readonly IObjectStorageService _objectStorageService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUserContextService _userContextService;
+        private readonly ISystemSettingService _systemSettingService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public CheckSaleWarehouseCommandHandler(IWMSDbContext context, IProductUnitService productUnitService, IProductCodeService productCodeService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, ISaleReturnCalculationService saleReturnCalculationService, IUserContextService userContextService, IUnitOfWork unitOfWork)
+        public CheckSaleWarehouseCommandHandler(IWMSDbContext context, IProductUnitService productUnitService, IProductCodeService productCodeService, IInventoryCostingService inventoryCostingService, IObjectStorageService objectStorageService, ISaleReturnCalculationService saleReturnCalculationService, IUserContextService userContextService, ISystemSettingService systemSettingService, IUnitOfWork unitOfWork)
         {
+            _systemSettingService = systemSettingService;
             _context = context;
             _productUnitService = productUnitService;
             _productCodeService = productCodeService;
@@ -202,7 +209,12 @@ namespace Application.Features.Sale.Commands
 
                 await SaleProformaPipeline.RecordAsync(_context, sale, SaleProformaEventEnum.WAREHOUSE_CHECKED, SaleProformaStageEnum.WAREHOUSE_CHECKED, userId,
                     string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(), cancellationToken);
-                res.Message = "انبار کالا را تأیید و رزرو کرد؛ پیش‌فاکتور آماده‌ی پرداخت است.";
+
+                // Every successful check starts the clock afresh - lines kept from an earlier check included.
+                var minutes = await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.SaleReservationMinutes, cancellationToken);
+                sale.ReservationExpiresAt = SaleProformaPipeline.ReservationDeadline(now, minutes);
+                res.Message = "انبار کالا را تأیید و رزرو کرد؛ پیش‌فاکتور آماده‌ی پرداخت است."
+                    + (minutes > 0 ? $" رزرو {minutes} دقیقه معتبر است." : string.Empty);
             }
 
             if (issueUnits.Count > 0)

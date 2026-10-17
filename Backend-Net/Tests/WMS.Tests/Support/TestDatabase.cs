@@ -12,6 +12,7 @@ using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Settings;
 using Application.Common.Contracts.UnitOfWork;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
@@ -111,6 +112,7 @@ namespace WMS.Tests.Support
             // registration shares one process-wide IMemoryCache, which xUnit's parallel classes
             // would turn into cross-test bleed.
             PermissionService = new PermissionService(context, new MemoryCache(new MemoryCacheOptions()));
+            SystemSettings = new SystemSettingService(context, new MemoryCache(new MemoryCacheOptions()));
             // Signed in as user 1 with no permission rows: rows without a card reader pass untouched. Tests of card-reader
             // rows build their own guard for a user holding PosManualRecord (PosPaymentGuardFor).
             PosPaymentGuard = PosPaymentGuardFor(1);
@@ -144,6 +146,7 @@ namespace WMS.Tests.Support
         public IUserRepository UserRepository { get; }
         public IOrgRoleService OrgRoleService { get; }
         public IPermissionService PermissionService { get; }
+        public ISystemSettingService SystemSettings { get; }
         public IPosPaymentGuard PosPaymentGuard { get; }
         public IPosPaymentGuard PosPaymentGuardFor(int userId) => new PosPaymentGuard(Context, PermissionService, FakeUserContext.WithUserId(userId));
         public IProductCategoryRepository ProductCategoryRepository { get; }

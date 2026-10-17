@@ -11,6 +11,7 @@ using Application.Common.Contracts.Permissions;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
+using Application.Common.Contracts.Settings;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UnitOfWork;
@@ -65,6 +66,7 @@ namespace Infrastructure.Ioc
 
             services.AddScoped<IOrgRoleService, OrgRoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<ISystemSettingService, SystemSettingService>();
             services.AddScoped<IAuditScope, AuditScope>();
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
 

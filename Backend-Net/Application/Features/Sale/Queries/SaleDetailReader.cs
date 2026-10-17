@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Queries;
+using Application.Common.Sales;
 using Common.Extensions;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -31,6 +32,7 @@ namespace Application.Features.Sale.Queries
                     PaymentDate = x.PaymentDate,
                     Status = x.Status,
                     ProformaStage = x.ProformaStage,
+                    ReservationExpiresAt = x.ReservationExpiresAt,
                     Revision = x.Revision,
                     ProformaEvents = x.ProformaEvents.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new SaleProformaEventDto
                     {
@@ -127,6 +129,7 @@ namespace Application.Features.Sale.Queries
         private static async Task FillPipelineAsync(IWMSDbContext context, SaleDto sale, CancellationToken cancellationToken)
         {
             sale.ProformaStageTitle = sale.Status == SalesStatusEnum.PROFORMA ? sale.ProformaStage.GetDescription() : null;
+            sale.ReservationSecondsLeft = SaleProformaPipeline.SecondsLeft(sale.ReservationExpiresAt, DateTime.Now);
             foreach (var e in sale.ProformaEvents)
                 e.KindTitle = e.Kind.GetDescription();
 

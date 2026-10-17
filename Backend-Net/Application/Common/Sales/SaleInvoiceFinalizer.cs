@@ -38,6 +38,8 @@ namespace Application.Common.Sales
             if (sale.Status == SalesStatusEnum.PROFORMA)
             {
                 sale.Status = SalesStatusEnum.PROCESSING;
+                // Paid for: the reserved units now wait for shipping, not for the customer.
+                sale.ReservationExpiresAt = null;
                 // Issuing the invoice is what puts it on the customer's account.
                 await PartyLedger.SaleInvoiceIssuedAsync(context, sale, sale.InvoiceDate ?? DateTime.Now, cancellationToken);
             }

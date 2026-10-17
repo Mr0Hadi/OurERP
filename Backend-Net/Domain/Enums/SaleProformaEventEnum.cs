@@ -16,5 +16,8 @@ namespace Domain.Enums
 
         [Description("بازگشت به پیش‌نویس به‌خاطر ویرایش")]
         RESET_BY_EDIT = 4,
+
+        [Description("پایان مهلت رزرو")]
+        RESERVATION_EXPIRED = 5,
     }
 }

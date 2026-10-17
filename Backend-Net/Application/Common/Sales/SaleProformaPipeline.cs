@@ -4,6 +4,7 @@ using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Application.Common.Sales
 {
@@ -15,11 +16,60 @@ namespace Application.Common.Sales
     /// </summary>
     public static class SaleProformaPipeline
     {
-        /// <summary>A customer payment (or an installment down payment) is only taken once the warehouse has confirmed the goods.</summary>
+        /// <summary>
+        /// How long after <see cref="Sale.ReservationExpiresAt"/> the background sweep waits before releasing the units. Payment
+        /// is refused from the deadline itself, so a payment that passed its check a moment before the deadline can never race
+        /// the sweep into releasing the units of a sale it has just issued.
+        /// </summary>
+        public static readonly TimeSpan ExpirySweepGrace = TimeSpan.FromMinutes(1);
+
+        /// <summary>
+        /// A customer payment (or an installment down payment) is only taken once the warehouse has confirmed the goods, and only
+        /// while their reservation still holds.
+        /// </summary>
         public static void EnsureReadyForPayment(Sale sale)
         {
-            if (sale.Status == SalesStatusEnum.PROFORMA && sale.ProformaStage != SaleProformaStageEnum.WAREHOUSE_CHECKED)
+            if (sale.Status != SalesStatusEnum.PROFORMA)
+                return;
+
+            if (sale.ProformaStage != SaleProformaStageEnum.WAREHOUSE_CHECKED)
                 throw new ValidationCustomException("پیش‌فاکتور هنوز تأیید مشتری و انبار را نگرفته است؛ تا پیش از آن پرداختی پذیرفته نمی‌شود.");
+            if (IsReservationExpired(sale, DateTime.Now))
+                throw new ValidationCustomException("مهلت رزرو کالای این پیش‌فاکتور تمام شده است؛ انبار باید کالا را دوباره بررسی و رزرو کند.");
+        }
+
+        /// <summary>The deadline of a reservation made at <paramref name="reservedAt"/>; null (never expires) when the setting is 0.</summary>
+        public static DateTime? ReservationDeadline(DateTime reservedAt, long minutes) =>
+            minutes > 0 ? reservedAt.AddMinutes(minutes) : null;
+
+        /// <summary>Whole seconds from <paramref name="now"/> to <paramref name="expiresAt"/>, never below 0; null when there is no deadline.</summary>
+        public static int? SecondsLeft(DateTime? expiresAt, DateTime now) =>
+            expiresAt.HasValue ? (int)Math.Max(0, Math.Ceiling((expiresAt.Value - now).TotalSeconds)) : null;
+
+        public static bool IsReservationExpired(Sale sale, DateTime now) =>
+            sale.ReservationExpiresAt.HasValue && sale.ReservationExpiresAt.Value <= now;
+
+        /// <summary>Proformas whose reservation the sweep releases at <paramref name="now"/> (deadline plus <see cref="ExpirySweepGrace"/>).</summary>
+        public static Expression<Func<Sale, bool>> ReservationDueForRelease(DateTime now)
+        {
+            var cutoff = now - ExpirySweepGrace;
+            return x => x.IsActive && x.Status == SalesStatusEnum.PROFORMA && x.ReservationExpiresAt != null && x.ReservationExpiresAt <= cutoff;
+        }
+
+        /// <summary>
+        /// The reservation ran out: every unit reserved for the sale goes back on the shelf, and a proforma that was ready for
+        /// payment goes back to CUSTOMER_APPROVED - the customer's approval of this revision still stands, the warehouse has to
+        /// check again. <paramref name="sale"/> must be loaded with its Items.
+        /// </summary>
+        public static async Task ExpireReservationAsync(IWMSDbContext context, IProductUnitService productUnitService, Sale sale, CancellationToken cancellationToken)
+        {
+            sale.ReservationExpiresAt = null;
+            await ReleaseAsync(context, productUnitService, sale, sale.Items.Select(i => i.Id), cancellationToken);
+
+            var toStage = sale.ProformaStage == SaleProformaStageEnum.WAREHOUSE_CHECKED ? SaleProformaStageEnum.CUSTOMER_APPROVED : sale.ProformaStage;
+            await RecordAsync(context, sale, SaleProformaEventEnum.RESERVATION_EXPIRED, toStage, null,
+                "مهلت رزرو تمام شد و کالا به موجودی آزاد برگشت؛ برای پرداخت، انبار باید دوباره بررسی کند.", cancellationToken);
+            sale.UpdatedAt = DateTime.Now;
         }
 
         /// <summary>Approvals name the revision they were given for; a stale screen is refused instead of approving something else.</summary>

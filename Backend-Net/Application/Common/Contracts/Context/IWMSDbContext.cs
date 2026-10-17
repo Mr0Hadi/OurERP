@@ -54,6 +54,7 @@ namespace Application.Common.Contracts.Context
         DbSet<DepartmentPermissionTemplate> DepartmentPermissionTemplates { get; }
         DbSet<AuditEvent> AuditEvents { get; }
         DbSet<AuditEntityChange> AuditEntityChanges { get; }
+        DbSet<SystemSetting> SystemSettings { get; }
 
         DbSet<T> Set<T>() where T : class;
 

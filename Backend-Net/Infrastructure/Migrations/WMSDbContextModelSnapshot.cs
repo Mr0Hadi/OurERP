@@ -1410,6 +1410,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("ProformaStage")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("ReservationExpiresAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("Revision")
                         .HasColumnType("int");
 
@@ -1428,6 +1431,9 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("ReservationExpiresAt")
+                        .HasFilter("[ReservationExpiresAt] IS NOT NULL");
 
                     b.HasIndex("SalesUserId");
 
@@ -2132,6 +2138,28 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Suppliers");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SystemSettings");
                 });
 
             modelBuilder.Entity("Domain.Entities.Team", b =>
