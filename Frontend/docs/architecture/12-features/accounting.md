@@ -35,13 +35,13 @@
 
 - `src/features/accounting/components/AccountingPageLayout.jsx` = `<AccountingNav/>` + `ListPageLayout`.
 - `src/features/accounting/components/AccountingNav.jsx` گروه‌های `ACCOUNTING_PAGE_GROUPS` (`src/features/accounting/domain/accountingPages.js`) را با `usePermission().allows(page.permission)` فیلتر می‌کند؛ دو گروه: دفترها (`AccountingView`) و فعالیت (`ReportView`).
-- **پیش‌تنظیم از URL:** `useUrlPreset(useStore, keys)` (`src/features/accounting/hooks/useUrlPreset.js`) پارامترهای URL را یک بار در initializerِ `useState` می‌خواند (قبل از اولین درخواست): `search` رشته، کلیدهای `*Date` فقط `YYYY-MM-DD`، بقیه عدد؛ بعد `applyPreset`ِ store. `withFilters(path, filters)` چنین URLهایی می‌سازد (لینک از داشبورد به دفترِ فیلترشده). استفاده: PartyBalances، PartyLedger، InvoiceJournal، SaleLine، PaymentJournal، TradeBreakdown.
+- **پیش‌تنظیم از URL:** `useUrlPreset(useStore, keys, { textKeys })` (`src/shared/hooks/useUrlPreset.js`؛ از ۲۰۲۶-۱۰-۱۷ در `shared/` چون `audit` هم لازمش دارد) پارامترهای URL را یک بار در initializerِ `useState` می‌خواند (قبل از اولین درخواست): `search` رشته، کلیدهای `*Date` فقط `YYYY-MM-DD`، بقیه عدد؛ بعد `applyPreset`ِ store. `withFilters(path, filters)` چنین URLهایی می‌سازد (لینک از داشبورد به دفترِ فیلترشده). استفاده: PartyBalances، PartyLedger، InvoiceJournal، SaleLine، PaymentJournal، TradeBreakdown.
 - storeها: `src/features/accounting/store/accountingFilterStores.js` (`createFilterStore` + `applyPreset`؛ `INVOICE_JOURNAL_STORES` یکی برای هر `DocumentSideEnum`؛ `useAccountingDashboardStore`، `useTaxReportStore` با factoryِ دستیِ دوره)؛ `src/features/accounting/activity/store/activityFilterStore.js`.
 - دامنه: `src/features/accounting/domain/accountingEnums.js` (`AccountingPartyTypeEnum`، `PartyBalanceStateEnum`، `InvoicePaymentStateEnum`، `DocumentSideEnum`، `TradeBreakdownGroupEnum`)، `aging.js`، `dashboardSeries.js`، `journalSides.js`، `paymentPurpose.js`.
 
 ## importهای بیرونی
 
-`auth` (`usePermission`)؛ فیلترها: `organization` (واحد/تیم در `EmployeeScopeFilter.jsx`)، `warehouse/categories` (`CategoryFilterSelect.jsx`)، `customers`/`suppliers` (`PartyFilterSelect.jsx`)، `employees` (`UserFilterSelect.jsx`).
+`auth` (`usePermission`)؛ فیلترها: `organization` (واحد/تیم در `EmployeeScopeFilter.jsx`)، `warehouse/categories` (`CategoryFilterSelect.jsx`)، `customers`/`suppliers` (`PartyFilterSelect.jsx`)، `employees` (`src/features/employees/components/UserFilterSelect.jsx`؛ پیش‌تر در `accounting/components/filters/`).
 
 ## نکته‌ها و بدهی
 

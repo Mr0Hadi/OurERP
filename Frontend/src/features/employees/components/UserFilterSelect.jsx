@@ -1,5 +1,5 @@
 import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { useAllUsersQuery } from "@/features/employees/services/queries";
+import { useAllUsersQuery } from "../services/queries";
 import { MAX_PAGE_SIZE } from "@/shared/services/api/contract";
 
 const ALL_ROWS = { take: MAX_PAGE_SIZE };

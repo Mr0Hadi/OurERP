@@ -11,7 +11,7 @@ import { toneRow } from "@/shared/lib/tone";
 import Amount from "../Amount";
 import { DateCell, PartyLink } from "./cells";
 import { DocumentSideEnum } from "../../domain/accountingEnums";
-import { withFilters } from "../../hooks/useUrlPreset";
+import { withFilters } from "@/shared/hooks/useUrlPreset";
 
 /** مانده: معوق قرمز، باز کهربایی، اضافه‌پرداخت (منفی) آبی. */
 function remainingTone(row) {

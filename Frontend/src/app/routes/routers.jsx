@@ -22,6 +22,7 @@ import { salesRoutes } from "@/features/sales/routes";
 import { employeesRoutes } from "@/features/employees/routes";
 import { organizationRoutes } from "@/features/organization/routes";
 import { permissionsRoutes } from "@/features/permissions/routes";
+import { auditRoutes } from "@/features/audit/routes";
 import { notifyNavigationSettled, notifyNavigationStart } from "@/shared/lib/routeTransitionBus";
 
 // راهنمای استایل فقط در توسعه؛ در build تولید شاخه‌ی DEV حذف می‌شود و
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
           ...employeesRoutes,
           ...organizationRoutes,
           ...permissionsRoutes,
+          ...auditRoutes,
           ...purchasesRoutes,
           ...warehouseRoutes,
           ...invoiceRoutes,

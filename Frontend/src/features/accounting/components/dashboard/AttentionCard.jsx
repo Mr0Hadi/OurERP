@@ -7,7 +7,7 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 import { AccountingPartyTypeEnum, InvoicePaymentStateEnum, PartyBalanceStateEnum } from "../../domain/accountingEnums";
-import { withFilters } from "../../hooks/useUrlPreset";
+import { withFilters } from "@/shared/hooks/useUrlPreset";
 
 const OVERDUE = { paymentState: InvoicePaymentStateEnum.OVERDUE };
 

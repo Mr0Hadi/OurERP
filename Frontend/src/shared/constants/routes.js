@@ -108,6 +108,10 @@ export const ROUTES = {
   // نشانیِ قدیمیِ بخشِ «گزارش‌ها»؛ به حسابداری هدایت می‌شود (پیوندهای ذخیره‌شده نشکنند).
   REPORTS: "/reports",
 
+  // تاریخچه‌ی تغییرات — کارهای کاربران (`api/Audit`، بخش ۲۱ سند)، فقط‌خواندنی.
+  AUDIT: "/audit",
+  AUDIT_DETAIL: "/audit/:id",
+
   // تنظیمات
   SETTINGS: "/settings",
   SETTINGS_GENERAL: "/settings/general",

@@ -6,7 +6,7 @@ import FilterSelect from "@/shared/components/filters/FilterSelect";
 import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import PartyFilterSelect from "./PartyFilterSelect";
-import UserFilterSelect from "./UserFilterSelect";
+import UserFilterSelect from "@/features/employees/components/UserFilterSelect";
 import { INVOICE_PAYMENT_STATE_LABELS, AccountingPartyTypeEnum, DocumentSideEnum } from "../../domain/accountingEnums";
 
 const PAYMENT_STATE_OPTIONS = [

@@ -101,6 +101,7 @@ endpointها (`src/features/permissions/services/api-v1.js`): `getUserPermission
 | می‌خواهم… | کجا |
 | --- | --- |
 | صفحه‌ای را محافظت کنم | `handle: { permission: "X" }` در `src/features/<f>/routes.jsx` |
+| کامپوننتی که خودش مجوزش را می‌سنجد | الگو: `AuditHistoryButton` (`AuditLogView`) در `src/features/audit/components/AuditHistoryButton.jsx` — بی‌مجوز `null` |
 | آیتمِ منو را محدود کنم | `permission` روی زیرآیتم در `src/shared/constants/navigationData.js` |
 | دکمه‌ای را محدود کنم | `const { allows } = usePermission()` از `@/features/auth/hooks/usePermission`؛ الگو: `src/features/sales/orders/pages/SaleIssuedView.jsx` |
 | مجوزِ تازه (سمتِ سرور) | فرانت نمی‌سازد؛ در `Backend-Net/docs/frontend-requests.fa.md` درخواست بنویسید، بعد نامش را مصرف کنید |

@@ -12,7 +12,7 @@ import BalanceAmount from "../BalanceAmount";
 import { DateCell, PartyLink, PartyTypeBadge } from "./cells";
 import { agingOverdue } from "../../domain/aging";
 import { AccountingPartyTypeEnum } from "../../domain/accountingEnums";
-import { withFilters } from "../../hooks/useUrlPreset";
+import { withFilters } from "@/shared/hooks/useUrlPreset";
 
 /** گردشِ همین طرف‌حساب در دفترِ اشخاص. */
 function ledgerLinkOf(row) {

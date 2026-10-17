@@ -6,7 +6,7 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import AgingBar from "../AgingBar";
 import { agingOverdue, agingTotal } from "../../domain/aging";
 import { AccountingPartyTypeEnum } from "../../domain/accountingEnums";
-import { withFilters } from "../../hooks/useUrlPreset";
+import { withFilters } from "@/shared/hooks/useUrlPreset";
 
 function AgingRow({ title, aging, to }) {
   const total = agingTotal(aging);

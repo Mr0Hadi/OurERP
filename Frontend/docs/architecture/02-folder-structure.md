@@ -56,7 +56,7 @@ flowchart LR
 | `src/shared/components/<group>/` | کامپوننت‌های ترکیبیِ پروژه | `table/`، `filters/`، `status/`، `payments/`، `print/` |
 | `src/shared/domain/` | منطقِ خالصِ مشترک (enum، محاسبه) | `enums/saleStatus.js`، `returns/`، `payments/paymentSplit.js` |
 | `src/shared/services/` | API مشترک و زیرساختِ شبکه | `api/axios.js`، `files/`، `dataTransfer/`، `pos/`، `invoice/`، `returns/` |
-| `src/shared/hooks/` | هوک‌های عمومی | `usePageHeader.js`، `useDebouncedFilters.js` |
+| `src/shared/hooks/` | هوک‌های عمومی | `usePageHeader.js`، `useDebouncedFilters.js`، `useUrlPreset.js` |
 | `src/shared/lib/` | تابع‌های کمکیِ بی‌ربط به دامنه | `dateUtils.js`، `persianDigits.js`، `utils.js` (`cn`) |
 | `src/shared/store/` | storeهای سراسری و factoryها | `headerStore.js`، `createFilterStore.js` |
 | `src/shared/constants/` | `routes.js`، `navigationData.js` | — |
@@ -87,24 +87,25 @@ flowchart TD
 
 ## قراردادها و نکته‌ها
 
-- **import بین فیچرها — وضعیتِ فعلی (نه قاعده).** شمارش = تعدادِ خطوطِ import با `@/features/<دیگر>` در فایل‌های فیچرِ واردکننده (grep، 2026-10-16):
+- **import بین فیچرها — وضعیتِ فعلی (نه قاعده).** شمارش = تعدادِ خطوطِ import با `@/features/<دیگر>` در فایل‌های فیچرِ واردکننده (grep، 2026-10-17):
 
 | واردکننده | واردشده | تعداد |
 | --- | --- | --- |
-| `accounting` | `organization` ۲؛ `auth`، `customers`، `employees`، `suppliers`، `warehouse` هر کدام ۱ | ۷ |
+| `accounting` | `organization` ۲، `employees` ۲؛ `auth`، `customers`، `suppliers`، `warehouse` هر کدام ۱ | ۸ |
+| `audit` | `auth` ۲، `employees` ۱ | ۳ |
 | `customers` | `partyAccount` | ۹ |
-| `customers` | `auth` ۱، `sales` ۱ | ۲ |
+| `customers` | `auth` ۱، `sales` ۱، `audit` ۱ | ۳ |
 | `dashboard` | `auth` ۳، `warehouse` ۲، `accounting` ۱، `sales` ۱ | ۷ |
-| `employees` | `organization` ۶، `auth` ۳، `permissions` ۱ | ۱۰ |
-| `organization` | `employees` ۷، `auth` ۲، `permissions` ۱ | ۱۰ |
+| `employees` | `organization` ۶، `auth` ۳، `audit` ۲، `permissions` ۱ | ۱۲ |
+| `organization` | `employees` ۷، `auth` ۲، `audit` ۲، `permissions` ۱ | ۱۲ |
 | `partyAccount` | `customers` ۱، `suppliers` ۱ | ۲ |
 | `permissions` | `auth` ۸، `organization` ۳، `employees` ۲ | ۱۳ |
-| `purchases` | `warehouse` ۶، `suppliers` ۴، `auth` ۴، `partyAccount` ۱ | ۱۵ |
-| `sales` | `warehouse` ۸، `customers` ۶، `auth` ۶، `partyAccount` ۱، `dashboard` ۱ | ۲۲ |
-| `suppliers` | `partyAccount` ۹، `auth` ۱ | ۱۰ |
-| `warehouse` | `purchases` ۷، `sales` ۵، `auth` ۵، `suppliers` ۳، `customers` ۲ | ۲۲ |
+| `purchases` | `warehouse` ۶، `suppliers` ۴، `auth` ۴، `audit` ۲، `partyAccount` ۱ | ۱۷ |
+| `sales` | `warehouse` ۸، `customers` ۶، `auth` ۶، `audit` ۲، `partyAccount` ۱، `dashboard` ۱ | ۲۴ |
+| `suppliers` | `partyAccount` ۹، `auth` ۱، `audit` ۱ | ۱۱ |
+| `warehouse` | `auth` ۸، `purchases` ۷، `sales` ۵، `suppliers` ۳، `customers` ۲، `audit` ۱ | ۲۶ |
 
-  **جهتِ عادی:** هر فیچر → `auth` (هوکِ مجوز)؛ اسناد → داده‌ی پایه (`sales`/`purchases` → `warehouse`، `customers`، `suppliers`)؛ `customers`/`suppliers` → `partyAccount`؛ گزارش‌ها (`dashboard`، `accounting`) → هر فیچری که می‌خوانند.
+  **جهتِ عادی:** هر فیچر → `auth` (هوکِ مجوز)؛ اسناد → داده‌ی پایه (`sales`/`purchases` → `warehouse`، `customers`، `suppliers`)؛ `customers`/`suppliers` → `partyAccount`؛ گزارش‌ها (`dashboard`، `accounting`) → هر فیچری که می‌خوانند؛ صفحه‌های جزئیات → `audit` (فقط `AuditHistoryButton`/`UserActivityButton`).
   **جهتِ غیرمنتظره — اضافه نکنید:** داده‌ی پایه → اسناد یا گزارش. نمونه‌های موجود: `warehouse` → `purchases`/`sales` (کلید و `sharedInvalidation` و mutationهای مرجوعی، برای صفِ دریافت/ارسال)، `sales/installments/services/mutations.js` → `dashboardKeys` از `@/features/dashboard/services/queryKeys`، `partyAccount/services/queries.js` → `customerKeys`/`supplierKeys` (چرخه‌ی دوطرفه با `customers`/`suppliers` در سطحِ فیچر)، و `employees` ↔ `organization` دوطرفه. هیچ‌کدام در سطحِ فایل حلقه نمی‌سازند (madge).
 - **`shared/` در ۹ فایل از `features/` import می‌کند** (خلافِ قاعده‌ی لایه‌ها؛ پیشنهادِ رفع هر کدام در [14](14-dependency-graph-and-health.md)):
   - `src/shared/services/api/axios.js` و `src/shared/components/layout/AppSidebar.jsx`، `NavUser.jsx`، `NavWorkspace.jsx` → `@/features/auth/...`

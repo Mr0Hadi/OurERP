@@ -30,6 +30,7 @@ function ContentSpinner() {
 
 export default function AppLayout() {
   const { title, showBack, onBack } = useHeaderStore();
+  const setActionsSlot = useHeaderStore((s) => s.setActionsSlot);
   // پیش‌فرضِ دکمه‌ی برگشت، صفحه‌ی قبلی است. صفحه‌ها فقط وقتی onBack
   // می‌دهند که پیش از رفتن کاری داشته باشند (مثلاً پاک‌کردن فرم).
   const goBack = useGoBack();
@@ -68,6 +69,8 @@ export default function AppLayout() {
                 {title && (
                   <h1 className="hidden sm:block md:text-xl font-bold tracking-tight">{title}</h1>
                 )}
+                {/* دکمه‌های صفحه (`PageHeaderActions`) */}
+                <div ref={setActionsSlot} className="flex items-center gap-2 empty:hidden" />
               </div>
             </div>
             <AppBreadcrumb />

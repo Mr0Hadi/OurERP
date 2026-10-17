@@ -63,3 +63,24 @@ export function todayIso(date = new Date()) {
 export function nowLocalIso(date = new Date()) {
   return `${todayIso(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
+
+/**
+ * ساعتِ یک زمانِ سرور ("2026-10-15T10:42:11") → "۱۰:۴۲" | بدونِ ساعت → "".
+ *
+ * از خودِ متن خوانده می‌شود، نه با `new Date`: سرور زمان را به وقتِ محلی و بدونِ منطقه‌ی
+ * زمانی می‌فرستد (`DateTime.Now`) و تبدیل در مرورگر فقط احتمالِ جابه‌جاییِ ساعت را اضافه می‌کرد.
+ */
+export function persianTimeOf(value) {
+  const match = String(value ?? "").match(/T(\d{2}):(\d{2})/);
+  if (!match) return "";
+  return `${match[1]}:${match[2]}`.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+}
+
+/** تاریخ و ساعتِ شمسی: "۱۴۰۵/۰۷/۲۳ ۱۰:۴۲" (ساعتِ نیمه‌شبِ تاریخِ بی‌ساعت حذف می‌شود). */
+export function gregorianToPersianDateTime(value) {
+  const date = gregorianToPersian(toDateOnly(value));
+  if (!date) return "";
+  const time = persianTimeOf(value);
+  const hasTime = time && !/T00:00(:00(\.0+)?)?$/.test(String(value));
+  return hasTime ? `${date} ${time}` : date;
+}

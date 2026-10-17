@@ -27,6 +27,7 @@ import TeamMembersCard from "../components/TeamMembersCard";
 import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function TeamDetailForm({ team }) {
   const navigate = useNavigate();
@@ -235,5 +236,10 @@ export default function TeamDetailPage() {
     );
   }
 
-  return <TeamDetailForm key={team.id} team={team} />;
+  return (
+    <>
+      <AuditHistoryButton entityType="Team" entityKey={team.id} title={`تیم ${team.name}`} />
+      <TeamDetailForm key={team.id} team={team} />
+    </>
+  );
 }

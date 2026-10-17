@@ -35,6 +35,8 @@
 
 **صورت‌حساب** — `PartyStatementCard` بازه را در state محلی نگه می‌دارد → `usePartyStatementQuery` با کلیدِ `[...customerKeys.all, "statement", id, { fromDate, toDate }]` (یا زیرِ `supplierKeys.all`). یعنی **هر invalidateِ `customerKeys.all`، صورت‌حساب را هم تازه می‌کند** — به همین دلیل فروش/پرداخت `customerKeys.all` را باطل می‌کنند.
 
+**تاریخچه** — `CustomerDetailPage` و `SupplierDetailPage` دکمه‌ی «تاریخچه» (`AuditHistoryButton` از `src/features/audit/components/AuditHistoryButton.jsx`، `entityType` = `Customer`/`Supplier`) را در هدر دارند؛ فقط با `AuditLogView` ([audit](audit.md)).
+
 ## نکته‌ها و بدهی
 
 - `partyAccount` ↔ `customers`/`suppliers` دوطرفه وابسته‌اند (`partyAccount/services/queries.js` کلیدهای آن دو را import می‌کند).

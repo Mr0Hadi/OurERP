@@ -10,7 +10,7 @@ import IdFilterChips from "../components/filters/IdFilterChips";
 import TradeBreakdownFilters from "../components/filters/TradeBreakdownFilters";
 import TradeBreakdownTable from "../components/table/TradeBreakdownTable";
 import { tradeBreakdownGroupLabels } from "../domain/accountingEnums";
-import { useUrlPreset } from "../hooks/useUrlPreset";
+import { useUrlPreset } from "@/shared/hooks/useUrlPreset";
 import { useTradeBreakdownQuery } from "../services/queries";
 import { useTradeBreakdownFilterStore } from "../store/accountingFilterStores";
 

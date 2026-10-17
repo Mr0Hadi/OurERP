@@ -13,7 +13,7 @@
 | `src/shared/store/createFilterStore.js` | `createFilterStore({ filters, defaultSorting, defaultPageSize, actions })` |
 | `src/shared/store/createDocumentFormStore.js` | `createDocumentFormStore({ emptyForm, formFromDocument })`، `isDocumentFormChanged` |
 | `src/shared/store/formDraftStore.js` | `useFormDraftStore` (پیش‌نویسِ یک‌بارمصرف) |
-| `src/shared/store/headerStore.js` | `useHeaderStore` (`title`، `showBack`، `onBack`) |
+| `src/shared/store/headerStore.js` | `useHeaderStore` (`title`، `showBack`، `onBack`، `actionsSlot` — گرهِ DOMِ جای دکمه‌های صفحه در هدر) |
 | `src/shared/hooks/useDebouncedFilters.js` | `useDebouncedFilters(useStore, { text, instant })` |
 | `src/shared/hooks/useDocumentFormDraft.js` | چرخه‌ی پرکردنِ فرمِ سند |
 | `src/shared/hooks/useFormDraft.js` | خواندن/ذخیره‌ی پیش‌نویس با `useFormDraftStore` |
@@ -108,6 +108,8 @@ usePageHeader({ title, showBack: true, onBack: () => {...} });
 
 `AppLayout` از `useHeaderStore` می‌خواند. `usePageHeader` فقط هنگامِ خروج پاک می‌کند (عنوان وسطِ بارگذاری خالی نمی‌شود) و `onBack` را در ref نگه می‌دارد. `setHeader` را مستقیم صدا نزنید.
 
+**دکمه در هدر:** `<PageHeaderActions>{…}</PageHeaderActions>` (`src/shared/components/layout/PageHeaderActions.jsx`) فرزندانش را با پورتال در `actionsSlot` (یک `div` در هدرِ `AppLayout`، کنارِ عنوان) رندر می‌کند و با خروج از صفحه خودبه‌خود برمی‌دارد. خودِ المانِ React در store نمی‌رود، فقط گرهِ مقصد. نمونه: `AuditHistoryButton` در صفحه‌های جزئیات.
+
 ## قراردادها و نکته‌ها
 
 - نام‌گذاری: فایل `<x>Store.js` یا `<x>FilterStore.js`، export `use<X>Store`؛ factory `create<X>Store`.
@@ -124,6 +126,7 @@ usePageHeader({ title, showBack: true, onBack: () => {...} });
 | فیلدِ تازه در فرمِ فروش | `EMPTY_FORM` و `formFromSale` در `src/features/sales/orders/store/saleFormStore.js` + `toApiSalePayload` در `api-v1.js` |
 | فرمِ سادهِ تازه | هوکِ `use<X>Form` با react-hook-form؛ الگو: `src/features/customers/hooks/useCustomerForm.js` |
 | عنوان/دکمه‌ی برگشتِ هدر | `usePageHeader` در صفحه |
+| دکمه‌ی صفحه کنارِ عنوانِ هدر | `PageHeaderActions` |
 
 ## سؤال‌های باز / بدهی
 

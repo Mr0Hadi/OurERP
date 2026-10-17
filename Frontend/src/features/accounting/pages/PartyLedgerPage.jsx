@@ -12,7 +12,7 @@ import SummaryStrip from "../components/SummaryStrip";
 import IdFilterChips from "../components/filters/IdFilterChips";
 import PartyLedgerFilters from "../components/filters/PartyLedgerFilters";
 import PartyLedgerTable from "../components/table/PartyLedgerTable";
-import { useUrlPreset } from "../hooks/useUrlPreset";
+import { useUrlPreset } from "@/shared/hooks/useUrlPreset";
 import { usePartyLedgerQuery } from "../services/queries";
 import { usePartyLedgerFilterStore } from "../store/accountingFilterStores";
 

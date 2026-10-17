@@ -8,7 +8,7 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import Amount from "../Amount";
 import { DocumentSideEnum, TradeBreakdownGroupEnum } from "../../domain/accountingEnums";
-import { withFilters } from "../../hooks/useUrlPreset";
+import { withFilters } from "@/shared/hooks/useUrlPreset";
 
 /** صفحه‌ی خودِ گروه (کالا، مشتری، تامین‌کننده)؛ دسته و کاربر صفحه‌ی جزئیاتِ حسابداری ندارند. */
 function titleRouteOf(row, { side, groupBy }) {

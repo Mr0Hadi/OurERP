@@ -14,7 +14,7 @@ import InvoiceJournalFilters from "../components/filters/InvoiceJournalFilters";
 import InvoiceJournalTable from "../components/table/InvoiceJournalTable";
 import { DocumentSideEnum } from "../domain/accountingEnums";
 import { JOURNAL_SIDES } from "../domain/journalSides";
-import { useUrlPreset } from "../hooks/useUrlPreset";
+import { useUrlPreset } from "@/shared/hooks/useUrlPreset";
 import { useInvoiceJournalQuery } from "../services/queries";
 import { INVOICE_JOURNAL_STORES } from "../store/accountingFilterStores";
 

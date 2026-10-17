@@ -39,6 +39,8 @@ const ROUTE_TITLES = {
   [ROUTES.ACCESS_USERS]: "دسترسی کارمندان",
   [ROUTES.ACCESS_TEMPLATES]: "الگوهای دسترسی واحدها",
 
+  [ROUTES.AUDIT]: "گزارش فعالیت کاربران",
+
   [ROUTES.PURCHASES]: "خرید",
   [ROUTES.PURCHASES_NEW]: "ثبت خرید جدید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "مرجوعی‌های خرید",
@@ -118,6 +120,7 @@ const DETAIL_TITLES = {
   [ROUTES.ORG_TEAMS]: "جزئیات تیم",
   [ROUTES.ACCESS_USERS]: "کارمند",
   [ROUTES.ACCESS_TEMPLATES]: "واحد",
+  [ROUTES.AUDIT]: "رویداد",
 
   [ROUTES.PURCHASES]: "جزئیات خرید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "جزئیات مرجوعی خرید",

@@ -31,6 +31,7 @@ import {
 } from "@/features/partyAccount/domain/partyBalance";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
@@ -224,5 +225,14 @@ export default function SupplierDetailPage() {
     );
   }
 
-  return <SupplierDetailForm key={supplier.id} supplierData={supplier} />;
+  return (
+    <>
+      <AuditHistoryButton
+        entityType="Supplier"
+        entityKey={supplier.id}
+        title={`تامین‌کننده ${supplier.companyName || `${supplier.firstName} ${supplier.lastName}`}`}
+      />
+      <SupplierDetailForm key={supplier.id} supplierData={supplier} />
+    </>
+  );
 }

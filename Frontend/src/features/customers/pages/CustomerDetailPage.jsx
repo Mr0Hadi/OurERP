@@ -32,6 +32,7 @@ import {
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
@@ -227,5 +228,14 @@ export default function CustomerDetailPage() {
     );
   }
 
-  return <CustomerDetailForm key={customer.id} customerData={customer} />;
+  return (
+    <>
+      <AuditHistoryButton
+        entityType="Customer"
+        entityKey={customer.id}
+        title={`مشتری ${customer.firstName} ${customer.lastName}`}
+      />
+      <CustomerDetailForm key={customer.id} customerData={customer} />
+    </>
+  );
 }

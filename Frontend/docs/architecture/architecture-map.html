@@ -203,10 +203,10 @@ footer{color:var(--muted);font-size:.82rem;border-top:1px solid var(--line);padd
   <h1>فرانت‌اندِ OurERP، از بازشدنِ صفحه تا درخواست به سرور</h1>
   <p>SPAِ فارسی و راست‌به‌چپ برای انبار و فروشِ لوازم یدکی، روی بکندِ ASP.NET. هر بخشِ این صفحه یک ابزار است: روی لایه‌ها، گام‌ها، فیچرها و حالت‌ها کلیک کنید. همه‌ی مسیرها و نام‌ها از کدِ واقعی و از <code>docs/architecture/</code> آمده‌اند.</p>
   <div class="stats">
-    <div class="stat"><b>۷۲۱</b><span>فایل در <span class="mono">src/</span></span></div>
+    <div class="stat"><b>۷۴۴</b><span>فایل در <span class="mono">src/</span></span></div>
     <div class="stat"><b>۶۱٬۵۴۸</b><span>خطِ کد (JSX و JS)</span></div>
-    <div class="stat"><b>۱۷</b><span>پوشه‌ی فیچر، ۱۴ با مسیر</span></div>
-    <div class="stat"><b>۳۰۷۰</b><span>یالِ وابستگی، <b style="display:inline;font-size:1em;color:var(--ok)">۰</b> حلقه</span></div>
+    <div class="stat"><b>۱۷</b><span>پوشه‌ی فیچر، ۱۵ با مسیر</span></div>
+    <div class="stat"><b>۳۲۱۴</b><span>یالِ وابستگی، <b style="display:inline;font-size:1em;color:var(--ok)">۰</b> حلقه</span></div>
     <div class="stat"><b style="color:var(--bad)">۷</b><span>باگِ شناخته‌شده</span></div>
   </div>
   <div class="stack" aria-label="پشته">
@@ -344,7 +344,7 @@ sequenceDiagram
     <tr><td>فرمِ سندِ خرید/فروش</td><td class="mono">createDocumentFormStore</td><td class="mono">saleFormStore.js · purchaseFormStore.js</td><td>حافظه</td></tr>
     <tr><td>فرمِ مرجوعی و انبار</td><td class="mono">create (دستی)</td><td class="mono">receivingFormStore.js</td><td>حافظه</td></tr>
     <tr><td>پیش‌نویسِ یک‌بارمصرف</td><td class="mono">useFormDraftStore</td><td class="mono">src/shared/store/formDraftStore.js</td><td>حافظه</td></tr>
-    <tr><td>عنوانِ هدر</td><td class="mono">useHeaderStore ← usePageHeader</td><td class="mono">src/shared/store/headerStore.js</td><td>حافظه</td></tr>
+    <tr><td>عنوان و دکمه‌های هدر</td><td class="mono">useHeaderStore ← usePageHeader · PageHeaderActions</td><td class="mono">src/shared/store/headerStore.js</td><td>حافظه</td></tr>
     <tr><td>توکن‌ها</td><td class="mono">persist</td><td class="mono">auth-storage</td><td><span class="pill p-warn">localStorage</span></td></tr>
     <tr><td>چیدمانِ داشبورد · قالبِ برچسب</td><td class="mono">persist</td><td class="mono">dashboard-layout · unit-label-template</td><td><span class="pill p-warn">localStorage، بعد از خروج می‌ماند</span></td></tr>
   </tbody></table></div>
@@ -417,7 +417,7 @@ export const PURCHASE_STATUS_TONES  = { ... }  // tone</div>
   <div class="debt" id="debtList"></div>
 </section>
 
-<footer>منبع: <code>Frontend/docs/architecture/</code> (ساخته‌شده از روی کد، 2026-10-16). برای جزئیات و هر مسیرِ فایل، همان اسناد را باز کنید.</footer>
+<footer>منبع: <code>Frontend/docs/architecture/</code> (ساخته‌شده از روی کد، 2026-10-16؛ به‌روزرسانی 2026-10-17: فیچرِ audit). برای جزئیات و هر مسیرِ فایل، همان اسناد را باز کنید.</footer>
 </main>
 </div>
 
@@ -528,7 +528,7 @@ const ROUTES_P=[
  ["/customers","CustomerView","مشتریان"],["/customers/new","CustomerCreate","مشتری جدید"],
  ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/sales/installments","SaleInstallmentView","اقساط"],
  ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
- ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],
+ ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],
  ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]
 ];
 const ALL=[...new Set(ROUTES_P.flatMap(r=>r[1]==null?[]:[].concat(r[1])))];
@@ -568,10 +568,11 @@ const F={
  permissions:{p:"/access",pages:"UserAccessPage، DepartmentTemplatesPage",stores:"— (usePermissionDraft)",api:"/Permission/*",note:"کاتالوگِ چک‌باکس‌ها از سرور می‌آید."},
  dashboard:{p:"/ ، /dashboard",pages:"DashboardPage",stores:"useDashboardLayoutStore (persist)، useDashboardFilterStore",api:"/Report/GetSaleReport، GetPurchaseReport، GetScopePerformance",note:"ویجت‌ها با buildDashboardContext انتخاب می‌شوند."},
  accounting:{p:"/accounting",pages:"AccountingDashboardPage، PartyBalancesPage، InvoiceJournalPage، *ActivityPage",stores:"accountingFilterStores.js، activityFilterStore.js",api:"/Accounting/*، /Report/*",sub:"activity",note:"/reports/* قدیمی به این‌جا ریدایرکت می‌شود."},
+ audit:{p:"/audit",pages:"AuditEventsPage، AuditEventDetailPage + AuditHistoryButton در صفحه‌های جزئیات",stores:"useAuditEventFilterStore",api:"/Audit/*",note:"فقط‌خواندنی، پشتِ AuditLogView. دکمه‌ی «تاریخچه» با PageHeaderActions در هدرِ صفحه‌های جزئیات می‌نشیند."},
  auth:{p:"/auth",pages:"LoginPage",stores:"useAuthStore (persist)",api:"/Account/Login، Logout، RefreshToken؛ /User/GetUserInfo",note:"همه‌ی فیچرها برای مجوز به آن وابسته‌اند."}
 };
-const E=[["accounting","organization",2],["accounting","customers",1],["accounting","employees",1],["accounting","suppliers",1],["accounting","warehouse",1],["customers","partyAccount",9],["customers","sales",1],["dashboard","warehouse",2],["dashboard","accounting",1],["dashboard","sales",1],["employees","organization",6],["employees","permissions",1],["organization","employees",7],["organization","permissions",1],["partyAccount","customers",1],["partyAccount","suppliers",1],["permissions","organization",3],["permissions","employees",2],["purchases","warehouse",6],["purchases","suppliers",4],["purchases","partyAccount",1],["sales","warehouse",8],["sales","customers",6],["sales","partyAccount",1],["sales","dashboard",1],["suppliers","partyAccount",9],["warehouse","purchases",7],["warehouse","sales",5],["warehouse","suppliers",3],["warehouse","customers",2]];
-const order=["sales","warehouse","purchases","suppliers","partyAccount","customers","accounting","organization","employees","permissions","dashboard"];
+const E=[["accounting","organization",2],["accounting","customers",1],["accounting","employees",2],["accounting","suppliers",1],["accounting","warehouse",1],["customers","partyAccount",9],["customers","sales",1],["dashboard","warehouse",2],["dashboard","accounting",1],["dashboard","sales",1],["employees","organization",6],["employees","permissions",1],["organization","employees",7],["organization","permissions",1],["partyAccount","customers",1],["partyAccount","suppliers",1],["permissions","organization",3],["permissions","employees",2],["purchases","warehouse",6],["purchases","suppliers",4],["purchases","partyAccount",1],["sales","warehouse",8],["sales","customers",6],["sales","partyAccount",1],["sales","dashboard",1],["suppliers","partyAccount",9],["warehouse","purchases",7],["warehouse","sales",5],["warehouse","suppliers",3],["warehouse","customers",2],["audit","employees",1],["customers","audit",1],["suppliers","audit",1],["sales","audit",2],["purchases","audit",2],["warehouse","audit",1],["employees","audit",2],["organization","audit",2]];
+const order=["sales","warehouse","purchases","suppliers","partyAccount","customers","accounting","organization","employees","permissions","dashboard","audit"];
 const pos={},cx=280,cy=250,R=190;order.forEach((k,i)=>{const a=-Math.PI/2+i*2*Math.PI/order.length;pos[k]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]});pos.auth=[cx,cy];
 const NS="http://www.w3.org/2000/svg",g=$("#graph");
 const defs=document.createElementNS(NS,"defs");
@@ -685,6 +686,7 @@ const REC=[
  {t:"نوشتنِ مالی/موجودی",src:"src/features/sales/orders/services/",s:["api-v1.js — fn(body, { idempotencyKey })","idempotent(key) در config","mutations.js — idempotencyKeyFor(payload)","setQueryData اگر سندِ کامل برگشت","invalidate*Ecosystem"]},
  {t:"enumِ تازه",src:"src/shared/domain/enums/purchaseStatus.js",s:["XEnum با همان اعدادِ بکند","X_LABELS و X_TONES","Badge روی StatusBadge (اختیاری)","قواعد در domain/xRules.js"]},
  {t:"فیلترِ تازه",src:"balanceType در لیستِ مشتری",s:["کلید در filtersِ store (نامِ پارامترِ سرور)","افزودن به text یا instant — وگرنه فرستاده نمی‌شود","کنترل با store.setKey"]},
+ {t:"دکمه‌ی تاریخچه",src:"src/features/customers/pages/CustomerDetailPage.jsx",s:["AuditHistoryButton کنارِ فرمِ جزئیات","سند: documentKind + documentId","رکورد: entityType + entityKey","مجوز و جای هدر (PageHeaderActions) با خودِ کامپوننت"]},
  {t:"ویجتِ داشبورد",src:"src/features/dashboard/domain/widgetRegistry.js",s:["عضو در WIDGETS با isAvailable(ctx)","components/widgets/XWidget.jsx","ثبت در WIDGET_COMPONENTS","چیدمانِ کاربران خودکار به‌روز می‌شود"]}
 ];
 REC.forEach(r=>$("#recipeGrid").append(el("div","recipe",`<h3>${r.t}</h3><div class="src">${r.src}</div><ol>${r.s.map(x=>`<li>${x}</li>`).join("")}</ol>`)));

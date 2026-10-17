@@ -91,6 +91,7 @@ export const SALE_STATUS_TONES = Object.freeze({
 | کار | تابع |
 | --- | --- |
 | تاریخِ ISO سرور → `۱۴۰۳/۰۵/۱۲` | `gregorianToPersian` (`src/shared/lib/dateUtils.js`) — بخشِ ساعت را می‌بُرد |
+| زمانِ سرور → `۱۴۰۳/۰۵/۱۲ ۱۰:۴۲` / `۱۰:۴۲` | `gregorianToPersianDateTime` / `persianTimeOf` (`src/shared/lib/dateUtils.js`) — ساعت از خودِ متن، بدونِ `new Date` (سرور بی‌منطقه‌ی زمانی می‌فرستد) |
 | امروز/الان برای فرستادن به سرور | `todayIso()`، `nowLocalIso()`، `toDateOnly()` (همان فایل) |
 | ورودیِ تاریخ | `PersianDatePicker` (`src/shared/components/ui/persian-date-picker.jsx`) |
 | عدد با جداکننده‌ی فارسی | `formatNumber` (`toLocaleString("fa-IR")`)، `formatRial`، `formatDigits` (`src/shared/lib/numberFormat.js`) |

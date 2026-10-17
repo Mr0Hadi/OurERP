@@ -4,8 +4,9 @@ import {
   UNIT_CUSTODY_REASON_LABELS,
   UNPAID_CUSTODY_REASONS,
 } from "@/shared/domain/enums/unitStatus";
-import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { ROUTES } from "@/shared/constants/routes";
 import { gregorianToPersian, toDateOnly } from "@/shared/lib/dateUtils";
+import { DocumentKindEnum, documentRouteOf } from "@/shared/domain/enums/documentKind";
 
 /**
  * واژگانِ صفحه‌ی «دانه‌ها و برچسب‌ها» — هر قاعده‌ای که به یک دانه‌ی فیزیکی
@@ -241,24 +242,6 @@ export function whereaboutsOf(unit) {
 }
 
 // ─── سندها ───────────────────────────────────────────────────────────────────
-
-/** `DocumentKindEnum` بکند — روی حرکت‌ها و منشأ قرنطینه. */
-export const DocumentKindEnum = Object.freeze({
-  PURCHASE: 1,
-  SALE: 2,
-  PURCHASE_RETURN: 3,
-  SALE_RETURN: 4,
-});
-
-const DOCUMENT_ROUTES = {
-  [DocumentKindEnum.PURCHASE]: ROUTES.PURCHASES_DETAIL,
-  [DocumentKindEnum.SALE]: ROUTES.SALES_DETAIL,
-  [DocumentKindEnum.PURCHASE_RETURN]: ROUTES.PURCHASES_RETURNS_DETAIL,
-  [DocumentKindEnum.SALE_RETURN]: ROUTES.SALES_RETURNS_DETAIL,
-};
-
-export const documentRouteOf = (kind, id) =>
-  DOCUMENT_ROUTES[kind] && id ? routeWithId(DOCUMENT_ROUTES[kind], id) : null;
 
 // ─── مرتب‌سازی ──────────────────────────────────────────────────────────────
 

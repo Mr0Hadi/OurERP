@@ -16,6 +16,7 @@ import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function ProductDetailForm({ productData }) {
   const navigate = useNavigate();
@@ -166,5 +167,10 @@ export default function ProductDetailPage() {
     );
   }
 
-  return <ProductDetailForm key={productData.id} productData={productData} />;
+  return (
+    <>
+      <AuditHistoryButton entityType="Product" entityKey={productData.id} title={`کالا ${productData.name ?? ""}`.trim()} />
+      <ProductDetailForm key={productData.id} productData={productData} />
+    </>
+  );
 }

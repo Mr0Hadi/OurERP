@@ -8,6 +8,8 @@ import SaleIssuedView from "./SaleIssuedView";
 import { isSaleProforma } from "@/shared/domain/enums/saleStatus";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import { DocumentKindEnum } from "@/shared/domain/enums/documentKind";
 
 export default function SaleDetailPage() {
   const { id } = useParams();
@@ -46,8 +48,18 @@ export default function SaleDetailPage() {
   }
 
   // قفل پیش‌فاکتور: فقط پیش‌فاکتور ویرایش می‌شود؛ فروشِ صادرشده فقط‌خواندنی است.
-  if (!isSaleProforma(sale.status)) {
-    return <SaleIssuedView key={sale.id} sale={sale} />;
-  }
-  return <SaleForm key={sale.id} sale={sale} />;
+  return (
+    <>
+      <AuditHistoryButton
+        documentKind={DocumentKindEnum.SALE}
+        documentId={sale.id}
+        title={sale.invoiceNumber ? `فاکتور فروش ${sale.invoiceNumber}` : "پیش‌فاکتور فروش"}
+      />
+      {isSaleProforma(sale.status) ? (
+        <SaleForm key={sale.id} sale={sale} />
+      ) : (
+        <SaleIssuedView key={sale.id} sale={sale} />
+      )}
+    </>
+  );
 }
