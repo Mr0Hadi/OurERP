@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 
 import { NavMain } from "@/shared/components/layout/NavMain";
 import { NavTools } from "@/shared/components/layout/NavTools";
@@ -10,6 +11,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  useSidebar,
 } from "@/shared/components/ui/sidebar";
 
 import { navigationData } from "@/shared/constants/navigationData";
@@ -34,6 +36,13 @@ function filterNav(items, names) {
 
 export function AppSidebar({ ...props }) {
   const { names, isPending, isError } = usePermission();
+  const { pathname } = useLocation();
+  const { setOpenMobile } = useSidebar();
+
+  // در موبایل، با رفتن به صفحهٔ جدید دراور خودکار بسته شود.
+  useEffect(() => {
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   // اگر فهرستِ دسترسی نیامد، منو بی‌فیلتر نشان داده می‌شود — مثلِ `allows` و
   // `PermissionGate` که در این حالت صفحه را باز می‌گذارند و تصمیم با ۴۰۳ِ سرور است.

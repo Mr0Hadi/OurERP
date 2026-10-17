@@ -83,6 +83,7 @@ export const SALE_STATUS_TONES = Object.freeze({
 - `src/main.jsx`: `<DirectionProvider direction="rtl">` برای Radix (منو، popover، …).
 - `components.json`: `rtl: true` تا shadcn کامپوننت‌ها را با کلاس‌های منطقی تولید کند.
 - سایدبار: `<AppSidebar side="right" />` در `src/app/layouts/AppLayout.jsx`.
+- در موبایل سایدبار داخلِ `Sheet` باز می‌شود؛ `AppSidebar` با هر تغییرِ `pathname` (`useLocation`) `setOpenMobile(false)` می‌زند، پس با رفتن به هر صفحه دراور خودکار بسته می‌شود (برای همهٔ لینک‌های `Nav*`، بدون دست‌زدن به تک‌تک آن‌ها).
 - toastها `direction: "rtl"` در `src/app/providers/ToastProvider.jsx`.
 - کلاس‌های جهت: کدِ فعلی بیشتر کلاسِ فیزیکی (`ml-*`، `mr-*`) دارد تا منطقی (`ms-*`، `me-*`)؛ قراردادِ واحدی نیست (پایین). برای کدِ تازه کلاسِ منطقی امن‌تر است.
 
