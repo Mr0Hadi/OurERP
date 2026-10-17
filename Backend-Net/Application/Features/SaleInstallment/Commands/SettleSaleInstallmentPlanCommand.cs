@@ -1,4 +1,5 @@
 using Application.Common.Ledger;
+using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -31,6 +32,9 @@ namespace Application.Features.SaleInstallment.Commands
         public PaymentTypeEnum PaymentType { get; set; }
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
+
+        /// <summary>The cash box or bank account the money went into (see PaymentInput.BankAccountId).</summary>
+        public int? BankAccountId { get; set; }
         public DateTime? PaidAt { get; set; }
     }
 
@@ -47,11 +51,13 @@ namespace Application.Features.SaleInstallment.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPaymentAccountResolver _paymentAccountResolver;
 
-        public SettleSaleInstallmentPlanCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork)
+        public SettleSaleInstallmentPlanCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IPaymentAccountResolver paymentAccountResolver)
         {
             _context = context;
             _unitOfWork = unitOfWork;
+            _paymentAccountResolver = paymentAccountResolver;
         }
 
         public async Task<ResponseDto> Handle(SettleSaleInstallmentPlanCommand request, CancellationToken cancellationToken)
@@ -92,7 +98,9 @@ namespace Application.Features.SaleInstallment.Commands
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
                 TransferRef = request.TransferRef,
+                BankAccountId = request.BankAccountId,
             };
+            await _paymentAccountResolver.ApplyAsync(new[] { payment }, cancellationToken);
             await _context.PaymentDetails.AddAsync(payment, cancellationToken);
             await PartyLedger.SalePaymentAsync(_context, plan.Sale, payment, cancellationToken);
 

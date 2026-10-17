@@ -22,7 +22,8 @@ namespace Application.Features.Accounting.Queries
 
     /// <summary>
     /// The receipts-and-payments journal (دفتر دریافت و پرداخت): every payment row of every sale and purchase, installments
-    /// included, card reader or not. Split by payment method only - there are no cash-box or bank accounts yet.
+    /// included, card reader or not, and (since 2026-10-17) every on-account payment with no invoice. Each row names its cash
+    /// box / bank account when it has one; per-account balances are BankAccount/GetBankAccountStatement.
     /// </summary>
     public class GetPaymentJournalQuery : IRequest<ResponseDto>
     {
@@ -44,6 +45,12 @@ namespace Application.Features.Accounting.Queries
         public int? SupplierId { get; set; }
         public int? PosTerminalId { get; set; }
         public int? RecordedByUserId { get; set; }
+
+        /// <summary>Only rows through this cash box / bank account.</summary>
+        public int? BankAccountId { get; set; }
+
+        /// <summary>true = only on-account payments (no invoice), false = only invoice payments.</summary>
+        public bool? IsOnAccount { get; set; }
 
         /// <summary>Voided rows are left out unless asked for; they never count in the summary either way.</summary>
         public bool IncludeVoided { get; set; }
@@ -76,8 +83,9 @@ namespace Application.Features.Accounting.Queries
         /// <summary>The filtered payment rows (voided ones included only when asked for).</summary>
         public static IQueryable<PaymentDetail> Filter(IWMSDbContext context, GetPaymentJournalQuery request)
         {
-            // A payment with neither document, or on a deleted document, belongs to nobody's account.
-            var query = context.PaymentDetails.Where(x => (x.Sale != null && x.Sale.IsActive) || (x.Purchase != null && x.Purchase.IsActive));
+            // A payment on a deleted document belongs to nobody's account; an on-account payment belongs to its party's.
+            var query = context.PaymentDetails.Where(x => (x.Sale != null && x.Sale.IsActive) || (x.Purchase != null && x.Purchase.IsActive)
+                || x.CustomerId != null || x.SupplierId != null);
 
             if (!request.IncludeVoided)
                 query = query.Where(x => x.VoidedAt == null);
@@ -95,18 +103,25 @@ namespace Application.Features.Accounting.Queries
                 query = query.Where(x => request.Types.Contains(x.Type));
             if (request.Purpose.HasValue)
                 query = query.Where(x => x.Purpose == request.Purpose);
+            // The side is the party's: an on-account receipt from a customer is on the sale side.
             if (request.DocumentSide == DocumentSideEnum.SALE)
-                query = query.Where(x => x.SaleId != null);
+                query = query.Where(x => x.SaleId != null || x.CustomerId != null);
             if (request.DocumentSide == DocumentSideEnum.PURCHASE)
-                query = query.Where(x => x.PurchaseId != null);
+                query = query.Where(x => x.PurchaseId != null || x.SupplierId != null);
             if (request.SaleId.HasValue)
                 query = query.Where(x => x.SaleId == request.SaleId);
             if (request.PurchaseId.HasValue)
                 query = query.Where(x => x.PurchaseId == request.PurchaseId);
             if (request.CustomerId.HasValue)
-                query = query.Where(x => x.Sale != null && x.Sale.CustomerId == request.CustomerId);
+                query = query.Where(x => (x.Sale != null && x.Sale.CustomerId == request.CustomerId) || x.CustomerId == request.CustomerId);
             if (request.SupplierId.HasValue)
-                query = query.Where(x => x.Purchase != null && x.Purchase.SupplierId == request.SupplierId);
+                query = query.Where(x => (x.Purchase != null && x.Purchase.SupplierId == request.SupplierId) || x.SupplierId == request.SupplierId);
+            if (request.BankAccountId.HasValue)
+                query = query.Where(x => x.BankAccountId == request.BankAccountId);
+            if (request.IsOnAccount == true)
+                query = query.Where(x => x.SaleId == null && x.PurchaseId == null);
+            if (request.IsOnAccount == false)
+                query = query.Where(x => x.SaleId != null || x.PurchaseId != null);
             if (request.PosTerminalId.HasValue)
                 query = query.Where(x => x.PosTerminalId == request.PosTerminalId);
             if (request.RecordedByUserId.HasValue)
@@ -118,6 +133,9 @@ namespace Application.Features.Accounting.Queries
                 query = query.Where(x => (x.Sale != null && (x.Sale.InvoiceNumber.Contains(search)
                                               || (x.Sale.Customer.FirstName + " " + x.Sale.Customer.LastName).Contains(search)))
                     || (x.Purchase != null && (x.Purchase.InvoiceNumber.Contains(search) || x.Purchase.Supplier.CompanyName.Contains(search)))
+                    || (x.Customer != null && (x.Customer.FirstName + " " + x.Customer.LastName).Contains(search))
+                    || (x.Supplier != null && x.Supplier.CompanyName.Contains(search))
+                    || x.Description!.Contains(search)
                     || x.CheckNumber!.Contains(search)
                     || x.TransferRef!.Contains(search));
             }
@@ -136,13 +154,20 @@ namespace Application.Features.Accounting.Queries
                 Purpose = x.Purpose,
                 Amount = x.Amount,
                 VoidedAt = x.VoidedAt,
-                DocumentSide = x.SaleId != null ? DocumentSideEnum.SALE : DocumentSideEnum.PURCHASE,
+                DocumentSide = x.SaleId != null || x.CustomerId != null ? DocumentSideEnum.SALE : DocumentSideEnum.PURCHASE,
                 SaleId = x.SaleId,
                 PurchaseId = x.PurchaseId,
-                InvoiceNumber = x.Sale != null ? x.Sale.InvoiceNumber : x.Purchase!.InvoiceNumber,
-                PartyType = x.SaleId != null ? AccountingPartyTypeEnum.CUSTOMER : AccountingPartyTypeEnum.SUPPLIER,
-                PartyId = x.Sale != null ? x.Sale.CustomerId : x.Purchase!.SupplierId,
-                PartyName = x.Sale != null ? x.Sale.Customer.FirstName + " " + x.Sale.Customer.LastName : x.Purchase!.Supplier.CompanyName,
+                InvoiceNumber = x.Sale != null ? x.Sale.InvoiceNumber : x.Purchase != null ? x.Purchase.InvoiceNumber : null,
+                IsOnAccount = x.SaleId == null && x.PurchaseId == null,
+                PartyType = x.SaleId != null || x.CustomerId != null ? AccountingPartyTypeEnum.CUSTOMER : AccountingPartyTypeEnum.SUPPLIER,
+                PartyId = x.Sale != null ? x.Sale.CustomerId : x.Purchase != null ? x.Purchase.SupplierId : x.CustomerId ?? x.SupplierId ?? 0,
+                PartyName = x.Sale != null ? x.Sale.Customer.FirstName + " " + x.Sale.Customer.LastName
+                    : x.Purchase != null ? x.Purchase.Supplier.CompanyName
+                    : x.Customer != null ? x.Customer.FirstName + " " + x.Customer.LastName
+                    : x.Supplier!.CompanyName,
+                BankAccountId = x.BankAccountId,
+                BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
+                Description = x.Description,
                 CheckNumber = x.CheckNumber,
                 TransferRef = x.TransferRef,
                 PosTerminalId = x.PosTerminalId,

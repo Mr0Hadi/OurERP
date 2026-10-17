@@ -1,3 +1,4 @@
+using Application.Common.Payments;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
@@ -58,6 +59,8 @@ namespace Application.Features.Purchase.Commands
 
             var purchase = await _context.Purchases
                 .Include(x => x.Items)
+                .Include(x => x.PaymentDetails)
+                .Include(x => x.PaymentAllocations)
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
@@ -81,7 +84,13 @@ namespace Application.Features.Purchase.Commands
             // The supplier's invoice enters the account when the purchase leaves PROFORMA, and leaves it on cancellation
             // (a draft cancelled before that never reached the account). Payments stay; a supplier refund is a payment row.
             if (request.Status == PurchaseStatusEnum.CANCELLED)
+            {
                 await PartyLedger.PurchaseCancelledAsync(_context, purchase, DateTime.Now, cancellationToken);
+                // On-account money applied to it goes back to being unallocated (free for another invoice); its own payment
+                // rows stay, as before.
+                if (DocumentPayments.ReleaseAllocations(purchase.PaymentAllocations) > 0)
+                    purchase.PaidAmount = DocumentPayments.NetPaid(purchase.PaymentDetails, purchase.PaymentAllocations, DocumentPayments.PurchaseDirection);
+            }
             else if (purchase.Status == PurchaseStatusEnum.PROFORMA)
                 await PartyLedger.PurchaseInvoiceRecordedAsync(_context, purchase, purchase.InvoiceDate ?? DateTime.Now, cancellationToken);
 

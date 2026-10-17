@@ -34,6 +34,7 @@
 20. [داشبورد و دفترهای حسابداری (Accounting)](#20-داشبورد-و-دفترهای-حسابداری-accounting)
 21. [تاریخچه تغییرات (Audit)](#21-تاریخچه-تغییرات-audit)
 22. [تنظیمات سامانه (Setting)](#22-تنظیمات-سامانه-setting)
+23. [صندوق و بانک، دریافت و پرداخت علی‌الحساب (BankAccount، PartyAccount)](#23-صندوق-و-بانک-دریافت-و-پرداخت-علیالحساب-bankaccount-partyaccount)
 
 ---
 
@@ -693,6 +694,11 @@ Authorization: Bearer {accessToken}
 | کارت‌خوان | `Pos/Charge` | `PosCharge` |
 | | `GetPosTerminalList/Detail` / بقیه | `PosTerminalView` **یا** `PosCharge` (از ۲۰۲۶-۱۰-۰۵، تا صندوق‌دار بتواند دستگاه را انتخاب کند) / `PosTerminalManage` |
 | حساب اشخاص | `PartyAccount/GetPartyStatement` | `PartyStatementView` |
+| | `PartyAccount/GetPartyPaymentList`، `GetPartyPaymentDetail` | `PartyStatementView` **یا** `PartyPaymentCreate` |
+| | `PartyAccount/AddPartyPayment`، `AllocatePartyPayment`، `RemovePartyPaymentAllocation`، `GetAllocatableDocumentList` / `VoidPartyPayment` | `PartyPaymentCreate` / `PartyPaymentVoid` |
+| صندوق و بانک | `BankAccount/GetBankAccountList`، `GetBankAccountDetail`، `GetBankAccountStatement` | `BankAccountView` **یا** `BankAccountManage` |
+| | `BankAccount/GetBankAccountOptions` (انتخابگر، بدون مانده) | هر کسی که پول ثبت می‌کند: `BankAccountView`، `BankAccountManage`، `SalePayment`، `PurchasePayment`، `PartyPaymentCreate`، `SaleInstallmentPay`، `SaleInstallmentManage`، `SaleInPerson`، `PurchaseCreate`، `PosTerminalManage` |
+| | `BankAccount/CreateBankAccount`، `UpdateBankAccount`، `DeleteBankAccount`، `TransferBetweenAccounts`، `VoidTransfer` | `BankAccountManage` |
 | حسابداری | تمام `Accounting/*` و خروجی‌های اکسلِ آن‌ها | `AccountingView` |
 | تاریخچه تغییرات | تمام `Audit/*` | `AuditLogView` |
 | تنظیمات سامانه | `Setting/GetSystemSettings` / `Setting/UpdateSystemSettings` | `SettingView` **یا** `SettingManage` / `SettingManage` |
@@ -1488,6 +1494,8 @@ data: سند کامل. دسترسی: `PurchaseUpdate`.
 - `direction`: خالی یا `2` (`OUT`) = ما پرداختیم؛ `1` (`IN`) = تامین‌کننده پول برگرداند (بازپرداخت).
 - `type` یکی از `CASH`/`CREDIT`/`CHECK`/`TRANSFER`؛ `amount > 0`؛ `paidAt` خالی = همین لحظه.
 - روی خرید لغوشده فقط `IN` پذیرفته می‌شود. پول برگشتی بیشتر از پرداخت‌شده ⇒ ۴۰۰.
+- **`bankAccountId`** (از ۲۰۲۶-۱۰-۱۷، اختیاری): صندوق یا حساب بانکی‌ای که پول از آن گذشت. قواعدش برای **همه‌ی** مسیرهای ثبت پول یکی است
+  (بخش ۲۳ «حساب روی هر دریافت و پرداخت»).
 - data: سند کامل (با `paidAmount` تازه). دسترسی: `PurchasePayment`.
 
 ### `POST api/Purchase/EditPurchasePayment`
@@ -2339,6 +2347,10 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 - **فروش اقساطی:** تا وقتی قرارداد اقساطی‌اش لغو نشده، ۴۰۰ — پول آن از مسیر `CreateSaleInstallmentPlan`/`PaySaleInstallment`/`SettleSaleInstallmentPlan`
   می‌آید. ردیف‌های اقساطی (`purpose ≠ 0`) با `Edit`/`Void` تغییر نمی‌کنند (۴۰۰).
 - روی فروش لغوشده فقط `OUT`.
+- `bankAccountId` (اختیاری) مثل نسخه‌ی خرید — بخش ۲۳.
+- **`paidAmount` = ردیف‌های پرداخت + تخصیص‌های فعالِ دریافت‌های علی‌الحساب** (از ۲۰۲۶-۱۰-۱۷)، در فروش و خرید. جزئیات سند هر دو را دارد:
+  `paymentDetails[]` (پولی که روی همین فاکتور جابه‌جا شد) و `paymentAllocations[]` (بخشی از یک دریافت علی‌الحساب که به این فاکتور خورد؛ بخش ۲۳).
+  لغو فروش/خرید تخصیص‌هایش را آزاد می‌کند (پول به حالت تخصیص‌نیافته برمی‌گردد)؛ ردیف‌های پرداخت خودش مثل قبل می‌مانند.
 
 **اطلاعات کارتخوان روی ردیف پرداخت (از ۲۰۲۶-۱۰-۰۵، همه اختیاری).** ردیف «انتقال بانکی» (`type = 3`) می‌تواند این‌ها را هم داشته باشد،
 هم در بدنه‌ی `AddSalePayment`/`EditSalePayment` (و نسخه‌های خرید)، هم در `payments[]`ِ `CompleteInPersonSale` و `paymentDetails[]`ِ `CreatePurchase`،
@@ -3158,8 +3170,12 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 233 | PosManualRecord | ثبت دستی پرداخت کارتخوان از روی رسید (فعلاً لازمه‌ی هر پرداخت کارتخوان) |
 | 234 | PosPaymentReportView | مشاهده گزارش پرداخت‌های کارتخوان (`Pos/GetPosPaymentList`) |
 | 250 | PartyStatementView | مشاهده گردش حساب مشتریان و تامین‌کنندگان |
+| 251 | PartyPaymentCreate | ثبت دریافت و پرداخت علی‌الحساب و تخصیص به فاکتورها |
+| 252 | PartyPaymentVoid | ابطال دریافت و پرداخت علی‌الحساب |
 | 260 | AccountingView | مشاهده داشبورد و دفترهای حسابداری (`Accounting/*`) |
 | 261 | SaleWarehouseIssueResolve | رسیدگی به کالای معیوب/مفقودِ گزارش‌شده‌ی انبار |
+| 262 | BankAccountView | مشاهده صندوق‌ها و حساب‌های بانکی (مانده و گردش) |
+| 263 | BankAccountManage | مدیریت صندوق‌ها و حساب‌های بانکی و انتقال بین آن‌ها |
 | 270 | AuditLogView | مشاهده تاریخچه تغییرات (`Audit/*`) |
 | 280 | SettingView | مشاهده تنظیمات سامانه (`Setting/GetSystemSettings`) |
 | 281 | SettingManage | ویرایش تنظیمات سامانه (`Setting/UpdateSystemSettings`) |
@@ -3540,6 +3556,25 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۷ (صندوق و بانک، دریافت و پرداخت علی‌الحساب) — افزودنی
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `api/BankAccount/*` | — | تازه: صندوق/حساب بانکی، مانده، گردش، انتقال بین حساب‌ها (بخش ۲۳) |
+| `PartyAccount/AddPartyPayment`، `AllocatePartyPayment`، `RemovePartyPaymentAllocation`، `VoidPartyPayment`، `GetPartyPaymentList`، `GetPartyPaymentDetail`، `GetAllocatableDocumentList` | — | تازه (بخش ۲۳) |
+| بدنه‌ی هر ثبت پول: `Add/Edit{Sale,Purchase}Payment`، `paymentDetails[]`ِ `CreatePurchase`، `payments[]`ِ `CompleteInPersonSale`، `CreateSaleInstallmentPlan`، `PaySaleInstallment`، `SettleSaleInstallmentPlan` | — | `bankAccountId` (اختیاری) |
+| `paymentDetails[]` در جزئیات فروش/خرید/قرارداد اقساطی | — | `bankAccountId`، `bankAccountTitle` |
+| جزئیات فروش و خرید | `paidAmount` = ردیف‌های پرداخت | `paidAmount` = ردیف‌ها + تخصیص‌های فعال؛ آرایه‌ی تازه‌ی `paymentAllocations[]` |
+| `ChangeSaleStatus`/`ChangePurchaseStatus` (لغو)، `DeletePurchase` | — | تخصیص‌های علی‌الحساب آزاد می‌شوند |
+| `CreatePosTerminal`/`UpdatePosTerminal` و فهرست/جزئیات کارتخوان | — | `bankAccountId` (حسابی که دستگاه به آن واریز می‌کند) و `bankAccountTitle` |
+| `Accounting/GetPaymentJournal` | فقط پرداخت‌های روی فاکتور | دریافت/پرداخت‌های علی‌الحساب هم؛ ردیف: `isOnAccount`، `bankAccountId`، `bankAccountTitle`، `description` (`invoiceNumber` برای علی‌الحساب `null`)؛ فیلترهای تازه‌ی `bankAccountId`، `isOnAccount` |
+| تنظیمات | — | `Payment.RequireBankAccount` (پیش‌فرض خاموش) |
+| `PermissionEnum` | — | `PartyPaymentCreate = 251`، `PartyPaymentVoid = 252`، `BankAccountView = 262`، `BankAccountManage = 263` |
+| `AuditActionEnum` | — | `1100`–`1104`، `1110`–`1113` |
+
+**برای فرانت:** تا وقتی همه‌ی فرم‌های پرداخت انتخابگر حساب ندارند، `Payment.RequireBankAccount` را خاموش نگه دارید. پرداخت‌های قدیمی حساب ندارند
+و در `unassignedNet`ِ فهرست حساب‌ها دیده می‌شوند.
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۷ (مهلت رزرو پیش‌فاکتور و تنظیمات سامانه) — افزودنی، با یک تغییر رفتار
 
@@ -4632,6 +4667,15 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 902 | `UpdatePosTerminal` | ویرایش کارت‌خوان |
 | 903 | `DeletePosTerminal` | حذف کارت‌خوان |
 | 1000 | `UpdateSystemSettings` | ویرایش تنظیمات سامانه |
+| 1100 | `CreateBankAccount` | ایجاد صندوق/حساب بانکی |
+| 1101 | `UpdateBankAccount` | ویرایش صندوق/حساب بانکی |
+| 1102 | `DeleteBankAccount` | حذف صندوق/حساب بانکی |
+| 1103 | `TransferBetweenBankAccounts` | انتقال بین حساب‌ها |
+| 1104 | `VoidBankAccountTransfer` | ابطال انتقال بین حساب‌ها |
+| 1110 | `AddPartyPayment` | ثبت دریافت/پرداخت علی‌الحساب |
+| 1111 | `AllocatePartyPayment` | تخصیص دریافت/پرداخت به فاکتور |
+| 1112 | `RemovePartyPaymentAllocation` | حذف تخصیص دریافت/پرداخت |
+| 1113 | `VoidPartyPayment` | ابطال دریافت/پرداخت علی‌الحساب |
 
 ---
 
@@ -4648,6 +4692,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | کلید | نوع | پیش‌فرض | حدود | معنی |
 |---|---|---|---|---|
 | `Sale.ReservationMinutes` | INTEGER | `10` | `0`–`10080` دقیقه | مهلت رزرو کالای پیش‌فاکتور پس از تأیید انبار (بخش ۱۱)؛ `0` = بدون انقضا؛ فقط روی رزروهای بعدی اثر دارد |
+| `Payment.RequireBankAccount` | BOOLEAN | `false` | — | از ۲۰۲۶-۱۰-۱۷: روشن ⇒ هر دریافت/پرداخت تازه باید صندوق یا حساب بانکی داشته باشد (بخش ۲۳)؛ ردیف نسیه (`CREDIT`) معاف است |
 
 ### `GET api/Setting/GetSystemSettings`
 
@@ -4703,3 +4748,178 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | مقدار | معنی |
 |---|---|
 | 1 | فروش (SALE) |
+| 2 | دریافت و پرداخت (PAYMENT) |
+
+---
+
+## 23. صندوق و بانک، دریافت و پرداخت علی‌الحساب (BankAccount، PartyAccount)
+
+> از ۲۰۲۶-۱۰-۱۷ (GAP-03، frontend-requests ۲۲.۱ و ۲۲.۲). چرخه‌ی چک (۲۲.۳) هنوز ساخته نشده: چک فعلاً مثل نقد و در تاریخ `paidAt` حساب می‌شود.
+
+### مفهوم
+
+- **صندوق/حساب بانکی** (`BankAccount`): جایی که پول در آن است. هر ردیف پرداخت می‌تواند بگوید از کدام حساب گذشت (`bankAccountId`).
+  **مانده** هیچ‌جا ذخیره نمی‌شود؛ همیشه از روی ردیف‌ها حساب می‌شود: مانده‌ی اول دوره + دریافت‌ها − پرداخت‌ها + انتقال‌های ورودی − انتقال‌های خروجی
+  (ردیف‌های باطل‌شده حساب نمی‌شوند). مانده ممکن است منفی شود — یعنی ثبتی جا افتاده؛ سرور جلوی ثبت را نمی‌گیرد.
+- **دریافت/پرداخت علی‌الحساب**: پولی که از مشتری گرفته یا به تامین‌کننده داده شده **بدون فاکتور**. یک ردیف پرداخت عادی است که به‌جای فاکتور،
+  نام طرف حساب را دارد. **همان لحظه** مانده‌ی حساب شخص (`GetPartyStatement`) و مانده‌ی صندوق/بانک را عوض می‌کند.
+- **تخصیص** (allocation): بخشی از یک دریافت علی‌الحساب که بعداً به یک فاکتور زده می‌شود. فقط دفترداری است: پولی جابه‌جا نمی‌شود و حساب شخص و
+  صندوق دوباره تغییر نمی‌کنند؛ فقط `paidAmount`ِ فاکتور بالا می‌رود و از «تخصیص‌نیافته»ی آن دریافت کم می‌شود. می‌شود هیچ‌وقت هم تخصیص نداد —
+  پول روی حساب شخص می‌ماند (بستانکاری مشتری / پیش‌پرداخت به تامین‌کننده).
+
+### حساب روی هر دریافت و پرداخت
+
+همه‌ی مسیرهای ثبت پول `bankAccountId` (اختیاری) می‌گیرند و یک قاعده دارند:
+`Add/Edit{Sale,Purchase}Payment`، `paymentDetails[]`ِ `CreatePurchase`، `payments[]`ِ `CompleteInPersonSale`، `CreateSaleInstallmentPlan` (پیش‌پرداخت)،
+`PaySaleInstallment`، `SettleSaleInstallmentPlan`، `AddPartyPayment`.
+- حساب داده‌شده باید وجود داشته باشد و فعال باشد، وگرنه ۴۰۰.
+- پرداخت کارتخوانی که حساب ندارد، حسابِ دستگاه (`posTerminal.bankAccountId`) را می‌گیرد.
+- اگر تنظیم `Payment.RequireBankAccount` روشن باشد، ردیفی که باز هم حساب ندارد ۴۰۰ می‌گیرد — به‌جز ردیف نسیه (`type = 1`، `CREDIT`).
+- **هنوز ساخته نشده:** پول مرجوعی‌ها (اثرهای `moneyIn`/`moneyOut` در بخش‌های ۱۰ و ۱۲) حساب نمی‌گیرد و در گردش صندوق/بانک دیده نمی‌شود.
+
+### `GET api/BankAccount/GetBankAccountList`
+
+**Query:** `kind` (اختیاری، `BankAccountKindEnum`)، `includeInactive` (پیش‌فرض `false`). صفحه‌بندی ندارد (تعداد حساب‌ها کم است).
+```json
+{
+  "accounts": [
+    { "id": 1, "title": "صندوق فروشگاه", "kind": 1, "kindTitle": "صندوق", "bankName": null, "accountNumber": null, "cardNumber": null,
+      "iban": null, "openingBalance": 1000000, "openingDate": "2026-10-17T00:00:00", "description": null, "isActive": true, "balance": 3800000 }
+  ],
+  "totalCashBoxBalance": 3800000, "totalBankBalance": 0, "totalBalance": 3800000,
+  "unassignedNet": 25000000
+}
+```
+`unassignedNet`: خالصِ دریافت‌ها و پرداخت‌هایی که هیچ حسابی ندارند (ردیف‌های قدیمی، یا تا وقتی تنظیم خاموش است) — برای تطبیق جمع کل.
+
+### `GET api/BankAccount/GetBankAccountOptions`
+
+انتخابگر حساب در فرم‌های پرداخت: فقط حساب‌های فعال، **بدون مانده** — `[{ "id", "title", "kind", "bankName" }]`. `kind` اختیاری. دسترسی‌اش برای هر
+کسی که پول ثبت می‌کند باز است (جدول دسترسی‌ها، بخش ۱).
+
+### `GET api/BankAccount/GetBankAccountDetail?id=1`
+
+یک حساب با `balance` (همان شکل ردیف فهرست).
+
+### `GET api/BankAccount/GetBankAccountStatement`
+
+**Query:** `bankAccountId` (الزامی)، `fromDate`، `toDate` (هر دو روز شامل). صفحه‌بندی ندارد؛ با تاریخ محدود کنید.
+```json
+{
+  "account": { "...": "مثل فهرست" },
+  "fromDate": null, "toDate": null,
+  "openingBalance": 1000000, "totalIn": 3500000, "totalOut": 2700000, "closingBalance": 1800000,
+  "rows": [
+    { "kind": 1, "occurredAt": "...", "in": 3000000, "out": 0, "balance": 4000000, "paymentDetailId": 51, "paymentType": 0,
+      "saleId": 200, "purchaseId": null, "invoiceNumber": "INV-1405-0012", "customerId": 1, "supplierId": null, "partyName": "علی رضایی",
+      "isOnAccount": false, "transferId": null, "counterpartBankAccountId": null, "counterpartBankAccountTitle": null,
+      "reference": null, "description": null },
+    { "kind": 3, "occurredAt": "...", "in": 0, "out": 2000000, "balance": 1800000, "transferId": 4,
+      "counterpartBankAccountId": 2, "counterpartBankAccountTitle": "بانک ملت", "reference": null, "description": "واریز به بانک" }
+  ]
+}
+```
+`openingBalance` = مانده‌ی اول دوره‌ی حساب + هر گردشی پیش از `fromDate`. `kind`: `BankAccountMovementKindEnum`. ردیف‌ها قدیمی‌ترین اول، با مانده‌ی جاری.
+
+### `POST api/BankAccount/CreateBankAccount` / `PUT api/BankAccount/UpdateBankAccount`
+
+```json
+{ "title": "بانک ملت - جاری", "kind": 2, "bankName": "ملت", "accountNumber": "123456789", "cardNumber": null,
+  "iban": "IR120120000000123456789012", "openingBalance": 0, "openingDate": "2026-10-17", "description": null }
+```
+`Update` همین به‌علاوه‌ی `id`. عنوان الزامی و بین حساب‌های فعال یکتا. `iban` (شبا): `IR` + ۲۴ رقم (فاصله‌ها نادیده). فیلدهای بانکی برای
+`CASH_BOX` ذخیره نمی‌شوند. نوع حسابی که گردش دارد عوض نمی‌شود. تغییر مانده‌ی اول دوره همه‌ی مانده‌های بعدی را جابه‌جا می‌کند (در تاریخچه‌ی تغییرات
+ثبت است). **data:** حساب با مانده.
+
+### `DELETE api/BankAccount/DeleteBankAccount?id=1`
+
+غیرفعال‌سازی (حذف نرم): گردشش می‌ماند، فقط برای پول تازه انتخاب نمی‌شود. اگر کارتخوان فعالی به آن واریز می‌کند ۴۰۰. **data:** `{ "id" }`.
+
+### `POST api/BankAccount/TransferBetweenAccounts`
+
+```json
+{ "fromBankAccountId": 1, "toBankAccountId": 2, "amount": 2000000, "transferredAt": null, "transferRef": "TR-88", "description": "واریز به بانک" }
+```
+انتقال بین دو حساب خودمان (واریز صندوق به بانک و ...). پرداخت نیست: طرف حساب ندارد و حساب هیچ شخصی را تغییر نمی‌دهد. هر دو حساب فعال و متفاوت.
+**data:** `{ id, fromBankAccountId, fromBankAccountTitle, toBankAccountId, toBankAccountTitle, amount, transferredAt, transferRef, description, voidedAt, recordedAt, recordedByUserId }`.
+
+### `POST api/BankAccount/VoidTransfer`
+
+`{ "id": 4 }` — ابطال انتقال اشتباه (ویرایش ندارد؛ ابطال و ثبت دوباره). **data:** همان شکل انتقال.
+
+### `POST api/PartyAccount/AddPartyPayment`
+
+```json
+{ "customerId": 1, "supplierId": null, "direction": null, "type": 0, "amount": 5000000, "paidAt": null,
+  "checkNumber": null, "transferRef": null, "bankAccountId": 1, "description": "علی‌الحساب",
+  "posTerminalId": null, "maskedCardNumber": null, "approvalCode": null, "traceNumber": null,
+  "allocations": [ { "saleId": 200, "purchaseId": null, "amount": 3000000 } ] }
+```
+- دقیقاً یکی از `customerId`/`supplierId`. `direction` خالی ⇒ مشتری `IN` (دریافت)، تامین‌کننده `OUT` (پرداخت). جهت مخالف = برگرداندن بستانکاری
+  (پول به مشتری، یا تامین‌کننده به ما) — ثبت می‌شود ولی **هرگز تخصیص داده نمی‌شود**.
+- `type` یکی از `CASH`/`CREDIT`/`CHECK`/`TRANSFER`؛ فیلدهای کارتخوان مثل بخش ۱۱. `allocations` اختیاری: تخصیص در همان درخواست (قواعد زیر).
+- حساب شخص: دریافت ⇒ بستانکار، پرداخت ⇒ بدهکار (ردیف `PAYMENT` با شرح «دریافت/پرداخت علی‌الحساب»).
+- **data:** `PartyPaymentDto` (پایین).
+
+### `POST api/PartyAccount/AllocatePartyPayment`
+
+```json
+{ "paymentDetailId": 51, "allocations": [ { "saleId": 200, "amount": 3000000 }, { "saleId": 201, "amount": 1500000 } ] }
+```
+همه یا هیچ. قواعد (برای تخصیص‌های `AddPartyPayment` هم):
+- فقط دریافت/پرداخت علی‌الحساب، ابطال‌نشده، در جهت طبیعی (دریافت از مشتری ⇒ فروش‌های همان مشتری؛ پرداخت به تامین‌کننده ⇒ خریدهای همان تامین‌کننده).
+- هر ردیف دقیقاً یکی از `saleId`/`purchaseId`، و هر فاکتور یک‌بار.
+- فاکتور فعال و لغونشده؛ فروش اقساطی تا قراردادش لغو نشده ۴۰۰؛ **پیش‌فاکتور فروش فقط در `WAREHOUSE_CHECKED` و پیش از پایان مهلت رزرو** —
+  و تخصیص به آن یعنی پرداختش: فاکتور صادر و `PROCESSING` می‌شود (مثل `AddSalePayment`). پیش‌فاکتور خرید مثل پیش‌پرداخت، قفل نمی‌شود.
+- مبلغ هر ردیف ≤ مانده‌ی فاکتور (فروش: `totalAmount − paidAmount`؛ خرید: `payableAmount − paidAmount`) و جمع ≤ تخصیص‌نیافته‌ی پرداخت.
+- **data:** `PartyPaymentDto`.
+
+### `POST api/PartyAccount/RemovePartyPaymentAllocation`
+
+`{ "allocationId": 9 }` — فاکتور دوباره آن مبلغ را بدهکار می‌شود و پرداخت دوباره همان قدر تخصیص‌نیافته دارد. حساب شخص تکان نمی‌خورد. فاکتوری که با
+این تخصیص صادر شده بود صادرشده می‌ماند. **data:** `PartyPaymentDto`.
+
+### `POST api/PartyAccount/VoidPartyPayment`
+
+`{ "paymentDetailId": 51 }` — ابطال دریافت/پرداخت علی‌الحساب اشتباه (ردیف برگشت در حساب شخص؛ از گردش صندوق/بانک بیرون می‌رود). تا وقتی بخشی از
+آن تخصیص دارد ۴۰۰ — اول تخصیص‌ها را بردارید. پرداخت روی فاکتور از مسیر خود فاکتور ابطال می‌شود. دسترسی: `PartyPaymentVoid`. **data:** `PartyPaymentDto`.
+
+### `GET api/PartyAccount/GetPartyPaymentList`
+
+**Query:** `page`، `take`، `customerId`، `supplierId`، `direction`، `bankAccountId`، `hasUnallocated` (`true` = فقط آن‌هایی که هنوز قابل تخصیص‌اند)،
+`fromDate`، `toDate` (روی `paidAt`)، `includeVoided`، `search` (نام طرف، شماره چک/پیگیری، شرح)، `sortBy` (`PartyPaymentListSortEnum`:
+`PAID_AT = 0` (پیش‌فرض، جدیدترین اول)، `AMOUNT = 1`، `PARTY_NAME = 2`، `UNALLOCATED_AMOUNT = 3`)، `sortDirection`.
+**data:** `{ "partyPaymentList": [PartyPaymentDto بدون allocations], "page": { ... } }`. فقط پرداخت‌های **بدون فاکتور**؛ پرداخت‌های روی فاکتور در
+`Accounting/GetPaymentJournal` هستند.
+
+### `GET api/PartyAccount/GetPartyPaymentDetail?id=51`
+
+`PartyPaymentDto` با همه‌ی تخصیص‌ها (فعال و حذف‌شده):
+```json
+{ "id": 51, "customerId": 1, "supplierId": null, "partyName": "علی رضایی", "direction": 1, "type": 0,
+  "amount": 5000000, "allocatedAmount": 4500000, "unallocatedAmount": 500000, "canAllocate": true,
+  "paidAt": "...", "checkNumber": null, "transferRef": null, "bankAccountId": 1, "bankAccountTitle": "صندوق فروشگاه",
+  "posTerminalId": null, "description": "علی‌الحساب", "voidedAt": null, "recordedAt": "...", "recordedByUserId": 3, "recordedByName": "...",
+  "allocations": [ { "id": 9, "paymentDetailId": 51, "saleId": 200, "purchaseId": null, "invoiceNumber": "INV-1405-0012",
+    "amount": 3000000, "allocatedAt": "...", "allocatedByUserId": 3, "voidedAt": null, "paymentType": 0, "paymentPaidAt": "...",
+    "bankAccountTitle": "صندوق فروشگاه" } ] }
+```
+`canAllocate`: جهت طبیعی و ابطال‌نشده. همین شکلِ `allocations[]` در `paymentAllocations[]`ِ جزئیات فروش و خرید هم برمی‌گردد.
+
+### `GET api/PartyAccount/GetAllocatableDocumentList`
+
+**Query:** دقیقاً یکی از `customerId`/`supplierId`. فاکتورهای بازِ همان شخص که الان می‌شود به آن‌ها تخصیص داد (قواعد بالا)، قدیمی‌ترین سررسید اول:
+`[{ "saleId", "purchaseId", "invoiceNumber", "invoiceDate", "paymentDate", "isProforma", "payableAmount", "paidAmount", "remainingAmount" }]`.
+
+### `BankAccountKindEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | صندوق (CASH_BOX) |
+| 2 | حساب بانکی (BANK) |
+
+### `BankAccountMovementKindEnum` (ردیف‌های گردش حساب)
+| مقدار | معنی |
+|---|---|
+| 1 | دریافت/پرداخت (PAYMENT) |
+| 2 | انتقال به این حساب (TRANSFER_IN) |
+| 3 | انتقال از این حساب (TRANSFER_OUT) |

@@ -55,6 +55,9 @@ namespace Application.Common.Contracts.Context
         DbSet<AuditEvent> AuditEvents { get; }
         DbSet<AuditEntityChange> AuditEntityChanges { get; }
         DbSet<SystemSetting> SystemSettings { get; }
+        DbSet<BankAccount> BankAccounts { get; }
+        DbSet<BankAccountTransfer> BankAccountTransfers { get; }
+        DbSet<PaymentAllocation> PaymentAllocations { get; }
 
         DbSet<T> Set<T>() where T : class;
 

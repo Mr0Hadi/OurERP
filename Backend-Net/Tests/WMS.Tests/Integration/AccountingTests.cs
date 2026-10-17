@@ -52,9 +52,9 @@ namespace WMS.Tests.Integration
 
         private static async Task<History> BuildHistoryAsync(TestScope scope)
         {
-            var addSalePayment = new AddSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
+            var addSalePayment = new AddSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.PaymentAccounts);
             var purchaseStatus = new ChangePurchaseStatusCommandHandler(scope.Db, FakeObjectStorage.Instance, scope.UnitOfWork);
-            var addPurchasePayment = new AddPurchasePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var addPurchasePayment = new AddPurchasePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.PaymentAccounts);
             var receive = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
             // A: 4,000 paid, 1,000 paid and voided, due 45 days ago.
@@ -77,7 +77,7 @@ namespace WMS.Tests.Integration
             var c = ProformaSale(scope, 10_000_000);
             c.Sale.PaymentType = PaymentTypeEnum.INSTALLMENT;
             scope.Context.SaveChanges();
-            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork).Handle(new CreateSaleInstallmentPlanCommand
+            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, scope.PaymentAccounts).Handle(new CreateSaleInstallmentPlanCommand
             {
                 SaleId = c.Sale.Id,
                 MarkupPercentage = 20m,

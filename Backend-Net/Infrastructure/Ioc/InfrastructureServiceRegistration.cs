@@ -1,6 +1,7 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Audit;
 using Application.Common.Contracts.Barcode;
+using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.DataTransfer;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.InventoryCosting;
@@ -67,6 +68,7 @@ namespace Infrastructure.Ioc
             services.AddScoped<IOrgRoleService, OrgRoleService>();
             services.AddScoped<IPermissionService, PermissionService>();
             services.AddScoped<ISystemSettingService, SystemSettingService>();
+            services.AddScoped<IPaymentAccountResolver, PaymentAccountResolver>();
             services.AddScoped<IAuditScope, AuditScope>();
             services.AddScoped<IPurchaseReturnCalculationService, PurchaseReturnCalculationService>();
 

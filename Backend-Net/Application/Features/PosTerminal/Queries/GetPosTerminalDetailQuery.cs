@@ -36,6 +36,8 @@ namespace Application.Features.PosTerminal.Queries
                     ComPort = x.ComPort,
                     TerminalId = x.TerminalId,
                     MerchantId = x.MerchantId,
+                    BankAccountId = x.BankAccountId,
+                    BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
                     BankCode = x.BankCode
                 })
                 .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("دستگاه کارتخوان مورد نظر یافت نشد.");

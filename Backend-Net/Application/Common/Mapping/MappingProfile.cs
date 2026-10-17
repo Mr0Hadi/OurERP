@@ -43,7 +43,15 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.Source, opt => opt.MapFrom(src => PaymentWriter.SourceOf(src)))
 				.ForMember(dest => dest.RecordedAt, opt => opt.Ignore())
 				.ForMember(dest => dest.RecordedByUserId, opt => opt.Ignore())
-				.ForMember(dest => dest.RecordedByUser, opt => opt.Ignore());
+				.ForMember(dest => dest.RecordedByUser, opt => opt.Ignore())
+				// A document's payment row: the party is the document's, and on-account fields stay empty.
+				.ForMember(dest => dest.CustomerId, opt => opt.Ignore())
+				.ForMember(dest => dest.Customer, opt => opt.Ignore())
+				.ForMember(dest => dest.SupplierId, opt => opt.Ignore())
+				.ForMember(dest => dest.Supplier, opt => opt.Ignore())
+				.ForMember(dest => dest.BankAccount, opt => opt.Ignore())
+				.ForMember(dest => dest.Description, opt => opt.Ignore())
+				.ForMember(dest => dest.Allocations, opt => opt.Ignore());
 
 			CreateMap<PaymentDetail, PaymentDetailDto>();
 
@@ -130,6 +138,7 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<CreatePosTerminalCommand, Domain.Entities.PosTerminal>()
+				.ForMember(dest => dest.BankAccount, opt => opt.Ignore())
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			CreateMap<CreateCustomerCommand, Customer>()

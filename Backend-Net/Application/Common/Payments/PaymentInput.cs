@@ -17,6 +17,12 @@ namespace Application.Common.Payments
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
 
+        /// <summary>
+        /// The cash box or bank account the money went through. Optional unless the Payment.RequireBankAccount setting is on;
+        /// a card-reader row whose device is linked to an account gets that account when this is left out.
+        /// </summary>
+        public int? BankAccountId { get; set; }
+
         /// <summary>Card-reader details, TRANSFER rows only (see IPosPaymentFields).</summary>
         public int? PosTerminalId { get; set; }
         public string? MaskedCardNumber { get; set; }
@@ -29,6 +35,7 @@ namespace Application.Common.Payments
         public PaymentInputValidator()
         {
             RuleFor(x => x.Amount).GreaterThan(0UL).WithMessage("مبلغ پرداخت باید از صفر بیشتر باشد.");
+            RuleFor(x => x.BankAccountId).GreaterThan(0).When(x => x.BankAccountId.HasValue).WithMessage("صندوق/حساب بانکی نامعتبر است.");
             RuleFor(x => x.Type).Must(DocumentPayments.IsRowMethod)
                 .WithMessage("روش پرداخت باید نقدی، نسیه، چک یا انتقال بانکی باشد.");
             Include(new PosPaymentFieldsValidator());
@@ -51,6 +58,7 @@ namespace Application.Common.Payments
             PaidAt = input.PaidAt ?? DateTime.Now,
             CheckNumber = input.CheckNumber,
             TransferRef = input.TransferRef?.Trim(),
+            BankAccountId = input.BankAccountId,
             PosTerminalId = input.PosTerminalId,
             Source = SourceOf(input),
             MaskedCardNumber = input.MaskedCardNumber,

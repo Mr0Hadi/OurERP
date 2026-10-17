@@ -1850,6 +1850,16 @@ git مانده، لو رفته حساب کنید.
 
 **تا آن وقت:** فرانت فقط از دکمه‌ی «ثبتِ پرداخت» روی صفحه‌ی هر فاکتور می‌تواند پول ثبت کند.
 
+**✅ انجام شد (۲۰۲۶-۱۰-۱۷، بکند).** `api-guide.fa.md` بخش ۲۳. تفاوت‌ها با درخواست:
+- `partyType` + `partyId` نیست؛ دقیقاً یکی از `customerId`/`supplierId` (همان شکلِ `GetPartyStatement`).
+- نوعِ تازه‌ای در دفترِ حساب ساخته نشد: دریافت/پرداختِ علی‌الحساب همان ردیفِ `PAYMENT` است (با شرحِ «دریافت/پرداخت علی‌الحساب»)، تا
+  `GetPartyStatement` و مانده‌ها بدون تغییر آن را بشمارند. در `GetPaymentJournal` با `isOnAccount = true` و فیلترِ هم‌نام می‌آید.
+- `AllocatePartyPayment` با `{ paymentDetailId, allocations: [{ saleId | purchaseId, amount }] }`؛ تخصیص در همان `AddPartyPayment` هم می‌شود.
+  برداشتنِ تخصیص: `RemovePartyPaymentAllocation`. تخصیص ردیفِ دفترِ حساب نمی‌نویسد (پول یک‌بار جابه‌جا شده) و فقط `paidAmount`ِ فاکتور را
+  عوض می‌کند؛ فاکتورِ لغوشده تخصیص‌هایش را آزاد می‌کند.
+- فهرستِ فاکتورهای قابلِ تخصیصِ یک شخص: `GetAllocatableDocumentList`؛ فهرست و جزئیاتِ دریافت‌ها: `GetPartyPaymentList`، `GetPartyPaymentDetail`.
+- دسترسی‌ها: `PartyPaymentCreate = 251`، `PartyPaymentVoid = 252`.
+
 ### ۲۲.۲ — حسابِ بانکی/صندوق (متوسط)
 
 **مشکل.** هیچ موجودیتی برای حساب بانکی یا صندوق نیست؛ روی ردیفِ پرداخت فقط `TransferRef` و ترمینالِ POS مانده است و
@@ -1860,6 +1870,12 @@ git مانده، لو رفته حساب کنید.
 `AddPurchasePayment`، `AddPartyPayment`، اقساط، POS) و یک گزارشِ ساده‌ی گردشِ هر حساب (ورودی/خروجی/مانده).
 `POST BankAccount/TransferBetweenAccounts` برای انتقالِ داخلی بینِ دو حساب (مثلاً واریزِ صندوق به بانک).
 **تا آن وقت:** فرانت فیلدِ حساب را نشان نمی‌دهد.
+
+**✅ انجام شد (۲۰۲۶-۱۰-۱۷، بکند).** `api-guide.fa.md` بخش ۲۳. `bankAccountId` روی همه‌ی مسیرهای ثبتِ پول (اقساط و کارتخوان هم)؛ کارتخوان می‌تواند
+حسابِ واریزِ خودش را داشته باشد (`posTerminal.bankAccountId`) و پرداختِ بی‌حسابِ آن دستگاه همان را می‌گیرد. CRUD + `GetBankAccountStatement`
+(گردش با مانده‌ی جاری) + `TransferBetweenAccounts`/`VoidTransfer`. انتخابگرِ فرم‌های پرداخت: `GetBankAccountOptions` (بدونِ مانده، برای صندوق‌دار).
+تنظیمِ `Payment.RequireBankAccount` (پیش‌فرض خاموش) وقتی همه‌ی فرم‌ها انتخابگر داشتند حساب را اجباری می‌کند.
+**باقی‌مانده:** پولِ مرجوعی‌ها (`moneyIn`/`moneyOut`) هنوز حساب نمی‌گیرد و در گردشِ صندوق/بانک نیست.
 
 ### ۲۲.۳ — چرخه‌ی چک (متوسط)
 

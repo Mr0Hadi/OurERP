@@ -1,5 +1,6 @@
 ﻿using Application.Common.Contracts.Pos;
 using Application.Common.Ledger;
+using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
@@ -83,6 +84,7 @@ namespace Application.Features.Purchase.Commands
         private readonly IObjectStorageService _objectStorageService;
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IPaymentAccountResolver _paymentAccountResolver;
         private readonly IUserContextService _userContextService;
 
         public CreatePurchaseCommandHandler(
@@ -91,7 +93,7 @@ namespace Application.Features.Purchase.Commands
             IObjectStorageService objectStorageService,
             IMapper mapper,
             IUnitOfWork unitOfWork,
-            IUserContextService userContextService)
+            IUserContextService userContextService, IPaymentAccountResolver paymentAccountResolver)
         {
             _purchaseRepository = purchaseRepository;
             _context = context;
@@ -100,6 +102,7 @@ namespace Application.Features.Purchase.Commands
             _mapper = mapper;
             _unitOfWork = unitOfWork;
             _userContextService = userContextService;
+            _paymentAccountResolver = paymentAccountResolver;
         }
 
         public async Task<ResponseDto> Handle(CreatePurchaseCommand request, CancellationToken cancellationToken)
@@ -129,7 +132,8 @@ namespace Application.Features.Purchase.Commands
                 if (payment.PaidAt == default)
                     payment.PaidAt = DateTime.Now;
             }
-            purchase.PaidAmount = DocumentPayments.NetPaid(purchase.PaymentDetails, DocumentPayments.PurchaseDirection);
+            await _paymentAccountResolver.ApplyAsync(purchase.PaymentDetails, cancellationToken);
+            purchase.PaidAmount = DocumentPayments.NetPaid(purchase.PaymentDetails, purchase.PaymentAllocations, DocumentPayments.PurchaseDirection);
             foreach (var payment in purchase.PaymentDetails)
                 await PartyLedger.PurchasePaymentAsync(_context, purchase, payment, cancellationToken);
 

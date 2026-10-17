@@ -170,6 +170,9 @@ namespace Infrastructure.Persistence
         public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
         public DbSet<AuditEntityChange> AuditEntityChanges => Set<AuditEntityChange>();
         public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+        public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
+        public DbSet<BankAccountTransfer> BankAccountTransfers => Set<BankAccountTransfer>();
+        public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -759,6 +762,65 @@ namespace Infrastructure.Persistence
             modelBuilder.Entity<PaymentDetail>()
                 .Property(x => x.Amount)
                 .HasPrecision(20, 0);
+
+            // Cash boxes, bank accounts and on-account payments (GAP-03, 2026-10-17). Every FK here is Restrict: accounts,
+            // parties and payments are only ever deactivated/voided, and several of these tables are reachable from Sales or
+            // Purchases by more than one path.
+            modelBuilder.Entity<PaymentDetail>(entry =>
+            {
+                entry.HasOne(x => x.Customer).WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.Supplier).WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.BankAccount).WithMany().HasForeignKey(x => x.BankAccountId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasIndex(x => x.CustomerId);
+                entry.HasIndex(x => x.SupplierId);
+                entry.HasIndex(x => x.BankAccountId);
+                entry.Property(x => x.Description).HasMaxLength(500);
+                // A row is a document's payment (party from the document) or an on-account payment of exactly one party.
+                entry.ToTable(t => t.HasCheckConstraint("CK_PaymentDetails_OnAccountParty",
+                    "([CustomerId] IS NULL AND [SupplierId] IS NULL) OR ([SaleId] IS NULL AND [PurchaseId] IS NULL AND ([CustomerId] IS NULL OR [SupplierId] IS NULL))"));
+            });
+
+            modelBuilder.Entity<PaymentAllocation>(entry =>
+            {
+                entry.HasOne(x => x.PaymentDetail).WithMany(x => x.Allocations).HasForeignKey(x => x.PaymentDetailId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.Sale).WithMany(x => x.PaymentAllocations).HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.Purchase).WithMany(x => x.PaymentAllocations).HasForeignKey(x => x.PurchaseId).OnDelete(DeleteBehavior.Restrict);
+                entry.Property(x => x.Amount).HasPrecision(20, 0);
+                entry.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_PaymentAllocations_OneDocument",
+                        "([SaleId] IS NOT NULL AND [PurchaseId] IS NULL) OR ([SaleId] IS NULL AND [PurchaseId] IS NOT NULL)");
+                    t.HasCheckConstraint("CK_PaymentAllocations_PositiveAmount", "[Amount] > 0");
+                });
+            });
+
+            modelBuilder.Entity<BankAccount>(entry =>
+            {
+                entry.Property(x => x.Title).HasMaxLength(100).IsRequired();
+                entry.Property(x => x.BankName).HasMaxLength(100);
+                entry.Property(x => x.AccountNumber).HasMaxLength(50);
+                entry.Property(x => x.CardNumber).HasMaxLength(32);
+                entry.Property(x => x.Iban).HasMaxLength(34);
+                entry.Property(x => x.Description).HasMaxLength(500);
+                entry.Property(x => x.OpeningBalance).HasPrecision(20, 0);
+            });
+
+            modelBuilder.Entity<BankAccountTransfer>(entry =>
+            {
+                entry.HasOne(x => x.FromBankAccount).WithMany().HasForeignKey(x => x.FromBankAccountId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.ToBankAccount).WithMany().HasForeignKey(x => x.ToBankAccountId).OnDelete(DeleteBehavior.Restrict);
+                entry.Property(x => x.Amount).HasPrecision(20, 0);
+                entry.Property(x => x.TransferRef).HasMaxLength(64);
+                entry.Property(x => x.Description).HasMaxLength(500);
+                entry.ToTable(t =>
+                {
+                    t.HasCheckConstraint("CK_BankAccountTransfers_TwoAccounts", "[FromBankAccountId] <> [ToBankAccountId]");
+                    t.HasCheckConstraint("CK_BankAccountTransfers_PositiveAmount", "[Amount] > 0");
+                });
+            });
+
+            modelBuilder.Entity<PosTerminal>()
+                .HasOne(x => x.BankAccount).WithMany().HasForeignKey(x => x.BankAccountId).OnDelete(DeleteBehavior.Restrict);
 
             // Restrict: a supplement line points at the ordered line it grew out of; neither is ever deleted once the
             // invoice is issued, and a cascade here would give SQL Server a second path from Purchases.

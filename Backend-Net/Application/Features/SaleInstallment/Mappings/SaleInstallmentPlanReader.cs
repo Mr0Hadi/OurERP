@@ -34,6 +34,8 @@ namespace Application.Features.SaleInstallment.Mappings
                     PaidAt = x.PaidAt,
                     CheckNumber = x.CheckNumber,
                     TransferRef = x.TransferRef,
+                    BankAccountId = x.BankAccountId,
+                    BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
                     PosTerminalId = x.PosTerminalId,
                     MaskedCardNumber = x.MaskedCardNumber,
                     ApprovalCode = x.ApprovalCode,

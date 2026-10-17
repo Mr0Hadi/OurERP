@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Pos;
+using Application.Common.Contracts.BankAccounts;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
@@ -40,14 +41,16 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IPosPaymentGuard _posPaymentGuard;
+        private readonly IPaymentAccountResolver _paymentAccountResolver;
         private readonly IObjectStorageService _objectStorageService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public EditSalePaymentCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
+        public EditSalePaymentCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService, IPaymentAccountResolver paymentAccountResolver)
         {
             _context = context;
             _posPaymentGuard = posPaymentGuard;
+            _paymentAccountResolver = paymentAccountResolver;
             _objectStorageService = objectStorageService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
@@ -61,6 +64,7 @@ namespace Application.Features.Sale.Commands
 
             var sale = await _context.Sales
                 .Include(x => x.PaymentDetails)
+                .Include(x => x.PaymentAllocations)
                 .FirstOrDefaultAsync(x => x.IsActive && x.PaymentDetails.Any(p => p.Id == request.PaymentId), cancellationToken)
                 ?? throw new NotFoundCustomException("پرداخت مورد نظر یافت نشد.");
 
@@ -70,9 +74,10 @@ namespace Application.Features.Sale.Commands
             PaymentWriter.Void(old);
             await PartyLedger.PaymentVoidedAsync(_context, old, old.VoidedAt!.Value, cancellationToken);
             var replacement = PaymentWriter.NewRow(request, old.Direction);
+            await _paymentAccountResolver.ApplyAsync(new[] { replacement }, cancellationToken);
             sale.PaymentDetails.Add(replacement);
             await PartyLedger.SalePaymentAsync(_context, sale, replacement, cancellationToken);
-            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, DocumentPayments.SaleDirection);
+            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, sale.PaymentAllocations, DocumentPayments.SaleDirection);
             sale.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

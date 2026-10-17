@@ -45,7 +45,7 @@ namespace WMS.Tests.Integration
         }
 
         private static AddSalePaymentCommandHandler AddPayment(TestScope scope, int userId)
-            => new(scope.Db, scope.PosPaymentGuardFor(userId), FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
+            => new(scope.Db, scope.PosPaymentGuardFor(userId), FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.PaymentAccounts);
 
         private static AddSalePaymentCommand CardPayment(int saleId, int? terminalId, string rrn = "412345678901", string maskedCard = "603770******1234") => new()
         {
@@ -155,7 +155,7 @@ namespace WMS.Tests.Integration
             var f = Setup(scope);
             var sale = Assert.IsType<SaleDto>((await AddPayment(scope, f.CashierId).Handle(CardPayment(f.Scenario.Sale.Id, f.Terminal.Id), CancellationToken.None)).Data);
 
-            var edit = new EditSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuardFor(f.CashierId), FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation);
+            var edit = new EditSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuardFor(f.CashierId), FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.PaymentAccounts);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => edit.Handle(new EditSalePaymentCommand
             {

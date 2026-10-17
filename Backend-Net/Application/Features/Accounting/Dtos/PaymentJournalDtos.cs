@@ -21,6 +21,12 @@ namespace Application.Features.Accounting.Dtos
         public int? SaleId { get; set; }
         public int? PurchaseId { get; set; }
         public string? InvoiceNumber { get; set; }
+
+        /// <summary>A payment with no invoice (PartyAccount/AddPartyPayment); SaleId/PurchaseId/InvoiceNumber are then null.</summary>
+        public bool IsOnAccount { get; set; }
+        public int? BankAccountId { get; set; }
+        public string? BankAccountTitle { get; set; }
+        public string? Description { get; set; }
         public AccountingPartyTypeEnum PartyType { get; set; }
         public int PartyId { get; set; }
         public string PartyName { get; set; } = string.Empty;

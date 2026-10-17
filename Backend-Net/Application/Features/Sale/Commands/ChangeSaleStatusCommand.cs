@@ -1,3 +1,4 @@
+using Application.Common.Payments;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductUnit;
@@ -64,6 +65,8 @@ namespace Application.Features.Sale.Commands
 
             var sale = await _context.Sales
                 .Include(x => x.Items)
+                .Include(x => x.PaymentDetails)
+                .Include(x => x.PaymentAllocations)
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
@@ -91,6 +94,10 @@ namespace Application.Features.Sale.Commands
             if (request.Status == SalesStatusEnum.CANCELLED)
             {
                 await PartyLedger.SaleCancelledAsync(_context, sale, DateTime.Now, cancellationToken);
+                // On-account money applied to it goes back to being unallocated (free for another invoice); its own payment
+                // rows stay, as before.
+                if (DocumentPayments.ReleaseAllocations(sale.PaymentAllocations) > 0)
+                    sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, sale.PaymentAllocations, DocumentPayments.SaleDirection);
                 // Nothing has shipped, so every unit reserved for it is still on the shelf: it is free again.
                 await SaleProformaPipeline.ReleaseAsync(_context, _productUnitService, sale, sale.Items.Select(i => i.Id), cancellationToken);
             }

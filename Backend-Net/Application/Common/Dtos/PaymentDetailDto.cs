@@ -34,6 +34,10 @@ namespace Application.Common.Dtos
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
 
+        /// <summary>The cash box or bank account (see PaymentInput.BankAccountId). Title is read only.</summary>
+        public int? BankAccountId { get; set; }
+        public string? BankAccountTitle { get; set; }
+
         /// <summary>Card-reader details, TRANSFER rows only (see IPosPaymentFields).</summary>
         public int? PosTerminalId { get; set; }
         public string? MaskedCardNumber { get; set; }

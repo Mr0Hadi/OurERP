@@ -20,6 +20,8 @@ namespace Application.Common.Ledger
     ///   installment charge           DEBIT   the customer owes the charge on top of the invoice
     ///   payment IN (money to us)     CREDIT  - a customer paying, or a supplier refunding
     ///   payment OUT (money from us)  DEBIT   - us paying a supplier, or refunding a customer
+    ///   (both with or without an invoice: an on-account payment is written the same way; allocating it to invoices later
+    ///    writes nothing)
     ///   return money ON_ACCOUNT      IN = DEBIT, OUT = CREDIT (no cash: the amount stays on the account)
     /// Anything taken back (voided payment, cancelled invoice, changed charge, removed return money) gets a REVERSAL row
     /// on the opposite side pointing at the original; nothing is ever edited or deleted.
@@ -78,6 +80,17 @@ namespace Application.Common.Ledger
         public static Task PurchasePaymentAsync(IWMSDbContext context, Purchase purchase, PaymentDetail payment, CancellationToken cancellationToken) =>
             AddAsync(context, Supplier(purchase), SideOf(payment.Direction), (ulong)payment.Amount, PartyLedgerEntryTypeEnum.PAYMENT,
                 payment.PaidAt, $"پرداخت فاکتور خرید {purchase.InvoiceNumber}".TrimEnd(), purchase: purchase, payment: payment, cancellationToken: cancellationToken);
+
+        /// <summary>
+        /// An on-account payment (no invoice): money in from the party (CREDIT) or out to it (DEBIT), exactly like a document's
+        /// payment row. Allocating it to invoices later writes nothing - the balance already counts it.
+        /// </summary>
+        public static Task OnAccountPaymentAsync(IWMSDbContext context, PaymentDetail payment, CancellationToken cancellationToken) =>
+            AddAsync(context, (payment.CustomerId, payment.SupplierId), SideOf(payment.Direction), (ulong)payment.Amount, PartyLedgerEntryTypeEnum.PAYMENT,
+                payment.PaidAt,
+                (payment.Direction == PaymentDirectionEnum.IN ? "دریافت علی‌الحساب" : "پرداخت علی‌الحساب")
+                    + (string.IsNullOrWhiteSpace(payment.Description) ? string.Empty : $" - {payment.Description}"),
+                payment: payment, cancellationToken: cancellationToken);
 
         public static async Task PaymentVoidedAsync(IWMSDbContext context, PaymentDetail payment, DateTime occurredAt, CancellationToken cancellationToken)
         {
