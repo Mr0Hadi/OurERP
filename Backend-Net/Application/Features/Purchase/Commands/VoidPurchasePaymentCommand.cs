@@ -49,13 +49,14 @@ namespace Application.Features.Purchase.Commands
 
             var purchase = await _context.Purchases
                 .Include(x => x.PaymentDetails)
+                .Include(x => x.PaymentAllocations)
                 .FirstOrDefaultAsync(x => x.IsActive && x.PaymentDetails.Any(p => p.Id == request.PaymentId), cancellationToken)
                 ?? throw new NotFoundCustomException("پرداخت مورد نظر یافت نشد.");
 
             var payment = purchase.PaymentDetails.First(p => p.Id == request.PaymentId);
             PaymentWriter.Void(payment);
             await PartyLedger.PaymentVoidedAsync(_context, payment, payment.VoidedAt!.Value, cancellationToken);
-            purchase.PaidAmount = DocumentPayments.NetPaid(purchase.PaymentDetails, DocumentPayments.PurchaseDirection);
+            purchase.PaidAmount = DocumentPayments.NetPaid(purchase.PaymentDetails, purchase.PaymentAllocations, DocumentPayments.PurchaseDirection);
             purchase.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

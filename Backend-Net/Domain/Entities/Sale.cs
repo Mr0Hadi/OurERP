@@ -26,6 +26,9 @@ namespace Domain.Entities
         public DateTime? ReservationExpiresAt { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetail> PaymentDetails { get; set; } = new();
+
+        /// <summary>On-account payments applied to this sale; active ones count in PaidAmount (DocumentPayments.NetPaid).</summary>
+        public List<PaymentAllocation> PaymentAllocations { get; set; } = new();
         public UInt64 PaidAmount { get; set; }
         public UInt64 TotalAmount { get; set; }
         public string? Description { get; set; }

@@ -55,6 +55,21 @@ namespace Application.Features.Purchase.Queries
                         IsSupplement = i.IsSupplement,
                         SupplementOfPurchaseItemId = i.SupplementOfPurchaseItemId,
                     }).ToList(),
+                    PaymentAllocations = x.PaymentAllocations.OrderBy(a => a.AllocatedAt).ThenBy(a => a.Id).Select(a => new PaymentAllocationDto
+                    {
+                        Id = a.Id,
+                        PaymentDetailId = a.PaymentDetailId,
+                        SaleId = a.SaleId,
+                        PurchaseId = a.PurchaseId,
+                        InvoiceNumber = x.InvoiceNumber,
+                        Amount = a.Amount,
+                        AllocatedAt = a.AllocatedAt,
+                        AllocatedByUserId = a.AllocatedByUserId,
+                        VoidedAt = a.VoidedAt,
+                        PaymentType = a.PaymentDetail.Type,
+                        PaymentPaidAt = a.PaymentDetail.PaidAt,
+                        BankAccountTitle = a.PaymentDetail.BankAccount != null ? a.PaymentDetail.BankAccount.Title : null,
+                    }).ToList(),
                     PaymentDetails = x.PaymentDetails.OrderBy(p => p.PaidAt).ThenBy(p => p.Id).Select(p => new PaymentDetailDto
                     {
                         Id = p.Id,
@@ -66,6 +81,8 @@ namespace Application.Features.Purchase.Queries
                         VoidedAt = p.VoidedAt,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef,
+                        BankAccountId = p.BankAccountId,
+                        BankAccountTitle = p.BankAccount != null ? p.BankAccount.Title : null,
                         PosTerminalId = p.PosTerminalId,
                         MaskedCardNumber = p.MaskedCardNumber,
                         ApprovalCode = p.ApprovalCode,

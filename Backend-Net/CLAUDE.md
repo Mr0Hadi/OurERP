@@ -140,6 +140,7 @@ Backend-Net/
 │   │   ├── Accounting/  # Queries/, Dtos/, DataTransfer/ (read-only dashboard + journals, 2026-10-12)
 │   │   ├── Audit/       # Queries/, Dtos/ (audit log read side, 2026-10-15)
 │   │   ├── Setting/     # Commands/, Queries/, Dtos/ (system settings, 2026-10-17; catalogue in Common/Settings)
+│   │   ├── Treasury/    # Commands/, Queries/, Dtos/ (cash boxes, bank accounts, transfers, statements - 2026-10-17)
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -147,6 +148,7 @@ Backend-Net/
 │   │   ├── Product/
 │   │   ├── ProductCategory/
 │   │   ├── Purchase/
+│   │   ├── PartyAccount/ # Commands/ (on-account payments + allocation), Queries/ (statement, payments), Dtos/
 │   │   ├── PurchaseReturn/ # Commands/ (CreatePurchaseReturn, Add/RemoveClaimResolution,
 │   │   │                   # ExecuteGoodsRound, Cancel/Reject/Reopen/DeletePurchaseReturn), Queries/, Dtos/
 │   │   │                   # (shared status/quantity math lives in IPurchaseReturnCalculationService, above)
@@ -2128,6 +2130,46 @@ ordinary TRANSFER row through the existing payment endpoints. Answers to 11.x/12
   deadline but swept only after the grace, sweep releases and the warehouse can reserve again, paid sales never swept, settings
   read/update/reset, four invalid inputs). **Verified:** build clean, suite 977/980 - the 3 documented environmental failures
   (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder).
+
+**Cash boxes, bank accounts and on-account payments - GAP-03 (2026-10-17).** frontend-requests 22.1 + 22.2; 22.3 (cheque
+lifecycle) is NOT built. API: `docs/api-guide.fa.md` section 23 and the 2026-10-17 «صندوق و بانک» table in section 16.
+
+- **`BankAccount`** (`Kind` CASH_BOX=1 / BANK=2, bank fields, `OpeningBalance`/`OpeningDate`, IsActive). **No stored balance**:
+  `Application/Features/Treasury/BankAccountLedger` is the one definition - opening + non-voided payment rows naming it (IN +, OUT -)
+  + non-voided `BankAccountTransfer`s. Balances may go negative (a missing entry), never blocked. `api/BankAccount/*`: list with
+  balances + `unassignedNet` (money recorded with no account), detail, statement (running balance, not paged, like the party
+  statement), CRUD (delete = deactivate, refused while an active POS terminal settles into it), `TransferBetweenAccounts`,
+  `VoidTransfer`, and `GetBankAccountOptions` (picker with no balances, open to every money-recording permission).
+  Feature folder is `Treasury`, not `BankAccount`, to avoid namespace shadowing of the entity.
+- **`PaymentDetail.BankAccountId` on every receipt and payment**, through `IPaymentAccountResolver`
+  (`Infrastructure/Services/PaymentAccountResolver`, Scoped), called by every PaymentDetail writer: Add/Edit Sale/Purchase payment,
+  CreatePurchase rows, the three installment commands, CompleteInPersonSale (via AddSalePayment), AddPartyPayment. Named account must
+  be active; a card row with none takes `PosTerminal.BankAccountId`; setting `Payment.RequireBankAccount` (default false) refuses a
+  row still without one, CREDIT rows exempt. **Not covered: return money effects** (moneyIn/moneyOut on both return sides) carry no
+  account and are absent from account statements - a known gap.
+- **On-account payments**: a `PaymentDetail` with `CustomerId` or `SupplierId` and no document (check constraint
+  `CK_PaymentDetails_OnAccountParty`), plus `Description`. Party ledger: ordinary `PAYMENT` row at once
+  (`PartyLedger.OnAccountPaymentAsync`). `api/PartyAccount/AddPartyPayment` (optional immediate allocations), `AllocatePartyPayment`,
+  `RemovePartyPaymentAllocation`, `VoidPartyPayment` (refused while allocated), `GetPartyPaymentList` (paged, sortable),
+  `GetPartyPaymentDetail`, `GetAllocatableDocumentList`.
+- **`PaymentAllocation`** (payment -> exactly one sale or purchase, Amount, VoidedAt; all FKs Restrict) is bookkeeping only: **no
+  party-ledger row, no bank movement** - the payment already moved both. Rules in `Application/Common/Payments/PaymentAllocator`:
+  natural direction only (customer IN -> that customer's sales, supplier OUT -> that supplier's purchases; refunds the other way stay on
+  the account), document active/not cancelled/not under an installment plan, a proforma sale must pass `EnsureReadyForPayment` and the
+  allocation then issues its invoice, each slice <= what the document owes (purchase: `PaymentAllocator.PayableAmount`) and the total
+  <= unallocated.
+- **`DocumentPayments.NetPaid` now takes the allocations too** - every caller Includes `PaymentAllocations`. Cancel (sale and
+  purchase) and `DeletePurchase` release active allocations (`DocumentPayments.ReleaseAllocations`); the document's own payment rows
+  stay as before. Sale/Purchase detail gained `paymentAllocations[]`; every `paymentDetails[]` projection gained
+  `bankAccountId`/`bankAccountTitle`. `GetPaymentJournal` now includes on-account rows (`isOnAccount`, account, description; filters
+  `bankAccountId`, `isOnAccount`). Audit maps an allocation to the document it pays.
+- Permissions `PartyPaymentCreate = 251`, `PartyPaymentVoid = 252`, `BankAccountView = 262`, `BankAccountManage = 263`; audit actions
+  1100-1104, 1110-1113. Handler constructors that write payments gained `IPaymentAccountResolver` as their LAST parameter (tests use
+  `scope.PaymentAccounts`).
+- Migration `bank-accounts-and-party-payments` (three tables, five columns, check constraints; no backfill - existing rows have no
+  account and show up in `unassignedNet`). **Generated, not applied.**
+- Tests: `Integration/PartyPaymentTests.cs` (14) + a `ListSortingTests` case. **Verified:** build clean, suite 991/994 - the 3
+  documented environmental failures; the whole migration chain applies from scratch to a throwaway database (dropped).
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

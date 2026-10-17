@@ -103,6 +103,115 @@ namespace Infrastructure.Migrations
                     b.ToTable("AuditEvents");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BankAccount", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CardNumber")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Iban")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("OpeningBalance")
+                        .HasPrecision(20)
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<DateTime>("OpeningDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BankAccounts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.BankAccountTransfer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(20)
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("FromBankAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RecordedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToBankAccountId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TransferRef")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("TransferredAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromBankAccountId");
+
+                    b.HasIndex("ToBankAccountId");
+
+                    b.ToTable("BankAccountTransfers", t =>
+                        {
+                            t.HasCheckConstraint("CK_BankAccountTransfers_PositiveAmount", "[Amount] > 0");
+
+                            t.HasCheckConstraint("CK_BankAccountTransfers_TwoAccounts", "[FromBankAccountId] <> [ToBankAccountId]");
+                        });
+                });
+
             modelBuilder.Entity("Domain.Entities.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -404,6 +513,52 @@ namespace Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Domain.Entities.PaymentAllocation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AllocatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("AllocatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(20)
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<int>("PaymentDetailId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PurchaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SaleId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentDetailId");
+
+                    b.HasIndex("PurchaseId");
+
+                    b.HasIndex("SaleId");
+
+                    b.ToTable("PaymentAllocations", t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentAllocations_OneDocument", "([SaleId] IS NOT NULL AND [PurchaseId] IS NULL) OR ([SaleId] IS NULL AND [PurchaseId] IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PaymentAllocations_PositiveAmount", "[Amount] > 0");
+                        });
+                });
+
             modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
                 {
                     b.Property<int>("Id")
@@ -420,8 +575,18 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CheckNumber")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Direction")
                         .HasColumnType("int");
@@ -454,6 +619,9 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("Source")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("int");
+
                     b.Property<string>("TraceNumber")
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
@@ -470,17 +638,26 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BankAccountId");
+
+                    b.HasIndex("CustomerId");
+
                     b.HasIndex("PurchaseId");
 
                     b.HasIndex("RecordedByUserId");
 
                     b.HasIndex("SaleId");
 
+                    b.HasIndex("SupplierId");
+
                     b.HasIndex("PosTerminalId", "TransferRef")
                         .IsUnique()
                         .HasFilter("[PosTerminalId] IS NOT NULL AND [TransferRef] IS NOT NULL");
 
-                    b.ToTable("PaymentDetails");
+                    b.ToTable("PaymentDetails", t =>
+                        {
+                            t.HasCheckConstraint("CK_PaymentDetails_OnAccountParty", "([CustomerId] IS NULL AND [SupplierId] IS NULL) OR ([SaleId] IS NULL AND [PurchaseId] IS NULL AND ([CustomerId] IS NULL OR [SupplierId] IS NULL))");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.PosTerminal", b =>
@@ -490,6 +667,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
 
                     b.Property<string>("BankCode")
                         .HasMaxLength(32)
@@ -522,6 +702,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BankAccountId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -2328,6 +2510,25 @@ namespace Infrastructure.Migrations
                     b.Navigation("AuditEvent");
                 });
 
+            modelBuilder.Entity("Domain.Entities.BankAccountTransfer", b =>
+                {
+                    b.HasOne("Domain.Entities.BankAccount", "FromBankAccount")
+                        .WithMany()
+                        .HasForeignKey("FromBankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.BankAccount", "ToBankAccount")
+                        .WithMany()
+                        .HasForeignKey("ToBankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("FromBankAccount");
+
+                    b.Navigation("ToBankAccount");
+                });
+
             modelBuilder.Entity("Domain.Entities.Department", b =>
                 {
                     b.HasOne("Domain.Entities.User", "Deputy")
@@ -2412,8 +2613,43 @@ namespace Infrastructure.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PaymentAllocation", b =>
+                {
+                    b.HasOne("Domain.Entities.PaymentDetail", "PaymentDetail")
+                        .WithMany("Allocations")
+                        .HasForeignKey("PaymentDetailId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Purchase", "Purchase")
+                        .WithMany("PaymentAllocations")
+                        .HasForeignKey("PurchaseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Sale", "Sale")
+                        .WithMany("PaymentAllocations")
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("PaymentDetail");
+
+                    b.Navigation("Purchase");
+
+                    b.Navigation("Sale");
+                });
+
             modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
                 {
+                    b.HasOne("Domain.Entities.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Entities.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.PosTerminal", "PosTerminal")
                         .WithMany()
                         .HasForeignKey("PosTerminalId")
@@ -2434,6 +2670,15 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("Domain.Entities.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BankAccount");
+
+                    b.Navigation("Customer");
+
                     b.Navigation("PosTerminal");
 
                     b.Navigation("Purchase");
@@ -2441,6 +2686,18 @@ namespace Infrastructure.Migrations
                     b.Navigation("RecordedByUser");
 
                     b.Navigation("Sale");
+
+                    b.Navigation("Supplier");
+                });
+
+            modelBuilder.Entity("Domain.Entities.PosTerminal", b =>
+                {
+                    b.HasOne("Domain.Entities.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BankAccount");
                 });
 
             modelBuilder.Entity("Domain.Entities.Product", b =>
@@ -3011,6 +3268,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("Domain.Entities.PaymentDetail", b =>
+                {
+                    b.Navigation("Allocations");
+                });
+
             modelBuilder.Entity("Domain.Entities.Product", b =>
                 {
                     b.Navigation("Vehicles");
@@ -3026,6 +3288,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("Drivers");
 
                     b.Navigation("Items");
+
+                    b.Navigation("PaymentAllocations");
 
                     b.Navigation("PaymentDetails");
 
@@ -3068,6 +3332,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("InstallmentPlan");
 
                     b.Navigation("Items");
+
+                    b.Navigation("PaymentAllocations");
 
                     b.Navigation("PaymentDetails");
 

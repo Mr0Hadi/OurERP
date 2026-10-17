@@ -5,6 +5,8 @@ namespace Domain.Entities
     /// <summary>
     /// یک رکورد مالی واقعی: پولی که جابه‌جا شده. می‌تواند به یک خرید یا یک فروش وصل باشد
     /// (نه هر دو، ولی مدل اجباری نمی‌کند - هر دو FK اختیاری‌اند).
+    /// Or, since 2026-10-17, an on-account payment: CustomerId or SupplierId set and no document (check constraint), applied
+    /// to documents later through PaymentAllocation rows - or never.
     /// </summary>
     public class PaymentDetail
     {
@@ -15,6 +17,25 @@ namespace Domain.Entities
 
         public int? SaleId { get; set; }
         public Sale? Sale { get; set; }
+
+        /// <summary>
+        /// On-account payments only (no SaleId/PurchaseId): whose account the money moved on. A document's payment rows leave
+        /// these null - their party is the document's.
+        /// </summary>
+        public int? CustomerId { get; set; }
+        public Customer? Customer { get; set; }
+        public int? SupplierId { get; set; }
+        public Supplier? Supplier { get; set; }
+
+        /// <summary>The cash box or bank account the money went into or out of. Null on rows recorded before 2026-10-17.</summary>
+        public int? BankAccountId { get; set; }
+        public BankAccount? BankAccount { get; set; }
+
+        /// <summary>Free text, mostly for on-account payments ("علی‌الحساب بابت ...").</summary>
+        public string? Description { get; set; }
+
+        /// <summary>Where an on-account payment was applied (active and voided). Empty for a document's own payment rows.</summary>
+        public List<PaymentAllocation> Allocations { get; set; } = new();
 
         /// <summary>«چطور پرداخت شد» - نقد/چک/انتقال/... .</summary>
         public PaymentTypeEnum Type { get; set; }

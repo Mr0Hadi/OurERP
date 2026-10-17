@@ -13,5 +13,7 @@ namespace Application.Features.PosTerminal.Dtos
         public string? TerminalId { get; set; }
         public string? MerchantId { get; set; }
         public string? BankCode { get; set; }
+        public int? BankAccountId { get; set; }
+        public string? BankAccountTitle { get; set; }
     }
 }

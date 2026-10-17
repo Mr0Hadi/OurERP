@@ -10,5 +10,7 @@ namespace Application.Features.PosTerminal.Dtos
         public string Host { get; set; }
         public int Port { get; set; }
         public string? BankCode { get; set; }
+        public int? BankAccountId { get; set; }
+        public string? BankAccountTitle { get; set; }
     }
 }

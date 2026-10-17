@@ -55,13 +55,14 @@ namespace Application.Features.Sale.Commands
 
             var sale = await _context.Sales
                 .Include(x => x.PaymentDetails)
+                .Include(x => x.PaymentAllocations)
                 .FirstOrDefaultAsync(x => x.IsActive && x.PaymentDetails.Any(p => p.Id == request.PaymentId), cancellationToken)
                 ?? throw new NotFoundCustomException("پرداخت مورد نظر یافت نشد.");
 
             var payment = sale.PaymentDetails.First(p => p.Id == request.PaymentId);
             PaymentWriter.Void(payment);
             await PartyLedger.PaymentVoidedAsync(_context, payment, payment.VoidedAt!.Value, cancellationToken);
-            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, DocumentPayments.SaleDirection);
+            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, sale.PaymentAllocations, DocumentPayments.SaleDirection);
             sale.UpdatedAt = DateTime.Now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

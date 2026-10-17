@@ -40,6 +40,9 @@ namespace Application.Features.Sale.Dtos
         public PaymentTypeEnum PaymentType { get; set; }
         public List<PaymentDetailDto> PaymentDetails { get; set; } = new();
 
+        /// <summary>On-account payments applied to this document (PartyAccount/AllocatePartyPayment); active ones count in PaidAmount.</summary>
+        public List<PaymentAllocationDto> PaymentAllocations { get; set; } = new();
+
         /// <summary>خلاصه‌ی قرارداد اقساطی - فقط برای فروش‌های اقساطی پر می‌شود.</summary>
         public SaleInstallmentSummaryDto? InstallmentSummary { get; set; }
         public UInt64 TotalAmount { get; set; }

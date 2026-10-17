@@ -24,6 +24,9 @@ namespace Application.Features.Purchase.Dtos
         public string SupplierName { get; set; }
         public List<PurchaseItemDto> Items { get; set; }
         public List<PaymentDetailDto> PaymentDetails { get; set; }
+
+        /// <summary>On-account payments applied to this document (PartyAccount/AllocatePartyPayment); active ones count in PaidAmount.</summary>
+        public List<PaymentAllocationDto> PaymentAllocations { get; set; } = new();
         public List<PurchaseDriverDto> Drivers { get; set; } = new();
         public List<PurchaseReceivingNoteDto> ReceivingNotes { get; set; } = new();
         public List<DocumentAttachmentDto> Attachments { get; set; } = new();

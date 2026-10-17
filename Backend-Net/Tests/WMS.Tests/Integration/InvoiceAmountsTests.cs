@@ -99,7 +99,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(1_090UL, (await DetailAsync(db, scenario.Sale.Id)).TotalAmount);
 
             // Issued: the rate changing again does nothing to it.
-            await new AddSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation)
+            await new AddSalePaymentCommandHandler(scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, scope.UnitOfWork, scope.SaleReturnCalculation, scope.PaymentAccounts)
                 .Handle(new AddSalePaymentCommand { SaleId = scenario.Sale.Id, Type = PaymentTypeEnum.CASH, Amount = 100 }, CancellationToken.None);
             scenario.Product.Tax = 20;
             scope.Context.SaveChanges();
@@ -119,7 +119,7 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             var user = Seed.PersistedUser(scope.Context);
 
-            var res = await new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id))
+            var res = await new CreatePurchaseCommandHandler(scope.PurchaseRepository, scope.Db, scope.PosPaymentGuard, FakeObjectStorage.Instance, TestMapper.Instance, scope.UnitOfWork, FakeUserContext.WithUserId(user.Id), scope.PaymentAccounts)
                 .Handle(new CreatePurchaseCommand
                 {
                     SupplierId = scenario.Supplier.Id,
@@ -185,7 +185,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = await InstallmentProformaAsync(scope, db, 10_000_000); // invoice = 11,000,000 with 10% tax
 
-            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork)
+            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, scope.PaymentAccounts)
                 .Handle(new CreateSaleInstallmentPlanCommand
                 {
                     SaleId = scenario.Sale.Id,
@@ -215,7 +215,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var scenario = await InstallmentProformaAsync(scope, db, 10_000_000);
-            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork)
+            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, scope.PaymentAccounts)
                 .Handle(new CreateSaleInstallmentPlanCommand
                 {
                     SaleId = scenario.Sale.Id,
@@ -249,7 +249,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = await InstallmentProformaAsync(scope, db, 10_000_000);
             // A plan with no down payment leaves the sale a proforma.
-            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork)
+            await new CreateSaleInstallmentPlanCommandHandler(scope.Db, scope.SaleInstallmentPlanRepository, scope.UnitOfWork, scope.PaymentAccounts)
                 .Handle(new CreateSaleInstallmentPlanCommand
                 {
                     SaleId = scenario.Sale.Id,

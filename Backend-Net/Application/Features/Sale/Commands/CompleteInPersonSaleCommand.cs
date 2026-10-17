@@ -112,6 +112,7 @@ namespace Application.Features.Sale.Commands
                             PaidAt = payment.PaidAt,
                             CheckNumber = payment.CheckNumber,
                             TransferRef = payment.TransferRef,
+                            BankAccountId = payment.BankAccountId,
                             PosTerminalId = payment.PosTerminalId,
                             MaskedCardNumber = payment.MaskedCardNumber,
                             ApprovalCode = payment.ApprovalCode,

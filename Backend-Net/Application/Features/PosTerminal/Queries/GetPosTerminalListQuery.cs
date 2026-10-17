@@ -58,6 +58,8 @@ namespace Application.Features.PosTerminal.Queries
                 Vendor = x.Vendor,
                 Host = x.Host,
                 Port = x.Port,
+                BankAccountId = x.BankAccountId,
+                BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
                 BankCode = x.BankCode
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 

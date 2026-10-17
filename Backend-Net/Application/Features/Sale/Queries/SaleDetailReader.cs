@@ -54,6 +54,21 @@ namespace Application.Features.Sale.Queries
                     HasOpenReturn = context.SaleReturns.Any(r => r.SaleId == x.Id && r.IsActive
                         && (r.Status == ReturnStatusEnum.OPEN || r.Status == ReturnStatusEnum.IN_PROGRESS)),
                     PaidAmount = x.PaidAmount,
+                    PaymentAllocations = x.PaymentAllocations.OrderBy(a => a.AllocatedAt).ThenBy(a => a.Id).Select(a => new PaymentAllocationDto
+                    {
+                        Id = a.Id,
+                        PaymentDetailId = a.PaymentDetailId,
+                        SaleId = a.SaleId,
+                        PurchaseId = a.PurchaseId,
+                        InvoiceNumber = x.InvoiceNumber,
+                        Amount = a.Amount,
+                        AllocatedAt = a.AllocatedAt,
+                        AllocatedByUserId = a.AllocatedByUserId,
+                        VoidedAt = a.VoidedAt,
+                        PaymentType = a.PaymentDetail.Type,
+                        PaymentPaidAt = a.PaymentDetail.PaidAt,
+                        BankAccountTitle = a.PaymentDetail.BankAccount != null ? a.PaymentDetail.BankAccount.Title : null,
+                    }).ToList(),
                     PaymentDetails = x.PaymentDetails.OrderBy(p => p.PaidAt).ThenBy(p => p.Id).Select(p => new PaymentDetailDto
                     {
                         Id = p.Id,
@@ -65,6 +80,8 @@ namespace Application.Features.Sale.Queries
                         VoidedAt = p.VoidedAt,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef,
+                        BankAccountId = p.BankAccountId,
+                        BankAccountTitle = p.BankAccount != null ? p.BankAccount.Title : null,
                         PosTerminalId = p.PosTerminalId,
                         MaskedCardNumber = p.MaskedCardNumber,
                         ApprovalCode = p.ApprovalCode,

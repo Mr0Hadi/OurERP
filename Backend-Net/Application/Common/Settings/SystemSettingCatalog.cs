@@ -23,9 +23,22 @@ namespace Application.Common.Settings
             MaxValue: 10080,
             Unit: "دقیقه");
 
+        /// <summary>
+        /// Whether every new receipt/payment must name the cash box or bank account it went through. Off by default so existing
+        /// screens keep working; turn it on once the frontend sends the account everywhere. CREDIT rows are exempt (no money moves).
+        /// </summary>
+        public static readonly SystemSettingDefinition PaymentRequireBankAccount = new(
+            Key: "Payment.RequireBankAccount",
+            Group: SystemSettingGroupEnum.PAYMENT,
+            Type: SystemSettingTypeEnum.BOOLEAN,
+            DefaultValue: "false",
+            Title: "الزام انتخاب صندوق/حساب بانکی",
+            Description: "اگر روشن باشد، هر دریافت و پرداخت تازه باید صندوق یا حساب بانکی‌ای را که پول از آن گذشته مشخص کند (به جز ردیف نسیه). پرداخت کارتخوانی که دستگاهش به حسابی وصل است خودکار همان حساب را می‌گیرد.");
+
         public static readonly IReadOnlyList<SystemSettingDefinition> All = new[]
         {
             SaleReservationMinutes,
+            PaymentRequireBankAccount,
         };
 
         public static SystemSettingDefinition? Find(string? key) =>

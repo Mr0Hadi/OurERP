@@ -347,6 +347,15 @@ namespace Domain.Enums
         [Description("مشاهده گردش حساب مشتریان و تامین‌کنندگان")]
         PartyStatementView = 250,
 
+        /// <summary>Recording money received from / paid to a customer or supplier with no invoice, and applying it to invoices.</summary>
+        [PermissionGroup(PermissionGroupEnum.PartyAccounts)]
+        [Description("ثبت دریافت و پرداخت علی‌الحساب و تخصیص به فاکتورها")]
+        PartyPaymentCreate = 251,
+
+        [PermissionGroup(PermissionGroupEnum.PartyAccounts)]
+        [Description("ابطال دریافت و پرداخت علی‌الحساب")]
+        PartyPaymentVoid = 252,
+
         // --- حسابداری ---
         /// <summary>The accounting dashboard and every journal behind it (api/Accounting), and their exports.</summary>
         [PermissionGroup(PermissionGroupEnum.Accounting)]
@@ -358,6 +367,16 @@ namespace Domain.Enums
         [PermissionGroup(PermissionGroupEnum.Accounting)]
         [Description("رسیدگی به کالای معیوب/مفقود گزارش‌شده‌ی انبار")]
         SaleWarehouseIssueResolve = 261,
+
+        /// <summary>Cash boxes and bank accounts: the list with balances and each account's statement.</summary>
+        [PermissionGroup(PermissionGroupEnum.Accounting)]
+        [Description("مشاهده صندوق‌ها و حساب‌های بانکی")]
+        BankAccountView = 262,
+
+        /// <summary>Creating/editing/deactivating accounts and moving money between them.</summary>
+        [PermissionGroup(PermissionGroupEnum.Accounting)]
+        [Description("مدیریت صندوق‌ها و حساب‌های بانکی و انتقال بین آن‌ها")]
+        BankAccountManage = 263,
 
         // --- تاریخچه تغییرات ---
         /// <summary>The audit log (api/Audit): every change, by whom and when, with old and new values.</summary>

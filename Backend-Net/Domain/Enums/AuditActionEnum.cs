@@ -337,5 +337,34 @@ namespace Domain.Enums
         // --- تنظیمات سامانه ---
         [Description("ویرایش تنظیمات سامانه")]
         UpdateSystemSettings = 1000,
+
+        // --- صندوق و بانک ---
+        [Description("ایجاد صندوق/حساب بانکی")]
+        CreateBankAccount = 1100,
+
+        [Description("ویرایش صندوق/حساب بانکی")]
+        UpdateBankAccount = 1101,
+
+        [Description("حذف صندوق/حساب بانکی")]
+        DeleteBankAccount = 1102,
+
+        [Description("انتقال بین حساب‌ها")]
+        TransferBetweenBankAccounts = 1103,
+
+        [Description("ابطال انتقال بین حساب‌ها")]
+        VoidBankAccountTransfer = 1104,
+
+        // --- دریافت و پرداخت علی‌الحساب ---
+        [Description("ثبت دریافت/پرداخت علی‌الحساب")]
+        AddPartyPayment = 1110,
+
+        [Description("تخصیص دریافت/پرداخت به فاکتور")]
+        AllocatePartyPayment = 1111,
+
+        [Description("حذف تخصیص دریافت/پرداخت")]
+        RemovePartyPaymentAllocation = 1112,
+
+        [Description("ابطال دریافت/پرداخت علی‌الحساب")]
+        VoidPartyPayment = 1113,
     }
 }

@@ -215,6 +215,12 @@ namespace Infrastructure.Persistence.Auditing
                         : x.PurchaseId.HasValue ? (DocumentKindEnum.PURCHASE, x.PurchaseId)
                         : (null, null);
 
+                // An allocation belongs to the invoice it pays; the on-account payment itself has no document.
+                case PaymentAllocation x:
+                    return x.SaleId.HasValue ? (DocumentKindEnum.SALE, x.SaleId)
+                        : x.PurchaseId.HasValue ? (DocumentKindEnum.PURCHASE, x.PurchaseId)
+                        : (null, null);
+
                 case DocumentAttachment x: return (x.DocumentKind, x.DocumentId);
 
                 case PurchaseReturn x: return (DocumentKindEnum.PURCHASE_RETURN, x.Id);

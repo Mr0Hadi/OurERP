@@ -7,5 +7,8 @@ namespace Domain.Enums
     {
         [Description("فروش")]
         SALE = 1,
+
+        [Description("دریافت و پرداخت")]
+        PAYMENT = 2,
     }
 }

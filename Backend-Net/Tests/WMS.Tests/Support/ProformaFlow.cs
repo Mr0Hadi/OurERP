@@ -38,6 +38,7 @@ namespace WMS.Tests.Support
             services.AddSingleton(FakeUserContext.WithUserId(userId));
             services.AddSingleton(scope.PosPaymentGuard);
             services.AddSingleton(scope.SystemSettings);
+            services.AddSingleton(scope.PaymentAccounts);
             return services.BuildServiceProvider().GetRequiredService<IMediator>();
         }
 

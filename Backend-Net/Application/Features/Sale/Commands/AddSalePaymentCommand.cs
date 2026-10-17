@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Pos;
+using Application.Common.Contracts.BankAccounts;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
@@ -46,14 +47,16 @@ namespace Application.Features.Sale.Commands
     {
         private readonly IWMSDbContext _context;
         private readonly IPosPaymentGuard _posPaymentGuard;
+        private readonly IPaymentAccountResolver _paymentAccountResolver;
         private readonly IObjectStorageService _objectStorageService;
         private readonly ISaleReturnCalculationService _saleReturnCalculationService;
         private readonly IUnitOfWork _unitOfWork;
 
-        public AddSalePaymentCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService)
+        public AddSalePaymentCommandHandler(IWMSDbContext context, IPosPaymentGuard posPaymentGuard, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, ISaleReturnCalculationService saleReturnCalculationService, IPaymentAccountResolver paymentAccountResolver)
         {
             _context = context;
             _posPaymentGuard = posPaymentGuard;
+            _paymentAccountResolver = paymentAccountResolver;
             _objectStorageService = objectStorageService;
             _saleReturnCalculationService = saleReturnCalculationService;
             _unitOfWork = unitOfWork;
@@ -67,6 +70,7 @@ namespace Application.Features.Sale.Commands
 
             var sale = await _context.Sales
                 .Include(x => x.PaymentDetails)
+                .Include(x => x.PaymentAllocations)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleId && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
@@ -80,9 +84,11 @@ namespace Application.Features.Sale.Commands
             SaleProformaPipeline.EnsureReadyForPayment(sale);
 
             var payment = PaymentWriter.NewRow(request, direction);
+
+            await _paymentAccountResolver.ApplyAsync(new[] { payment }, cancellationToken);
             sale.PaymentDetails.Add(payment);
             await PartyLedger.SalePaymentAsync(_context, sale, payment, cancellationToken);
-            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, DocumentPayments.SaleDirection);
+            sale.PaidAmount = DocumentPayments.NetPaid(sale.PaymentDetails, sale.PaymentAllocations, DocumentPayments.SaleDirection);
             sale.UpdatedAt = DateTime.Now;
 
             if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount > 0)
