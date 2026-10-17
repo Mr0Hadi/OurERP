@@ -170,7 +170,7 @@ export default function LoginPage() {
       {/* ───── پنل فرم ───── */}
       <div className="relative flex w-full flex-1 flex-col items-center justify-center px-6 py-10 lg:w-1/2">
         {/* دکمه تغییر تم */}
-        <div className="absolute top-6 left-6">
+        <div className="absolute top-6 right-6 lg:right-auto lg:left-6">
           <ThemeToggle />
         </div>
 
