@@ -267,6 +267,12 @@ namespace Domain.Enums
         [Description("تسویه‌ی طرح اقساط")]
         SettleSaleInstallmentPlan = 504,
 
+        [Description("علامت‌گذاری اقساط سررسیدگذشته")]
+        MarkOverdueSaleInstallments = 505,
+
+        [Description("بخشودگی جریمه‌ی دیرکرد قسط")]
+        WaiveSaleInstallmentPenalty = 506,
+
         // --- مرجوعی فروش ---
         [Description("ایجاد مرجوعی فروش")]
         CreateSaleReturn = 600,
@@ -366,5 +372,15 @@ namespace Domain.Enums
 
         [Description("ابطال دریافت/پرداخت علی‌الحساب")]
         VoidPartyPayment = 1113,
+
+        // --- چک ---
+        [Description("وصول چک")]
+        CashCheck = 1120,
+
+        [Description("برگشت چک")]
+        BounceCheck = 1121,
+
+        [Description("خرج چک")]
+        EndorseCheck = 1122,
     }
 }

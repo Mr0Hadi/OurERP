@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
+using Application.Common.Installments;
+using Application.Common.Settings;
 using Application.Features.SaleInstallment.Dtos;
 using Common.Exceptions;
 using Common.Extensions;
@@ -22,6 +24,9 @@ namespace Application.Features.SaleInstallment.Mappings
                 .FirstOrDefaultAsync(x => x.Id == planId, cancellationToken)
                 ?? throw new NotFoundCustomException("قرارداد اقساطی مورد نظر یافت نشد.");
 
+            var graceDays = await SystemSettingValues.GetIntegerAsync(context, SystemSettingCatalog.InstallmentOverdueGraceDays, cancellationToken);
+            var today = DateTime.Now;
+
             var paymentDetails = await context.PaymentDetails.AsNoTracking()
                 .Where(x => x.SaleId == plan.SaleId)
                 .OrderBy(x => x.PaidAt)
@@ -33,6 +38,13 @@ namespace Application.Features.SaleInstallment.Mappings
                     Amount = x.Amount,
                     PaidAt = x.PaidAt,
                     CheckNumber = x.CheckNumber,
+                    CheckDueDate = x.CheckDueDate,
+                    CheckBankName = x.CheckBankName,
+                    CheckDrawerName = x.CheckDrawerName,
+                    CheckStatus = x.CheckStatus,
+                    CheckStatusChangedAt = x.CheckStatusChangedAt,
+                    CheckStatusNote = x.CheckStatusNote,
+                    EndorsedFromPaymentDetailId = x.EndorsedFromPaymentDetailId,
                     TransferRef = x.TransferRef,
                     BankAccountId = x.BankAccountId,
                     BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
@@ -72,6 +84,12 @@ namespace Application.Features.SaleInstallment.Mappings
                 PaidInstallmentsAmount = plan.PaidInstallmentsAmount,
                 PaidAmount = plan.PaidAmount,
                 RemainingAmount = plan.RemainingAmount,
+                PenaltyPaidAmount = plan.PenaltyPaidAmount,
+                PenaltyDueAmount = plan.Status == Domain.Enums.SaleInstallmentPlanStatusEnum.ACTIVE
+                    ? plan.Installments.Where(InstallmentRules.IsUnpaid).Aggregate(0UL, (sum, i) => sum + InstallmentRules.PenaltyDue(plan, i, today, graceDays))
+                    : 0UL,
+                EarlySettlementDiscountAmount = plan.EarlySettlementDiscountAmount,
+                ReturnCreditAmount = plan.ReturnCreditAmount,
                 LastPaymentDate = plan.LastPaymentDate,
                 NextDueDate = plan.NextDueDate,
                 CreatedAt = plan.CreatedAt,
@@ -86,6 +104,12 @@ namespace Application.Features.SaleInstallment.Mappings
                     PaidAt = i.PaidAt,
                     PaymentType = i.PaymentType,
                     PaymentDetailId = i.PaymentDetailId,
+                    PenaltyAmount = i.PenaltyAmount,
+                    DaysLate = InstallmentRules.IsUnpaid(i) ? InstallmentRules.DaysLate(i.DueDate, today, graceDays) : 0,
+                    PenaltyDue = InstallmentRules.IsUnpaid(i) ? InstallmentRules.PenaltyDue(plan, i, today, graceDays) : 0,
+                    PenaltyWaivedAmount = i.PenaltyWaivedAmount,
+                    PenaltyWaiveReason = i.PenaltyWaiveReason,
+                    EarlySettlementDiscountAmount = i.EarlySettlementDiscountAmount,
                 }).ToList(),
                 PaymentDetails = paymentDetails,
             };

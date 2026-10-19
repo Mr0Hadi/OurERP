@@ -26,6 +26,7 @@ namespace WMS.Tests.Functional
             builder.UseEnvironment("Development");
             // The sweep would race the tests' own data; tests that need it run it directly.
             builder.UseSetting("BackgroundJobs:SaleReservationExpiry:Enabled", "false");
+            builder.UseSetting("BackgroundJobs:InstallmentOverdue:Enabled", "false");
 
             builder.ConfigureServices(services =>
             {

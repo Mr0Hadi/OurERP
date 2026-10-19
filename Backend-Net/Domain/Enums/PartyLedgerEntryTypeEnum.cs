@@ -43,5 +43,12 @@ namespace Domain.Enums
         /// </summary>
         [Description("بستن قلم خرید (کسری)")]
         PURCHASE_SHORT_CLOSE = 8,
+
+        /// <summary>
+        /// A late-payment penalty on an installment, charged when the installment is paid (DEBIT). Carries the payment's
+        /// PaymentDetailId, so voiding or bouncing that payment reverses the penalty with it.
+        /// </summary>
+        [Description("جریمه‌ی دیرکرد قسط")]
+        LATE_PENALTY = 9,
     }
 }

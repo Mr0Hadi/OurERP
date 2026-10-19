@@ -123,7 +123,8 @@ namespace Application.Features.SaleInstallment.Queries
                 CustomerId = x.Sale.CustomerId,
                 CustomerName = x.Sale.Customer.FirstName + " " + x.Sale.Customer.LastName,
                 TotalAmount = (decimal)x.TotalAmount,
-                DownPaymentAmount = (decimal)x.DownPaymentAmount,
+                // The return credit counts as paid, like the down payment (SaleInstallmentPlan.PaidAmount).
+                DownPaymentAmount = (decimal)x.DownPaymentAmount + (decimal)x.ReturnCreditAmount,
                 PaidInstallmentsAmount = x.Installments
                     .Where(i => i.Status == SaleInstallmentStatusEnum.PAID)
                     .Sum(i => (decimal)i.Amount),

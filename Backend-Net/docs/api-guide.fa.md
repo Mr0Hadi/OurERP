@@ -35,6 +35,7 @@
 21. [تاریخچه تغییرات (Audit)](#21-تاریخچه-تغییرات-audit)
 22. [تنظیمات سامانه (Setting)](#22-تنظیمات-سامانه-setting)
 23. [صندوق و بانک، دریافت و پرداخت علی‌الحساب (BankAccount، PartyAccount)](#23-صندوق-و-بانک-دریافت-و-پرداخت-علیالحساب-bankaccount-partyaccount)
+24. [چک (Check)](#24-چک-check)
 
 ---
 
@@ -680,6 +681,8 @@ Authorization: Bearer {accessToken}
 | | `ChangeSaleStatus`، `UpdateSaleAttachments`، `UpdateSalePaymentDate` | `SaleUpdate` |
 | | `Add/Edit/VoidSalePayment` | `SalePayment` |
 | اقساط | `Get...` / `Create,Update,DeletePlan` / `PaySaleInstallment`،`SettleSaleInstallmentPlan` | `SaleInstallmentView` / `SaleInstallmentManage` / `SaleInstallmentPay` |
+| | `WaiveSaleInstallmentPenalty` | `SaleInstallmentPenaltyWaive` |
+| چک | `Check/GetCheckList` / `CashCheck`، `BounceCheck`، `EndorseCheck` | `CheckView` **یا** `CheckManage` / `CheckManage` |
 | مرجوعی خرید | خواندن‌ها (شامل `GetPurchaseReceivingInfo`) | `PurchaseReturnView` |
 | | `CreatePurchaseReturn`، `UpdatePurchaseReturnAttachments` | `PurchaseReturnCreate` |
 | | `Add/RemoveClaimResolution` | `PurchaseReturnDecide` |
@@ -2518,7 +2521,7 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 
 اثر: پلن + تمام سطرهای قسط در وضعیت `PENDING` ساخته می‌شوند، یک `PaymentDetail` با `purpose = 1` (`INSTALLMENT_DOWN_PAYMENT`) ثبت می‌شود، `sale.paidAmount` به‌روز می‌شود، و در صورت نیاز فروش از پیش‌فاکتور خارج می‌شود.
 
-**`latePenaltyPercentage` فقط ذخیره می‌شود.** هیچ محاسبه‌ای روی آن انجام نمی‌شود و هیچ‌جا خوانده نمی‌شود — بخش «موارد باز» پایین همین بخش.
+**`latePenaltyPercentage`** نرخ **ماهانه‌ی** جریمه‌ی دیرکرد است (درصدی از قسطِ دیرشده، روزانه حساب می‌شود؛ خالی یا صفر = بدون جریمه) — از ۲۰۲۶-۱۰-۱۹ اعمال می‌شود، زیر `PaySaleInstallment`.
 
 **data خروجی:** همان سند کامل `GetSaleInstallmentPlanDetail` (پایین). همه‌ی commandهای این بخش همین سند را برمی‌گردانند، تا پاسخ یک write دقیقاً همان شکلی باشد که یک read می‌دهد.
 
@@ -2562,6 +2565,12 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 - پرداخت **زودتر از سررسید** مجاز است — هیچ اعتبارسنجی‌ای روی `dueDate` نیست. پرداخت **خارج از ترتیب** هم رد نمی‌شود (سطر مشخصاً با `id` هدف گرفته می‌شود).
 - اگر سطر `PAID` یا `CANCELLED` باشد، یا پلن `ACTIVE` نباشد، ۴۰۰ برمی‌گردد.
 - اثر: یک `PaymentDetail` با `purpose = 2` (`INSTALLMENT`) ساخته و به سطر لینک می‌شود؛ سطر `PAID` می‌شود؛ اگر هیچ سطر پرداخت‌نشده‌ای نماند پلن `SETTLED` می‌شود؛ `sale.paidAmount` به‌روز می‌شود.
+- **جریمه‌ی دیرکرد (از ۲۰۲۶-۱۰-۱۹):** اگر قسط دیر پرداخت شود، جریمه‌اش **در همان پرداخت** گرفته می‌شود: مبلغ ردیف پرداخت = قسط + جریمه، و
+  `penaltyAmount`ِ سطر جریمه را نشان می‌دهد. جریمه = `مبلغ قسط × latePenaltyPercentage ÷ ۱۰۰ × روزهای تأخیر ÷ ۳۰` (نرخ ماهانه است و روزانه حساب
+  می‌شود؛ گرد به نزدیک‌ترین ریال)، منهای آنچه بخشوده شده. روزهای تأخیر از پایان مهلت ارفاق (تنظیم `Installment.OverdueGraceDays`) تا `paidAt`.
+  جریمه **جزو `totalAmount`/`paidAmount` پلن نیست**؛ در حساب مشتری یک ردیف بدهکار `LATE_PENALTY` می‌خورد که با ابطال یا برگشت همان پرداخت برمی‌گردد.
+  پیش از پرداخت، `penaltyDue` هر سطر در جزئیات پلن نشان می‌دهد پرداختِ امروز چقدر جریمه دارد.
+- **چک:** برای `paymentType = 2` فیلدهای `checkDueDate`، `checkBankName`، `checkDrawerName` (اختیاری) هم پذیرفته می‌شود (بخش ۲۴).
 
 ### `POST api/SaleInstallment/SettleSaleInstallmentPlan`
 
@@ -2576,7 +2585,13 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 }
 ```
 
-تسویه‌ی کامل زودهنگام: یکی از `saleId` یا `planId` کافی است. مبلغ دقیقاً `plan.remainingAmount` است، **بدون هیچ تخفیفی** روی درصد افزایش. یک `PaymentDetail` یکجا ساخته می‌شود و تمام سطرهای پرداخت‌نشده با همان `paidAt`/`paymentType`/`paymentDetailId` به `PAID` می‌روند؛ پلن `SETTLED` و `sale.paidAmount = plan.totalAmount` می‌شود.
+تسویه‌ی کامل زودهنگام: یکی از `saleId` یا `planId` کافی است. یک `PaymentDetail` یکجا ساخته می‌شود و تمام سطرهای پرداخت‌نشده با همان
+`paidAt`/`paymentType`/`paymentDetailId` به `PAID` می‌روند؛ پلن `SETTLED` و `sale.paidAmount = plan.paidAmount` می‌شود.
+
+**تخفیف تسویه‌ی زودهنگام (از ۲۰۲۶-۱۰-۱۹):** سود اقساطِ قسط‌هایی که سررسیدشان **هنوز نرسیده** بخشیده می‌شود، به اندازه‌ی تنظیم
+`Installment.EarlySettlementDiscountPercentage` (پیش‌فرض ۱۰۰٪). سهم هر قسط از سود = `installmentChargeAmount × مبلغ قسط ÷ financedAmount`. مبلغ
+آن قسط‌ها، `installmentChargeAmount`، `totalAmount` و `financedAmount` به همان اندازه کم می‌شوند، `earlySettlementDiscountAmount` روی پلن و روی هر
+قسط ثبت می‌شود، و ردیف سود اقساط در حساب مشتری اصلاح می‌شود. **مبلغ پرداخت = `remainingAmount` (بعد از تخفیف) + جریمه‌ی قسط‌های دیرشده.**
 
 ### `GET api/SaleInstallment/GetSaleInstallmentPlanDetail?saleId=200`
 
@@ -2699,15 +2714,26 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 
 بدون لیست سطرها — اینجا فقط خلاصه است؛ سطرها در `GetSaleInstallmentPlanDetail` می‌آیند.
 
-### موارد باز (عمداً پیاده‌سازی‌نشده)
+### دیرکرد، جریمه، بخشودگی، تسویه‌ی زودهنگام و مرجوعی (از ۲۰۲۶-۱۰-۱۹)
 
-۱. **علامت‌گذاری دیرکرد.** `OVERDUE` عضو `SaleInstallmentStatusEnum` هست ولی **هیچ کدی آن را نمی‌نویسد**: هیچ background service، هیچ job و هیچ اندپوینت بازمحاسبه‌ای وجود ندارد. تشخیص دیرکرد از روی `dueDate` کارِ فرانت است. این عضو برای وقتی نگه داشته شده که بعداً تصمیم بگیریم علامت‌گذاری دستی یا خودکار اضافه کنیم — فراموش نشده است.
+۱. **علامت‌گذاری دیرکرد.** سرویس پس‌زمینه هر ساعت قسط‌های `PENDING`ِ پلن‌های جاری را که سررسیدشان به‌اضافه‌ی مهلت ارفاق
+(`Installment.OverdueGraceDays`، پیش‌فرض صفر) گذشته `OVERDUE` می‌کند. این فقط برچسب است؛ جریمه از روی `dueDate` و تاریخ پرداخت حساب می‌شود.
 
-۲. **جریمه‌ی دیرکرد.** `latePenaltyPercentage` روی پلن ذخیره می‌شود (اوپراتور دستی وارد می‌کند) ولی هیچ محاسبه‌ای روی آن انجام نمی‌شود و هیچ‌جا خوانده نمی‌شود. پرسش‌های بازی که باید پاسخ بگیرند: درصد نسبت به چه پایه‌ای (مبلغ قسط معوق یا کل باقیمانده)؟ به ازای هر روز تأخیر یا هر ماه؟ خودکار محاسبه شود یا اوپراتور موقع دریافت، مبلغ نهایی را ثبت کند؟ جریمه به `totalAmount` اضافه شود یا جدا نگه داشته شود؟ (توصیه: **جدا** — وگرنه رابطه‌ی `paidAmount == totalAmount ⇔ SETTLED` می‌شکند و منطق تسویه به‌هم می‌ریزد.) نقطه‌ی ورودش `PaySaleInstallmentCommand` است و احتمالاً یک `Purpose = LATE_PENALTY` روی `PaymentPurposeEnum` به‌علاوه‌ی یک فیلد `PenaltyAmount` روی `SaleInstallment` می‌خواهد.
+۲. **جریمه‌ی دیرکرد.** بالای همین بخش زیر `PaySaleInstallment`. در جزئیات پلن هر سطر `daysLate`، `penaltyDue` (اگر امروز پرداخت شود)،
+`penaltyAmount` (گرفته‌شده)، `penaltyWaivedAmount`، `penaltyWaiveReason` دارد و پلن `penaltyPaidAmount` و `penaltyDueAmount`.
 
-۳. **تخفیف تسویه‌ی زودهنگام.** الان `SettleSaleInstallmentPlan` دقیقاً `remainingAmount` را می‌گیرد. اگر بعداً تصمیم شد بخشی از درصد افزایش برگردد، تنها جایی که تغییر می‌کند محاسبه‌ی مبلغ در همان handler است، به‌علاوه‌ی احتمالاً یک فیلد `EarlySettlementDiscountAmount` روی پلن برای ثبت مقدار برگشتی.
+۳. **بخشودگی جریمه** — `POST api/SaleInstallment/WaiveSaleInstallmentPenalty`، دسترسی `SaleInstallmentPenaltyWaive`:
+`{ "saleInstallmentId": 101, "amount": 10000, "reason": "مشتری قدیمی" }`. مبلغ (ریال) از جریمه‌ای که موقع پرداخت حساب می‌شود کم می‌شود؛ جایگزین
+بخشودگی قبلی همان سطر است و `0` آن را برمی‌دارد. برای مبلغ بیش از صفر `reason` الزامی است. فقط سطر پرداخت‌نشده‌ی پلن جاری. **data:** پلن کامل.
 
-۴. **اثر مرجوعی فروش (`SaleReturn`) روی اقساط باقی‌مانده.** خارج از scope است و هیچ اتصالی بین این دو دامنه ساخته نشده. اگر مشتری کالایی را مرجوع کند، سطرهای قسط به‌طور خودکار تعدیل نمی‌شوند؛ فعلاً کار اوپراتور است (`UpdateSaleInstallmentPlan`).
+۴. **تسویه‌ی زودهنگام** — زیر `SettleSaleInstallmentPlan`.
+
+۵. **اثر مرجوعی فروش روی اقساط.** اوپراتور با روش پرداخت پول مرجوعی تصمیم می‌گیرد: استرداد `CASH`/`CHECK`/`TRANSFER` یعنی پول به مشتری
+برمی‌گردد و **قرارداد دست نمی‌خورد**؛ استرداد `ON_ACCOUNT` (یا بخش `ON_ACCOUNT`ِ `MIXED`) روی فروشِ اقساطیِ دارای قرارداد جاری، **از انتهای
+قرارداد کم می‌شود**: آخرین قسط‌ها کوچک می‌شوند (قسطی که صفر شود `CANCELLED`)، مبلغ در `returnCreditAmount`ِ پلن ثبت و **پرداخت‌شده** حساب می‌شود
+(جزو `paidAmount`). بیش از باقیمانده‌ی قرارداد، بستانکاری مشتری می‌ماند. حذف همان تصمیم مرجوعی آن را برمی‌گرداند (روی آخرین قسط پرداخت‌نشده،
+یا اگر نمانده، قسطی تازه یک ماه بعد از آخرین سررسید).
+
 
 
 ---
@@ -3146,6 +3172,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 110 | SaleInstallmentView | مشاهده اقساط |
 | 111 | SaleInstallmentManage | مدیریت قرارداد اقساطی |
 | 112 | SaleInstallmentPay | دریافت قسط |
+| 113 | SaleInstallmentPenaltyWaive | بخشودگی جریمه‌ی دیرکرد قسط |
 | 130 | PurchaseReturnView | مشاهده مرجوعی خرید |
 | 131 | PurchaseReturnCreate | ثبت مرجوعی خرید |
 | 132 | PurchaseReturnDecide | ثبت تصمیم مرجوعی خرید |
@@ -3176,6 +3203,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 261 | SaleWarehouseIssueResolve | رسیدگی به کالای معیوب/مفقودِ گزارش‌شده‌ی انبار |
 | 262 | BankAccountView | مشاهده صندوق‌ها و حساب‌های بانکی (مانده و گردش) |
 | 263 | BankAccountManage | مدیریت صندوق‌ها و حساب‌های بانکی و انتقال بین آن‌ها |
+| 264 | CheckView | مشاهده چک‌ها |
+| 265 | CheckManage | وصول، برگشت و خرج چک |
 | 270 | AuditLogView | مشاهده تاریخچه تغییرات (`Audit/*`) |
 | 280 | SettingView | مشاهده تنظیمات سامانه (`Setting/GetSystemSettings`) |
 | 281 | SettingManage | ویرایش تنظیمات سامانه (`Setting/UpdateSystemSettings`) |
@@ -3244,6 +3273,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 6 | تسویه‌ی مرجوعی در حساب (RETURN_SETTLEMENT) |
 | 7 | برگشت (REVERSAL) — `reversalOfEntryId` ردیف اصلی را نشان می‌دهد |
 | 8 | بستن قلم خرید با کسری (PURCHASE_SHORT_CLOSE) |
+| 9 | جریمه‌ی دیرکرد قسط (LATE_PENALTY) — از ۲۰۲۶-۱۰-۱۹؛ بدهکار، همراه پرداخت همان قسط |
 
 ### `PaymentSourceEnum` (منبع پرداخت کارتخوان — روی `paymentDetails[]`، از ۲۰۲۶-۱۰-۰۵)
 | مقدار | معنی |
@@ -3276,7 +3306,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 2 | سررسید گذشته (OVERDUE) |
 | 3 | ابطال شده (CANCELLED) |
 
-⚠️ **`OVERDUE` را هیچ کدی نمی‌نویسد.** هیچ background service، هیچ job و هیچ اندپوینت بازمحاسبه‌ای برای علامت‌گذاری دیرکرد وجود ندارد؛ تشخیصش از روی `dueDate` کارِ فرانت است (بخش ۱۱ب، «موارد باز»). این عضو عمداً تعریف شده تا اگر بعداً علامت‌گذاری دستی/خودکار اضافه شد، شماره‌ها عوض نشوند.
+از ۲۰۲۶-۱۰-۱۹ `OVERDUE` را سرویس پس‌زمینه می‌نویسد (بخش ۱۱ب). کوئری‌ها آن را مثل `PENDING` «پرداخت‌نشده» حساب می‌کنند.
 
 ### `ProductUnitEnum` (واحد شمارش محصول)
 | مقدار | معنی |
@@ -3556,6 +3586,26 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۹ (چرخه‌ی چک، تکمیل فروش اقساطی) — افزودنی، با دو تغییر رفتار
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `api/Check/*` | — | تازه: `GetCheckList`، `CashCheck`، `BounceCheck`، `EndorseCheck` (بخش ۲۴) |
+| بدنه‌ی هر ثبت پول (همان فهرست بخش ۲۳) | `checkNumber` | به‌علاوه‌ی `checkDueDate`، `checkBankName`، `checkDrawerName` (فقط برای `CHECK`) |
+| `paymentDetails[]` و دفتر دریافت و پرداخت | — | `checkDueDate`، `checkBankName`، `checkDrawerName`، `checkStatus`، `checkStatusChangedAt`، `checkStatusNote`، `endorsedFromPaymentDetailId` (journal: `checkStatus`، `checkDueDate`) |
+| مانده‌ی صندوق/بانک (`GetBankAccountList`/`Statement`) | چک در تاریخ دریافت/صدور | چک فقط وقتی وصول شد، در تاریخ وصول (**تغییر رفتار**؛ چک‌های قدیمی وصول‌شده در تاریخ ثبت فرض شدند تا مانده‌ها عوض نشوند) |
+| `Edit/Void{Sale,Purchase}Payment`، `VoidPartyPayment` | — | چکی که وصول، برگشت یا خرج شده ۴۰۰ |
+| `PaySaleInstallment` | مبلغ = قسط | مبلغ = قسط + جریمه‌ی دیرکرد (**تغییر رفتار** برای پلن‌های دارای `latePenaltyPercentage`) |
+| `SettleSaleInstallmentPlan` | مبلغ = باقیمانده | باقیمانده منهای تخفیف تسویه‌ی زودهنگام + جریمه‌ها |
+| `WaiveSaleInstallmentPenalty` | — | تازه (بخش ۱۱ب) |
+| قسط‌ها | `OVERDUE` نوشته نمی‌شد | سرویس پس‌زمینه می‌نویسد |
+| جزئیات پلن اقساط | — | پلن: `penaltyPaidAmount`، `penaltyDueAmount`، `earlySettlementDiscountAmount`، `returnCreditAmount`؛ هر سطر: `penaltyAmount`، `daysLate`، `penaltyDue`، `penaltyWaivedAmount`، `penaltyWaiveReason`، `earlySettlementDiscountAmount` |
+| مرجوعی فروش اقساطی با استرداد `ON_ACCOUNT` | قرارداد دست نمی‌خورد | از انتهای قرارداد کم می‌شود (بخش ۱۱ب) |
+| تنظیمات | — | `Installment.OverdueGraceDays`، `Installment.EarlySettlementDiscountPercentage`؛ گروه `INSTALLMENT = 3` |
+| `PermissionEnum` | — | `SaleInstallmentPenaltyWaive = 113`، `CheckView = 264`، `CheckManage = 265` |
+| `AuditActionEnum` / `PartyLedgerEntryTypeEnum` | — | `505`، `506`، `1120`–`1122` / `LATE_PENALTY = 9` |
+| enum تازه | — | `PaymentCheckStatusEnum` (بخش ۲۴) |
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۷ (صندوق و بانک، دریافت و پرداخت علی‌الحساب) — افزودنی
 
@@ -4645,6 +4695,8 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 502 | `DeleteSaleInstallmentPlan` | حذف طرح اقساط |
 | 503 | `PaySaleInstallment` | پرداخت قسط |
 | 504 | `SettleSaleInstallmentPlan` | تسویه‌ی طرح اقساط |
+| 505 | `MarkOverdueSaleInstallments` | علامت‌گذاری اقساط سررسیدگذشته (سرویس پس‌زمینه؛ `userId` خالی) |
+| 506 | `WaiveSaleInstallmentPenalty` | بخشودگی جریمه‌ی دیرکرد قسط |
 | 600 | `CreateSaleReturn` | ایجاد مرجوعی فروش |
 | 601 | `DeleteSaleReturn` | حذف مرجوعی فروش |
 | 602 | `CancelSaleReturn` | لغو مرجوعی فروش |
@@ -4676,6 +4728,9 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 1111 | `AllocatePartyPayment` | تخصیص دریافت/پرداخت به فاکتور |
 | 1112 | `RemovePartyPaymentAllocation` | حذف تخصیص دریافت/پرداخت |
 | 1113 | `VoidPartyPayment` | ابطال دریافت/پرداخت علی‌الحساب |
+| 1120 | `CashCheck` | وصول چک |
+| 1121 | `BounceCheck` | برگشت چک |
+| 1122 | `EndorseCheck` | خرج چک |
 
 ---
 
@@ -4692,7 +4747,9 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | کلید | نوع | پیش‌فرض | حدود | معنی |
 |---|---|---|---|---|
 | `Sale.ReservationMinutes` | INTEGER | `10` | `0`–`10080` دقیقه | مهلت رزرو کالای پیش‌فاکتور پس از تأیید انبار (بخش ۱۱)؛ `0` = بدون انقضا؛ فقط روی رزروهای بعدی اثر دارد |
-| `Payment.RequireBankAccount` | BOOLEAN | `false` | — | از ۲۰۲۶-۱۰-۱۷: روشن ⇒ هر دریافت/پرداخت تازه باید صندوق یا حساب بانکی داشته باشد (بخش ۲۳)؛ ردیف نسیه (`CREDIT`) معاف است |
+| `Payment.RequireBankAccount` | BOOLEAN | `false` | — | از ۲۰۲۶-۱۰-۱۷: روشن ⇒ هر دریافت/پرداخت تازه باید صندوق یا حساب بانکی داشته باشد (بخش ۲۳)؛ ردیف نسیه (`CREDIT`) و چک دریافتی (حسابش موقع وصول تعیین می‌شود) معاف‌اند |
+| `Installment.OverdueGraceDays` | INTEGER | `0` | `0`–`60` روز | از ۲۰۲۶-۱۰-۱۹: چند روز پس از سررسید، قسط دیرکرد حساب می‌شود (`OVERDUE` و شروع جریمه) |
+| `Installment.EarlySettlementDiscountPercentage` | INTEGER | `100` | `0`–`100` درصد | از ۲۰۲۶-۱۰-۱۹: چه درصدی از سود اقساطِ قسط‌های هنوز سررسیدنشده در تسویه‌ی زودهنگام بخشیده شود |
 
 ### `GET api/Setting/GetSystemSettings`
 
@@ -4749,6 +4806,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 |---|---|
 | 1 | فروش (SALE) |
 | 2 | دریافت و پرداخت (PAYMENT) |
+| 3 | اقساط (INSTALLMENT) |
 
 ---
 
@@ -4774,7 +4832,9 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 `PaySaleInstallment`، `SettleSaleInstallmentPlan`، `AddPartyPayment`.
 - حساب داده‌شده باید وجود داشته باشد و فعال باشد، وگرنه ۴۰۰.
 - پرداخت کارتخوانی که حساب ندارد، حسابِ دستگاه (`posTerminal.bankAccountId`) را می‌گیرد.
-- اگر تنظیم `Payment.RequireBankAccount` روشن باشد، ردیفی که باز هم حساب ندارد ۴۰۰ می‌گیرد — به‌جز ردیف نسیه (`type = 1`، `CREDIT`).
+- اگر تنظیم `Payment.RequireBankAccount` روشن باشد، ردیفی که باز هم حساب ندارد ۴۰۰ می‌گیرد — به‌جز ردیف نسیه (`type = 1`، `CREDIT`) و
+  چک دریافتی (حسابش موقع وصول تعیین می‌شود، بخش ۲۴).
+- **چک** فقط وقتی وصول شود (`CASHED`) و در تاریخ وصول در مانده‌ی حساب می‌آید؛ چکِ در جریان در هیچ مانده‌ای نیست (بخش ۲۴).
 - **هنوز ساخته نشده:** پول مرجوعی‌ها (اثرهای `moneyIn`/`moneyOut` در بخش‌های ۱۰ و ۱۲) حساب نمی‌گیرد و در گردش صندوق/بانک دیده نمی‌شود.
 
 ### `GET api/BankAccount/GetBankAccountList`
@@ -4923,3 +4983,84 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 1 | دریافت/پرداخت (PAYMENT) |
 | 2 | انتقال به این حساب (TRANSFER_IN) |
 | 3 | انتقال از این حساب (TRANSFER_OUT) |
+
+---
+
+## 24. چک (Check)
+
+> از ۲۰۲۶-۱۰-۱۹ (GAP-03.3، frontend-requests ۲۲.۳). کنترلر: `api/Check`.
+
+### مفهوم
+
+هر ردیف پرداخت با `type = 2` (`CHECK`) یک چک است — دریافتی (`direction = IN`) یا صادره/خرج‌شده (`OUT`)، روی فاکتور، روی قسط، یا علی‌الحساب. سرور
+وضعیتش را نگه می‌دارد (`checkStatus`، `PaymentCheckStatusEnum`):
+
+| رویداد | چه می‌شود |
+|---|---|
+| ثبت (هر مسیر پرداخت) | `PENDING`. حساب شخص **همان لحظه** تغییر می‌کند (مثل قبل)، ولی چک در مانده‌ی هیچ صندوق/بانکی نیست. `checkDueDate` خالی = همان روز. |
+| `CashCheck` | `CASHED` (نهایی). دریافتی: به حسابی که انتخاب می‌شود واریز شد؛ صادره: از حسابی که روی آن کشیده شده پاس شد. مانده‌ی حساب در **تاریخ وصول** تغییر می‌کند. |
+| `BounceCheck` | `BOUNCED` (نهایی). پرداختش برمی‌گردد: حساب شخص دوباره بدهکار/بستانکار، فاکتور یا قسط‌هایی که پرداخته دوباره بدهکار، تخصیص‌هایش حذف. |
+| `EndorseCheck` | چک دریافتی به تامین‌کننده داده می‌شود: ردیف پرداخت تازه‌ی `OUT` با همان مشخصات چک (روی خرید یا علی‌الحساب)؛ چک اصلی `ENDORSED` می‌شود. هیچ حساب بانکی ما تکان نمی‌خورد. سرنوشت بعدی روی ردیف تازه ثبت می‌شود. |
+
+چکی که سرنوشتش ثبت شده (`CASHED`/`BOUNCED`/`ENDORSED`) دیگر با `Edit`/`Void` تغییر نمی‌کند (۴۰۰). چکِ `PENDING`ِ اشتباه را مثل قبل ابطال کنید.
+**ثبت چک:** همه‌ی مسیرهای پرداخت (بخش ۲۳) برای `CHECK` این فیلدهای اختیاری را می‌پذیرند: `checkNumber`، `checkDueDate` (تاریخ روی چک)،
+`checkBankName`، `checkDrawerName` (صاحب حساب). برای غیرچک فرستادن سه فیلد آخر ۴۰۰ است. چک دریافتی حساب لازم ندارد (حتی با
+`Payment.RequireBankAccount`) — حسابش موقع وصول تعیین می‌شود.
+
+### `GET api/Check/GetCheckList`
+
+**Query:** `page`، `take`، `direction` (`1` دریافتی / `2` پرداختی)، `statuses` (چندتایی)، `fromDueDate`، `toDueDate` (روی تاریخ چک، هر دو روز شامل)،
+`customerId`، `supplierId`، `bankAccountId`، `includeVoided` (چکِ در جریانی که اشتباهی ثبت و ابطال شده؛ چک برگشتی همیشه هست)، `search` (شماره،
+صاحب حساب، بانک، نام طرف، شماره فاکتور)، `sortBy` (`CheckListSortEnum`: `DUE_DATE = 0` پیش‌فرض و **صعودی** — نزدیک‌ترین سررسید اول، `AMOUNT = 1`،
+`PAID_AT = 2`، `PARTY_NAME = 3`)، `sortDirection`.
+
+```json
+{
+  "checkList": [
+    { "id": 51, "direction": 1, "amount": 3000000, "checkNumber": "889900", "checkDueDate": "2026-10-29T00:00:00",
+      "checkBankName": "صادرات", "checkDrawerName": "علی رضایی", "status": 1, "statusTitle": "در جریان", "statusChangedAt": "...",
+      "statusNote": null, "daysToDue": 10, "paidAt": "...", "purpose": 0, "isCustomer": true, "partyId": 1, "partyName": "علی رضایی",
+      "saleId": 200, "purchaseId": null, "invoiceNumber": "INV-1405-0012", "isOnAccount": false,
+      "bankAccountId": null, "bankAccountTitle": null, "endorsedFromPaymentDetailId": null, "endorsedToPaymentDetailId": null,
+      "description": null }
+  ],
+  "summary": { "pendingReceivedCount": 3, "pendingReceivedAmount": 9000000, "pendingIssuedCount": 1, "pendingIssuedAmount": 4000000,
+               "pastDueReceivedAmount": 1000000, "pastDueIssuedAmount": 0 },
+  "page": { "...": "..." }
+}
+```
+`id` شناسه‌ی ردیف پرداخت است (همان `paymentDetails[].id`). `daysToDue` منفی = سررسید گذشته. `summary` روی کل فیلتر است: چک‌های در جریان و آن‌هایی
+که تاریخشان گذشته.
+
+### `POST api/Check/CashCheck`
+
+`{ "paymentDetailId": 51, "bankAccountId": 2, "cashedAt": null }` — فقط چکِ `PENDING`. `bankAccountId` برای چکی که خودش حساب دارد اختیاری است
+(چک صادره معمولاً دارد)، وگرنه الزامی؛ برای چک خرج‌شده (که تامین‌کننده وصولش کرده) نادیده گرفته می‌شود. `cashedAt` خالی = اکنون. **data:** چک.
+
+### `POST api/Check/BounceCheck`
+
+`{ "paymentDetailId": 51, "bouncedAt": null, "note": "کسری موجودی" }` — فقط چکِ `PENDING` (چک وصول‌شده برنمی‌گردد؛ چک خرج‌شده را روی ردیف
+تامین‌کننده برگشت بزنید). اثرها:
+- ردیف پرداخت ابطال می‌شود و همه‌ی ردیف‌های دفتر حساب همان پرداخت برمی‌گردند (جریمه‌ی دیرکرد هم).
+- پرداخت روی فاکتور: `paidAmount` فاکتور دوباره حساب می‌شود (فاکتور صادرشده صادرشده می‌ماند).
+- پرداخت قسط یا تسویه: قسط‌هایش دوباره `PENDING` می‌شوند (سرویس دیرکرد دوباره علامت می‌زند)، جریمه‌شان صفر، و تخفیف تسویه‌ی زودهنگامی که گرفته
+  بودند به قسط، پلن و حساب مشتری برمی‌گردد؛ پلن `SETTLED` دوباره `ACTIVE` می‌شود.
+- علی‌الحساب: تخصیص‌هایش حذف می‌شوند (فاکتورهایی که پرداخته دوباره بدهکارند).
+- چک خرج‌شده: چک اصلی مشتری هم `BOUNCED` می‌شود — مشتری دوباره بدهکار، تامین‌کننده دوباره بستانکار.
+- **استثنا:** چک **پیش‌پرداخت** قرارداد اقساطی از این مسیر برگشت نمی‌خورد (۴۰۰) — قرارداد را ابطال و دوباره ثبت کنید.
+
+**data:** چک.
+
+### `POST api/Check/EndorseCheck`
+
+`{ "paymentDetailId": 51, "supplierId": 7, "purchaseId": null, "endorsedAt": null, "description": null }` — فقط چک **دریافتیِ** `PENDING`.
+`purchaseId` = پرداخت همان خرید این تامین‌کننده (`paidAmount` خرید بالا می‌رود)؛ خالی = علی‌الحساب تامین‌کننده. **data:** چکِ تازه (ردیف `OUT`)، با
+`endorsedFromPaymentDetailId` = چک اصلی؛ روی چک اصلی هم `endorsedToPaymentDetailId` پر می‌شود.
+
+### `PaymentCheckStatusEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | در جریان (PENDING) |
+| 2 | وصول‌شده (CASHED) |
+| 3 | برگشتی (BOUNCED) |
+| 4 | خرج‌شده (ENDORSED) |

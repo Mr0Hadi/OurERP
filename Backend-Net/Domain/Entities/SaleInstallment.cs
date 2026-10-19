@@ -21,6 +21,22 @@ namespace Domain.Entities
 
         public UInt64 Amount { get; set; }
 
+        /// <summary>
+        /// The late penalty charged when this row was paid (0 when paid on time, or before 2026-10-19). Kept apart from Amount:
+        /// it is not part of the plan's TotalAmount, so "PaidAmount == TotalAmount means SETTLED" still holds.
+        /// </summary>
+        public UInt64 PenaltyAmount { get; set; }
+
+        /// <summary>Penalty forgiven in advance (WaiveSaleInstallmentPenalty); taken off what is charged at payment.</summary>
+        public UInt64 PenaltyWaivedAmount { get; set; }
+        public string? PenaltyWaiveReason { get; set; }
+
+        /// <summary>
+        /// What an early settlement took off this row's Amount (its share of the installment charge). Kept so that a bounced
+        /// settlement cheque can put it back.
+        /// </summary>
+        public UInt64 EarlySettlementDiscountAmount { get; set; }
+
         public SaleInstallmentStatusEnum Status { get; set; }
 
         public DateTime? PaidAt { get; set; }

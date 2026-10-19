@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Audit;
 using Application.Common.Contracts.UserContextService;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence.Auditing;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,6 +49,15 @@ namespace Infrastructure.Persistence
                 {
                     entry.Entity.RecordedAt ??= now;
                     entry.Entity.RecordedByUserId ??= userId;
+
+                    // Every new cheque starts its life PENDING (GAP-03.3), whichever command wrote it; the date on it
+                    // defaults to the day it was received or issued.
+                    if (entry.Entity.Type == PaymentTypeEnum.CHECK && entry.Entity.CheckStatus == null)
+                    {
+                        entry.Entity.CheckStatus = PaymentCheckStatusEnum.PENDING;
+                        entry.Entity.CheckStatusChangedAt = now;
+                        entry.Entity.CheckDueDate ??= entry.Entity.PaidAt.Date;
+                    }
                 }
             }
 
@@ -173,6 +183,7 @@ namespace Infrastructure.Persistence
         public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
         public DbSet<BankAccountTransfer> BankAccountTransfers => Set<BankAccountTransfer>();
         public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
+        public DbSet<SaleInstallmentReturnCredit> SaleInstallmentReturnCredits => Set<SaleInstallmentReturnCredit>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -821,6 +832,26 @@ namespace Infrastructure.Persistence
 
             modelBuilder.Entity<PosTerminal>()
                 .HasOne(x => x.BankAccount).WithMany().HasForeignKey(x => x.BankAccountId).OnDelete(DeleteBehavior.Restrict);
+
+            // Cheque lifecycle (GAP-03.3). An endorsed cheque points at the received one it is; Restrict - payment rows are
+            // never deleted. The cheque list filters on status and due date.
+            modelBuilder.Entity<PaymentDetail>(entry =>
+            {
+                entry.HasOne(x => x.EndorsedFrom).WithMany().HasForeignKey(x => x.EndorsedFromPaymentDetailId).OnDelete(DeleteBehavior.Restrict);
+                entry.Property(x => x.CheckBankName).HasMaxLength(100);
+                entry.Property(x => x.CheckDrawerName).HasMaxLength(100);
+                entry.Property(x => x.CheckStatusNote).HasMaxLength(500);
+                entry.HasIndex(x => new { x.CheckStatus, x.CheckDueDate }).HasFilter("[CheckStatus] IS NOT NULL");
+            });
+
+            // Return refunds applied to an installment plan (GAP-26). Goes with the plan.
+            modelBuilder.Entity<SaleInstallmentReturnCredit>(entry =>
+            {
+                entry.HasOne(x => x.Plan).WithMany(x => x.ReturnCredits).HasForeignKey(x => x.SaleInstallmentPlanId).OnDelete(DeleteBehavior.Cascade);
+                entry.Property(x => x.RequestedAmount).HasPrecision(20, 0);
+                entry.Property(x => x.AppliedAmount).HasPrecision(20, 0);
+                entry.HasIndex(x => x.SaleReturnClaimId);
+            });
 
             // Restrict: a supplement line points at the ordered line it grew out of; neither is ever deleted once the
             // invoice is issued, and a cascade here would give SQL Server a second path from Purchases.

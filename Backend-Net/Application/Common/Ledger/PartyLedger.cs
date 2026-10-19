@@ -23,6 +23,7 @@ namespace Application.Common.Ledger
     ///   (both with or without an invoice: an on-account payment is written the same way; allocating it to invoices later
     ///    writes nothing)
     ///   return money ON_ACCOUNT      IN = DEBIT, OUT = CREDIT (no cash: the amount stays on the account)
+    ///   installment late penalty     DEBIT   charged with the payment that pays the late installment
     /// Anything taken back (voided payment, cancelled invoice, changed charge, removed return money) gets a REVERSAL row
     /// on the opposite side pointing at the original; nothing is ever edited or deleted.
     /// </summary>
@@ -151,12 +152,7 @@ namespace Application.Common.Ledger
             ReturnEffectDirectionEnum direction, ReturnPaymentMethodEnum? method, ulong amount, IEnumerable<(ReturnPaymentMethodEnum Method, ulong Amount)> parts,
             bool reversal, string description, DateTime occurredAt, CancellationToken cancellationToken)
         {
-            var onAccount = method switch
-            {
-                ReturnPaymentMethodEnum.ON_ACCOUNT => amount,
-                ReturnPaymentMethodEnum.MIXED => parts.Where(p => p.Method == ReturnPaymentMethodEnum.ON_ACCOUNT).Aggregate(0UL, (sum, p) => sum + p.Amount),
-                _ => 0UL,
-            };
+            var onAccount = OnAccountAmount(method, amount, parts);
             if (onAccount == 0)
                 return;
 
@@ -190,6 +186,23 @@ namespace Application.Common.Ledger
             if (original != null)
                 await ReverseAsync(context, original, occurredAt, "حذف تصمیم مرجوعی", cancellationToken);
         }
+
+        /// <summary>The part of a return money effect left on the party's account: all of it for ON_ACCOUNT, the ON_ACCOUNT parts of MIXED.</summary>
+        public static ulong OnAccountAmount(ReturnPaymentMethodEnum? method, ulong amount, IEnumerable<(ReturnPaymentMethodEnum Method, ulong Amount)> parts) =>
+            method switch
+            {
+                ReturnPaymentMethodEnum.ON_ACCOUNT => amount,
+                ReturnPaymentMethodEnum.MIXED => parts.Where(p => p.Method == ReturnPaymentMethodEnum.ON_ACCOUNT).Aggregate(0UL, (sum, p) => sum + p.Amount),
+                _ => 0UL,
+            };
+
+        /// <summary>
+        /// A late penalty charged with an installment payment (DEBIT). It carries the payment, so voiding or bouncing that
+        /// payment reverses the penalty too (PaymentVoidedAsync takes back every row of the payment).
+        /// </summary>
+        public static Task InstallmentPenaltyAsync(IWMSDbContext context, Sale sale, PaymentDetail payment, ulong penalty, DateTime occurredAt, CancellationToken cancellationToken) =>
+            AddAsync(context, Customer(sale), PartyLedgerDirectionEnum.DEBIT, penalty, PartyLedgerEntryTypeEnum.LATE_PENALTY,
+                occurredAt, $"جریمه‌ی دیرکرد قسط فاکتور {sale.InvoiceNumber}".TrimEnd(), sale: sale, payment: payment, cancellationToken: cancellationToken);
 
         /// <summary>A sale-return money effect applied (or, with <paramref name="reversal"/>, taken back) - see ReturnSettlementAsync.</summary>
         public static Task SaleReturnMoneyAsync(IWMSDbContext context, Sale sale, string returnNumber, int claimId, SaleReturnEffect effect, bool reversal, DateTime occurredAt, CancellationToken cancellationToken) =>

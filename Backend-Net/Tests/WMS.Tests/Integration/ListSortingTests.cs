@@ -1,3 +1,4 @@
+using Application.Features.Cheque.Queries;
 using Application.Features.PartyAccount.Queries;
 ﻿using Application.Features.Accounting;
 using Application.Features.Accounting.Queries;
@@ -65,6 +66,7 @@ namespace WMS.Tests.Integration
             await RunAll<DepartmentListSortEnum>((s, d) => new GetDepartmentListQueryHandler(scope.Db).Handle(new GetDepartmentListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<TeamListSortEnum>((s, d) => new GetTeamListQueryHandler(scope.Db).Handle(new GetTeamListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PosTerminalListSortEnum>((s, d) => new GetPosTerminalListQueryHandler(scope.Db).Handle(new GetPosTerminalListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<CheckListSortEnum>((s, d) => new GetCheckListQueryHandler(scope.Db).Handle(new GetCheckListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PartyPaymentListSortEnum>((s, d) => new GetPartyPaymentListQueryHandler(scope.Db).Handle(new GetPartyPaymentListQuery { SortBy = s, SortDirection = d, HasUnallocated = true }, ct));
             await RunAll<PosPaymentListSortEnum>((s, d) => new GetPosPaymentListQueryHandler(scope.Db).Handle(new GetPosPaymentListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<CustomerPurchaseStatisticsSortEnum>((s, d) => new GetCustomerPurchaseStatisticsQueryHandler(scope.Db).Handle(new GetCustomerPurchaseStatisticsQuery { SortBy = s, SortDirection = d }, ct));

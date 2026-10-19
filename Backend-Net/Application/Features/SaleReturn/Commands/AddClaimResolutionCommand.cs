@@ -1,4 +1,5 @@
-﻿using Application.Common.Ledger;
+using Application.Common.Installments;
+using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.SaleReturn;
@@ -187,7 +188,7 @@ namespace Application.Features.SaleReturn.Commands
             foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
             {
                 await _inventoryCostingService.RecordSaleReturnMoneyAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, money.AppliedAt ?? now, cancellationToken);
-                await PartyLedger.SaleReturnMoneyAsync(_context, saleReturn.Sale!, saleReturn.ReturnNumber, claim.Id, money, reversal: false, money.AppliedAt ?? now, cancellationToken);
+                await SaleReturnMoney.RecordAsync(_context, saleReturn.Sale!, saleReturn.ReturnNumber, claim.Id, money, reversal: false, money.AppliedAt ?? now, cancellationToken);
             }
 
             // A resolution with no pending effect settles the claimed quantity immediately; one with a

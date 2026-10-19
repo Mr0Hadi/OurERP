@@ -31,6 +31,8 @@ namespace WMS.Ioc
 
             services.Configure<SaleReservationExpiryJobOptions>(configuration.GetSection(SaleReservationExpiryJobOptions.SectionName));
             services.AddHostedService<SaleReservationExpiryJob>();
+            services.Configure<InstallmentOverdueJobOptions>(configuration.GetSection(InstallmentOverdueJobOptions.SectionName));
+            services.AddHostedService<InstallmentOverdueJob>();
 
 
             return services;

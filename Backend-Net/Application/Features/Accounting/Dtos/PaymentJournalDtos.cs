@@ -27,6 +27,10 @@ namespace Application.Features.Accounting.Dtos
         public int? BankAccountId { get; set; }
         public string? BankAccountTitle { get; set; }
         public string? Description { get; set; }
+
+        /// <summary>CHECK rows: the cheque's status and the date written on it (null otherwise).</summary>
+        public PaymentCheckStatusEnum? CheckStatus { get; set; }
+        public DateTime? CheckDueDate { get; set; }
         public AccountingPartyTypeEnum PartyType { get; set; }
         public int PartyId { get; set; }
         public string PartyName { get; set; } = string.Empty;

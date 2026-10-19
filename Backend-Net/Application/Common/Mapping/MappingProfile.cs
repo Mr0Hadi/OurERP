@@ -51,7 +51,13 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.Supplier, opt => opt.Ignore())
 				.ForMember(dest => dest.BankAccount, opt => opt.Ignore())
 				.ForMember(dest => dest.Description, opt => opt.Ignore())
-				.ForMember(dest => dest.Allocations, opt => opt.Ignore());
+				.ForMember(dest => dest.Allocations, opt => opt.Ignore())
+				// Cheque status is the server's (PENDING at birth, see WMSDbContext); dates and names come from the row.
+				.ForMember(dest => dest.CheckStatus, opt => opt.Ignore())
+				.ForMember(dest => dest.CheckStatusChangedAt, opt => opt.Ignore())
+				.ForMember(dest => dest.CheckStatusNote, opt => opt.Ignore())
+				.ForMember(dest => dest.EndorsedFromPaymentDetailId, opt => opt.Ignore())
+				.ForMember(dest => dest.EndorsedFrom, opt => opt.Ignore());
 
 			CreateMap<PaymentDetail, PaymentDetailDto>();
 

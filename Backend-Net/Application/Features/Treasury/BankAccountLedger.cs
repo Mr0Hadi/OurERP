@@ -10,7 +10,8 @@ namespace Application.Features.Treasury
 {
     /// <summary>
     /// The one definition of what moves a cash box or bank account: its opening balance, every non-voided payment row naming
-    /// it (IN adds, OUT subtracts) and every non-voided transfer between our accounts. Nothing stores a running balance; it is
+    /// it (IN adds, OUT subtracts) and every non-voided transfer between our accounts. A cheque row moves it only once
+    /// CASHED, on the day it was cashed (CheckStatusChangedAt) - a cheque in hand or not yet cleared is in no balance. Nothing stores a running balance; it is
     /// always summed from these, so it cannot drift from the rows. Read-side only.
     /// </summary>
     public static class BankAccountLedger
@@ -18,9 +19,9 @@ namespace Application.Features.Treasury
         /// <summary>Net movement (without the opening balance) per account, optionally only before <paramref name="before"/>.</summary>
         public static async Task<Dictionary<int, decimal>> NetMovementsAsync(IWMSDbContext context, IReadOnlyCollection<int> accountIds, DateTime? before, CancellationToken cancellationToken)
         {
-            var payments = await context.PaymentDetails.AsNoTracking()
-                .Where(x => x.BankAccountId != null && accountIds.Contains(x.BankAccountId.Value) && x.VoidedAt == null)
-                .Where(x => before == null || x.PaidAt < before)
+            var payments = await Counted(context.PaymentDetails.AsNoTracking())
+                .Where(x => x.BankAccountId != null && accountIds.Contains(x.BankAccountId.Value))
+                .Where(x => before == null || (x.Type == PaymentTypeEnum.CHECK ? x.CheckStatusChangedAt : x.PaidAt) < before)
                 .GroupBy(x => new { AccountId = x.BankAccountId!.Value, x.Direction })
                 .Select(g => new { g.Key.AccountId, g.Key.Direction, Total = g.Sum(x => x.Amount) })
                 .ToListAsync(cancellationToken);
@@ -50,8 +51,8 @@ namespace Application.Features.Treasury
         /// <summary>Money recorded with no account: net IN minus OUT of the non-voided payment rows without a BankAccountId.</summary>
         public static async Task<decimal> UnassignedNetAsync(IWMSDbContext context, CancellationToken cancellationToken)
         {
-            var sides = await context.PaymentDetails.AsNoTracking()
-                .Where(x => x.BankAccountId == null && x.VoidedAt == null && x.Type != PaymentTypeEnum.CREDIT)
+            var sides = await Counted(context.PaymentDetails.AsNoTracking())
+                .Where(x => x.BankAccountId == null && x.Type != PaymentTypeEnum.CREDIT)
                 .GroupBy(x => x.Direction)
                 .Select(g => new { Direction = g.Key, Total = g.Sum(x => x.Amount) })
                 .ToListAsync(cancellationToken);
@@ -86,13 +87,14 @@ namespace Application.Features.Treasury
         /// <summary>The statement lines of one account in [from, to), oldest first, without running balances.</summary>
         public static async Task<List<BankAccountMovementDto>> MovementsAsync(IWMSDbContext context, int accountId, DateTime? from, DateTime? to, CancellationToken cancellationToken)
         {
-            var payments = await context.PaymentDetails.AsNoTracking()
-                .Where(x => x.BankAccountId == accountId && x.VoidedAt == null)
-                .Where(x => (from == null || x.PaidAt >= from) && (to == null || x.PaidAt < to))
+            var payments = await Counted(context.PaymentDetails.AsNoTracking())
+                .Where(x => x.BankAccountId == accountId)
+                .Where(x => from == null || (x.Type == PaymentTypeEnum.CHECK ? x.CheckStatusChangedAt : x.PaidAt) >= from)
+                .Where(x => to == null || (x.Type == PaymentTypeEnum.CHECK ? x.CheckStatusChangedAt : x.PaidAt) < to)
                 .Select(x => new BankAccountMovementDto
                 {
                     Kind = BankAccountMovementKindEnum.PAYMENT,
-                    OccurredAt = x.PaidAt,
+                    OccurredAt = x.Type == PaymentTypeEnum.CHECK ? x.CheckStatusChangedAt!.Value : x.PaidAt,
                     In = x.Direction == PaymentDirectionEnum.IN ? x.Amount : 0,
                     Out = x.Direction == PaymentDirectionEnum.OUT ? x.Amount : 0,
                     PaymentDetailId = x.Id,
@@ -135,6 +137,10 @@ namespace Application.Features.Treasury
                 .ThenBy(x => x.TransferId ?? 0)
                 .ToList();
         }
+
+        /// <summary>Payment rows that count in an account: not voided, and a cheque only once cashed.</summary>
+        private static IQueryable<PaymentDetail> Counted(IQueryable<PaymentDetail> rows) =>
+            rows.Where(x => x.VoidedAt == null && (x.Type != PaymentTypeEnum.CHECK || x.CheckStatus == PaymentCheckStatusEnum.CASHED));
 
         /// <summary>[from, to) as the accounting pages read a day range: both days inclusive.</summary>
         public static (DateTime? From, DateTime? To) Range(DateTime? fromDate, DateTime? toDate) =>

@@ -35,10 +35,36 @@ namespace Application.Common.Settings
             Title: "الزام انتخاب صندوق/حساب بانکی",
             Description: "اگر روشن باشد، هر دریافت و پرداخت تازه باید صندوق یا حساب بانکی‌ای را که پول از آن گذشته مشخص کند (به جز ردیف نسیه). پرداخت کارتخوانی که دستگاهش به حسابی وصل است خودکار همان حساب را می‌گیرد.");
 
+        /// <summary>Days after its due date before an unpaid installment counts as late: marked OVERDUE, and penalised.</summary>
+        public static readonly SystemSettingDefinition InstallmentOverdueGraceDays = new(
+            Key: "Installment.OverdueGraceDays",
+            Group: SystemSettingGroupEnum.INSTALLMENT,
+            Type: SystemSettingTypeEnum.INTEGER,
+            DefaultValue: "0",
+            Title: "مهلت ارفاق پس از سررسید قسط",
+            Description: "قسطی که تا این تعداد روز پس از سررسید پرداخت نشود «سررسیدگذشته» می‌شود و جریمه‌ی دیرکردش از روز بعد از این مهلت حساب می‌شود.",
+            MinValue: 0,
+            MaxValue: 60,
+            Unit: "روز");
+
+        /// <summary>How much of the installment charge on rows not yet due is forgiven when a plan is settled early.</summary>
+        public static readonly SystemSettingDefinition InstallmentEarlySettlementDiscountPercentage = new(
+            Key: "Installment.EarlySettlementDiscountPercentage",
+            Group: SystemSettingGroupEnum.INSTALLMENT,
+            Type: SystemSettingTypeEnum.INTEGER,
+            DefaultValue: "100",
+            Title: "تخفیف تسویه‌ی زودهنگام اقساط",
+            Description: "در تسویه‌ی یکجای قرارداد، این درصد از سود اقساطِ قسط‌هایی که هنوز سررسیدشان نرسیده بخشیده می‌شود. ۱۰۰ یعنی سود اقساط آینده کامل برمی‌گردد، صفر یعنی تخفیفی در کار نیست.",
+            MinValue: 0,
+            MaxValue: 100,
+            Unit: "درصد");
+
         public static readonly IReadOnlyList<SystemSettingDefinition> All = new[]
         {
             SaleReservationMinutes,
             PaymentRequireBankAccount,
+            InstallmentOverdueGraceDays,
+            InstallmentEarlySettlementDiscountPercentage,
         };
 
         public static SystemSettingDefinition? Find(string? key) =>

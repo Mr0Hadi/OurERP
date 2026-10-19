@@ -62,6 +62,28 @@ namespace Domain.Entities
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
 
+        // ---- Cheque lifecycle (CHECK rows only; GAP-03.3) ----
+
+        /// <summary>The date written on the cheque. PaidAt when not given (a cheque for today).</summary>
+        public DateTime? CheckDueDate { get; set; }
+        public string? CheckBankName { get; set; }
+
+        /// <summary>Whose account the cheque is drawn on (صاحب حساب).</summary>
+        public string? CheckDrawerName { get; set; }
+
+        /// <summary>Set on every CHECK row by the server: PENDING at birth. Null on every other row.</summary>
+        public PaymentCheckStatusEnum? CheckStatus { get; set; }
+
+        /// <summary>When CheckStatus last changed - for CASHED, the day the money moved in or out of the bank.</summary>
+        public DateTime? CheckStatusChangedAt { get; set; }
+
+        /// <summary>Why it bounced, or any note on the status change.</summary>
+        public string? CheckStatusNote { get; set; }
+
+        /// <summary>On a cheque passed on to a supplier: the received cheque it is (ENDORSED there).</summary>
+        public int? EndorsedFromPaymentDetailId { get; set; }
+        public PaymentDetail? EndorsedFrom { get; set; }
+
         /// <summary>The card reader the money was taken on (TRANSFER rows only). Restrict: a device is only ever deactivated.</summary>
         public int? PosTerminalId { get; set; }
         public PosTerminal? PosTerminal { get; set; }
