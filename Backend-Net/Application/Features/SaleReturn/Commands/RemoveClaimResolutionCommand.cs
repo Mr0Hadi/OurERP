@@ -1,3 +1,4 @@
+using Application.Common.Installments;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
@@ -92,7 +93,7 @@ namespace Application.Features.SaleReturn.Commands
             foreach (var money in resolution.Effects.Where(e => e.Direction is ReturnEffectDirectionEnum.MONEY_IN or ReturnEffectDirectionEnum.MONEY_OUT && e.Status == ReturnEffectStatusEnum.APPLIED))
             {
                 await _inventoryCostingService.RecordSaleReturnMoneyReversalAsync(claim.Product!, money.Direction, money.Amount!.Value, claim.Id, now, cancellationToken);
-                await PartyLedger.SaleReturnMoneyAsync(_context, saleReturn.Sale!, saleReturn.ReturnNumber, claim.Id, money, reversal: true, now, cancellationToken);
+                await SaleReturnMoney.RecordAsync(_context, saleReturn.Sale!, saleReturn.ReturnNumber, claim.Id, money, reversal: true, now, cancellationToken);
             }
 
             claim.Resolutions.Remove(resolution);

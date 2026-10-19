@@ -578,8 +578,29 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("BankAccountId")
                         .HasColumnType("int");
 
+                    b.Property<string>("CheckBankName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CheckDrawerName")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("CheckDueDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("CheckNumber")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("CheckStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CheckStatusChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CheckStatusNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int?>("CustomerId")
                         .HasColumnType("int");
@@ -589,6 +610,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Direction")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("EndorsedFromPaymentDetailId")
                         .HasColumnType("int");
 
                     b.Property<string>("MaskedCardNumber")
@@ -642,6 +666,8 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("EndorsedFromPaymentDetailId");
+
                     b.HasIndex("PurchaseId");
 
                     b.HasIndex("RecordedByUserId");
@@ -649,6 +675,9 @@ namespace Infrastructure.Migrations
                     b.HasIndex("SaleId");
 
                     b.HasIndex("SupplierId");
+
+                    b.HasIndex("CheckStatus", "CheckDueDate")
+                        .HasFilter("[CheckStatus] IS NOT NULL");
 
                     b.HasIndex("PosTerminalId", "TransferRef")
                         .IsUnique()
@@ -1672,6 +1701,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("EarlySettlementDiscountAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<int>("Number")
                         .HasColumnType("int");
 
@@ -1683,6 +1715,15 @@ namespace Infrastructure.Migrations
 
                     b.Property<int?>("PaymentType")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("PenaltyAmount")
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<string>("PenaltyWaiveReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("PenaltyWaivedAmount")
+                        .HasColumnType("decimal(20,0)");
 
                     b.Property<int>("SaleInstallmentPlanId")
                         .HasColumnType("int");
@@ -1722,6 +1763,9 @@ namespace Infrastructure.Migrations
                     b.Property<decimal>("DownPaymentAmount")
                         .HasColumnType("decimal(20,0)");
 
+                    b.Property<decimal>("EarlySettlementDiscountAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<decimal>("FinancedAmount")
                         .HasColumnType("decimal(20,0)");
 
@@ -1748,6 +1792,9 @@ namespace Infrastructure.Migrations
                         .HasPrecision(9, 4)
                         .HasColumnType("decimal(9,4)");
 
+                    b.Property<decimal>("ReturnCreditAmount")
+                        .HasColumnType("decimal(20,0)");
+
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
@@ -1766,6 +1813,43 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("SaleInstallmentPlans");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SaleInstallmentReturnCredit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("AppliedAmount")
+                        .HasPrecision(20)
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("RequestedAmount")
+                        .HasPrecision(20)
+                        .HasColumnType("decimal(20,0)");
+
+                    b.Property<DateTime?>("ReversedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SaleInstallmentPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SaleReturnClaimId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SaleInstallmentPlanId");
+
+                    b.HasIndex("SaleReturnClaimId");
+
+                    b.ToTable("SaleInstallmentReturnCredits");
                 });
 
             modelBuilder.Entity("Domain.Entities.SaleItem", b =>
@@ -2650,6 +2734,11 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Domain.Entities.PaymentDetail", "EndorsedFrom")
+                        .WithMany()
+                        .HasForeignKey("EndorsedFromPaymentDetailId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.PosTerminal", "PosTerminal")
                         .WithMany()
                         .HasForeignKey("PosTerminalId")
@@ -2678,6 +2767,8 @@ namespace Infrastructure.Migrations
                     b.Navigation("BankAccount");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("EndorsedFrom");
 
                     b.Navigation("PosTerminal");
 
@@ -3019,6 +3110,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Sale");
                 });
 
+            modelBuilder.Entity("Domain.Entities.SaleInstallmentReturnCredit", b =>
+                {
+                    b.HasOne("Domain.Entities.SaleInstallmentPlan", "Plan")
+                        .WithMany("ReturnCredits")
+                        .HasForeignKey("SaleInstallmentPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+                });
+
             modelBuilder.Entity("Domain.Entities.SaleItem", b =>
                 {
                     b.HasOne("Domain.Entities.Product", "Product")
@@ -3345,6 +3447,8 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.SaleInstallmentPlan", b =>
                 {
                     b.Navigation("Installments");
+
+                    b.Navigation("ReturnCredits");
                 });
 
             modelBuilder.Entity("Domain.Entities.SaleReturn", b =>

@@ -238,6 +238,11 @@ namespace Domain.Enums
         [Description("دریافت قسط")]
         SaleInstallmentPay = 112,
 
+        /// <summary>Reducing or forgiving the late penalty of an installment before it is paid.</summary>
+        [PermissionGroup(PermissionGroupEnum.Installment)]
+        [Description("بخشودگی جریمه‌ی دیرکرد قسط")]
+        SaleInstallmentPenaltyWaive = 113,
+
         // --- مرجوعی خرید ---
         [PermissionGroup(PermissionGroupEnum.PurchaseReturn)]
         [Description("مشاهده مرجوعی خرید")]
@@ -377,6 +382,16 @@ namespace Domain.Enums
         [PermissionGroup(PermissionGroupEnum.Accounting)]
         [Description("مدیریت صندوق‌ها و حساب‌های بانکی و انتقال بین آن‌ها")]
         BankAccountManage = 263,
+
+        /// <summary>The cheque list (received and issued, due dates, statuses).</summary>
+        [PermissionGroup(PermissionGroupEnum.Accounting)]
+        [Description("مشاهده چک‌ها")]
+        CheckView = 264,
+
+        /// <summary>Cashing, bouncing and endorsing cheques.</summary>
+        [PermissionGroup(PermissionGroupEnum.Accounting)]
+        [Description("وصول، برگشت و خرج چک")]
+        CheckManage = 265,
 
         // --- تاریخچه تغییرات ---
         /// <summary>The audit log (api/Audit): every change, by whom and when, with old and new values.</summary>

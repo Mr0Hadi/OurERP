@@ -43,10 +43,25 @@ namespace Domain.Entities
 
         public DateTime FirstDueDate { get; set; }
 
-        // TODO (جریمه‌ی دیرکرد): فقط ذخیره می‌شود - هیچ محاسبه‌ای روی آن انجام نمی‌شود و هیچ‌جا
-        // خوانده نمی‌شود. پرسش‌های باز (پایه‌ی درصد، روزانه/ماهانه، خودکار/دستی، جدا از TotalAmount
-        // یا داخل آن) در docs/sale-installment-guide.fa.md بخش «موارد باز» ثبت شده‌اند.
+        /// <summary>
+        /// Monthly late penalty, as a percentage of the late installment, charged per day late (rate / 30 per day) after the
+        /// Installment.OverdueGraceDays setting (InstallmentRules.Penalty). Null or 0 = no penalty.
+        /// </summary>
         public decimal? LatePenaltyPercentage { get; set; }
+
+        /// <summary>
+        /// Installment charge forgiven by an early settlement: the charge share of the rows not yet due, times the
+        /// Installment.EarlySettlementDiscountPercentage setting. Already taken off InstallmentChargeAmount/TotalAmount and off
+        /// those rows' Amount; kept here to show it.
+        /// </summary>
+        public UInt64 EarlySettlementDiscountAmount { get; set; }
+
+        /// <summary>
+        /// Money a sale return left on the customer's account (MONEY_OUT, ON_ACCOUNT) and that now counts as paid towards this
+        /// plan: the unpaid tail was shortened by it (InstallmentReturnCredit). Part of PaidAmount.
+        /// </summary>
+        public UInt64 ReturnCreditAmount { get; set; }
+        public List<SaleInstallmentReturnCredit> ReturnCredits { get; set; } = new();
 
         public SaleInstallmentPlanStatusEnum Status { get; set; }
 
@@ -72,7 +87,12 @@ namespace Domain.Entities
             .Aggregate(0UL, (sum, i) => sum + i.Amount);
 
         [NotMapped]
-        public UInt64 PaidAmount => DownPaymentAmount + PaidInstallmentsAmount;
+        public UInt64 PaidAmount => DownPaymentAmount + PaidInstallmentsAmount + ReturnCreditAmount;
+
+        /// <summary>Late penalties charged on the paid rows - not part of PaidAmount/TotalAmount.</summary>
+        [NotMapped]
+        public UInt64 PenaltyPaidAmount => Installments.Where(i => i.Status == SaleInstallmentStatusEnum.PAID)
+            .Aggregate(0UL, (sum, i) => sum + i.PenaltyAmount);
 
         [NotMapped]
         public UInt64 RemainingAmount => TotalAmount > PaidAmount ? TotalAmount - PaidAmount : 0UL;

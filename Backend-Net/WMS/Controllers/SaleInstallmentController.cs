@@ -75,5 +75,12 @@ namespace WMS.Controllers
         {
             return await _mediator.Send(request);
         }
+
+        [HasPermission(PermissionEnum.SaleInstallmentPenaltyWaive)]
+        [HttpPost("WaiveSaleInstallmentPenalty")]
+        public async Task<ActionResult<ResponseDto>> WaiveSaleInstallmentPenalty([FromBody] WaiveSaleInstallmentPenaltyCommand request)
+        {
+            return await _mediator.Send(request);
+        }
     }
 }

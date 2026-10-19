@@ -38,6 +38,16 @@ namespace Application.Features.SaleInstallment.Dtos
         public UInt64 PaidInstallmentsAmount { get; set; }
         public UInt64 PaidAmount { get; set; }
         public UInt64 RemainingAmount { get; set; }
+
+        /// <summary>Late penalties charged so far (outside TotalAmount/PaidAmount), and those due if every late row were paid today.</summary>
+        public UInt64 PenaltyPaidAmount { get; set; }
+        public UInt64 PenaltyDueAmount { get; set; }
+
+        /// <summary>Installment charge forgiven by an early settlement (already taken off InstallmentChargeAmount/TotalAmount).</summary>
+        public UInt64 EarlySettlementDiscountAmount { get; set; }
+
+        /// <summary>Return refunds left on account that paid the plan down (part of PaidAmount).</summary>
+        public UInt64 ReturnCreditAmount { get; set; }
         public DateTime? LastPaymentDate { get; set; }
         public DateTime? NextDueDate { get; set; }
 

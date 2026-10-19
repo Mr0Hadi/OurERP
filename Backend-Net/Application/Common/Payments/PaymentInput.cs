@@ -17,6 +17,11 @@ namespace Application.Common.Payments
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
 
+        /// <summary>CHECK rows only: the date on the cheque (default: PaidAt), its bank and whose account it is drawn on.</summary>
+        public DateTime? CheckDueDate { get; set; }
+        public string? CheckBankName { get; set; }
+        public string? CheckDrawerName { get; set; }
+
         /// <summary>
         /// The cash box or bank account the money went through. Optional unless the Payment.RequireBankAccount setting is on;
         /// a card-reader row whose device is linked to an account gets that account when this is left out.
@@ -39,6 +44,11 @@ namespace Application.Common.Payments
             RuleFor(x => x.Type).Must(DocumentPayments.IsRowMethod)
                 .WithMessage("روش پرداخت باید نقدی، نسیه، چک یا انتقال بانکی باشد.");
             Include(new PosPaymentFieldsValidator());
+            RuleFor(x => x).Must(x => x.CheckDueDate == null && x.CheckBankName == null && x.CheckDrawerName == null)
+                .When(x => x.Type != PaymentTypeEnum.CHECK)
+                .WithMessage("سررسید، بانک و صاحب حساب فقط برای پرداخت چکی ثبت می‌شود.");
+            RuleFor(x => x.CheckBankName).MaximumLength(100).WithMessage("نام بانک چک حداکثر ۱۰۰ نویسه است.");
+            RuleFor(x => x.CheckDrawerName).MaximumLength(100).WithMessage("نام صاحب حساب چک حداکثر ۱۰۰ نویسه است.");
         }
     }
 
@@ -58,6 +68,9 @@ namespace Application.Common.Payments
             PaidAt = input.PaidAt ?? DateTime.Now,
             CheckNumber = input.CheckNumber,
             TransferRef = input.TransferRef?.Trim(),
+            CheckDueDate = input.CheckDueDate?.Date,
+            CheckBankName = string.IsNullOrWhiteSpace(input.CheckBankName) ? null : input.CheckBankName.Trim(),
+            CheckDrawerName = string.IsNullOrWhiteSpace(input.CheckDrawerName) ? null : input.CheckDrawerName.Trim(),
             BankAccountId = input.BankAccountId,
             PosTerminalId = input.PosTerminalId,
             Source = SourceOf(input),
@@ -81,12 +94,24 @@ namespace Application.Common.Payments
         {
             if (row.PosTerminalId.HasValue)
                 throw new ValidationCustomException("پرداخت کارتخوان ویرایش نمی‌شود؛ اگر اشتباه ثبت شده، آن را ابطال کنید.");
+            EnsureChequeOpen(row);
+        }
+
+        /// <summary>
+        /// A cheque that was cashed, bounced or passed on is a fact on the bank's side: it is no longer edited or voided.
+        /// Bouncing is its own command (Check/BounceCheck).
+        /// </summary>
+        public static void EnsureChequeOpen(PaymentDetail row)
+        {
+            if (row.CheckStatus is PaymentCheckStatusEnum.CASHED or PaymentCheckStatusEnum.BOUNCED or PaymentCheckStatusEnum.ENDORSED)
+                throw new ValidationCustomException("سرنوشت این چک (وصول، برگشت یا خرج) ثبت شده است؛ پرداخت آن دیگر ویرایش یا ابطال نمی‌شود.");
         }
 
         public static void Void(PaymentDetail row)
         {
             if (row.VoidedAt != null)
                 throw new ValidationCustomException("این پرداخت قبلاً ابطال شده است.");
+            EnsureChequeOpen(row);
 
             if (row.Purpose != PaymentPurposeEnum.NORMAL)
                 throw new ValidationCustomException("پرداخت‌های قرارداد اقساطی فقط از مسیر همان قرارداد تغییر می‌کنند.");

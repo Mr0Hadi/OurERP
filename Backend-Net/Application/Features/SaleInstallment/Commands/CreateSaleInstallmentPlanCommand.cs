@@ -38,6 +38,11 @@ namespace Application.Features.SaleInstallment.Commands
         // اطلاعات پرداخت پیش‌پرداخت
         public PaymentTypeEnum PaymentType { get; set; }
         public string? CheckNumber { get; set; }
+
+        /// <summary>Cheque rows only: the date on the cheque, its bank and drawer (see PaymentInput).</summary>
+        public DateTime? CheckDueDate { get; set; }
+        public string? CheckBankName { get; set; }
+        public string? CheckDrawerName { get; set; }
         public string? TransferRef { get; set; }
 
         /// <summary>The cash box or bank account the money went into (see PaymentInput.BankAccountId).</summary>
@@ -140,6 +145,9 @@ namespace Application.Features.SaleInstallment.Commands
                 Amount = request.DownPaymentAmount,
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
+                CheckDueDate = request.CheckDueDate,
+                CheckBankName = request.CheckBankName,
+                CheckDrawerName = request.CheckDrawerName,
                 TransferRef = request.TransferRef,
                 BankAccountId = request.BankAccountId,
             };

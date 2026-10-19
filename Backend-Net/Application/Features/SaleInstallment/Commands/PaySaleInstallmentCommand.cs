@@ -1,6 +1,9 @@
 using Application.Common.Ledger;
 using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Settings;
+using Application.Common.Installments;
+using Application.Common.Settings;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -19,6 +22,9 @@ namespace Application.Features.SaleInstallment.Commands
     /// پرداخت یک قسط. یک قسط = یک پرداخت کامل؛ پرداخت جزئی وجود ندارد و مبلغ از روی
     /// <c>installment.Amount</c> برداشته می‌شود، نه از ورودی کاربر. پرداخت زودتر از سررسید و
     /// پرداخت خارج از ترتیب هر دو مجازند - سطر مشخصاً با <c>Id</c> هدف گرفته می‌شود.
+    /// A late row also pays its penalty (InstallmentRules.PenaltyDue at PaidAt) in the same payment row: the row's Amount
+    /// is installment + penalty, installment.PenaltyAmount records the penalty, and a LATE_PENALTY ledger row charges it.
+    /// The penalty is never part of the plan's TotalAmount or PaidAmount.
     /// </summary>
     [AuditAction(AuditActionEnum.PaySaleInstallment)]
     public class PaySaleInstallmentCommand : IRequest<ResponseDto>
@@ -26,6 +32,11 @@ namespace Application.Features.SaleInstallment.Commands
         public int SaleInstallmentId { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public string? CheckNumber { get; set; }
+
+        /// <summary>Cheque rows only: the date on the cheque, its bank and drawer (see PaymentInput).</summary>
+        public DateTime? CheckDueDate { get; set; }
+        public string? CheckBankName { get; set; }
+        public string? CheckDrawerName { get; set; }
         public string? TransferRef { get; set; }
 
         /// <summary>The cash box or bank account the money went into (see PaymentInput.BankAccountId).</summary>
@@ -46,12 +57,14 @@ namespace Application.Features.SaleInstallment.Commands
         private readonly IWMSDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPaymentAccountResolver _paymentAccountResolver;
+        private readonly ISystemSettingService _systemSettingService;
 
-        public PaySaleInstallmentCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IPaymentAccountResolver paymentAccountResolver)
+        public PaySaleInstallmentCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IPaymentAccountResolver paymentAccountResolver, ISystemSettingService systemSettingService)
         {
             _context = context;
             _unitOfWork = unitOfWork;
             _paymentAccountResolver = paymentAccountResolver;
+            _systemSettingService = systemSettingService;
         }
 
         public async Task<ResponseDto> Handle(PaySaleInstallmentCommand request, CancellationToken cancellationToken)
@@ -80,6 +93,8 @@ namespace Application.Features.SaleInstallment.Commands
 
             var paidAt = request.PaidAt ?? DateTime.Now;
             var now = DateTime.Now;
+            var graceDays = await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.InstallmentOverdueGraceDays, cancellationToken);
+            var penalty = InstallmentRules.PenaltyDue(plan, installment, paidAt, graceDays);
 
             var payment = new Domain.Entities.PaymentDetail
             {
@@ -87,16 +102,21 @@ namespace Application.Features.SaleInstallment.Commands
                 Type = request.PaymentType,
                 Purpose = PaymentPurposeEnum.INSTALLMENT,
                 Direction = PaymentDirectionEnum.IN,
-                Amount = installment.Amount,
+                Amount = installment.Amount + penalty,
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
+                CheckDueDate = request.CheckDueDate,
+                CheckBankName = request.CheckBankName,
+                CheckDrawerName = request.CheckDrawerName,
                 TransferRef = request.TransferRef,
                 BankAccountId = request.BankAccountId,
             };
             await _paymentAccountResolver.ApplyAsync(new[] { payment }, cancellationToken);
             await _context.PaymentDetails.AddAsync(payment, cancellationToken);
             await PartyLedger.SalePaymentAsync(_context, plan.Sale, payment, cancellationToken);
+            await PartyLedger.InstallmentPenaltyAsync(_context, plan.Sale, payment, penalty, paidAt, cancellationToken);
 
+            installment.PenaltyAmount = penalty;
             installment.Status = SaleInstallmentStatusEnum.PAID;
             installment.PaidAt = paidAt;
             installment.PaymentType = request.PaymentType;

@@ -3,14 +3,9 @@ using System.ComponentModel;
 namespace Domain.Enums
 {
     /// <summary>
-    /// وضعیت یک سطر قسط.
-    ///
-    /// توجه: <see cref="OVERDUE"/> عمداً توسط هیچ کدی نوشته نمی‌شود. هیچ background service،
-    /// هیچ job و هیچ اندپوینت بازمحاسبه‌ای برای علامت‌گذاری دیرکرد وجود ندارد؛ تشخیص «سررسید
-    /// گذشته» از روی <c>DueDate</c> کارِ فرانت است (Status = PENDING و DueDate &lt; امروز).
-    /// این عضو فقط برای زمانی نگه داشته شده که بعداً تصمیم بگیریم علامت‌گذاری دستی یا خودکار
-    /// اضافه کنیم - فراموش نشده است. کوئری‌ها آن را در کنار PENDING به‌عنوان «پرداخت‌نشده»
-    /// حساب می‌کنند تا اگر روزی نوشته شد، منطق موجود نشکند.
+    /// وضعیت یک سطر قسط. Since 2026-10-19 <see cref="OVERDUE"/> is written by the background job
+    /// (WMS/BackgroundJobs/InstallmentOverdueJob -> MarkOverdueSaleInstallmentsCommand) once DueDate plus the
+    /// Installment.OverdueGraceDays setting has passed; queries keep counting it with PENDING as "unpaid".
     /// </summary>
     public enum SaleInstallmentStatusEnum
     {

@@ -168,6 +168,8 @@ namespace Application.Features.Accounting.Queries
                 BankAccountId = x.BankAccountId,
                 BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
                 Description = x.Description,
+                CheckStatus = x.CheckStatus,
+                CheckDueDate = x.CheckDueDate,
                 CheckNumber = x.CheckNumber,
                 TransferRef = x.TransferRef,
                 PosTerminalId = x.PosTerminalId,

@@ -10,5 +10,8 @@ namespace Domain.Enums
 
         [Description("دریافت و پرداخت")]
         PAYMENT = 2,
+
+        [Description("اقساط")]
+        INSTALLMENT = 3,
     }
 }

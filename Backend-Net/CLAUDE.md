@@ -141,6 +141,7 @@ Backend-Net/
 │   │   ├── Audit/       # Queries/, Dtos/ (audit log read side, 2026-10-15)
 │   │   ├── Setting/     # Commands/, Queries/, Dtos/ (system settings, 2026-10-17; catalogue in Common/Settings)
 │   │   ├── Treasury/    # Commands/, Queries/, Dtos/ (cash boxes, bank accounts, transfers, statements - 2026-10-17)
+│   │   ├── Cheque/      # Commands/ (Cash/Bounce/EndorseCheck), Queries/ (GetCheckList) - route api/Check, 2026-10-19
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -178,7 +179,7 @@ Backend-Net/
     ├── Middlewares/     # ExceptionHandlingMiddleware, RequestLoggingMiddleware, CachingMiddleware
     ├── ResponseHandler/ # ResponseHandler.HandleExceptionAsync
     ├── Services/        # EnvironmentService, UserContextService
-    ├── BackgroundJobs/  # SaleReservationExpiryJob (the only hosted service)
+    ├── BackgroundJobs/  # SaleReservationExpiryJob, InstallmentOverdueJob
     ├── Logging/         # SerilogConfiguration
     ├── Program.cs       # DI composition + JWT + CORS + OpenAPI/Scalar
     └── appsettings.json
@@ -2170,6 +2171,38 @@ lifecycle) is NOT built. API: `docs/api-guide.fa.md` section 23 and the 2026-10-
   account and show up in `unassignedNet`). **Generated, not applied.**
 - Tests: `Integration/PartyPaymentTests.cs` (14) + a `ListSortingTests` case. **Verified:** build clean, suite 991/994 - the 3
   documented environmental failures; the whole migration chain applies from scratch to a throwaway database (dropped).
+
+**Cheque lifecycle (GAP-03.3) and installment completion (GAP-26) (2026-10-19).** API: `docs/api-guide.fa.md` section 24 (cheques),
+section 11b (installments), the 2026-10-19 table in section 16; installment decisions: `docs/sale-installment-guide.fa.md` section 5.
+
+- **Cheques are CHECK payment rows with a status** (`PaymentCheckStatusEnum` PENDING=1 / CASHED=2 / BOUNCED=3 / ENDORSED=4) plus
+  `CheckDueDate`/`CheckBankName`/`CheckDrawerName`/`CheckStatusChangedAt`/`CheckStatusNote`/`EndorsedFromPaymentDetailId` on `PaymentDetail`.
+  **`WMSDbContext.SaveChangesAsync` stamps every new CHECK row PENDING** (next to RecordedAt), so no writer can forget it. The party
+  ledger moves at receipt/issue as before; **a cheque moves a cash/bank balance only once CASHED, on its CheckStatusChangedAt**
+  (`BankAccountLedger.Counted`). Received cheques are exempt from `Payment.RequireBankAccount` - the account is chosen at cashing.
+  `PaymentWriter.EnsureChequeOpen` refuses Edit/Void of a cheque whose fate is recorded.
+- `api/Check`: `GetCheckList` (paged, due date ascending, summary of pending/past due), `CashCheck`, `BounceCheck`, `EndorseCheck`.
+  **Bounce = void + undo what it paid**, all in `Application/Common/Payments/ChequeLifecycle`: invoice PaidAmount recomputed, installment
+  rows back to PENDING with penalty cleared and any early-settlement discount restored (plan SETTLED -> ACTIVE), on-account allocations
+  removed, and the received cheque behind an endorsed one bounced too. A down-payment cheque is refused (no plan state for it).
+  Endorse writes a new OUT CHECK row (on a purchase or on account) pointing back; no bank of ours ever moves for it.
+- **Installments:** `OVERDUE` is now written - `WMS/BackgroundJobs/InstallmentOverdueJob` (hourly, `BackgroundJobs:InstallmentOverdue`)
+  -> `MarkOverdueSaleInstallmentsCommand`, grace `Installment.OverdueGraceDays`. **Late penalty** = amount x LatePenaltyPercentage
+  (monthly) x days late / 30, charged inside the installment's own PaymentDetail (amount = installment + penalty), recorded on
+  `SaleInstallment.PenaltyAmount` and as a `LATE_PENALTY = 9` party-ledger DEBIT carrying the PaymentDetailId (so void/bounce reverses
+  it); never part of plan Total/PaidAmount. `WaiveSaleInstallmentPenaltyCommand` (`SaleInstallmentPenaltyWaive = 113`).
+  **Early settlement** forgives not-yet-due rows' charge share x `Installment.EarlySettlementDiscountPercentage` (default 100): rows,
+  charge, total and financed drop; per-row discount kept for restore. **Sale-return ON_ACCOUNT refunds shorten the plan from the end**
+  (`InstallmentReturnCredit`, `SaleInstallmentReturnCredit` rows, `plan.ReturnCreditAmount` counted in PaidAmount), via
+  `SaleReturnMoney.RecordAsync`, which now replaces the direct `PartyLedger.SaleReturnMoneyAsync` call in all three sale-return commands.
+- `PaySaleInstallment`/`SettleSaleInstallmentPlan` handlers gained `ISystemSettingService` as their last constructor parameter. All
+  installment math is `Application/Common/Installments/InstallmentRules`; static readers read settings via `SystemSettingValues`.
+- Permissions `CheckView = 264`, `CheckManage = 265`; audit 505, 506, 1120-1122; settings group `INSTALLMENT = 3`.
+- Migration `cheques-and-installment-completion` (columns + `SaleInstallmentReturnCredits`; backfill: every non-voided legacy CHECK row
+  becomes CASHED on its PaidAt, so bank balances do not move). **Generated, not applied.**
+- Tests: `Integration/ChequeTests.cs` (7), `Integration/InstallmentCompletionTests.cs` (6), a `ListSortingTests` case;
+  `SaleInstallmentTests.SettlePlan_...` now asserts the early-settlement discount. **Verified:** suite 1004/1007 - the 3 documented
+  environmental failures; the migration chain applies from scratch to a throwaway database (dropped).
 
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.

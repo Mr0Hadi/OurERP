@@ -1,6 +1,9 @@
 using Application.Common.Ledger;
 using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Settings;
+using Application.Common.Installments;
+using Application.Common.Settings;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -18,11 +21,10 @@ namespace Application.Features.SaleInstallment.Commands
     /// تسویه‌ی کامل زودهنگام: تمام سطرهای پرداخت‌نشده با یک PaymentDetail یکجا پرداخت‌شده
     /// علامت می‌خورند.
     ///
-    /// TODO (تخفیف تسویه‌ی زودهنگام): مبلغ دقیقاً <c>plan.RemainingAmount</c> است، بدون هیچ
-    /// تخفیفی روی درصد افزایش. اگر بعداً تصمیم شد بخشی از افزایش برگردد، تنها جایی که تغییر
-    /// می‌کند محاسبه‌ی مبلغ در همین handler است (به‌علاوه‌ی احتمالاً یک فیلد
-    /// <c>EarlySettlementDiscountAmount</c> روی پلن برای ثبت مقدار برگشتی). جزئیات در
-    /// docs/sale-installment-guide.fa.md بخش «موارد باز».
+    /// Rows not yet due are discounted by their share of the installment charge times the
+    /// Installment.EarlySettlementDiscountPercentage setting (default 100): the charge, total and those rows' Amount drop by it,
+    /// and the customer's account gets the lower charge (PartyLedger.InstallmentChargeChangedAsync). Late rows pay their penalty
+    /// in the same payment, exactly like PaySaleInstallment.
     /// </summary>
     [AuditAction(AuditActionEnum.SettleSaleInstallmentPlan)]
     public class SettleSaleInstallmentPlanCommand : IRequest<ResponseDto>
@@ -31,6 +33,11 @@ namespace Application.Features.SaleInstallment.Commands
         public int? PlanId { get; set; }
         public PaymentTypeEnum PaymentType { get; set; }
         public string? CheckNumber { get; set; }
+
+        /// <summary>Cheque rows only: the date on the cheque, its bank and drawer (see PaymentInput).</summary>
+        public DateTime? CheckDueDate { get; set; }
+        public string? CheckBankName { get; set; }
+        public string? CheckDrawerName { get; set; }
         public string? TransferRef { get; set; }
 
         /// <summary>The cash box or bank account the money went into (see PaymentInput.BankAccountId).</summary>
@@ -52,12 +59,14 @@ namespace Application.Features.SaleInstallment.Commands
         private readonly IWMSDbContext _context;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IPaymentAccountResolver _paymentAccountResolver;
+        private readonly ISystemSettingService _systemSettingService;
 
-        public SettleSaleInstallmentPlanCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IPaymentAccountResolver paymentAccountResolver)
+        public SettleSaleInstallmentPlanCommandHandler(IWMSDbContext context, IUnitOfWork unitOfWork, IPaymentAccountResolver paymentAccountResolver, ISystemSettingService systemSettingService)
         {
             _context = context;
             _unitOfWork = unitOfWork;
             _paymentAccountResolver = paymentAccountResolver;
+            _systemSettingService = systemSettingService;
         }
 
         public async Task<ResponseDto> Handle(SettleSaleInstallmentPlanCommand request, CancellationToken cancellationToken)
@@ -86,6 +95,35 @@ namespace Application.Features.SaleInstallment.Commands
 
             var paidAt = request.PaidAt ?? DateTime.Now;
             var now = DateTime.Now;
+            var graceDays = await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.InstallmentOverdueGraceDays, cancellationToken);
+            var discountPercentage = await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.InstallmentEarlySettlementDiscountPercentage, cancellationToken);
+
+            // Late rows pay their penalty; rows not yet due are discounted by their share of the installment charge. Shares
+            // are taken before any row changes, from the plan as it stood.
+            var penalties = unpaid.ToDictionary(i => i.Id, i => InstallmentRules.PenaltyDue(plan, i, paidAt, graceDays));
+            var discounts = unpaid.ToDictionary(i => i.Id, i => InstallmentRules.IsNotYetDue(i, paidAt)
+                ? (ulong)Math.Round((decimal)InstallmentRules.ChargeShare(plan, i) * discountPercentage / 100m, MidpointRounding.AwayFromZero)
+                : 0UL);
+            var totalDiscount = Math.Min(discounts.Values.Aggregate(0UL, (sum, d) => sum + d), plan.InstallmentChargeAmount);
+            var totalPenalty = penalties.Values.Aggregate(0UL, (sum, p) => sum + p);
+
+            if (totalDiscount > 0)
+            {
+                var left = totalDiscount;
+                foreach (var installment in unpaid)
+                {
+                    var take = Math.Min(Math.Min(discounts[installment.Id], left), installment.Amount);
+                    installment.Amount -= take;
+                    installment.EarlySettlementDiscountAmount += take;
+                    left -= take;
+                }
+
+                plan.InstallmentChargeAmount -= totalDiscount;
+                plan.TotalAmount -= totalDiscount;
+                plan.FinancedAmount -= totalDiscount;
+                plan.EarlySettlementDiscountAmount += totalDiscount;
+                await PartyLedger.InstallmentChargeChangedAsync(_context, plan.Sale, plan.InstallmentChargeAmount, paidAt, cancellationToken);
+            }
 
             var payment = new Domain.Entities.PaymentDetail
             {
@@ -93,19 +131,24 @@ namespace Application.Features.SaleInstallment.Commands
                 Type = request.PaymentType,
                 Purpose = PaymentPurposeEnum.INSTALLMENT,
                 Direction = PaymentDirectionEnum.IN,
-                // بدون تخفیف - همان باقیمانده‌ی قرارداد.
-                Amount = plan.RemainingAmount,
+                // The remaining after the early-settlement discount, plus the late rows' penalties.
+                Amount = plan.RemainingAmount + totalPenalty,
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
+                CheckDueDate = request.CheckDueDate,
+                CheckBankName = request.CheckBankName,
+                CheckDrawerName = request.CheckDrawerName,
                 TransferRef = request.TransferRef,
                 BankAccountId = request.BankAccountId,
             };
             await _paymentAccountResolver.ApplyAsync(new[] { payment }, cancellationToken);
             await _context.PaymentDetails.AddAsync(payment, cancellationToken);
             await PartyLedger.SalePaymentAsync(_context, plan.Sale, payment, cancellationToken);
+            await PartyLedger.InstallmentPenaltyAsync(_context, plan.Sale, payment, totalPenalty, paidAt, cancellationToken);
 
             foreach (var installment in unpaid)
             {
+                installment.PenaltyAmount = penalties[installment.Id];
                 installment.Status = SaleInstallmentStatusEnum.PAID;
                 installment.PaidAt = paidAt;
                 installment.PaymentType = request.PaymentType;
@@ -115,7 +158,7 @@ namespace Application.Features.SaleInstallment.Commands
 
             plan.Status = SaleInstallmentPlanStatusEnum.SETTLED;
             plan.UpdatedAt = now;
-            plan.Sale.PaidAmount = plan.TotalAmount;
+            plan.Sale.PaidAmount = plan.PaidAmount;
             plan.Sale.UpdatedAt = now;
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

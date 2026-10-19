@@ -58,6 +58,7 @@ namespace Application.Common.Contracts.Context
         DbSet<BankAccount> BankAccounts { get; }
         DbSet<BankAccountTransfer> BankAccountTransfers { get; }
         DbSet<PaymentAllocation> PaymentAllocations { get; }
+        DbSet<SaleInstallmentReturnCredit> SaleInstallmentReturnCredits { get; }
 
         DbSet<T> Set<T>() where T : class;
 

@@ -45,7 +45,9 @@ namespace Infrastructure.Services
                     throw new ValidationCustomException("صندوق/حساب بانکی انتخاب‌شده یافت نشد یا غیرفعال است.");
             }
 
-            if (list.Any(x => x.BankAccountId == null && x.Type != PaymentTypeEnum.CREDIT)
+            // A received cheque is in no account until it is deposited: its account is chosen when it is cashed (Check/CashCheck).
+            if (list.Any(x => x.BankAccountId == null && x.Type != PaymentTypeEnum.CREDIT
+                    && !(x.Type == PaymentTypeEnum.CHECK && x.Direction == PaymentDirectionEnum.IN))
                 && await _systemSettingService.GetBooleanAsync(SystemSettingCatalog.PaymentRequireBankAccount, cancellationToken))
                 throw new ValidationCustomException("صندوق یا حساب بانکی‌ای را که پول از آن دریافت یا پرداخت شده انتخاب کنید.");
         }
