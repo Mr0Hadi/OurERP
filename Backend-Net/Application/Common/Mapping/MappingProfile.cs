@@ -102,6 +102,7 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.ImageUrl, opt => opt.Ignore())
 				// Linked from VehicleIds by the handler, after checking every vehicle is live.
 				.ForMember(dest => dest.Vehicles, opt => opt.Ignore())
+				.ForMember(dest => dest.PreferredSupplier, opt => opt.Ignore())
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
 			// The entity's ImageUrl column holds the bucket object key (signed URLs expire, so
@@ -115,7 +116,8 @@ namespace Application.Common.Mapping
 				.ForMember(dest => dest.QuarantinedCount, opt => opt.Ignore())
 				.ForMember(dest => dest.ReservedCount, opt => opt.Ignore())
 				// Read with the vehicle names by the detail query.
-				.ForMember(dest => dest.Vehicles, opt => opt.Ignore());
+				.ForMember(dest => dest.Vehicles, opt => opt.Ignore())
+				.ForMember(dest => dest.PreferredSupplierName, opt => opt.MapFrom(src => src.PreferredSupplier != null ? src.PreferredSupplier.CompanyName : null));
 
 			CreateMap<CreateProductCategoryCommand, ProductCategory>()
 				.ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));

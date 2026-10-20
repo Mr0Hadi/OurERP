@@ -39,6 +39,8 @@ namespace WMS.Tests.Unit
             "DataTransferController.CommitImport",
             "FileController.GetImageUrl",               // re-signs a key the caller already has
             "PermissionController.GetMyPermissions",    // asking what you yourself may do
+            "SettingController.GetFeatureFlags",
+            "WarehouseController.GetWarehouseList",     // names for the warehouse pickers; nothing sensitive        // which features are switched on; nothing sensitive (IsPublic only)
             "ReportController.GetScopePerformance",     // your own numbers; TEAM/DEPARTMENT gated by org role in the handler
             "UserController.GetUserInfo",               // your own profile
             "UserController.UpdateUserInfo",            // your own name

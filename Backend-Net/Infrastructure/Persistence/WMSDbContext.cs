@@ -184,6 +184,13 @@ namespace Infrastructure.Persistence
         public DbSet<BankAccountTransfer> BankAccountTransfers => Set<BankAccountTransfer>();
         public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
         public DbSet<SaleInstallmentReturnCredit> SaleInstallmentReturnCredits => Set<SaleInstallmentReturnCredit>();
+        public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+        public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+        public DbSet<StockTransferUnit> StockTransferUnits => Set<StockTransferUnit>();
+        public DbSet<Stocktake> Stocktakes => Set<Stocktake>();
+        public DbSet<StocktakeLine> StocktakeLines => Set<StocktakeLine>();
+        public DbSet<StocktakeScan> StocktakeScans => Set<StocktakeScan>();
+        public DbSet<StocktakeSnapshotUnit> StocktakeSnapshotUnits => Set<StocktakeSnapshotUnit>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -843,6 +850,90 @@ namespace Infrastructure.Persistence
                 entry.Property(x => x.CheckStatusNote).HasMaxLength(500);
                 entry.HasIndex(x => new { x.CheckStatus, x.CheckDueDate }).HasFilter("[CheckStatus] IS NOT NULL");
             });
+
+            // Warehouses, transfers (GAP-08), stocktake (GAP-01). Restrict everywhere a row points at a warehouse, unit or
+            // product: those are only ever deactivated. A session's own lines/scans/snapshot go with it.
+            modelBuilder.Entity<Warehouse>(entry =>
+            {
+                entry.Property(x => x.Code).HasMaxLength(30).IsRequired();
+                entry.Property(x => x.Name).HasMaxLength(100).IsRequired();
+                entry.Property(x => x.Address).HasMaxLength(500);
+                entry.Property(x => x.Description).HasMaxLength(500);
+                entry.HasIndex(x => x.Code).IsUnique();
+                entry.HasIndex(x => x.IsDefault).IsUnique().HasFilter("[IsDefault] = 1");
+                // The default warehouse exists from the first migration on (and in every test database), so every unit always
+                // has one - multi-warehouse off or on (CLAUDE.md 6b).
+                entry.HasData(new Warehouse
+                {
+                    Id = 1,
+                    Code = "MAIN",
+                    Name = "انبار اصلی",
+                    IsDefault = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2026, 10, 19),
+                    UpdatedAt = new DateTime(2026, 10, 19),
+                });
+            });
+
+            modelBuilder.Entity<ProductUnit>(entry =>
+            {
+                entry.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+                // Existing rows (and any insert that leaves it unset) land in the seeded default warehouse.
+                entry.Property(x => x.WarehouseId).HasDefaultValue(1);
+                entry.HasIndex(x => new { x.WarehouseId, x.ProductId, x.Status });
+            });
+
+            modelBuilder.Entity<StockTransfer>(entry =>
+            {
+                entry.Property(x => x.TransferNumber).HasMaxLength(30).IsRequired();
+                entry.HasIndex(x => x.TransferNumber).IsUnique();
+                entry.Property(x => x.Description).HasMaxLength(500);
+                entry.HasOne(x => x.FromWarehouse).WithMany().HasForeignKey(x => x.FromWarehouseId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.ToWarehouse).WithMany().HasForeignKey(x => x.ToWarehouseId).OnDelete(DeleteBehavior.Restrict);
+                entry.ToTable(t => t.HasCheckConstraint("CK_StockTransfers_TwoWarehouses", "[FromWarehouseId] <> [ToWarehouseId]"));
+            });
+
+            modelBuilder.Entity<StockTransferUnit>(entry =>
+            {
+                entry.HasOne(x => x.StockTransfer).WithMany(x => x.Units).HasForeignKey(x => x.StockTransferId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasOne(x => x.ProductUnit).WithMany().HasForeignKey(x => x.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasIndex(x => x.ProductUnitId);
+            });
+
+            modelBuilder.Entity<Stocktake>(entry =>
+            {
+                entry.Property(x => x.Number).HasMaxLength(30).IsRequired();
+                entry.HasIndex(x => x.Number).IsUnique();
+                entry.Property(x => x.Title).HasMaxLength(200).IsRequired();
+                entry.Property(x => x.Brand).HasMaxLength(100);
+                entry.Property(x => x.BinLocationPrefix).HasMaxLength(50);
+                entry.Property(x => x.Note).HasMaxLength(1000);
+                entry.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<StocktakeLine>(entry =>
+            {
+                entry.HasOne(x => x.Stocktake).WithMany(x => x.Lines).HasForeignKey(x => x.StocktakeId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasIndex(x => new { x.StocktakeId, x.ProductId }).IsUnique();
+            });
+
+            modelBuilder.Entity<StocktakeScan>(entry =>
+            {
+                entry.HasOne(x => x.Stocktake).WithMany(x => x.Scans).HasForeignKey(x => x.StocktakeId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasOne(x => x.ProductUnit).WithMany().HasForeignKey(x => x.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
+                entry.Property(x => x.Barcode).HasMaxLength(100).IsRequired();
+                entry.HasIndex(x => new { x.StocktakeId, x.ProductUnitId });
+            });
+
+            modelBuilder.Entity<StocktakeSnapshotUnit>(entry =>
+            {
+                entry.HasOne(x => x.Stocktake).WithMany(x => x.SnapshotUnits).HasForeignKey(x => x.StocktakeId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasIndex(x => new { x.StocktakeId, x.ProductUnitId }).IsUnique();
+            });
+
+            modelBuilder.Entity<Product>()
+                .HasOne(x => x.PreferredSupplier).WithMany().HasForeignKey(x => x.PreferredSupplierId).OnDelete(DeleteBehavior.Restrict);
 
             // Return refunds applied to an installment plan (GAP-26). Goes with the plan.
             modelBuilder.Entity<SaleInstallmentReturnCredit>(entry =>

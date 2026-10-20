@@ -271,7 +271,7 @@ namespace WMS.Tests.Integration
 
             // The QuestPDF engine: the Excel one needs LibreOffice on the machine running the tests.
             var pdf = new Infrastructure.Services.QuestPdfInvoiceDocumentService(scope.QuestPdfDocumentService);
-            var file = await new Application.Features.Invoice.Queries.GetPurchaseReturnPdfQueryHandler(scope.Db, pdf, new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build())
+            var file = await new Application.Features.Invoice.Queries.GetPurchaseReturnPdfQueryHandler(scope.Db, pdf)
                 .Handle(new Application.Features.Invoice.Queries.GetPurchaseReturnPdfQuery { PurchaseReturnId = returnId }, CancellationToken.None);
 
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(file.Content, 0, 4));

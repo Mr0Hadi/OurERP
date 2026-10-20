@@ -39,6 +39,12 @@ namespace Application.Features.Product.Commands
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
 
+        /// <summary>Reorder (GAP-04): order back up to this level when stock falls to LowStockThreshold (the reorder point). Null = up to the reorder point.</summary>
+        public int? TargetStock { get; set; }
+        public int? LeadTimeDays { get; set; }
+        public int? PreferredSupplierId { get; set; }
+        public int? MinOrderQuantity { get; set; }
+
         /// <summary>
         /// The ObjectKey returned by POST api/File/UploadImage (folder=PRODUCTS), or the ImageKey
         /// read off the detail response to keep the existing image. Send null to clear it.
@@ -71,6 +77,12 @@ namespace Application.Features.Product.Commands
             RuleFor(x => x.TaxCategory).IsInEnum().WithMessage("وضعیت مالیاتی کالا نامعتبر است.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
+
+            RuleFor(x => x.TargetStock).GreaterThanOrEqualTo(x => x.LowStockThreshold).When(x => x.TargetStock.HasValue)
+                .WithMessage("سقف موجودی نمی‌تواند از نقطه‌ی سفارش کمتر باشد.");
+            RuleFor(x => x.LeadTimeDays).InclusiveBetween(0, 365).When(x => x.LeadTimeDays.HasValue).WithMessage("زمان تحویل باید بین ۰ و ۳۶۵ روز باشد.");
+            RuleFor(x => x.MinOrderQuantity).GreaterThan(0).When(x => x.MinOrderQuantity.HasValue).WithMessage("حداقل مقدار سفارش باید از صفر بیشتر باشد.");
+            RuleFor(x => x.PreferredSupplierId).GreaterThan(0).When(x => x.PreferredSupplierId.HasValue).WithMessage("تامین‌کننده‌ی ترجیحی نامعتبر است.");
             RuleFor(x => x.ProductCategoryId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دسته‌بندی محصول"));
             RuleFor(x => x.Unit).IsInEnum().WithMessage("واحد محصول نامعتبر است.");
         }
@@ -98,6 +110,9 @@ namespace Application.Features.Product.Commands
         public async Task<ResponseDto> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
+
+            if (request.PreferredSupplierId.HasValue && !await _context.Suppliers.AnyAsync(x => x.Id == request.PreferredSupplierId && x.IsActive, cancellationToken))
+                throw new ValidationCustomException("تامین‌کننده‌ی ترجیحی یافت نشد.");
             var product = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new ValidationCustomException("محصول مورد نظر یافت نشد.");
 
             var category = await _productCategoryRepository.GetByIdAsync(request.ProductCategoryId, cancellationToken)
@@ -129,6 +144,10 @@ namespace Application.Features.Product.Commands
             product.Tax = request.Tax;
             product.TaxCategory = request.TaxCategory;
             product.LowStockThreshold = request.LowStockThreshold;
+            product.TargetStock = request.TargetStock;
+            product.LeadTimeDays = request.LeadTimeDays;
+            product.PreferredSupplierId = request.PreferredSupplierId;
+            product.MinOrderQuantity = request.MinOrderQuantity;
             // The column stores the bucket object key, never a URL - a browser-facing image URL
             // echoed back by the frontend is stripped down rather than persisted verbatim.
             product.ImageUrl = _objectStorageService.NormalizeKey(request.ImageKey);

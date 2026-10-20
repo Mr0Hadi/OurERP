@@ -4,6 +4,13 @@ namespace Domain.Entities
 {
     public class ProductUnit
     {
+        /// <summary>
+        /// Where the unit is (GAP-08). Always set - the default warehouse while multi-warehouse is off - so the switch never needs
+        /// a conversion (CLAUDE.md section 6b). For a unit no longer here (SOLD, SCRAPPED, ...) it is where it last was.
+        /// </summary>
+        public int WarehouseId { get; set; }
+        public Warehouse Warehouse { get; set; } = null!;
+
         public int Id { get; set; }
         public int ProductId { get; set; }
         public Product Product { get; set; }

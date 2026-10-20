@@ -23,7 +23,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.ShippedSale(scope.Context, orderedQuantity: 3, shippedQuantity: 3, stock: 0);
 
-            var handler = new GetSaleInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, EmptyConfig());
+            var handler = new GetSaleInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService);
             var file = await handler.Handle(new GetSaleInvoicePdfQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
 
             Assert.NotEmpty(file.Content);
@@ -38,7 +38,7 @@ namespace WMS.Tests.Integration
         //    using var scope = db.NewScope();
         //    var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 3, stock: 0);
 
-        //    //var handler = new GetPurchaseInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, scope.InvoiceLineCalculation, EmptyConfig());
+        //    //var handler = new GetPurchaseInvoicePdfQueryHandler(scope.Db, scope.PdfDocumentService, scope.InvoiceLineCalculation);
         //    //var file = await handler.Handle(new GetPurchaseInvoicePdfQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
 
         //    Assert.NotEmpty(file.Content);
@@ -83,7 +83,7 @@ namespace WMS.Tests.Integration
                 },
             }, CancellationToken.None);
 
-            var pdfHandler = new GetSaleReturnCreditNotePdfQueryHandler(scope.Db, scope.PdfDocumentService, EmptyConfig());
+            var pdfHandler = new GetSaleReturnCreditNotePdfQueryHandler(scope.Db, scope.PdfDocumentService);
             var file = await pdfHandler.Handle(new GetSaleReturnCreditNotePdfQuery { SaleReturnId = saleReturnId }, CancellationToken.None);
 
             Assert.NotEmpty(file.Content);

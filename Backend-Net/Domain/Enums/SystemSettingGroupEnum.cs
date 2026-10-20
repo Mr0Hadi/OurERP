@@ -13,5 +13,14 @@ namespace Domain.Enums
 
         [Description("اقساط")]
         INSTALLMENT = 3,
+
+        [Description("انبار")]
+        WAREHOUSE = 4,
+
+        [Description("مشخصات شرکت")]
+        COMPANY = 5,
+
+        [Description("امنیت")]
+        SECURITY = 6,
     }
 }

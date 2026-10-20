@@ -14,7 +14,7 @@ namespace WMS.Tests.Integration
         private static IConfiguration MakeConfiguration() => TestSessions.Configuration;
 
         private static LoginUserCommandHandler LoginHandler(TestScope scope, IUserSessionService? sessions = null)
-            => new(scope.UserRepository, sessions ?? TestSessions.Create(), scope.UnitOfWork, MakeConfiguration());
+            => new(scope.UserRepository, sessions ?? TestSessions.Create(), scope.UnitOfWork, scope.SystemSettings);
 
         private static Domain.Entities.User SeedUser(TestScope scope, string username = "tester", string password = "Correct@1234")
         {

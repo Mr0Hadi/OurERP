@@ -55,5 +55,22 @@ namespace Domain.Enums
 
         [Description("آزادسازی رزرو پیش‌فاکتور")]
         SALE_RESERVATION_RELEASED = 16,
+
+        [Description("ارسال حواله‌ی بین انبار")]
+        STOCK_TRANSFER_DISPATCHED = 17,
+
+        [Description("دریافت حواله‌ی بین انبار")]
+        STOCK_TRANSFER_RECEIVED = 18,
+
+        [Description("لغو حواله‌ی بین انبار")]
+        STOCK_TRANSFER_CANCELLED = 19,
+
+        /// <summary>A stocktake found the unit missing (IN_STOCK -> SCRAPPED) or added a counted surplus (minted IN_STOCK).</summary>
+        [Description("تعدیل انبارگردانی")]
+        STOCKTAKE_ADJUSTMENT = 20,
+
+        /// <summary>A stocktake found the unit in a different warehouse than recorded; only its warehouse changed.</summary>
+        [Description("جابه‌جایی در انبارگردانی")]
+        STOCKTAKE_RELOCATED = 21,
     }
 }

@@ -37,6 +37,19 @@ namespace Domain.Entities
         public TaxCategoryEnum TaxCategory { get; set; } = TaxCategoryEnum.TAXABLE;
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
+
+        // ---- Reorder (GAP-04). LowStockThreshold is the reorder point. ----
+
+        /// <summary>The level to order back up to (max). Null = order back up to the reorder point.</summary>
+        public int? TargetStock { get; set; }
+        public int? LeadTimeDays { get; set; }
+
+        /// <summary>Who to order from; null = the supplier of the latest purchase.</summary>
+        public int? PreferredSupplierId { get; set; }
+        public Supplier? PreferredSupplier { get; set; }
+
+        /// <summary>The smallest quantity the supplier sells; a suggestion is rounded up to a multiple of it.</summary>
+        public int? MinOrderQuantity { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
