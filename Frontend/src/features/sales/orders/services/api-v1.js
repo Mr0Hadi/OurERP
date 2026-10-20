@@ -86,7 +86,15 @@ export function fromApiSale(dto) {
     warehouseIssues: dto.warehouseIssues || [],
   };
 
-  return { ...sale, updatedAt: sale.updatedAt || documentVersion(sale) };
+  // `SaleDto` فیلدِ `updatedAt` ندارد. نسخه باید با هر تغییرِ سرور عوض شود تا فرمِ پیش‌فاکتور از نو
+  // پر شود: `revision` (ویرایش، از جمله تغییرِ انبار)، مرحله و تعدادِ اقلام هم در آن است.
+  const version = [
+    documentVersion(sale),
+    sale.revision,
+    sale.proformaStage,
+    sale.items.map((item) => `${item.id}:${item.quantity}:${item.unitPrice}`).join(","),
+  ].join("|");
+  return { ...sale, updatedAt: sale.updatedAt || version };
 }
 
 /** بدنه‌ی مشترکِ Create/Update. شماره‌ی فاکتور را همیشه سرور می‌سازد. */

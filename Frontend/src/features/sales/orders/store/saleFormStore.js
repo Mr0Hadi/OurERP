@@ -67,15 +67,30 @@ export const useSaleFormStore = createDocumentFormStore({
   formFromDocument: formFromSale,
 });
 
-/** فیلدهایی که فقط پیش‌نویسِ همین صفحه‌اند و با `UpdateSale` نمی‌روند. */
-const LOCAL_ONLY = ["paymentDraft", "status", "installmentPlan", "priceMode"];
+/**
+ * همان چیزی که `UpdateSale` از فرم می‌فرستد. فیلدهای نمایشی (نامِ مشتری، کد/واحدِ کالا که
+ * انتخابگرها بعد از پر شدن می‌نشانند) و پیش‌نویس‌های همین صفحه (دریافت‌ها، قرارداد) حساب نمی‌شوند
+ * — وگرنه فرمِ دست‌نخورده «تغییرکرده» دیده می‌شد و دریافت بسته می‌ماند.
+ */
 const documentPart = (form) =>
-  JSON.stringify(Object.fromEntries(Object.entries(form).filter(([key]) => !LOCAL_ONLY.includes(key))));
+  JSON.stringify([
+    String(form.customerId ?? ""),
+    form.invoiceDate || "",
+    form.paymentDate || "",
+    form.description || "",
+    Boolean(form.installment),
+    (form.items || []).map((item) => [
+      Number(item.id) || 0,
+      Number(item.productId) || 0,
+      Number(item.quantity) || 0,
+      Number(item.unitPrice) || 0,
+      Number(item.discount) || 0,
+    ]),
+  ]);
 
 /**
- * سلکتور: خودِ پیش‌فاکتور (مشتری، اقلام، تاریخ‌ها، شیوه‌ی پرداخت، توضیح) عوض شده؟ دریافت‌ها و
- * پیش‌نویسِ قرارداد حساب نمی‌شوند. ذخیره‌ی چنین تغییری (`UpdateSale`) چرخه‌ی تأیید را به
- * پیش‌نویس برمی‌گرداند، پس پیش از دریافت باید جدا ذخیره شود.
+ * سلکتور: خودِ پیش‌فاکتور (مشتری، اقلام، تاریخ‌ها، شیوه‌ی پرداخت، توضیح) عوض شده؟ ذخیره‌ی چنین
+ * تغییری (`UpdateSale`) چرخه‌ی تأیید را به پیش‌نویس برمی‌گرداند، پس پیش از دریافت ممنوع است.
  */
 export const isSaleDocumentChanged = (state) =>
   state.formData !== state.baseline && documentPart(state.formData) !== documentPart(state.baseline);
