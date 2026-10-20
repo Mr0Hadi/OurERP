@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Percent,
   Receipt,
+  PackageSearch,
   Rows3,
   Settings,
   Scale,
@@ -241,6 +242,13 @@ export const navigationData = {
           permission: "PurchaseReceive",
           icon: ClipboardList,
           description: "مشاهده و تأیید کالاهای دریافتی",
+        },
+        {
+          title: "بررسی پیش‌فاکتورها",
+          url: ROUTES.WAREHOUSE_SALE_CHECK,
+          permission: "SaleWarehouseCheck",
+          icon: PackageSearch,
+          description: "برداشتن و اسکنِ کالای پیش‌فاکتورهای تأییدشده (رزرو) پیش از پرداخت",
         },
         {
           title: "ارسال کالا",

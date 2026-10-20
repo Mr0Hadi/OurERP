@@ -13,6 +13,8 @@ const VehiclesPage = lazy(() => import("./vehicles/pages/VehiclesPage"));
 const ShippingListPage = lazy(() => import("./shipping/pages/ShippingListPage"));
 const ShippingDetailPage = lazy(() => import("./shipping/pages/ShippingDetailPage"));
 const ReceivingReturnDetailPage = lazy(() => import("./receiving/pages/ReceivingReturnDetailPage"));
+const SaleCheckListPage = lazy(() => import("./saleCheck/pages/SaleCheckListPage"));
+const SaleCheckPage = lazy(() => import("./saleCheck/pages/SaleCheckPage"));
 const SupplierReturnDetailPage = lazy(() => import("./shipping/pages/SupplierReturnDetailPage"));
 
 /** نشانیِ قدیمی → نشانیِ تازه، با همان پارامترها (`?unit=`، `?productId=`). */
@@ -90,6 +92,16 @@ export const warehouseRoutes = [
     path: ROUTES.WAREHOUSE_SHIPPING,
     handle: { permission: "SaleShip" },
     element: <ShippingListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SALE_CHECK,
+    handle: { permission: "SaleWarehouseCheck" },
+    element: <SaleCheckListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SALE_CHECK_DETAIL,
+    handle: { permission: "SaleWarehouseCheck" },
+    element: <SaleCheckPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING_DETAIL,

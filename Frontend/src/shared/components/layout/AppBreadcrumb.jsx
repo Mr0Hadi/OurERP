@@ -59,6 +59,7 @@ const ROUTE_TITLES = {
   [ROUTES.WAREHOUSE_VEHICLES]: "خودروها",
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت کالا",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال کالا",
+  [ROUTES.WAREHOUSE_SALE_CHECK]: "بررسی انبارِ پیش‌فاکتور",
   [ROUTES.WAREHOUSE_STOCK]: "موجودی انبار",
   [ROUTES.WAREHOUSE_TRANSACTIONS]: "تراکنش‌های انبار",
 
@@ -132,6 +133,7 @@ const DETAIL_TITLES = {
   [ROUTES.WAREHOUSE_VEHICLES]: "جزئیات خودرو",
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت خرید",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال فروش",
+  [ROUTES.WAREHOUSE_SALE_CHECK]: "بررسی پیش‌فاکتور",
   "/warehouse/receiving/returns": "دریافت کالای مرجوعی",
   // عودت، آزادسازی و اسقاطِ قرنطینه — نه فقط عودت.
   "/warehouse/shipping/returns": "کار انبار روی مرجوعی خرید",
