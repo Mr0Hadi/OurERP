@@ -110,6 +110,8 @@ export const UnitActionReasonEnum = Object.freeze({
   EXPIRED: 3,
   NEEDS_INSPECTION: 4,
   INSPECTION_PASSED: 5,
+  // فقط در گزارشِ بررسیِ انبارِ پیش‌فاکتور (`CheckSaleWarehouse`)؛ دانه پیدا نشد.
+  MISSING: 6,
   OTHER: 9,
 });
 
@@ -119,6 +121,7 @@ export const UNIT_ACTION_REASON_LABELS = Object.freeze({
   [UnitActionReasonEnum.EXPIRED]: "تاریخ گذشته",
   [UnitActionReasonEnum.NEEDS_INSPECTION]: "نیاز به بررسی",
   [UnitActionReasonEnum.INSPECTION_PASSED]: "بررسی شد — سالم",
+  [UnitActionReasonEnum.MISSING]: "مفقود",
   [UnitActionReasonEnum.OTHER]: "سایر موارد",
 });
 

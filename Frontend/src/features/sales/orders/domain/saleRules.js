@@ -66,18 +66,18 @@ export function scannedBarcodesOf(items) {
 }
 
 /**
- * قلمی که در فروشِ حضوری اسکنش کامل نیست (پیامِ اولی) یا `null`. کالای
- * ردیابی‌پذیر باید همه‌ی دانه‌هایش اسکن شود؛ بقیه یا همه یا هیچ.
+ * قلمی که در فروشِ حضوری اسکنش کامل نیست (پیامِ اولی) یا `null`. فروشِ حضوری بررسیِ انبار را
+ * با همین دانه‌ها انجام می‌دهد (`CheckSaleWarehouse` برای هر ردیف دقیقاً به‌اندازه‌ی تعدادش
+ * بارکد می‌خواهد)، پس همه‌ی دانه‌های همه‌ی اقلام — ردیابی‌پذیر یا نه — باید اسکن شوند.
  */
-function inPersonScanProblem(items, scanned, isTracked) {
+function inPersonScanProblem(items, scanned) {
+  const need = {};
+  for (const item of items) need[item.productId] = (need[item.productId] || 0) + (Number(item.quantity) || 0);
   for (const item of items) {
-    const quantity = Number(item.quantity) || 0;
     const count = (scanned[item.productId] || []).length;
-    if (isTracked(item.productId) && count !== quantity) {
-      return `«${item.productName}» ردیابی‌پذیر است؛ همه‌ی ${formatNumber(quantity)} دانه را اسکن کنید`;
-    }
-    if (count > 0 && count !== quantity) {
-      return `${formatNumber(count)} از ${formatNumber(quantity)} دانه‌ی «${item.productName}» اسکن شده؛ همه را اسکن یا تعداد را اصلاح کنید`;
+    const quantity = need[item.productId];
+    if (count !== quantity) {
+      return `فروشِ حضوری: ${formatNumber(count)} از ${formatNumber(quantity)} دانه‌ی «${item.productName}» اسکن شده؛ همه‌ی دانه‌های همه‌ی اقلام را اسکن کنید (یا اسکن‌ها را پاک کنید تا پیش‌فاکتور ثبت شود)`;
     }
   }
   return null;
@@ -94,7 +94,6 @@ function inPersonScanProblem(items, scanned, isTracked) {
  * می‌شود و تحویلِ حضوری هم با همان، پس قاعده‌های «دریافت» جایشان را به خطاهای قرارداد
  * (`planDraftErrors`) می‌دهند.
  *
- * @param isTracked `(productId) => boolean` — کالا ردیابیِ دانه دارد
  */
 export function saleFormProblem({
   formData,
@@ -103,7 +102,6 @@ export function saleFormProblem({
   isInvoice,
   isInPerson,
   scannedBarcodes,
-  isTracked,
   paid,
   total,
   planErrors,
@@ -113,7 +111,7 @@ export function saleFormProblem({
   if (items.length === 0) return ["دست‌کم یک کالا اضافه کنید.", "items"];
   if (invoiceErrors) return ["برای فاکتور، تاریخ را وارد کنید.", "info"];
   if (isInPerson) {
-    const scanProblem = inPersonScanProblem(items, scannedBarcodes, isTracked);
+    const scanProblem = inPersonScanProblem(items, scannedBarcodes);
     if (scanProblem) return [scanProblem, "items"];
   }
   if (planErrors) {

@@ -11,7 +11,7 @@ import { saleKeys } from './queryKeys';
 export function useSaleListFilters() {
   return useDebouncedFilters(useSaleFilterStore, {
     text: ["invoiceNumber"],
-    instant: ["customerId", "status", "paymentType", "fromDate", "toDate"],
+    instant: ["customerId", "status", "proformaStages", "paymentType", "fromDate", "toDate"],
   });
 }
 

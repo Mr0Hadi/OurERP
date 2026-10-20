@@ -73,6 +73,9 @@ export const ROUTES = {
   WAREHOUSE_RECEIVING: "/warehouse/receiving",
   WAREHOUSE_RECEIVING_DETAIL: "/warehouse/receiving/:id",
   WAREHOUSE_SHIPPING: "/warehouse/shipping",
+  // بررسیِ انبارِ پیش‌فاکتورِ فروش (اسکن و رزرو، پیش از پرداخت).
+  WAREHOUSE_SALE_CHECK: "/warehouse/sale-check",
+  WAREHOUSE_SALE_CHECK_DETAIL: "/warehouse/sale-check/:id",
   WAREHOUSE_SHIPPING_DETAIL: "/warehouse/shipping/:id",
   WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",
   WAREHOUSE_SHIPPING_RETURN_DETAIL: "/warehouse/shipping/returns/:id",
@@ -97,6 +100,8 @@ export const ROUTES = {
   ACCOUNTING_PURCHASES: "/accounting/purchases",
   ACCOUNTING_SALE_LINES: "/accounting/sale-lines",
   ACCOUNTING_PAYMENTS: "/accounting/payments",
+  // گزارش‌های دانه‌ی معیوب/مفقودِ بررسیِ انبار، منتظرِ تصمیمِ حسابداری.
+  ACCOUNTING_WAREHOUSE_ISSUES: "/accounting/warehouse-issues",
   ACCOUNTING_TAX: "/accounting/tax",
   ACCOUNTING_INVENTORY: "/accounting/inventory",
   ACCOUNTING_BREAKDOWN: "/accounting/breakdown",

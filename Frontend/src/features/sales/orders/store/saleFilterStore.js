@@ -6,6 +6,8 @@ export const useSaleFilterStore = createFilterStore({
     invoiceNumber: "",
     customerId: "",
     status: "",
+    // یک مرحله‌ی پیش‌فاکتور (`SaleProformaStageEnum`)؛ سرور چندتایی هم می‌پذیرد.
+    proformaStages: "",
     paymentType: "",
     fromDate: "",
     toDate: "",

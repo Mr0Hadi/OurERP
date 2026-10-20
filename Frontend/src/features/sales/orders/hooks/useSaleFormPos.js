@@ -1,51 +1,50 @@
 import { useRef, useState } from "react";
 
-import { useCreateInPersonSaleMutation, useCreateSaleMutation, useSalePosActions } from "../services/mutations";
+import { useInPersonSaleMutation, useSalePosActions } from "../services/mutations";
 import { newPosReference } from "@/shared/domain/pos/posSession";
-import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
 import { rowsTotal } from "@/shared/domain/payments/paymentSplit";
 
 /**
  * «دریافت با کارتخوان» در فرمِ فروش — پیکربندیِ `posPayment`ِ `PaymentsCard`.
  *
- * رسید تا «بستن» می‌ماند و بعد صفحه‌ی فروشِ صادرشده باز می‌شود.
- *  - فاکتورِ تازه: خودِ تأیید «ثبتِ فاکتور» است؛ فروش با دریافت‌های فرم به‌اضافه‌ی تکه‌ی
- *    کارتخوان ساخته می‌شود. حضوری فقط با دریافتِ کامل تحویل می‌شود؛ ناقص، فاکتورِ معمولی
- *    («در حال آماده‌سازی») بدونِ دانه‌های اسکن‌شده است (بند ۱۱.۴ درخواست‌های بکند).
- *  - پیش‌فاکتورِ ثبت‌شده: تغییراتش پیش از کارت‌کشیدن ذخیره می‌شود و دریافت آن را فاکتور
- *    می‌کند. دریافت‌های ثبت‌نشده‌ی دیگر باید اول ذخیره شوند (وگرنه با رفتن به فاکتور گم می‌شوند).
+ * دریافت فقط دو جا ممکن است (چرخه‌ی تأیید، ۲۰۲۶-۱۰-۱۶):
+ *  - فروشِ حضوریِ تازه: خودِ تأیید «ثبت» است؛ کلِ چرخه (`useInPersonSaleMutation`) با
+ *    دریافت‌های فرم به‌اضافه‌ی تکه‌ی کارتخوان اجرا می‌شود. کلِ مبلغ ⇒ تحویلِ همان‌جا؛ کمتر ⇒
+ *    فاکتور با همان دریافت‌ها صادر و کالا رزرو برای ارسالِ انبار (پولِ کشیده‌شده گم نمی‌شود).
+ *  - پیش‌فاکتورِ «آماده‌ی پرداخت»: `AddSalePayment` فاکتور را صادر می‌کند. پیش‌فاکتورِ
+ *    تغییرکرده یا دریافت‌های ثبت‌نشده‌ی دیگر مانع‌اند (ذخیره‌ی تغییر تأییدها را برمی‌گرداند).
  *
- * ثبت از روی *نسخه‌ای* از فرم است که پیش از کارت‌کشیدن اعتبارسنجی شد (`snapshot`)، نه
- * فرمی که شاید وسطِ کار عوض شده. «ثبتِ دوباره» همان بدنه را می‌فرستد و چون کلیدِ
- * ایدمپوتنسی از محتواست، فروشِ دوم ساخته نمی‌شود.
+ * ثبت از روی *نسخه‌ای* از فرم است که پیش از کارت‌کشیدن اعتبارسنجی شد (`snapshot`)؛ «ثبتِ
+ * دوباره» همان بدنه را می‌فرستد و کلیدِ ایدمپوتنسی از محتواست.
  *
- * @param enabled      کاربر `PosCharge` دارد
- * @param sale         پیش‌فاکتورِ ثبت‌شده؛ خالی برای فروشِ تازه
- * @param takeSnapshot پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و
- *                     `{ payload, draftRows, inPerson, scannedBarcodes, total }`
- * @param onPersisted  `() => void` — فروشِ تازه همین الان روی سرور ساخته شد (مثلاً نگه‌داشتنِ پیوست‌ها)
- * @param onCreated    `(created) => void` — بعد از «بستن»ِ رسیدِ فروشِ تازه
- * @param onIssued     `() => void` — بعد از «بستن»ِ رسیدِ پیش‌فاکتورِ صادرشده (پیش از `apply`)
+ * @param enabled         کاربر `PosCharge` دارد
+ * @param sale            پیش‌فاکتورِ ثبت‌شده؛ خالی برای فروشِ تازه
+ * @param isInPerson      فروشِ تازه‌ی حضوری (دانه اسکن شده)
+ * @param blockedReason   چرا الان روی پیش‌فاکتور نمی‌شود کارت کشید (یا `undefined`)
+ * @param takeSnapshot    پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و
+ *                        `{ payload, draftRows, scannedBarcodes, total }`
+ * @param onPersisted     `() => void` — فروشِ تازه همین الان روی سرور ساخته شد
+ * @param onCreated       `(created) => void` — بعد از «بستن»ِ رسیدِ فروشِ تازه
+ * @param onIssued        `() => void` — بعد از «بستن»ِ رسیدِ پیش‌فاکتورِ صادرشده (پیش از `apply`)
  * @returns `{ posPayment, posLocked }` — `posLocked`: تا پایانِ کار دکمه‌ی اصلی بسته است
  */
 export function useSaleFormPos({
   enabled,
   sale,
-  takeSnapshot,
-  hasDraftPayments,
   isInPerson,
+  blockedReason,
+  takeSnapshot,
   onPersisted,
   onCreated,
   onIssued,
 }) {
-  const createMutation = useCreateSaleMutation();
-  const inPersonMutation = useCreateInPersonSaleMutation();
+  const inPersonMutation = useInPersonSaleMutation();
   const posActions = useSalePosActions();
   const [posLocked, setPosLocked] = useState(false);
   // `snapshot` سندی که پیش از کارت‌کشیدن اعتبارسنجی شد؛ `outcome` سندِ ساخته/صادرشده تا «بستن»ِ رسید.
   const runRef = useRef({ snapshot: null, outcome: null });
 
-  if (!enabled) return { posPayment: undefined, posLocked };
+  if (!enabled || (!sale && !isInPerson)) return { posPayment: undefined, posLocked };
 
   const prepare = () => {
     runRef.current = { snapshot: takeSnapshot(), outcome: null };
@@ -56,13 +55,14 @@ export function useSaleFormPos({
     ? {
         prepare,
         record: async (_result, { rows }) => {
-          const { payload, draftRows, inPerson, scannedBarcodes, total } = runRef.current.snapshot;
+          const { payload, draftRows, scannedBarcodes, total } = runRef.current.snapshot;
           const paymentRows = [...draftRows, ...rows];
-          const body = { ...payload, paymentType: paymentTypeOf(paymentRows), paymentRows };
-          const created =
-            inPerson && rowsTotal(paymentRows) >= total
-              ? await inPersonMutation.mutateAsync({ payload: body, scannedBarcodes })
-              : await createMutation.mutateAsync(body);
+          const created = await inPersonMutation.mutateAsync({
+            payload,
+            scannedBarcodes,
+            paymentRows,
+            deliver: rowsTotal(paymentRows) >= total,
+          });
           runRef.current.outcome = created;
           onPersisted?.();
           return created;
@@ -71,15 +71,10 @@ export function useSaleFormPos({
         onDone: () => onCreated(runRef.current.outcome),
         onLockChange: setPosLocked,
         doneLabel: "مشاهده‌ی فاکتور",
-        hint: isInPerson
-          ? "فروشِ حضوری فقط با دریافتِ کلِ مبلغ تحویل می‌شود؛ وگرنه فاکتور «در حال آماده‌سازی» ثبت می‌شود."
-          : "با تأییدِ کارتخوان، فاکتور همین‌جا ثبت می‌شود.",
+        hint: "فروشِ حضوری فقط با دریافتِ کلِ مبلغ همین‌جا تحویل می‌شود؛ وگرنه فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند.",
       }
     : {
-        prepare: async () => {
-          const { payload } = prepare();
-          await posActions.saveProforma(sale.id, payload);
-        },
+        prepare,
         record: (_result, context) => posActions.recordPayment(sale.id, context),
         onRecorded: (latest) => {
           runRef.current.outcome = latest;
@@ -91,10 +86,8 @@ export function useSaleFormPos({
         onLockChange: setPosLocked,
         reference: () => newPosReference(`sale-${sale.id}`),
         doneLabel: "مشاهده‌ی فاکتور",
-        blockedReason: hasDraftPayments
-          ? "دریافت‌های ثبت‌نشده را اول ذخیره کنید؛ بعد از صفحه‌ی فاکتور با کارتخوان دریافت کنید."
-          : undefined,
-        hint: "تغییراتِ پیش‌فاکتور ذخیره می‌شود و با تأییدِ کارتخوان فاکتور صادر می‌شود.",
+        blockedReason,
+        hint: "با تأییدِ کارتخوان فاکتور صادر می‌شود.",
       };
 
   return { posPayment, posLocked };

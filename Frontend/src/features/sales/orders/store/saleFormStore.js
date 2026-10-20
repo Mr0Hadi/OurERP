@@ -66,3 +66,16 @@ export const useSaleFormStore = createDocumentFormStore({
   emptyForm: EMPTY_FORM,
   formFromDocument: formFromSale,
 });
+
+/** فیلدهایی که فقط پیش‌نویسِ همین صفحه‌اند و با `UpdateSale` نمی‌روند. */
+const LOCAL_ONLY = ["paymentDraft", "status", "installmentPlan", "priceMode"];
+const documentPart = (form) =>
+  JSON.stringify(Object.fromEntries(Object.entries(form).filter(([key]) => !LOCAL_ONLY.includes(key))));
+
+/**
+ * سلکتور: خودِ پیش‌فاکتور (مشتری، اقلام، تاریخ‌ها، شیوه‌ی پرداخت، توضیح) عوض شده؟ دریافت‌ها و
+ * پیش‌نویسِ قرارداد حساب نمی‌شوند. ذخیره‌ی چنین تغییری (`UpdateSale`) چرخه‌ی تأیید را به
+ * پیش‌نویس برمی‌گرداند، پس پیش از دریافت باید جدا ذخیره شود.
+ */
+export const isSaleDocumentChanged = (state) =>
+  state.formData !== state.baseline && documentPart(state.formData) !== documentPart(state.baseline);

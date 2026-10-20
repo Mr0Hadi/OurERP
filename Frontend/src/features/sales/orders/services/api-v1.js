@@ -13,9 +13,12 @@ import { toApiPaymentRows } from "@/shared/domain/payments/paymentRows";
  * الگوی `api/{Controller}/{Action}` استفاده می‌کند، نه REST.
  *
  * **قفل پیش‌فاکتور (۲۰۲۶-۰۹-۲۴):** فروش همیشه پیش‌فاکتور ثبت می‌شود و
- * **اولین ریال پرداخت** (`paymentDetails`ِ `CreateSale` یا
- * `AddSalePayment`) فاکتور را صادر می‌کند: شماره‌ی رسمی، تاریخ و وضعیتِ
- * «آماده‌سازی انبار». راهِ دستی‌ای نیست و `status` دیگر فرستاده نمی‌شود.
+ * **اولین ریال پرداخت** (`AddSalePayment`) فاکتور را صادر می‌کند: شماره‌ی رسمی،
+ * تاریخ و وضعیتِ «آماده‌سازی انبار». راهِ دستی‌ای نیست و `status` فرستاده نمی‌شود.
+ *
+ * **چرخه‌ی تأیید (۲۰۲۶-۱۰-۱۶):** پیش از هر پرداختی پیش‌فاکتور باید از «تأیید مشتری»
+ * (`ApproveSaleProforma`) و «تأیید انبار» (`CheckSaleWarehouse`، دانه‌ها رزرو می‌شوند)
+ * بگذرد (`proformaStage`). رزرو مهلت دارد (`reservationExpiresAt`/`reservationSecondsLeft`).
  * فقط پیش‌فاکتور با `UpdateSale` ویرایش می‌شود؛ بعد از صدور فقط
  * پرداخت‌ها، وضعیت (`ChangeSaleStatus`: تحویل/لغو)، پیوست‌ها و مهلت
  * پرداخت، هر کدام با endpoint خودش. خروج یک‌طرفه است: ابطالِ پرداخت
@@ -79,6 +82,8 @@ export function fromApiSale(dto) {
     drivers: dto.drivers || [],
     shippingNotes: dto.shippingNotes || [],
     attachments: dto.attachments || [],
+    proformaEvents: dto.proformaEvents || [],
+    warehouseIssues: dto.warehouseIssues || [],
   };
 
   return { ...sale, updatedAt: sale.updatedAt || documentVersion(sale) };
@@ -110,8 +115,8 @@ export async function fetchSaleById(id) {
 }
 
 /**
- * فروش همیشه پیش‌فاکتور ثبت می‌شود؛ `paymentDetails` با مبلغِ بیشتر از
- * صفر همین‌جا فاکتور را صادر می‌کند.
+ * فروش همیشه پیش‌فاکتورِ `DRAFT` ثبت می‌شود و پول نمی‌گیرد (`paymentDetails` از ۲۰۲۶-۱۰-۱۶
+ * حذف شد). تعدادِ هر کالا نباید از موجودیِ آزادش بیشتر باشد (۴۰۰).
  *
  * @returns `{ id, invoiceNumber, status }`
  */
@@ -120,7 +125,6 @@ export async function createSale(saleData, { idempotencyKey } = {}) {
     "/Sale/CreateSale",
     {
       ...toApiSalePayload(saleData),
-      paymentDetails: toApiPaymentRows(saleData.paymentRows),
       // نامِ فیلد گمراه‌کننده است: با وجودِ اسمِ `productIds`، بکند لیستی
       // از اقلامِ کامل (محصول+تعداد+قیمت+تخفیف) می‌خواهد، نه فقط شناسه.
       productIds: toApiCreateItems(saleData.items),
@@ -131,41 +135,79 @@ export async function createSale(saleData, { idempotencyKey } = {}) {
 }
 
 /**
- * فروشِ حضوری در یک درخواستِ اتمی: بکند فروش را ثبت (با شماره و تاریخِ
- * فاکتورِ خودکار)، خروجِ کالا با بارکدِ دانه‌های اسکن‌شده را انجام و وضعیت
- * را مستقیم «تحویل کامل» می‌کند؛ اگر قدمی شکست بخورد هیچ‌چیز ثبت نمی‌شود.
- * retry بدون کلید یعنی کالا دوبار از انبار کم می‌شد.
+ * «مشتری تأیید کرد»: `DRAFT` ⇒ `CUSTOMER_APPROVED` (صفِ انبار)، یا مستقیم
+ * `WAREHOUSE_CHECKED` اگر همه‌ی ردیف‌ها هنوز رزرو مانده‌اند. `revision` همانی است که
+ * صفحه نشان داده؛ ویرایشِ هم‌زمان ۴۰۰ می‌گیرد. خروجی سندِ کامل.
+ */
+export async function approveSaleProforma(saleId, revision) {
+  const { data } = await axiosInstance.post("/Sale/ApproveSaleProforma", { saleId, revision });
+  return fromApiSale(data);
+}
+
+/**
+ * بررسیِ انبار (همه یا هیچ). `lines`: `[{ saleItemId, productUnitBarcodes }]` — هر ردیف دقیقاً
+ * به‌اندازه‌ی کسریِ رزروش. `issues`: `[{ productUnitBarcode, reason, description }]` دانه‌ی
+ * معیوب/مفقود (قرنطینه). همه کامل ⇒ `WAREHOUSE_CHECKED`؛ وگرنه کسری ⇒ `DRAFT` و هیچ رزروی.
+ * خروجی سندِ کامل.
+ */
+export async function checkSaleWarehouse({ saleId, revision, lines = [], issues = [], note = null }) {
+  const { data } = await axiosInstance.post("/Sale/CheckSaleWarehouse", {
+    saleId,
+    revision,
+    lines,
+    issues,
+    note: note || null,
+  });
+  return fromApiSale(data);
+}
+
+/**
+ * گامِ آخرِ فروشِ حضوری روی پیش‌فاکتورِ `WAREHOUSE_CHECKED`، اتمیک: پرداخت (یا قرارداد
+ * اقساط با پیش‌پرداخت) که فاکتور را صادر می‌کند، ارسالِ همان دانه‌های رزروشده و `DELIVERED`.
+ * فروشِ غیراقساطی: جمعِ `payments` دقیقاً برابرِ `totalAmount`.
  *
- * فروشِ حضوریِ اقساطی: `installmentPlan` (بدنه‌ی `CreateSaleInstallmentPlan` بی `saleId`)
- * در همان تراکنش و پیش از خروجِ کالا ثبت می‌شود؛ پیش‌پرداخت باید بیشتر از صفر باشد و
- * `paymentDetails` خالی.
- *
- * @param scannedBarcodes `{ [productId]: string[] }`
  * @returns `{ id, invoiceNumber, status }`
  */
-export async function createInPersonSale(
-  saleData,
-  scannedBarcodes = {},
-  { idempotencyKey, installmentPlan } = {},
+export async function completeInPersonSale(
+  { saleId, paymentRows = [], installmentPlan = null, shippingNote },
+  { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
-    "/Sale/CreateInPersonSale",
+    "/Sale/CompleteInPersonSale",
     {
-      sale: {
-        ...toApiSalePayload(saleData),
-        paymentDetails: toApiPaymentRows(saleData.paymentRows),
-        productIds: toApiCreateItems(saleData.items),
-      },
-      scannedItems: Object.entries(scannedBarcodes).map(
-        ([productId, barcodes]) => ({
-          productId: Number(productId),
-          productUnitBarcodes: barcodes,
-        }),
-      ),
-      ...(installmentPlan && { installmentPlan }),
+      saleId,
+      payments: installmentPlan ? [] : toApiPaymentRows(paymentRows),
+      installmentPlan,
+      shippingNote: shippingNote || undefined,
     },
     idempotent(idempotencyKey),
   );
+  return data;
+}
+
+// ─── گزارش‌های انبار (صفِ حسابداری) ─────────────────────────────────────────
+
+/** `SaleWarehouseIssueListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+export const WAREHOUSE_ISSUE_SORT_COLUMNS = {
+  reportedAt: 0,
+  productName: 1,
+  reasonTitle: 2,
+  resolvedAt: 3,
+};
+
+/** `GET GetSaleWarehouseIssueList` — `isOpen`، `saleId`، `productId`، `reason`، بازه‌ی `reportedAt`. */
+export async function fetchSaleWarehouseIssues(params) {
+  const { data } = await axiosInstance.get("/Sale/GetSaleWarehouseIssueList", { params });
+  return normalizeListResponse(data);
+}
+
+/** `{ id, resolution, note }` — اسقاط `note` الزامی دارد. خروجی همان ردیفِ گزارش. */
+export async function resolveSaleWarehouseIssue({ id, resolution, note }) {
+  const { data } = await axiosInstance.post("/Sale/ResolveSaleWarehouseIssue", {
+    id,
+    resolution,
+    note: note || null,
+  });
   return data;
 }
 

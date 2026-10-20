@@ -1,8 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import {
+  approveSaleProforma,
+  checkSaleWarehouse,
+  completeInPersonSale,
   createSale,
-  createInPersonSale,
+  resolveSaleWarehouseIssue,
   updateSale,
   changeSaleStatus,
   updateSaleAttachments,
@@ -12,7 +15,7 @@ import {
   voidSalePayment,
   removeSale,
 } from "./api-v1";
-import { saleKeys } from "./queryKeys";
+import { saleKeys, warehouseIssueKeys } from "./queryKeys";
 import { invalidateSalesEcosystem } from "./sharedInvalidation";
 import { partialSaveMessage, runDocumentChanges } from "@/shared/services/documentChanges";
 import { shippingKeys } from "@/features/warehouse/shipping/services/queryKeys";
@@ -22,6 +25,7 @@ import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import { toPaymentPayload } from "@/shared/domain/payments/paymentRows";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { SaleProformaEventEnum, SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { createInstallmentPlan } from "@/features/sales/installments/services/api-v1";
 import { installmentKeys } from "@/features/sales/installments/services/queryKeys";
 import { applyInstallmentPlan } from "@/features/sales/installments/services/mutations";
@@ -63,11 +67,7 @@ export const useCreateSaleMutation = () => {
     mutationFn: (payload) =>
       createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
     onSuccess: (created) => {
-      toast.success(
-        created?.invoiceNumber
-          ? `فاکتور ${created.invoiceNumber} صادر شد`
-          : "پیش‌فاکتور فروش ثبت شد",
-      );
+      toast.success("پیش‌فاکتور فروش ثبت شد");
       invalidateSalesEcosystem(queryClient, created?.id ?? null);
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
@@ -78,21 +78,86 @@ export const useCreateSaleMutation = () => {
 };
 
 /**
- * فروشِ حضوری: یک درخواستِ اتمی که ثبت، خروجِ کالا و «تحویل کامل» را انجام می‌دهد.
- * `variables.installmentPlan` برای فروشِ حضوریِ اقساطی (همان تراکنش).
+ * بارکدهای اسکن‌شده‌ی فرم (`{ [productId]: string[] }`) → `lines`ِ `CheckSaleWarehouse`.
+ * اگر یک کالا در چند ردیف آمده، دانه‌ها به ترتیب بینِ ردیف‌ها پخش می‌شوند.
  */
-export const useCreateInPersonSaleMutation = () => {
+function warehouseLinesFrom(sale, scannedBarcodes) {
+  const left = Object.fromEntries(
+    Object.entries(scannedBarcodes).map(([productId, codes]) => [productId, [...codes]]),
+  );
+  return (sale.items || []).map((item) => {
+    const need = (Number(item.quantity) || 0) - (Number(item.reservedQuantity) || 0);
+    const pool = left[item.productId] || [];
+    return { saleItemId: item.id, productUnitBarcodes: pool.splice(0, Math.max(need, 0)) };
+  });
+}
+
+/** پیامِ کسریِ انبار از آخرین رویدادِ `WAREHOUSE_SHORTAGE`. */
+function shortageNote(sale) {
+  const event = [...(sale.proformaEvents || [])]
+    .reverse()
+    .find((e) => e.kind === SaleProformaEventEnum.WAREHOUSE_SHORTAGE);
+  return event?.note || "همه‌ی دانه‌ها رزرو نشد";
+}
+
+/**
+ * فروشِ حضوری: یک نفر در پیشخوان همه‌ی چرخه را پشتِ هم انجام می‌دهد — ثبتِ پیش‌فاکتور،
+ * تأییدِ مشتری، بررسیِ انبار با همان دانه‌هایی که در فرم اسکن شده‌اند (رزرو)، و
+ * `CompleteInPersonSale` (پرداخت یا قرارداد، ارسال و تحویل، اتمیک).
+ *
+ * چهار درخواستِ جداست و دستورِ اتمیِ یک‌جا ندارد. اگر بعد از ثبت قدمی شکست بخورد، پیش‌فاکتور
+ * می‌ماند: `partiallySaved` و `saleId` روی خطا می‌نشینند تا صفحه به همان پیش‌فاکتور برود و
+ * کار از همان مرحله ادامه یابد.
+ *
+ * `deliver = false` (فقط کارتخوانی که کمتر از کلِ مبلغ کشیده شد — پولِ گرفته‌شده نباید گم شود):
+ * به‌جای `CompleteInPersonSale` دریافت‌ها با `AddSalePayment` ثبت می‌شوند؛ فاکتور صادر و دانه‌ها
+ * رزرو می‌مانند تا انبار ارسال کند.
+ *
+ * `{ payload, scannedBarcodes, paymentRows, installmentPlan, deliver }`
+ * @returns `{ id, invoiceNumber, status }`
+ */
+export const useInPersonSaleMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (variables) =>
-      createInPersonSale(variables.payload, variables.scannedBarcodes, {
-        idempotencyKey: idempotencyKeyFor(variables),
-        installmentPlan: variables.installmentPlan,
-      }),
-    onSuccess: (created, variables) => {
-      toast.success('فروش حضوری ثبت و تحویل شد');
-      invalidateSalesEcosystem(queryClient, created.id);
+    mutationFn: async ({ payload, scannedBarcodes, paymentRows = [], installmentPlan = null, deliver = true }) => {
+      const created = await createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) });
+      try {
+        const approved = await approveSaleProforma(created.id, 0);
+        let ready = approved;
+        if (approved.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
+          ready = await checkSaleWarehouse({
+            saleId: created.id,
+            revision: approved.revision,
+            lines: warehouseLinesFrom(approved, scannedBarcodes),
+          });
+        }
+        if (ready.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
+          throw new Error(`کسری در انبار: ${shortageNote(ready)}`);
+        }
+        if (!deliver) {
+          let latest = ready;
+          for (const row of paymentRows) {
+            const body = { saleId: created.id, ...toPaymentPayload({ ...row, direction: SALE_PAYMENT_SIDE.direction }) };
+            latest = await addSalePayment(body, { idempotencyKey: idempotencyKeyFor(body) });
+          }
+          return latest;
+        }
+        const body = { saleId: created.id, paymentRows, installmentPlan };
+        return await completeInPersonSale(body, { idempotencyKey: idempotencyKeyFor(body) });
+      } catch (error) {
+        error.partiallySaved = true;
+        error.saleId = created.id;
+        throw error;
+      }
+    },
+    onSuccess: (completed, variables) => {
+      toast.success(
+        variables.deliver === false
+          ? `فاکتور ${completed?.invoiceNumber || ""} صادر شد؛ کالا رزرو است و انبار ارسال می‌کند`
+          : `فاکتور ${completed?.invoiceNumber || ""} صادر و تحویل شد`,
+      );
+      invalidateSalesEcosystem(queryClient, completed?.id ?? null);
       queryClient.invalidateQueries({ queryKey: shippingKeys.all });
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
       if (variables.installmentPlan) {
@@ -100,8 +165,69 @@ export const useCreateInPersonSaleMutation = () => {
       }
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'ثبت فروش حضوری انجام نشد'));
+      if (error?.partiallySaved) invalidateSalesEcosystem(queryClient, error.saleId);
+      const reason = getErrorMessage(error, "ثبت فروش حضوری انجام نشد");
+      toast.error(
+        error?.partiallySaved
+          ? `${reason} — پیش‌فاکتور ذخیره شد؛ کار را از صفحه‌ی همان پیش‌فاکتور ادامه دهید.`
+          : reason,
+      );
     },
+  });
+};
+
+/** «مشتری تأیید کرد». `{ saleId, revision }`. */
+export const useApproveSaleProformaMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ saleId, revision }) => approveSaleProforma(saleId, revision),
+    onSuccess: (sale) => {
+      applySale(queryClient, sale);
+      toast.success(
+        sale.proformaStage === SaleProformaStageEnum.WAREHOUSE_CHECKED
+          ? "تأیید مشتری ثبت شد؛ کالا هنوز رزرو است و پیش‌فاکتور آماده‌ی پرداخت است"
+          : "تأیید مشتری ثبت شد و پیش‌فاکتور به صفِ انبار رفت",
+      );
+    },
+    onError: (error, { saleId }) => {
+      invalidateSalesEcosystem(queryClient, saleId);
+      toast.error(getErrorMessage(error, "ثبتِ تأیید مشتری انجام نشد"));
+    },
+  });
+};
+
+/** بررسیِ انبار — بدنه‌ی `checkSaleWarehouse`. نتیجه (تأیید یا کسری) را صدازننده می‌خواند. */
+export const useCheckSaleWarehouseMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: checkSaleWarehouse,
+    onSuccess: (sale) => {
+      applySale(queryClient, sale);
+      queryClient.invalidateQueries({ queryKey: warehouseIssueKeys.all });
+      if (sale.proformaStage === SaleProformaStageEnum.WAREHOUSE_CHECKED) {
+        toast.success("بررسی انبار ثبت شد؛ کالا رزرو شد و پیش‌فاکتور آماده‌ی پرداخت است");
+      } else {
+        toast.error(`کسری ثبت شد و پیش‌فاکتور به فروش برگشت: ${shortageNote(sale)}`);
+      }
+    },
+    onError: (error, { saleId }) => {
+      invalidateSalesEcosystem(queryClient, saleId);
+      toast.error(getErrorMessage(error, "ثبتِ بررسی انبار انجام نشد"));
+    },
+  });
+};
+
+/** تصمیمِ حسابداری روی گزارشِ انبار. `{ id, resolution, note }`. */
+export const useResolveWarehouseIssueMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: resolveSaleWarehouseIssue,
+    onSuccess: (issue) => {
+      toast.success("تصمیم ثبت شد");
+      queryClient.invalidateQueries({ queryKey: warehouseIssueKeys.all });
+      invalidateSalesEcosystem(queryClient, issue?.saleId ?? null);
+    },
+    onError: (error) => toast.error(getErrorMessage(error, "ثبتِ تصمیم انجام نشد")),
   });
 };
 
@@ -137,43 +263,15 @@ async function createPlanForSale(saleId, plan) {
 }
 
 /**
- * فروشِ اقساطیِ تازه (غیرحضوری). بکند دو قدمِ جدا دارد و دستورِ اتمی‌ای برایشان نیست
- * (`frontend-requests.fa.md` بخش ۱۷): فروش به‌شکلِ پیش‌فاکتورِ اقساطی ثبت می‌شود و
- * بعد قرارداد با پیش‌پرداخت، که فاکتور را صادر می‌کند.
- *
- * `{ payload, plan }` — `plan` بدنه‌ی `CreateSaleInstallmentPlan` بی `saleId`.
- * @returns سندِ کاملِ قرارداد
- */
-export const useCreateInstallmentSaleMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ payload, plan }) => {
-      const created = await createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) });
-      return createPlanForSale(created.id, plan);
-    },
-    onSuccess: (plan) => {
-      toast.success(`فاکتور ${plan.invoiceNumber || ""} صادر و قرارداد اقساط ثبت شد`);
-      applyInstallmentPlan(queryClient, plan);
-      invalidateSalesEcosystem(queryClient, plan.saleId);
-    },
-    onError: (error) => {
-      if (error?.partiallySaved) invalidateSalesEcosystem(queryClient, error.saleId);
-      toast.error(installmentSaleError(error, "ثبت فروش اقساطی انجام نشد"));
-    },
-  });
-};
-
-/**
- * صدورِ پیش‌فاکتورِ اقساطی: ذخیره‌ی خودِ پیش‌فاکتور (`UpdateSale`) و بعد ثبتِ قرارداد با
- * پیش‌پرداخت. `{ update, plan }`.
+ * صدورِ پیش‌فاکتورِ اقساطیِ «آماده‌ی پرداخت»: ثبتِ قرارداد با پیش‌پرداخت. خودِ پیش‌فاکتور
+ * ذخیره نمی‌شود (چرخه را به پیش‌نویس برمی‌گرداند)؛ فقط پیوست‌های عوض‌شده. `{ attachments, plan }`.
  */
 export const useIssueInstallmentSaleMutation = (saleId) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ update, plan }) => {
-      await updateSale(saleId, update);
+    mutationFn: async ({ attachments, plan }) => {
+      if (attachments) await updateSaleAttachments(saleId, attachments);
       return createPlanForSale(saleId, plan);
     },
     onSuccess: (plan) => {
@@ -248,7 +346,6 @@ export const useSaleChangesSaver = (saleId) => {
  * می‌شود (یا صفحه به فاکتورِ صادرشده می‌رود) و پنلِ کارتخوان وسطِ کار از بین می‌رود. صفحه
  * بعد از «بستن»ِ رسید خودش `apply` را صدا می‌زند.
  *
- *  - `saveProforma`: ذخیره‌ی تغییراتِ پیش‌فاکتور پیش از کارت‌کشیدن.
  *  - `recordPayment`: `AddSalePayment`ِ معمولی (انتقال بانکی، `transferRef` = شماره‌ی پیگیری)؛
  *    کلیدِ ایدمپوتنسی از دستگاه و شماره‌ی پیگیری است تا «ثبتِ دوباره» ردیفِ دوم نسازد. اگر
  *    دستگاه شماره‌ی پیگیری نداد، شناسه‌ی همین ارسال (`reference`) جایش می‌نشیند — کلیدِ
@@ -256,10 +353,6 @@ export const useSaleChangesSaver = (saleId) => {
  */
 export const useSalePosActions = () => {
   const queryClient = useQueryClient();
-  const save = useMutation({
-    mutationFn: ({ saleId, update }) => updateSale(saleId, update),
-    onError: (error) => toast.error(getErrorMessage(error, "ذخیره‌ی پیش‌فاکتور انجام نشد")),
-  });
   const record = useMutation({
     mutationFn: ({ saleId, terminal, row, reference }) =>
       addSalePayment(
@@ -269,7 +362,6 @@ export const useSalePosActions = () => {
   });
 
   return {
-    saveProforma: (saleId, update) => save.mutateAsync({ saleId, update }),
     recordPayment: (saleId, { terminal, row, reference }) =>
       record.mutateAsync({ saleId, terminal, row, reference }),
     apply: (sale) => applySale(queryClient, sale),

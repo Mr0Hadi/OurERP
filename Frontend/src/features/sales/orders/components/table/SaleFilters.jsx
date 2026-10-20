@@ -8,8 +8,10 @@ import { toFilterOptions } from "@/shared/components/filters/filterUtils";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { SALE_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { SALE_PROFORMA_STAGE_LABELS } from "@/shared/domain/enums/saleProforma";
 
 const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
+const STAGE_OPTIONS = toFilterOptions(SALE_PROFORMA_STAGE_LABELS);
 const PAYMENT_TYPE_OPTIONS = toFilterOptions(SALE_PAYMENT_TYPE_LABELS);
 
 const renderCustomerPhone = (customer) =>
@@ -27,12 +29,14 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
     invoiceNumber,
     customerId,
     status,
+    proformaStages,
     paymentType,
     fromDate,
     toDate,
     setInvoiceNumber,
     setCustomerId,
     setStatus,
+    setProformaStages,
     setPaymentType,
     setFromDate,
     setToDate,
@@ -87,6 +91,15 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         onChange={setStatus}
         allLabel="همه وضعیت‌ها"
         options={STATUS_OPTIONS}
+        numeric
+      />
+
+      <FilterSelect
+        label="مرحله‌ی پیش‌فاکتور"
+        value={proformaStages}
+        onChange={setProformaStages}
+        allLabel="همه"
+        options={STAGE_OPTIONS}
         numeric
       />
 

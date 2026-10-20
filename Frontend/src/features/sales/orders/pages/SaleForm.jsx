@@ -4,11 +4,11 @@ import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
+import { isSaleDocumentChanged, useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
 import {
-  useCreateInPersonSaleMutation,
-  useCreateInstallmentSaleMutation,
+  useApproveSaleProformaMutation,
   useCreateSaleMutation,
+  useInPersonSaleMutation,
   useIssueInstallmentSaleMutation,
   useRemoveSaleMutation,
   useSaleChangesSaver,
@@ -22,6 +22,8 @@ import {
 import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
 import { salePriceOf } from "@/features/sales/orders/domain/salePricing";
 import { useSaleFormPos } from "../hooks/useSaleFormPos";
+import { useReservationCountdown } from "../hooks/useReservationCountdown";
+import ProformaStageCard from "../components/proforma/ProformaStageCard";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import DocumentFormLayout, {
@@ -41,9 +43,10 @@ import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { isDocumentFormChanged } from "@/shared/store/createDocumentFormStore";
 import { useUpdateGuard } from "@/shared/services/updateSafety";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { reportFormProblem } from "@/shared/lib/scrollToSection";
+import { reportFormProblem, scrollToSection } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
@@ -77,15 +80,17 @@ const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها ص
  * چیدمان همان نمای فاکتورِ صادرشده است: مشتری ← اقلام ← دریافت‌ها در ستونِ اصلی؛
  * جمع و دکمه‌ی ثبت ← اطلاعاتِ فاکتور ← سند و پیوست در ستونِ کناری.
  *
- *  - پیش‌فاکتور: تاریخ، سررسید و دریافت ندارد.
- *  - فاکتور: تاریخ الزامی؛ شماره را بکند می‌سازد. بکند فروش را فقط با اولین
- *    دریافت فاکتور می‌کند، پس «نسیه»ی کامل فعلاً بسته است (بندِ ۹.۱۱).
- *  - اسکنِ دانه در اقلام یعنی «فروشِ حضوری»: ثبت، خروجِ کالا با همان کدها و
- *    «تحویل کامل» در یک درخواست؛ دریافت باید کامل باشد.
+ *  - چرخه‌ی تأیید (۲۰۲۶-۱۰-۱۶): فروشِ تازه همیشه پیش‌فاکتورِ «پیش‌نویس» است و پول
+ *    نمی‌گیرد؛ «مشتری تأیید کرد» ← بررسیِ انبار (رزرو) ← دریافت (`ProformaStageCard`).
+ *    نوعِ «فاکتور» (دریافت و صدور) فقط در مرحله‌ی «آماده‌ی پرداخت» و پیش از پایانِ مهلتِ
+ *    رزرو باز است. ذخیره‌ی خودِ پیش‌فاکتور (`UpdateSale`) فقط وقتی فرستاده می‌شود که
+ *    واقعاً عوض شده، چون چرخه را به پیش‌نویس برمی‌گرداند؛ پس در حالِ دریافت ممنوع است.
+ *  - فاکتور: تاریخ الزامی؛ شماره را بکند می‌سازد و با اولین دریافت صادر می‌شود.
+ *  - اسکنِ دانه در اقلام یعنی «فروشِ حضوری»: یک نفر همه‌ی چرخه را پشتِ هم انجام می‌دهد
+ *    (`useInPersonSaleMutation`)؛ همه‌ی دانه‌ها اسکن و کلِ مبلغ دریافت می‌شود.
  *  - کارتخوان: `useSaleFormPos`.
  *  - اقساطی: به‌جای دریافت‌ها قرارداد اقساط (`InstallmentPlanDraftCard`)؛ فاکتور با
- *    پیش‌پرداختِ قرارداد صادر می‌شود. فروشِ تازه دو درخواست است (فروش، بعد قرارداد)
- *    و فروشِ حضوری یکی (`installmentPlan`ِ `CreateInPersonSale`).
+ *    پیش‌پرداختِ قرارداد صادر می‌شود (پیش‌فاکتورِ آماده‌ی پرداخت، یا فروشِ حضوری).
  *
  * قاعده‌ها (پیش از ثبت چه کم است، فروشِ حضوری) در `domain/saleRules.js`.
  */
@@ -110,9 +115,15 @@ export default function SaleForm({ sale }) {
   ]);
 
   const createMutation = useCreateSaleMutation();
-  const installmentCreateMutation = useCreateInstallmentSaleMutation();
   const installmentIssueMutation = useIssueInstallmentSaleMutation(sale?.id);
-  const inPersonMutation = useCreateInPersonSaleMutation();
+  const inPersonMutation = useInPersonSaleMutation();
+  const approveMutation = useApproveSaleProformaMutation();
+
+  // چرخه‌ی تأیید: دریافت فقط در «آماده‌ی پرداخت» و تا وقتی رزرو زنده است.
+  const documentChanged = useSaleFormStore(isSaleDocumentChanged);
+  const secondsLeft = useReservationCountdown(sale);
+  const stage = Number(sale?.proformaStage ?? SaleProformaStageEnum.DRAFT);
+  const readyForPayment = !isNew && stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && secondsLeft !== 0;
   const saver = useSaleChangesSaver(sale?.id);
   const deleteMutation = useRemoveSaleMutation();
 
@@ -137,8 +148,6 @@ export default function SaleForm({ sale }) {
   const scannedBarcodes = scannedBarcodesOf(items);
   const isInPerson = isNew && Object.keys(scannedBarcodes).length > 0;
   const { productMap } = useDocumentProducts(items.map((item) => item.productId));
-  const isTracked = (productId) =>
-    Boolean(productMap.get(Number(productId))?.requiresUnitTracking);
   const paid = payments.netPaid;
 
   const isInstallment = Boolean(formData.installment);
@@ -180,7 +189,6 @@ export default function SaleForm({ sale }) {
     items,
     isInPerson,
     scannedBarcodes,
-    isTracked,
     paid,
     total: totals.totalAmount,
     planErrors: existingPlan
@@ -215,7 +223,11 @@ export default function SaleForm({ sale }) {
     enabled: allows("PosCharge") && !isInstallment,
     sale,
     isInPerson,
-    hasDraftPayments: payments.hasChanges,
+    blockedReason: documentChanged
+      ? "پیش‌فاکتور تغییر کرده؛ تغییرات را برگردانید یا اول (به‌صورتِ پیش‌فاکتور) ذخیره کنید."
+      : payments.hasChanges
+        ? "دریافت‌های ثبت‌نشده را اول ذخیره کنید؛ بعد از صفحه‌ی فاکتور با کارتخوان دریافت کنید."
+        : undefined,
     // پیش از کارت‌کشیدن: اگر فرم را نمی‌شود ثبت کرد، به دستگاه چیزی نمی‌رود.
     takeSnapshot: () => {
       // کارتخوان فقط روی فاکتور است (کارتِ دریافت در پیش‌فاکتور نیست).
@@ -237,7 +249,6 @@ export default function SaleForm({ sale }) {
       return {
         payload: buildPayload(true),
         draftRows: payments.rows,
-        inPerson: isInPerson,
         scannedBarcodes,
         total: totals.totalAmount,
       };
@@ -255,12 +266,12 @@ export default function SaleForm({ sale }) {
   const isInvoice =
     posLocked ||
     isInPerson ||
-    Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA;
+    (readyForPayment && Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA);
   const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
 
   const isBusy =
     createMutation.isPending ||
-    installmentCreateMutation.isPending ||
+    approveMutation.isPending ||
     installmentIssueMutation.isPending ||
     inPersonMutation.isPending ||
     saver.isPending ||
@@ -284,47 +295,38 @@ export default function SaleForm({ sale }) {
     if (attachments.isUploading) return toast.error(UPLOADING_MESSAGE);
 
     const payload = buildPayload(isInvoice);
-    if (isInstallment && isInvoice) return submitInstallment(payload);
-    if (!isNew) {
-      // اول خودِ پیش‌فاکتور، بعد دریافت‌ها — اولینش فاکتور را صادر می‌کند و
-      // صفحه خودش به نمای فاکتورِ صادرشده می‌رود.
-      saver.mutate(
-        { update: payload, paymentDraft: isInvoice ? payments : null },
+    const onSaved = (created) => openSaved(created?.id);
+    const onPartial = (error) => error?.partiallySaved && openSaved(error.saleId);
+
+    if (isInPerson) {
+      inPersonMutation.mutate(
         {
-          onSuccess: (latest) => {
-            attachments.commit();
-            resetForm();
-            if (latest) store.initializeFrom(latest);
-          },
+          payload,
+          scannedBarcodes,
+          paymentRows: isInstallment ? [] : payments.rows,
+          installmentPlan: isInstallment ? toApiCreatePlan(planDraft) : null,
         },
+        { onSuccess: onSaved, onError: onPartial },
       );
       return;
     }
-
-    const onSuccess = (created) => openSaved(created?.id);
-    // دریافت‌ها فقط با فاکتورِ غیراقساطی؛ ردیف‌هایی که پیش از رفتن به پیش‌فاکتور/اقساطی
-    // اضافه شده بودند پنهان‌اند و نباید بی‌صدا فرستاده شوند (فروشِ اقساطی با ردیف ۴۰۰ می‌گیرد).
-    const body = { ...payload, paymentRows: isInvoice && !isInstallment ? payments.rows : [] };
-    if (isInPerson) inPersonMutation.mutate({ payload: body, scannedBarcodes }, { onSuccess });
-    else createMutation.mutate(body, { onSuccess });
-  };
-
-  /** فاکتورِ اقساطی: پیش‌پرداختِ قرارداد آن را صادر می‌کند؛ دریافتِ عادی ندارد. */
-  const submitInstallment = (payload) => {
-    const plan = toApiCreatePlan(planDraft);
-    const body = { ...payload, paymentRows: [] };
-    const onSuccess = (created) => openSaved(created?.saleId ?? created?.id);
-    if (isInPerson) {
-      inPersonMutation.mutate({ payload: body, scannedBarcodes, installmentPlan: plan }, { onSuccess });
-    } else if (isNew) {
-      installmentCreateMutation.mutate(
-        { payload: body, plan },
-        // فروش ثبت شد ولی قرارداد نه: به همان پیش‌فاکتور برو تا قرارداد از آن‌جا ثبت شود.
-        { onSuccess, onError: (error) => error?.partiallySaved && openSaved(error.saleId) },
-      );
-    } else {
+    if (isNew) {
+      createMutation.mutate(payload, { onSuccess: onSaved });
+      return;
+    }
+    // دریافت روی نسخه‌ی تأییدشده؛ ذخیره‌ی تغییر آن را به پیش‌نویس برمی‌گرداند و سرور دریافت را رد می‌کرد.
+    if (isInvoice && documentChanged) {
+      return reportFormProblem([
+        "پیش‌فاکتور تغییر کرده؛ ذخیره‌اش تأییدها را برمی‌گرداند و دریافت پذیرفته نمی‌شود. نوع سند را «پیش‌فاکتور» کنید و ذخیره کنید، یا تغییرات را برگردانید.",
+        "info",
+      ]);
+    }
+    const sideAttachments = !documentChanged && attachmentsChanged(attachments.filesPayload, sale.attachments)
+      ? attachments.filesPayload
+      : undefined;
+    if (isInstallment && isInvoice) {
       installmentIssueMutation.mutate(
-        { update: payload, plan },
+        { attachments: sideAttachments, plan: toApiCreatePlan(planDraft) },
         {
           onSuccess: () => {
             attachments.commit();
@@ -332,7 +334,22 @@ export default function SaleForm({ sale }) {
           },
         },
       );
+      return;
     }
+    saver.mutate(
+      {
+        update: documentChanged ? payload : undefined,
+        attachments: sideAttachments,
+        paymentDraft: isInvoice ? payments : null,
+      },
+      {
+        onSuccess: (latest) => {
+          attachments.commit();
+          resetForm();
+          if (latest) store.initializeFrom(latest);
+        },
+      },
+    );
   };
 
   const leave = () => {
@@ -341,20 +358,22 @@ export default function SaleForm({ sale }) {
     navigate(ROUTES.SALES);
   };
 
-  const canEdit = isNew || allows("SaleUpdate");
+  const canEdit = isNew || allows("SaleUpdate") || (isInvoice && allows("SalePayment"));
   const submitLabel = isInPerson
     ? "ثبت و تحویل حضوری"
-    : isInstallment && isInvoice
-      ? isNew
-        ? "ثبت فاکتور اقساطی"
-        : "صدور فاکتور اقساطی"
-      : isNew
-      ? isInvoice
-        ? "ثبت فاکتور"
-        : "ثبت پیش‌فاکتور"
+    : isNew
+      ? "ثبت پیش‌فاکتور"
       : isInvoice
-        ? "ذخیره و صدور فاکتور"
+        ? isInstallment
+          ? "صدور فاکتور اقساطی"
+          : "ثبت دریافت و صدور فاکتور"
         : "ذخیره‌ی پیش‌فاکتور";
+
+  const startPayment = () => {
+    setFormData({ status: SaleStatusEnum.PROCESSING });
+    // کارتِ دریافت بعد از همین رندر ظاهر می‌شود.
+    window.requestAnimationFrame(() => scrollToSection("payment"));
+  };
 
   return (
     <>
@@ -362,6 +381,21 @@ export default function SaleForm({ sale }) {
         onSubmit={onSubmit}
         main={
           <>
+            {!isNew && (
+              <ProformaStageCard
+                sale={sale}
+                secondsLeft={secondsLeft}
+                documentChanged={documentChanged}
+                onApprove={
+                  allows("SaleUpdate")
+                    ? () => approveMutation.mutate({ saleId: sale.id, revision: sale.revision })
+                    : undefined
+                }
+                approving={approveMutation.isPending}
+                canCheckWarehouse={allows("SaleWarehouseCheck")}
+                onStartPayment={readyForPayment && !isInvoice && allows("SalePayment") ? startPayment : undefined}
+              />
+            )}
             <FormSection name="party">
               <SaleCustomerSection
                 selectedId={formData.customerId}
@@ -428,12 +462,20 @@ export default function SaleForm({ sale }) {
             <FormSection name="info">
               <OrderInfoCard
                 kind={isInvoice ? "invoice" : "proforma"}
-                onKindChange={(kind) =>
-                  setFormData({
-                    status: kind === "proforma" ? SaleStatusEnum.PROFORMA : SaleStatusEnum.PROCESSING,
-                  })
+                // «فاکتور» یعنی دریافت و صدور؛ فقط در «آماده‌ی پرداخت» (و فروشِ حضوری، که قفل است).
+                onKindChange={
+                  readyForPayment || isInPerson
+                    ? (kind) =>
+                        setFormData({
+                          status: kind === "proforma" ? SaleStatusEnum.PROFORMA : SaleStatusEnum.PROCESSING,
+                        })
+                    : undefined
                 }
-                kindNote={isInPerson ? "دانه اسکن شده؛ فروش حضوری است و فاکتور همین حالا تحویل می‌شود." : undefined}
+                kindNote={
+                  isInPerson
+                    ? "دانه اسکن شده؛ فروش حضوری است: تأیید، رزرو، دریافت و تحویل همین حالا پشتِ هم انجام می‌شود."
+                    : undefined
+                }
                 formData={formData}
                 onFormChange={setFormData}
                 errors={showErrors ? invoiceErrors ?? {} : {}}
@@ -509,4 +551,10 @@ export default function SaleForm({ sale }) {
       )}
     </>
   );
+}
+
+/** پیوست‌ها نسبت به نسخه‌ی ذخیره‌شده عوض شده‌اند؟ (کلید و یادداشتِ هر فایل) */
+function attachmentsChanged(current = [], saved = []) {
+  const sig = (list) => list.map((file) => `${file?.objectKey}:${file?.note || ""}`).join("|");
+  return sig(current) !== sig(saved);
 }
