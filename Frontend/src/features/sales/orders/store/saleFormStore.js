@@ -91,5 +91,5 @@ export const isSaleCoreChanged = changedBy((form) => [
 /** مهلتِ پرداخت — روی پیش‌فاکتور چرخه را برمی‌گرداند؛ بعد از صدورِ فاکتور آزاد است. */
 export const isSaleDueDateChanged = changedBy((form) => form.paymentDate || "");
 
-/** تاریخِ فاکتور و توضیح — اثری روی چرخه ندارند و هم‌زمان با دریافت ذخیره می‌شوند. */
-export const isSaleInfoChanged = changedBy((form) => [form.invoiceDate || "", form.description || ""]);
+/** توضیح — اثری روی چرخه ندارد و هم‌زمان با دریافت ذخیره می‌شود. (تاریخِ فاکتور را سرور هنگامِ صدور می‌گذارد.) */
+export const isSaleInfoChanged = changedBy((form) => form.description || "");

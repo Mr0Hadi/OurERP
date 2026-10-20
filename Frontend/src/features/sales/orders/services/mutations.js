@@ -200,8 +200,11 @@ export const useApproveSaleProformaMutation = () => {
  * تأییدِ انبار، با تغییرِ اختیاریِ اقلام. بی‌تغییر: یک `CheckSaleWarehouse`. با تغییر (تعدادِ کمتر یا
  * حذفِ ردیف، با دلیل): `UpdateSale` (پیش‌فاکتور به پیش‌نویس) ← `ApproveSaleProforma` (همان تأییدِ
  * مشتری، با نسخه‌ی تازه) ← `CheckSaleWarehouse` با دلیل در `note`، که در تاریخچه‌ی پیش‌فاکتور
- * می‌ماند. بکند دستورِ یک‌جا برایش ندارد (`frontend-requests.fa.md` بخش ۲۴)، پس زنجیره
- * `SaleUpdate` هم می‌خواهد و اتمیک نیست.
+ * می‌ماند. اگر تأییدِ دوباره مستقیم «آماده‌ی پرداخت» شود (ردیف‌های مانده رزرو بودند)، بررسی
+ * لازم نیست و دلیل فقط در رویدادِ «ویرایش» می‌ماند.
+ *
+ * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴ — تا `CheckSaleWarehouse` تغییرِ تعداد را بپذیرد،
+ * زنجیره `SaleUpdate` هم می‌خواهد و اتمیک نیست.
  *
  * `{ sale, quantities, scans, issues, reason }` — `quantities`: `{ [saleItemId]: number }` فقط
  * ردیف‌های تغییرکرده؛ `scans`: `{ [saleItemId]: string[] }`.
@@ -211,16 +214,24 @@ export const useWarehouseApproveMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ sale, quantities = {}, scans, issues = [], reason = "" }) => {
-      const changed = Object.keys(quantities).length > 0;
       let base = sale;
-      if (changed) {
+      if (Object.keys(quantities).length > 0) {
         const items = (sale.items || [])
           .map((item) => ({ ...item, quantity: quantities[item.id] ?? item.quantity }))
           .filter((item) => Number(item.quantity) > 0);
+        // همان شرایطِ ذخیره‌شده (مشتری، شیوه‌ی پرداخت، سررسید)؛ فقط تعدادها عوض می‌شوند.
         const updated = await updateSale(sale.id, { ...sale, items });
-        base = await approveSaleProforma(sale.id, updated.revision);
+        try {
+          base = await approveSaleProforma(sale.id, updated.revision);
+        } catch (error) {
+          throw new Error(
+            `${getErrorMessage(error, "ثبتِ تأیید انجام نشد")} — اقلامِ پیش‌فاکتور تغییر کرد ولی پیش‌فاکتور به پیش‌نویس برگشت و از صفِ انبار بیرون رفت؛ فروش باید دوباره «ارسال به انبار» بزند.`,
+            { cause: error },
+          );
+        }
       }
-      if (base.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED || issues.length > 0) {
+
+      if (base.proformaStage === SaleProformaStageEnum.CUSTOMER_APPROVED) {
         base = await checkSaleWarehouse({
           saleId: sale.id,
           revision: base.revision,
@@ -231,9 +242,16 @@ export const useWarehouseApproveMutation = () => {
             })
             .filter((line) => line.productUnitBarcodes.length > 0),
           issues,
-          note: reason,
+          note: reason || null,
         });
+      } else if (issues.length > 0) {
+        // تأییدِ دوباره مستقیم «آماده‌ی پرداخت» شد (ردیف‌های مانده از قبل رزرو بودند)؛ بررسی‌ای
+        // نمانده که گزارش‌ها همراهش بروند.
+        throw new Error(
+          "پیش‌فاکتور تغییر کرد و تأیید شد، ولی گزارشِ دانه‌های معیوب/مفقود ثبت نشد؛ آن‌ها را از صفحه‌ی «دانه‌ها و برچسب‌ها» قرنطینه کنید.",
+        );
       }
+
       if (base.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
         throw new Error(`تأیید انبار ثبت نشد: ${shortageNote(base)}`);
       }
@@ -386,6 +404,8 @@ export const useSaleChangesSaver = (saleId) => {
  * می‌شود (یا صفحه به فاکتورِ صادرشده می‌رود) و پنلِ کارتخوان وسطِ کار از بین می‌رود. صفحه
  * بعد از «بستن»ِ رسید خودش `apply` را صدا می‌زند.
  *
+ *  - `saveInfo`: پیش از کارت‌کشیدن، تغییرهای بی‌اثر بر چرخه‌ی تأیید (`{ update, attachments }`:
+ *    توضیح با `UpdateSale`ی که شرایطِ ذخیره‌شده را نگه می‌دارد، یا فقط پیوست‌ها).
  *  - `recordPayment`: `AddSalePayment`ِ معمولی (انتقال بانکی، `transferRef` = شماره‌ی پیگیری)؛
  *    کلیدِ ایدمپوتنسی از دستگاه و شماره‌ی پیگیری است تا «ثبتِ دوباره» ردیفِ دوم نسازد. اگر
  *    دستگاه شماره‌ی پیگیری نداد، شناسه‌ی همین ارسال (`reference`) جایش می‌نشیند — کلیدِ
@@ -393,6 +413,13 @@ export const useSaleChangesSaver = (saleId) => {
  */
 export const useSalePosActions = () => {
   const queryClient = useQueryClient();
+  const info = useMutation({
+    mutationFn: async ({ saleId, update, attachments }) => {
+      if (update) await updateSale(saleId, update);
+      else if (attachments) await updateSaleAttachments(saleId, attachments);
+    },
+    onError: (error) => toast.error(getErrorMessage(error, "ذخیره‌ی پیش‌فاکتور انجام نشد")),
+  });
   const record = useMutation({
     mutationFn: ({ saleId, terminal, row, reference }) =>
       addSalePayment(
@@ -402,6 +429,8 @@ export const useSalePosActions = () => {
   });
 
   return {
+    saveInfo: (saleId, { update, attachments } = {}) =>
+      update || attachments ? info.mutateAsync({ saleId, update, attachments }) : Promise.resolve(),
     recordPayment: (saleId, { terminal, row, reference }) =>
       record.mutateAsync({ saleId, terminal, row, reference }),
     apply: (sale) => applySale(queryClient, sale),

@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { useInPersonSaleMutation, useSalePosActions } from "../services/mutations";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 import { rowsTotal } from "@/shared/domain/payments/paymentSplit";
+import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
 
 /**
  * «دریافت با کارتخوان» در فرمِ فروش — پیکربندیِ `posPayment`ِ `PaymentsCard`.
@@ -11,8 +12,9 @@ import { rowsTotal } from "@/shared/domain/payments/paymentSplit";
  *  - فروشِ حضوریِ تازه: خودِ تأیید «ثبت» است؛ کلِ چرخه (`useInPersonSaleMutation`) با
  *    دریافت‌های فرم به‌اضافه‌ی تکه‌ی کارتخوان اجرا می‌شود. کلِ مبلغ ⇒ تحویلِ همان‌جا؛ کمتر ⇒
  *    فاکتور با همان دریافت‌ها صادر و کالا رزرو برای ارسالِ انبار (پولِ کشیده‌شده گم نمی‌شود).
- *  - پیش‌فاکتورِ «آماده‌ی پرداخت»: `AddSalePayment` فاکتور را صادر می‌کند. پیش‌فاکتورِ
- *    تغییرکرده یا دریافت‌های ثبت‌نشده‌ی دیگر مانع‌اند (ذخیره‌ی تغییر تأییدها را برمی‌گرداند).
+ *  - پیش‌فاکتورِ «آماده‌ی پرداخت»: پیش از کارت‌کشیدن تغییرهای بی‌اثر بر چرخه (توضیح، پیوست)
+ *    ذخیره می‌شوند (`snapshot.infoChanges`)؛ بعد `AddSalePayment` فاکتور را صادر می‌کند. تغییرِ
+ *    شرایط یا سررسید، و دریافت‌های ثبت‌نشده‌ی دیگر مانع‌اند (`blockedReason`).
  *
  * ثبت از روی *نسخه‌ای* از فرم است که پیش از کارت‌کشیدن اعتبارسنجی شد (`snapshot`)؛ «ثبتِ
  * دوباره» همان بدنه را می‌فرستد و کلیدِ ایدمپوتنسی از محتواست.
@@ -22,7 +24,7 @@ import { rowsTotal } from "@/shared/domain/payments/paymentSplit";
  * @param isInPerson      فروشِ تازه‌ی حضوری (دانه اسکن شده)
  * @param blockedReason   چرا الان روی پیش‌فاکتور نمی‌شود کارت کشید (یا `undefined`)
  * @param takeSnapshot    پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و
- *                        `{ payload, draftRows, scannedBarcodes, total }`
+ *                        `{ payload, draftRows, scannedBarcodes, total, infoChanges }`
  * @param onPersisted     `() => void` — فروشِ تازه همین الان روی سرور ساخته شد
  * @param onCreated       `(created) => void` — بعد از «بستن»ِ رسیدِ فروشِ تازه
  * @param onIssued        `() => void` — بعد از «بستن»ِ رسیدِ پیش‌فاکتورِ صادرشده (پیش از `apply`)
@@ -58,7 +60,8 @@ export function useSaleFormPos({
           const { payload, draftRows, scannedBarcodes, total } = runRef.current.snapshot;
           const paymentRows = [...draftRows, ...rows];
           const created = await inPersonMutation.mutateAsync({
-            payload,
+            // فروشِ تازه: نوع از همه‌ی دریافت‌ها، با تکه‌ی کارتخوان.
+            payload: { ...payload, paymentType: paymentTypeOf(paymentRows) },
             scannedBarcodes,
             paymentRows,
             deliver: rowsTotal(paymentRows) >= total,
@@ -74,7 +77,10 @@ export function useSaleFormPos({
         hint: "فروشِ حضوری فقط با دریافتِ کلِ مبلغ همین‌جا تحویل می‌شود؛ وگرنه فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند.",
       }
     : {
-        prepare,
+        prepare: async () => {
+          const { infoChanges } = prepare();
+          await posActions.saveInfo(sale.id, infoChanges);
+        },
         record: (_result, context) => posActions.recordPayment(sale.id, context),
         onRecorded: (latest) => {
           runRef.current.outcome = latest;

@@ -1952,6 +1952,12 @@ git مانده، لو رفته حساب کنید.
 **۲۴.۲ — `updatedAt` در `SaleDto`.** نمونه‌ی `GetSaleDetail` در `api-guide.fa.md` `updatedAt` دارد ولی `SaleDto` ندارد. فرانت نسخه‌ی سند را
 (برای پرکردنِ دوباره‌ی فرم پس از تغییرِ سرور) از ترکیبِ `revision`، مرحله و اقلام می‌سازد؛ با `updatedAt` ساده‌تر و مطمئن‌تر می‌شد.
 
+**۲۴.۳ — `paymentType` هنگامِ صدور.** `paymentType` فقط با `CreateSale`/`UpdateSale` عوض می‌شود و تغییرش در `UpdateSale` تأییدها را
+برمی‌گرداند. پس پیش‌فاکتوری که «نسیه» ثبت شده و نقد پرداخت می‌شود، «نسیه» می‌ماند (فرانت دیگر پیش از دریافت آن را عوض نمی‌کند، چون
+همین باعث می‌شد دریافت ۴۰۰ بگیرد). پیشنهاد: اولین پرداخت (`SaleInvoiceFinalizer`) `paymentType` را از ردیف‌های پرداخت بگذارد (یک
+روش ⇒ همان، چند روش ⇒ `MIXED`)، مگر اقساطی. همین‌طور تاریخِ فاکتور را `FinalizeAsync` همیشه «اکنون» می‌گذارد؛ اگر تاریخِ دستی لازم است،
+`InvoiceDate`ِ ذخیره‌شده را نگه دارد.
+
 **تا آن وقت:** زنجیره‌ی بالا در `useWarehouseApproveMutation` (`Frontend/src/features/sales/orders/services/mutations.js`)؛ انبارداری
 که `SaleUpdate` ندارد فقط می‌تواند همان را تأیید کند.
 
@@ -1983,4 +1989,4 @@ git مانده، لو رفته حساب کنید.
 - [ ] ۲۱ — حسابداری: مانده‌ی اولیه‌ی دستی در مانده‌ها (۲۱.۱)، خروجیِ مالیات و تفکیک (۲۱.۲)، ریزِ اقلامِ خرید (۲۱.۳)، فهرستِ سبکِ کاربران (۲۱.۴)
 - [ ] ۲۲ — دریافت/پرداختِ مستقل از فاکتور (۲۲.۱)، حسابِ بانک/صندوق (۲۲.۲)، چرخه‌ی چک (۲۲.۳)
 - [ ] ۲۳ — خواندنِ مرجوعی برای انبار با `PurchaseReturnExecute`/`SaleReturnExecute` (پنج endpoint)
-- [ ] ۲۴ — تغییرِ اقلام در `CheckSaleWarehouse` (`adjustments` + `note`، اتمیک، با `SaleWarehouseCheck`)؛ `updatedAt` در `SaleDto` (۲۴.۲)
+- [ ] ۲۴ — تغییرِ اقلام در `CheckSaleWarehouse` (`adjustments` + `note`، اتمیک، با `SaleWarehouseCheck`)؛ `updatedAt` در `SaleDto` (۲۴.۲)؛ `paymentType`/تاریخِ فاکتور هنگامِ صدور (۲۴.۳)

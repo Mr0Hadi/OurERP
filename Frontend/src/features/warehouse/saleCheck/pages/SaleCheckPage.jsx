@@ -57,15 +57,13 @@ function SaleCheckForm({ sale }) {
   const excluded = new Set([...Object.values(scans).flat(), ...issues.map((issue) => issue.productUnitBarcode)]);
 
   const setQuantity = (item, quantity) => {
-    setQuantities((current) => {
-      const next = { ...current };
-      if (quantity === Number(item.quantity)) delete next[item.id];
-      else next[item.id] = quantity;
-      // اسکن‌های بیش از نیازِ تازه کنار می‌روند.
-      const need = lineNeed(item, next);
-      setScans((codes) => ({ ...codes, [item.id]: (codes[item.id] || []).slice(0, need) }));
-      return next;
-    });
+    const next = { ...quantities };
+    if (quantity === Number(item.quantity)) delete next[item.id];
+    else next[item.id] = quantity;
+    setQuantities(next);
+    // اسکن‌های بیش از نیازِ تازه کنار می‌روند.
+    const need = lineNeed(item, next);
+    setScans((codes) => ({ ...codes, [item.id]: (codes[item.id] || []).slice(0, need) }));
   };
 
   const addIssue = (issue) => {

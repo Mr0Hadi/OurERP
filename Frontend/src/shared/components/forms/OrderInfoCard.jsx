@@ -46,6 +46,9 @@ function ReadOnlyValue({ children }) {
  *    عوض می‌شوند (تا دکمه‌ی اصلی ذخیره نمی‌شوند).
  *
  * @param kind/onKindChange «پیش‌فاکتور / فاکتور» (فقط پیش از صدور)
+ * @param showInvoiceDate تاریخِ فاکتور پیش از صدور (پیش‌فرض بله). فروش آن را نمی‌خواهد: سرور با صدور
+ *   تاریخ می‌گذارد.
+ * @param showDueDate سررسید حتی روی پیش‌فاکتور (پیش‌فرض فقط فاکتور) — در فروش جزوِ شرایطِ پیش‌فاکتور است.
  * @param status `{ value, options: [{ value, label }], onChange }` — با یک گزینه
  *   (فقط وضعیتِ فعلی) فیلد دیده نمی‌شود.
  * @param children انتخاب‌های اضافه‌ی هر سمت زیرِ «نوع سند» (فروش: شیوه‌ی پرداخت)
@@ -55,6 +58,8 @@ export default function OrderInfoCard({
   kind,
   onKindChange,
   kindNote,
+  showInvoiceDate = true,
+  showDueDate,
   withNumber = false,
   formData,
   onFormChange,
@@ -64,6 +69,8 @@ export default function OrderInfoCard({
   children,
 }) {
   const isInvoice = issued || kind === "invoice";
+  const dueDateVisible = showDueDate ?? isInvoice;
+  const invoiceDateVisible = isInvoice && (issued || showInvoiceDate);
   const showStatus = status && status.options.length > 1;
 
   return (
@@ -76,7 +83,7 @@ export default function OrderInfoCard({
       )}
       {children}
 
-      {isInvoice && (
+      {(isInvoice || dueDateVisible) && (
         <div className="grid grid-cols-2 gap-3">
           {(withNumber || issued) && (
             <Field label="شماره فاکتور" required={!issued} htmlFor="invoiceNumber" error={errors.invoiceNumber} className={issued ? undefined : "col-span-2"}>
@@ -94,6 +101,7 @@ export default function OrderInfoCard({
               )}
             </Field>
           )}
+          {invoiceDateVisible && (
           <Field label="تاریخ فاکتور" required={!issued} htmlFor="invoiceDate" error={errors.invoiceDate}>
             {issued ? (
               <ReadOnlyValue>{gregorianToPersian(formData.invoiceDate)}</ReadOnlyValue>
@@ -107,7 +115,9 @@ export default function OrderInfoCard({
               />
             )}
           </Field>
-          <Field label="سررسید پرداخت" htmlFor="paymentDate">
+          )}
+          {dueDateVisible && (
+          <Field label="سررسید پرداخت" htmlFor="paymentDate" className={invoiceDateVisible ? undefined : "col-span-2"}>
             <PersianDatePicker
               id="paymentDate"
               value={formData.paymentDate || ""}
@@ -116,6 +126,7 @@ export default function OrderInfoCard({
               disabled={!onFormChange}
             />
           </Field>
+          )}
           {showStatus && (
             <Field label="وضعیت" className="col-span-2">
               <Select value={String(status.value)} onValueChange={(next) => status.onChange(Number(next))}>

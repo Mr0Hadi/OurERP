@@ -45,12 +45,6 @@ export function saleStatusOptions(sale) {
   ];
 }
 
-/** تاریخِ فاکتور برای صدور الزامی است (شماره را بکند می‌سازد). */
-export function missingSaleInvoiceFields(formData, isInvoice) {
-  if (!isInvoice || formData.invoiceDate) return null;
-  return { invoiceDate: "برای صدورِ فاکتور، تاریخ الزامی است" };
-}
-
 // ─── فروشِ حضوری ────────────────────────────────────────────────────────────
 
 /**
@@ -98,7 +92,6 @@ function inPersonScanProblem(items, scanned) {
 export function saleFormProblem({
   formData,
   items,
-  invoiceErrors,
   isInvoice,
   isInPerson,
   scannedBarcodes,
@@ -109,7 +102,6 @@ export function saleFormProblem({
 }) {
   if (!formData.customerId) return ["مشتری را انتخاب کنید.", "party"];
   if (items.length === 0) return ["دست‌کم یک کالا اضافه کنید.", "items"];
-  if (invoiceErrors) return ["برای فاکتور، تاریخ را وارد کنید.", "info"];
   if (isInPerson) {
     const scanProblem = inPersonScanProblem(items, scannedBarcodes);
     if (scanProblem) return [scanProblem, "items"];

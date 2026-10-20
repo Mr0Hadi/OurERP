@@ -19,11 +19,8 @@ import {
   useSaleChangesSaver,
 } from "@/features/sales/orders/services/mutations";
 import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
-import {
-  missingSaleInvoiceFields,
-  saleFormProblem,
-  scannedBarcodesOf,
-} from "@/features/sales/orders/domain/saleRules";
+import { saleFormProblem, scannedBarcodesOf } from "@/features/sales/orders/domain/saleRules";
+import { ProformaAction, proformaAction, proformaPaymentType } from "@/features/sales/orders/domain/proformaFlow";
 import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
 import { salePriceOf } from "@/features/sales/orders/domain/salePricing";
 import { useSaleFormPos } from "../hooks/useSaleFormPos";
@@ -41,7 +38,6 @@ import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentS
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { usePaymentDraft } from "@/shared/hooks/usePaymentDraft";
-import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
 import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
@@ -52,7 +48,6 @@ import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
-import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import InstallmentPlanDraftCard from "@/features/sales/installments/components/InstallmentPlanDraftCard";
 import ProformaPlanNotice from "@/features/sales/installments/components/ProformaPlanNotice";
@@ -78,23 +73,24 @@ const PAYMENT_TERMS_OPTIONS = [
 const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها صبر کنید.";
 
 /**
- * فرمِ فروش — ثبتِ تازه (`sale` خالی) و ویرایشِ پیش‌فاکتور (تنها وضعیتی که
- * `UpdateSale` می‌پذیرد). فروشِ صادرشده در `SaleIssuedView` باز می‌شود.
+ * فرمِ فروش — ثبتِ تازه (`sale` خالی) و پیش‌فاکتور (تنها وضعیتی که `UpdateSale` می‌پذیرد).
+ * فروشِ صادرشده در `SaleIssuedView` باز می‌شود.
  *
  * چیدمان همان نمای فاکتورِ صادرشده است: مشتری ← اقلام ← دریافت‌ها در ستونِ اصلی؛
- * جمع و دکمه‌ی ثبت ← اطلاعاتِ فاکتور ← سند و پیوست در ستونِ کناری.
+ * جمع و دکمه‌ی اصلی ← اطلاعاتِ فاکتور ← سند و پیوست در ستونِ کناری.
  *
- *  - چرخه‌ی تأیید (۲۰۲۶-۱۰-۱۶): فروشِ تازه همیشه پیش‌فاکتورِ «پیش‌نویس» است و پول
- *    نمی‌گیرد؛ «مشتری تأیید کرد» ← بررسیِ انبار (رزرو) ← دریافت (`ProformaStageCard`).
- *    نوعِ «فاکتور» (دریافت و صدور) فقط در مرحله‌ی «آماده‌ی پرداخت» و پیش از پایانِ مهلتِ
- *    رزرو باز است. ذخیره‌ی خودِ پیش‌فاکتور (`UpdateSale`) فقط وقتی فرستاده می‌شود که
- *    واقعاً عوض شده، چون چرخه را به پیش‌نویس برمی‌گرداند؛ پس در حالِ دریافت ممنوع است.
- *  - فاکتور: تاریخ الزامی؛ شماره را بکند می‌سازد و با اولین دریافت صادر می‌شود.
+ *  - چرخه‌ی تأیید (بخش ۱۱ سند): پیش‌نویس ← مشتری تأیید کرد (به انبار) ← انبار تأیید کرد (رزرو) ←
+ *    دریافت (فاکتور) یا حذف. **یک دکمه‌ی اصلی** که کارش را `proformaAction` می‌گوید؛
+ *    `ProformaStageCard` فقط وضعیت را نشان می‌دهد.
+ *  - `UpdateSale` با تغییرِ مشتری، اقلام، قیمت/تخفیف، شیوه‌ی پرداخت یا سررسید تأییدها را برمی‌گرداند؛
+ *    پس هنگامِ دریافت فقط تغییرهای بی‌اثر (توضیح، پیوست) پیش از آن و سررسیدِ تازه بعد از صدور
+ *    ذخیره می‌شوند، و `paymentType` همیشه همان مقدارِ ذخیره‌شده است (`proformaPaymentType`).
+ *  - تاریخِ فاکتور را سرور هنگامِ صدور می‌گذارد؛ فرم آن را نمی‌پرسد.
  *  - اسکنِ دانه در اقلام یعنی «فروشِ حضوری»: یک نفر همه‌ی چرخه را پشتِ هم انجام می‌دهد
  *    (`useInPersonSaleMutation`)؛ همه‌ی دانه‌ها اسکن و کلِ مبلغ دریافت می‌شود.
  *  - کارتخوان: `useSaleFormPos`.
  *  - اقساطی: به‌جای دریافت‌ها قرارداد اقساط (`InstallmentPlanDraftCard`)؛ فاکتور با
- *    پیش‌پرداختِ قرارداد صادر می‌شود (پیش‌فاکتورِ آماده‌ی پرداخت، یا فروشِ حضوری).
+ *    پیش‌پرداختِ قرارداد صادر می‌شود.
  *
  * قاعده‌ها (پیش از ثبت چه کم است، فروشِ حضوری) در `domain/saleRules.js`.
  */
@@ -123,16 +119,12 @@ export default function SaleForm({ sale }) {
   const inPersonMutation = useInPersonSaleMutation();
   const approveMutation = useApproveSaleProformaMutation();
 
-  // چرخه‌ی تأیید: دریافت فقط در «آماده‌ی پرداخت» و تا وقتی رزرو زنده است.
   const coreChanged = useSaleFormStore(isSaleCoreChanged);
   const dueDateChanged = useSaleFormStore(isSaleDueDateChanged);
   const infoChanged = useSaleFormStore(isSaleInfoChanged);
+  const anythingChanged = useSaleFormStore(isDocumentFormChanged);
   const secondsLeft = useReservationCountdown(sale);
   const stage = Number(sale?.proformaStage ?? SaleProformaStageEnum.DRAFT);
-  const readyForPayment = !isNew && stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && secondsLeft !== 0;
-  // تغییری که ذخیره‌اش تأییدها را برمی‌گرداند. مهلتِ پرداخت در «آماده‌ی پرداخت» بعد از دریافت
-  // (روی فاکتورِ صادرشده) ذخیره می‌شود، پس آن‌جا مانعِ دریافت نیست.
-  const documentChanged = coreChanged || (dueDateChanged && !readyForPayment);
   const saver = useSaleChangesSaver(sale?.id);
   const deleteMutation = useRemoveSaleMutation();
 
@@ -207,19 +199,37 @@ export default function SaleForm({ sale }) {
         : planErrors,
   };
 
+  // کارِ دکمه‌ی اصلی، از مرحله و تغییرهای ذخیره‌نشده.
+  const attachmentsDirty = !isNew && attachmentsChanged(attachments.filesPayload, sale.attachments);
+  const action = proformaAction({
+    isNew,
+    isInPerson,
+    stage,
+    secondsLeft,
+    changes: { core: coreChanged, dueDate: dueDateChanged, info: infoChanged, attachments: attachmentsDirty },
+  });
+  const isPay = action === ProformaAction.PAY;
+
   /** فرم → بدنه‌ی `CreateSale`/`UpdateSale` (بی ردیف‌های پرداخت). */
-  const buildPayload = (isInvoice) => ({
+  const buildPayload = () => ({
     customerId: formData.customerId,
     customerName: formData.customerName,
-    invoiceDate: isInvoice ? formData.invoiceDate : null,
-    paymentDate: isInvoice ? formData.paymentDate || null : null,
+    invoiceDate: sale?.invoiceDate || null,
+    paymentDate: formData.paymentDate || null,
     description: formData.description || "",
     items,
-    paymentType: isInstallment
-      ? PaymentTypeEnum.INSTALLMENT
-      : paymentTypeOf(isInvoice ? payments.rows : []),
+    paymentType: proformaPaymentType(isInstallment, sale, isInPerson ? payments.rows : undefined),
     attachments: attachments.filesPayload,
   });
+
+  /**
+   * تغییرهای بی‌اثر بر چرخه که همراهِ دریافت ذخیره می‌شوند: توضیح با `UpdateSale` (با سررسیدِ
+   * ذخیره‌شده تا تأییدها برنگردند؛ پیوست‌ها هم در همان بدنه)، یا فقط پیوست‌ها.
+   */
+  const infoChanges = () =>
+    infoChanged
+      ? { update: { ...buildPayload(), paymentDate: sale.paymentDate || null } }
+      : { attachments: attachmentsDirty ? attachments.filesPayload : undefined };
 
   const openSaved = (id) => {
     attachments.commit();
@@ -232,8 +242,8 @@ export default function SaleForm({ sale }) {
     enabled: allows("PosCharge") && !isInstallment,
     sale,
     isInPerson,
-    blockedReason: documentChanged
-      ? "پیش‌فاکتور تغییر کرده؛ تغییرات را برگردانید یا اول (به‌صورتِ پیش‌فاکتور) ذخیره کنید."
+    blockedReason: dueDateChanged
+      ? "سررسیدِ تازه را با دکمه‌ی اصلی (همراهِ دریافت) ثبت کنید، یا آن را برگردانید."
       : payments.hasChanges
         ? "دریافت‌های ثبت‌نشده را اول ذخیره کنید؛ بعد از صفحه‌ی فاکتور با کارتخوان دریافت کنید."
         : undefined,
@@ -243,7 +253,6 @@ export default function SaleForm({ sale }) {
       const problem = saleFormProblem({
         ...problemBase,
         isInvoice: true,
-        invoiceErrors: missingSaleInvoiceFields(formData, true),
         forPos: true,
       });
       if (problem) {
@@ -256,10 +265,11 @@ export default function SaleForm({ sale }) {
         throw new Error(UPLOADING_MESSAGE);
       }
       return {
-        payload: buildPayload(true),
+        payload: buildPayload(),
         draftRows: payments.rows,
         scannedBarcodes,
         total: totals.totalAmount,
+        infoChanges: isNew ? undefined : infoChanges(),
       };
     },
     onPersisted: attachments.commit,
@@ -270,13 +280,8 @@ export default function SaleForm({ sale }) {
     },
   });
 
-  // `status` روی سیم نمی‌رود؛ فقط شکلِ فرم را تعیین می‌کند. وسطِ کارتخوان کارتِ
-  // دریافت‌ها نباید با تغییرِ نوع به پیش‌فاکتور از صفحه برود.
-  const isInvoice =
-    posLocked ||
-    isInPerson ||
-    (readyForPayment && !documentChanged);
-  const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
+  // کارتِ دریافت/قرارداد: فقط وقتی پول گرفته می‌شود. وسطِ کارتخوان نباید از صفحه برود.
+  const isInvoice = posLocked || isInPerson || isPay;
 
   const isBusy =
     createMutation.isPending ||
@@ -287,124 +292,92 @@ export default function SaleForm({ sale }) {
     deleteMutation.isPending ||
     attachments.isUploading ||
     posLocked;
-  // نسخه‌ی تازه‌ی برنامه نباید فاکتورِ نیمه‌کاره یا ثبتِ در جریان را از بین ببرد.
-  const changed = useSaleFormStore(isDocumentFormChanged);
-  useUpdateGuard({ dirty: changed, busy: isBusy, reason: "فاکتورِ فروش در حال ثبت یا ذخیره‌نشده است" });
+  // نسخه‌ی تازه‌ی برنامه نباید فاکتورِ نیمه‌کاره یا ثبتِ در جریان را از بین ببرد. فرمِ پیش‌فاکتور
+  // فقط با تغییرهای واقعی (نه فیلدهای نمایشی که انتخابگرها می‌نشانند) «ذخیره‌نشده» است.
+  const dirty = isNew
+    ? anythingChanged
+    : coreChanged || dueDateChanged || infoChanged || attachmentsDirty || payments.hasChanges;
+  useUpdateGuard({ dirty, busy: isBusy, reason: "فاکتورِ فروش در حال ثبت یا ذخیره‌نشده است" });
 
   if (!ready) return null;
 
-  // کارِ دکمه‌ی اصلی؛ صفحه فقط همین یک دکمه را دارد (کارتِ مرحله فقط وضعیت را می‌گوید).
-  const attachmentsDirty = !isNew && attachmentsChanged(attachments.filesPayload, sale.attachments);
-  const action = isNew
-    ? isInPerson
-      ? "inPerson"
-      : "create"
-    : documentChanged || (!readyForPayment && (infoChanged || attachmentsDirty))
-      ? "save"
-      : stage === SaleProformaStageEnum.DRAFT
-        ? "sendToWarehouse"
-        : stage === SaleProformaStageEnum.CUSTOMER_APPROVED
-          ? "awaitWarehouse"
-          : readyForPayment
-            ? "pay"
-            : "expired";
+  const afterSave = (latest) => {
+    attachments.commit();
+    resetForm();
+    if (latest) store.initializeFrom(latest);
+  };
+
+  /** دریافت (یا قرارداد) روی پیش‌فاکتورِ «آماده‌ی پرداخت» — فاکتور را صادر می‌کند. */
+  const submitPayment = () => {
+    const { update, attachments: attachmentFiles } = infoChanges();
+    // سررسید روی پیش‌فاکتور تأییدها را برمی‌گرداند؛ بعد از صدور روی فاکتور ذخیره می‌شود.
+    const paymentDate = dueDateChanged ? formData.paymentDate || null : undefined;
+    if (isInstallment) {
+      installmentIssueMutation.mutate(
+        { update, attachments: attachmentFiles, plan: toApiCreatePlan(planDraft), paymentDate },
+        { onSuccess: () => afterSave(null) },
+      );
+      return;
+    }
+    saver.mutate(
+      { update, attachments: attachmentFiles, paymentDraft: payments, paymentDate },
+      { onSuccess: afterSave },
+    );
+  };
+
+  /** ذخیره‌ی پیش‌فاکتور؛ `UpdateSale` فقط اگر خودِ سند عوض شده، وگرنه فقط پیوست‌ها. */
+  const submitSave = () => {
+    const documentEdited = coreChanged || dueDateChanged || infoChanged;
+    saver.mutate(
+      {
+        update: documentEdited ? buildPayload() : undefined,
+        attachments: !documentEdited && attachmentsDirty ? attachments.filesPayload : undefined,
+      },
+      { onSuccess: afterSave },
+    );
+  };
 
   const onSubmit = (e) => {
     e.preventDefault();
-    if (posLocked) return;
-    if (action === "sendToWarehouse") {
+    if (posLocked || isBusy) return;
+    if (action === ProformaAction.SEND_TO_WAREHOUSE) {
       approveMutation.mutate({ saleId: sale.id, revision: sale.revision });
       return;
     }
-    if (action === "awaitWarehouse") {
+    if (action === ProformaAction.AWAIT_WAREHOUSE) {
       navigate(routeWithId(ROUTES.WAREHOUSE_SALE_CHECK_DETAIL, sale.id));
       return;
     }
-    if (action === "expired") return;
-    const problem = saleFormProblem({ ...problemBase, isInvoice, invoiceErrors });
+    if (action === ProformaAction.EXPIRED) return;
+
+    const problem = saleFormProblem({ ...problemBase, isInvoice });
     if (problem) {
       setShowErrors(true);
       return reportFormProblem(problem);
     }
     if (attachments.isUploading) return toast.error(UPLOADING_MESSAGE);
 
-    const payload = buildPayload(isInvoice);
-    const onSaved = (created) => openSaved(created?.id);
-    const onPartial = (error) => error?.partiallySaved && openSaved(error.saleId);
-
-    if (isInPerson) {
+    if (action === ProformaAction.IN_PERSON) {
       inPersonMutation.mutate(
         {
-          payload,
+          payload: buildPayload(),
           scannedBarcodes,
           paymentRows: isInstallment ? [] : payments.rows,
           installmentPlan: isInstallment ? toApiCreatePlan(planDraft) : null,
         },
-        { onSuccess: onSaved, onError: onPartial },
-      );
-      return;
-    }
-    if (isNew) {
-      createMutation.mutate(payload, { onSuccess: onSaved });
-      return;
-    }
-    // پیوستِ تنها راهِ جدای خودش را دارد.
-    const sideAttachments = !documentChanged && !infoChanged && attachmentsDirty ? attachments.filesPayload : undefined;
-    if (action === "pay") {
-      // تاریخِ فاکتور/توضیح با `UpdateSale` ولی با مهلتِ پرداختِ ذخیره‌شده (تا چرخه برنگردد)؛
-      // مهلتِ تازه بعد از دریافت، روی فاکتورِ صادرشده.
-      const infoUpdate = infoChanged ? { ...payload, paymentDate: sale.paymentDate || null } : undefined;
-      const duePatch = dueDateChanged ? formData.paymentDate || null : undefined;
-      if (isInstallment) {
-        installmentIssueMutation.mutate(
-          { update: infoUpdate, attachments: sideAttachments, plan: toApiCreatePlan(planDraft), paymentDate: duePatch },
-          {
-            onSuccess: () => {
-              attachments.commit();
-              resetForm();
-            },
-          },
-        );
-        return;
-      }
-      saver.mutate(
-        { update: infoUpdate, attachments: sideAttachments, paymentDraft: payments, paymentDate: duePatch },
         {
-          onSuccess: (latest) => {
-            attachments.commit();
-            resetForm();
-            if (latest) store.initializeFrom(latest);
-          },
+          onSuccess: (created) => openSaved(created?.id),
+          onError: (error) => error?.partiallySaved && openSaved(error.saleId),
         },
       );
       return;
     }
-    if (isInstallment && isInvoice) {
-      installmentIssueMutation.mutate(
-        { attachments: sideAttachments, plan: toApiCreatePlan(planDraft) },
-        {
-          onSuccess: () => {
-            attachments.commit();
-            resetForm();
-          },
-        },
-      );
+    if (action === ProformaAction.CREATE) {
+      createMutation.mutate(buildPayload(), { onSuccess: (created) => openSaved(created?.id) });
       return;
     }
-    saver.mutate(
-      {
-        update: documentChanged || infoChanged ? payload : undefined,
-        attachments: sideAttachments,
-        paymentDraft: isInvoice ? payments : null,
-      },
-      {
-        onSuccess: (latest) => {
-          attachments.commit();
-          resetForm();
-          if (latest) store.initializeFrom(latest);
-        },
-      },
-    );
+    if (isPay) submitPayment();
+    else submitSave();
   };
 
   const leave = () => {
@@ -413,22 +386,21 @@ export default function SaleForm({ sale }) {
     navigate(ROUTES.SALES);
   };
 
-  const canWarehouseCheck = allows("SaleWarehouseCheck");
-  const ACTIONS = {
-    create: { label: "ثبت پیش‌فاکتور", allowed: true },
-    inPerson: { label: "ثبت و تحویل حضوری", allowed: true },
-    save: { label: "ذخیره‌ی تغییرات", allowed: allows("SaleUpdate") },
-    sendToWarehouse: { label: "مشتری تأیید کرد؛ ارسال به انبار", allowed: allows("SaleUpdate") },
-    awaitWarehouse: canWarehouseCheck
+  const ACTION_BUTTONS = {
+    [ProformaAction.CREATE]: { label: "ثبت پیش‌فاکتور", allowed: true },
+    [ProformaAction.IN_PERSON]: { label: "ثبت و تحویل حضوری", allowed: true },
+    [ProformaAction.SAVE]: { label: "ذخیره‌ی تغییرات", allowed: allows("SaleUpdate") },
+    [ProformaAction.SEND_TO_WAREHOUSE]: { label: "مشتری تأیید کرد؛ ارسال به انبار", allowed: allows("SaleUpdate") },
+    [ProformaAction.AWAIT_WAREHOUSE]: allows("SaleWarehouseCheck")
       ? { label: "بررسی انبار", allowed: true }
       : { label: "در انتظار بررسی انبار", allowed: true, disabled: true },
-    pay: {
+    [ProformaAction.PAY]: {
       label: isInstallment ? "صدور فاکتور اقساطی" : "دریافت و صدور فاکتور",
       allowed: allows(isInstallment ? "SaleInstallmentManage" : "SalePayment"),
     },
-    expired: { label: "مهلت رزرو تمام شد", allowed: true, disabled: true },
+    [ProformaAction.EXPIRED]: { label: "مهلت رزرو تمام شد", allowed: true, disabled: true },
   };
-  const primary = ACTIONS[action];
+  const primary = ACTION_BUTTONS[action];
 
   return (
     <>
@@ -440,7 +412,7 @@ export default function SaleForm({ sale }) {
               <ProformaStageCard
                 sale={sale}
                 secondsLeft={secondsLeft}
-                documentChanged={documentChanged}
+                documentChanged={coreChanged || (dueDateChanged && !isPay)}
               />
             )}
             <FormSection name="party">
@@ -509,9 +481,11 @@ export default function SaleForm({ sale }) {
             <FormSection name="info">
               <OrderInfoCard
                 kind={isInvoice ? "invoice" : "proforma"}
+                // تاریخِ فاکتور را سرور با صدور می‌گذارد؛ سررسید جزوِ شرایطِ پیش‌فاکتور است.
+                showInvoiceDate={false}
+                showDueDate
                 formData={formData}
                 onFormChange={setFormData}
-                errors={showErrors ? invoiceErrors ?? {} : {}}
               >
                 {(isInstallment || allows("SaleInstallmentManage")) && (
                   <StatusChoice
