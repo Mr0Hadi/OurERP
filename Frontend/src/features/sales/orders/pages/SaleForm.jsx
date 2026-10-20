@@ -4,7 +4,12 @@ import toast from "react-hot-toast";
 import { Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import { isSaleDocumentChanged, useSaleFormStore } from "@/features/sales/orders/store/saleFormStore";
+import {
+  isSaleCoreChanged,
+  isSaleDueDateChanged,
+  isSaleInfoChanged,
+  useSaleFormStore,
+} from "@/features/sales/orders/store/saleFormStore";
 import {
   useApproveSaleProformaMutation,
   useCreateSaleMutation,
@@ -119,10 +124,15 @@ export default function SaleForm({ sale }) {
   const approveMutation = useApproveSaleProformaMutation();
 
   // چرخه‌ی تأیید: دریافت فقط در «آماده‌ی پرداخت» و تا وقتی رزرو زنده است.
-  const documentChanged = useSaleFormStore(isSaleDocumentChanged);
+  const coreChanged = useSaleFormStore(isSaleCoreChanged);
+  const dueDateChanged = useSaleFormStore(isSaleDueDateChanged);
+  const infoChanged = useSaleFormStore(isSaleInfoChanged);
   const secondsLeft = useReservationCountdown(sale);
   const stage = Number(sale?.proformaStage ?? SaleProformaStageEnum.DRAFT);
   const readyForPayment = !isNew && stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && secondsLeft !== 0;
+  // تغییری که ذخیره‌اش تأییدها را برمی‌گرداند. مهلتِ پرداخت در «آماده‌ی پرداخت» بعد از دریافت
+  // (روی فاکتورِ صادرشده) ذخیره می‌شود، پس آن‌جا مانعِ دریافت نیست.
+  const documentChanged = coreChanged || (dueDateChanged && !readyForPayment);
   const saver = useSaleChangesSaver(sale?.id);
   const deleteMutation = useRemoveSaleMutation();
 
@@ -289,7 +299,7 @@ export default function SaleForm({ sale }) {
     ? isInPerson
       ? "inPerson"
       : "create"
-    : documentChanged || attachmentsDirty
+    : documentChanged || (!readyForPayment && (infoChanged || attachmentsDirty))
       ? "save"
       : stage === SaleProformaStageEnum.DRAFT
         ? "sendToWarehouse"
@@ -338,8 +348,37 @@ export default function SaleForm({ sale }) {
       createMutation.mutate(payload, { onSuccess: onSaved });
       return;
     }
-    // `UpdateSale` فقط برای تغییرِ خودِ سند (تأییدها را برمی‌گرداند)؛ پیوستِ تنها راهِ جدای خودش را دارد.
-    const sideAttachments = !documentChanged && attachmentsDirty ? attachments.filesPayload : undefined;
+    // پیوستِ تنها راهِ جدای خودش را دارد.
+    const sideAttachments = !documentChanged && !infoChanged && attachmentsDirty ? attachments.filesPayload : undefined;
+    if (action === "pay") {
+      // تاریخِ فاکتور/توضیح با `UpdateSale` ولی با مهلتِ پرداختِ ذخیره‌شده (تا چرخه برنگردد)؛
+      // مهلتِ تازه بعد از دریافت، روی فاکتورِ صادرشده.
+      const infoUpdate = infoChanged ? { ...payload, paymentDate: sale.paymentDate || null } : undefined;
+      const duePatch = dueDateChanged ? formData.paymentDate || null : undefined;
+      if (isInstallment) {
+        installmentIssueMutation.mutate(
+          { update: infoUpdate, attachments: sideAttachments, plan: toApiCreatePlan(planDraft), paymentDate: duePatch },
+          {
+            onSuccess: () => {
+              attachments.commit();
+              resetForm();
+            },
+          },
+        );
+        return;
+      }
+      saver.mutate(
+        { update: infoUpdate, attachments: sideAttachments, paymentDraft: payments, paymentDate: duePatch },
+        {
+          onSuccess: (latest) => {
+            attachments.commit();
+            resetForm();
+            if (latest) store.initializeFrom(latest);
+          },
+        },
+      );
+      return;
+    }
     if (isInstallment && isInvoice) {
       installmentIssueMutation.mutate(
         { attachments: sideAttachments, plan: toApiCreatePlan(planDraft) },
@@ -354,7 +393,7 @@ export default function SaleForm({ sale }) {
     }
     saver.mutate(
       {
-        update: documentChanged ? payload : undefined,
+        update: documentChanged || infoChanged ? payload : undefined,
         attachments: sideAttachments,
         paymentDraft: isInvoice ? payments : null,
       },

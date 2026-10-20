@@ -67,30 +67,29 @@ export const useSaleFormStore = createDocumentFormStore({
   formFromDocument: formFromSale,
 });
 
-/**
- * همان چیزی که `UpdateSale` از فرم می‌فرستد. فیلدهای نمایشی (نامِ مشتری، کد/واحدِ کالا که
- * انتخابگرها بعد از پر شدن می‌نشانند) و پیش‌نویس‌های همین صفحه (دریافت‌ها، قرارداد) حساب نمی‌شوند
- * — وگرنه فرمِ دست‌نخورده «تغییرکرده» دیده می‌شد و دریافت بسته می‌ماند.
+/*
+ * تغییرهای فرمِ پیش‌فاکتور، به تفکیکِ اثرشان روی چرخه‌ی تأیید (جدولِ `UpdateSale` در بخش ۱۱ سند).
+ * فقط فیلدهایی که با `UpdateSale` می‌روند سنجیده می‌شوند؛ فیلدهای نمایشی (نامِ مشتری، کد/واحدِ کالا
+ * که انتخابگرها بعد از پر شدن می‌نشانند) و پیش‌نویس‌های همین صفحه (دریافت‌ها، قرارداد) نه.
  */
-const documentPart = (form) =>
-  JSON.stringify([
-    String(form.customerId ?? ""),
-    form.invoiceDate || "",
-    form.paymentDate || "",
-    form.description || "",
-    Boolean(form.installment),
-    (form.items || []).map((item) => [
-      Number(item.id) || 0,
-      Number(item.productId) || 0,
-      Number(item.quantity) || 0,
-      Number(item.unitPrice) || 0,
-      Number(item.discount) || 0,
-    ]),
-  ]);
+const changedBy = (pick) => (state) =>
+  state.formData !== state.baseline && JSON.stringify(pick(state.formData)) !== JSON.stringify(pick(state.baseline));
 
-/**
- * سلکتور: خودِ پیش‌فاکتور (مشتری، اقلام، تاریخ‌ها، شیوه‌ی پرداخت، توضیح) عوض شده؟ ذخیره‌ی چنین
- * تغییری (`UpdateSale`) چرخه‌ی تأیید را به پیش‌نویس برمی‌گرداند، پس پیش از دریافت ممنوع است.
- */
-export const isSaleDocumentChanged = (state) =>
-  state.formData !== state.baseline && documentPart(state.formData) !== documentPart(state.baseline);
+/** مشتری، اقلام، قیمت/تخفیف، شیوه‌ی پرداخت — ذخیره‌اش پیش‌فاکتور را به پیش‌نویس برمی‌گرداند. */
+export const isSaleCoreChanged = changedBy((form) => [
+  String(form.customerId ?? ""),
+  Boolean(form.installment),
+  (form.items || []).map((item) => [
+    Number(item.id) || 0,
+    Number(item.productId) || 0,
+    Number(item.quantity) || 0,
+    Number(item.unitPrice) || 0,
+    Number(item.discount) || 0,
+  ]),
+]);
+
+/** مهلتِ پرداخت — روی پیش‌فاکتور چرخه را برمی‌گرداند؛ بعد از صدورِ فاکتور آزاد است. */
+export const isSaleDueDateChanged = changedBy((form) => form.paymentDate || "");
+
+/** تاریخِ فاکتور و توضیح — اثری روی چرخه ندارند و هم‌زمان با دریافت ذخیره می‌شوند. */
+export const isSaleInfoChanged = changedBy((form) => [form.invoiceDate || "", form.description || ""]);

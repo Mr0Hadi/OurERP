@@ -298,16 +298,21 @@ async function createPlanForSale(saleId, plan) {
 }
 
 /**
- * صدورِ پیش‌فاکتورِ اقساطیِ «آماده‌ی پرداخت»: ثبتِ قرارداد با پیش‌پرداخت. خودِ پیش‌فاکتور
- * ذخیره نمی‌شود (چرخه را به پیش‌نویس برمی‌گرداند)؛ فقط پیوست‌های عوض‌شده. `{ attachments, plan }`.
+ * صدورِ پیش‌فاکتورِ اقساطیِ «آماده‌ی پرداخت»: ثبتِ قرارداد با پیش‌پرداخت. فقط تغییرهای بی‌اثر بر
+ * چرخه پیش از آن ذخیره می‌شوند. `{ update, attachments, plan, paymentDate }`.
  */
 export const useIssueInstallmentSaleMutation = (saleId) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ attachments, plan }) => {
-      if (attachments) await updateSaleAttachments(saleId, attachments);
-      return createPlanForSale(saleId, plan);
+    mutationFn: async ({ update, attachments, plan, paymentDate }) => {
+      // `update` فقط تغییرِ بی‌اثر بر چرخه (تاریخِ فاکتور، توضیح، پیوست‌ها).
+      if (update) await updateSale(saleId, update);
+      else if (attachments) await updateSaleAttachments(saleId, attachments);
+      const created = await createPlanForSale(saleId, plan);
+      // مهلتِ پرداخت پس از صدور؛ روی پیش‌فاکتور چرخه را برمی‌گرداند.
+      if (paymentDate !== undefined) await updateSalePaymentDate(saleId, paymentDate);
+      return created;
     },
     onSuccess: (plan) => {
       toast.success(`فاکتور ${plan.invoiceNumber || ""} صادر و قرارداد اقساط ثبت شد`);
