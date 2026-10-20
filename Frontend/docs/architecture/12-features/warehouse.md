@@ -1,6 +1,6 @@
 # warehouse — کالا، دسته، دانه، خودرو، دریافت و ارسال
 
-شش زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
+هفت زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/` (بررسیِ انبارِ پیش‌فاکتورِ فروش)؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
 
 ## مسیرها
 
@@ -17,6 +17,7 @@
 | `WAREHOUSE_RECEIVING` (+ `_DETAIL`) | `/warehouse/receiving`، `/:id` | `PurchaseReceive` | `src/features/warehouse/receiving/pages/ReceivingListPage.jsx`، `ReceivingDetailPage.jsx` |
 | `WAREHOUSE_RECEIVING_RETURN_DETAIL` | `/warehouse/receiving/returns/:id` | `SaleReturnExecute` | `src/features/warehouse/receiving/pages/ReceivingReturnDetailPage.jsx` (کالای برگشتی از **مرجوعیِ فروش**) |
 | `WAREHOUSE_SHIPPING` (+ `_DETAIL`) | `/warehouse/shipping`، `/:id` | `SaleShip` | `src/features/warehouse/shipping/pages/ShippingListPage.jsx`، `ShippingDetailPage.jsx` |
+| `WAREHOUSE_SALE_CHECK` (+ `_DETAIL`) | `/warehouse/sale-check`، `/:id` | `SaleWarehouseCheck` | `src/features/warehouse/saleCheck/pages/SaleCheckListPage.jsx`، `SaleCheckPage.jsx` (اسکن و رزروِ دانه‌ها، گزارشِ معیوب/مفقود، کسری با دلیل) |
 | `WAREHOUSE_SHIPPING_RETURN_DETAIL` | `/warehouse/shipping/returns/:id` | `PurchaseReturnExecute` | `src/features/warehouse/shipping/pages/SupplierReturnDetailPage.jsx` (عودت به تامین‌کننده در **مرجوعیِ خرید**) |
 
 `CategoriesPage` و `VehiclesPage` فهرست/جزئیات در یک کامپوننت‌اند؛ `:id` فقط انتخاب است.
@@ -30,6 +31,7 @@
 | units | `fetchProductUnits` GET `/Product/GetProductUnitList`، `fetchAllProductUnits` (صفحه‌به‌صفحه ۲۰۰تایی تا ۲۰۰۰)، `fetchProductUnitSummary`، `fetchProductUnitHistory`، `resolveScannedCode`، `markProductUnitsPrinted` POST، `applyProductUnitAction` POST (ایدمپوتنت)، `setProductUnitLocation` POST | `productUnitKeys` (`["productUnits"]`) |
 | vehicles | `/Vehicle/GetVehicleList` (take ۵۰۰)، `GetVehicleProductList`، `CreateVehicle`، `UpdateVehicle`، `DeleteVehicle`، `AddProductsToVehicle`، `RemoveProductFromVehicle` | `vehicleKeys` (`["vehicles"]`) |
 | receiving | `fetchReceivablePurchases` GET `/Purchase/GetPurchaseList`، `fetchPurchaseReceivingInfo` GET `/PurchaseReturn/GetPurchaseReceivingInfo`، `fetchPurchaseReturnPendingEffects`، `receiveShipment` POST `/Shipment/ReceiveShipment` | `receivingKeys` (`['receiving']`) |
+| saleCheck | `useSaleCheckQueueQuery` (`fetchSales` با `proformaStages = 1`)، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useCheckSaleWarehouseMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
 | shipping | `fetchShippableSales` GET `/Sale/GetSaleList`، `fetchSaleForShipping` GET `/Sale/GetSaleDetail`، `fetchSaleReturnPendingEffects`، `dispatchShipment` POST `/Shipment/DispatchShipment` | `shippingKeys` (`['shipping']`) |
 
 هوک‌های پرکاربرد برای بقیه‌ی برنامه: `useDocumentProducts`، `useProductSearchQuery`، `useProductsOptionsQuery` (`src/features/warehouse/products/services/queries.js`)؛ `UnitsPageLink` (`src/features/warehouse/units/components/UnitsPageLink.jsx`).

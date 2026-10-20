@@ -528,7 +528,7 @@ const ROUTES_P=[
  ["/customers","CustomerView","مشتریان"],["/customers/new","CustomerCreate","مشتری جدید"],
  ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/sales/installments","SaleInstallmentView","اقساط"],
  ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
- ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],
+ ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],["/warehouse/sale-check","SaleWarehouseCheck","بررسیِ انبارِ پیش‌فاکتور"],["/accounting/warehouse-issues",["AccountingView","SaleWarehouseIssueResolve"],"گزارش‌های انبار"],["/settings",["SettingView","SettingManage"],"تنظیماتِ سامانه"],
  ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]
 ];
 const ALL=[...new Set(ROUTES_P.flatMap(r=>r[1]==null?[]:[].concat(r[1])))];
@@ -559,7 +559,7 @@ $("#routeSel").onchange=renderPerm;$("#stateSel").onchange=renderPerm;renderPerm
 const F={
  sales:{p:"/sales",pages:"SalePage، SaleNewPage، SaleDetailPage (SaleForm / SaleIssuedView)، InstallmentsPage، SalesReturns*Page",stores:"useSaleFormStore، useSaleFilterStore، useSalesReturnFormStore، useInstallmentFilterStore",api:"/Sale/*، /SaleReturn/*، /SaleInstallment/*",sub:"orders · returns · installments",note:"ثبتِ تغییرات با runDocumentChanges؛ invalidateSalesEcosystem."},
  purchases:{p:"/purchases",pages:"PurchasesPage، PurchasesNewPage، PurchaseDetailPage، PurchaseReturn*Page",stores:"usePurchaseFormStore، usePurchaseFilterStore، usePurchaseReturnFormStore",api:"/Purchase/*، /PurchaseReturn/*",sub:"orders · returns",note:"قرنطینه فقط در مرجوعیِ خرید؛ invalidatePurchaseEcosystem."},
- warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping",note:"فیلترِ خودرو (vehicleId) در instantِ useProductListFilters."},
+ warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page، SaleCheck*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping · saleCheck",note:"فیلترِ خودرو (vehicleId) در instantِ useProductListFilters."},
  customers:{p:"/customers",pages:"CustomersPage، CustomerNewPage، CustomerDetailPage",stores:"useCustomerFilterStore",api:"/Customer/*",note:"صورت‌حساب زیرِ customerKeys.all است."},
  suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:"SupplierEditPage placeholderِ مسیردار است."},
  partyAccount:{p:"— (بدونِ مسیر)",pages:"—",stores:"createPartyFilterStore",api:"/PartyAccount/GetPartyStatement",note:"کتابخانه‌ی مشترکِ مشتری و تامین‌کننده."},
@@ -567,7 +567,7 @@ const F={
  organization:{p:"/organization",pages:"DepartmentsPage، TeamsPage و جزئیات",stores:"useDepartmentFilterStore، useTeamFilterStore",api:"/Department/*، /Team/*",sub:"departments · teams",note:"تغییرِ تیم authKeys.session() را باطل می‌کند."},
  permissions:{p:"/access",pages:"UserAccessPage، DepartmentTemplatesPage",stores:"— (usePermissionDraft)",api:"/Permission/*",note:"کاتالوگِ چک‌باکس‌ها از سرور می‌آید."},
  dashboard:{p:"/ ، /dashboard",pages:"DashboardPage",stores:"useDashboardLayoutStore (persist)، useDashboardFilterStore",api:"/Report/GetSaleReport، GetPurchaseReport، GetScopePerformance",note:"ویجت‌ها با buildDashboardContext انتخاب می‌شوند."},
- accounting:{p:"/accounting",pages:"AccountingDashboardPage، PartyBalancesPage، InvoiceJournalPage، *ActivityPage",stores:"accountingFilterStores.js، activityFilterStore.js",api:"/Accounting/*، /Report/*",sub:"activity",note:"/reports/* قدیمی به این‌جا ریدایرکت می‌شود."},
+ accounting:{p:"/accounting",pages:"AccountingDashboardPage، PartyBalancesPage، InvoiceJournalPage، WarehouseIssuesPage، *ActivityPage",stores:"accountingFilterStores.js، activityFilterStore.js",api:"/Accounting/*، /Report/*",sub:"activity",note:"/reports/* قدیمی به این‌جا ریدایرکت می‌شود."},
  audit:{p:"/audit",pages:"AuditEventsPage، AuditEventDetailPage + AuditHistoryButton در صفحه‌های جزئیات",stores:"useAuditEventFilterStore",api:"/Audit/*",note:"فقط‌خواندنی، پشتِ AuditLogView. دکمه‌ی «تاریخچه» با PageHeaderActions در هدرِ صفحه‌های جزئیات می‌نشیند."},
  auth:{p:"/auth",pages:"LoginPage",stores:"useAuthStore (persist)",api:"/Account/Login، Logout، RefreshToken؛ /User/GetUserInfo",note:"همه‌ی فیچرها برای مجوز به آن وابسته‌اند."}
 };
@@ -618,6 +618,7 @@ renderWiz("start");
 const KEYS=["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all","purchaseKeys.detail","purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","supplierKeys.all","customerKeys.lists","customerKeys.detail","authKeys.session","authKeys.myPermissions","userKeys.*","teamKeys.all","departmentKeys.all","permissionKeys.user"];
 const MUT=[
  {n:"useCreateSaleMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"invalidateSalesEcosystem(queryClient, created.id) + customerKeys.all"},
+ {n:"useInPersonSaleMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"CreateSale → ApproveSaleProforma → CheckSaleWarehouse → CompleteInPersonSale؛ شکستِ میانه: partiallySaved."},
  {n:"useSaleChangesSaver (ثبت تغییرات)",set:["saleKeys.detail"],hit:["saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"applySale: setQueryData برای جزئیات، بقیه با invalidateSalesEcosystem({ freshSale: true })."},
  {n:"useCreatePurchaseMutation",set:["purchaseKeys.detail"],hit:["purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","productKeys.all","productUnitKeys.all","supplierKeys.all"],note:"applyPurchase: setQueryData + invalidatePurchaseEcosystem({ freshPurchase: true }) + supplierKeys.all"},
  {n:"useUpdateCustomerMutation",set:[],hit:["customerKeys.lists","customerKeys.detail"],note:"الگوی ساده: lists() و detail(id)."},

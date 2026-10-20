@@ -20,12 +20,12 @@
 
 | زیرماژول | `api-v1.js` | کلید |
 | --- | --- | --- |
-| orders | `fetchSales` GET `/Sale/GetSaleList`، `fetchSaleById` GET `/Sale/GetSaleDetail`، `createSale` POST `/Sale/CreateSale`، `createInPersonSale` POST `/Sale/CreateInPersonSale`، `updateSale` PUT `/Sale/UpdateSale`، `changeSaleStatus` POST `/Sale/ChangeSaleStatus`، `updateSaleAttachments` PUT، `updateSalePaymentDate` PUT، `addSalePayment` / `editSalePayment` / `voidSalePayment` POST، `removeSale` DELETE `/Sale/DeleteSale` | `saleKeys` (`['sales']`) |
+| orders | `fetchSales` GET `/Sale/GetSaleList`، `fetchSaleById` GET `/Sale/GetSaleDetail`، `createSale` POST `/Sale/CreateSale`، `approveSaleProforma` POST `/Sale/ApproveSaleProforma`، `checkSaleWarehouse` POST `/Sale/CheckSaleWarehouse`، `completeInPersonSale` POST `/Sale/CompleteInPersonSale`، `fetchSaleWarehouseIssues` GET `/Sale/GetSaleWarehouseIssueList`، `resolveSaleWarehouseIssue` POST، `updateSale` PUT `/Sale/UpdateSale`، `changeSaleStatus` POST `/Sale/ChangeSaleStatus`، `updateSaleAttachments` PUT، `updateSalePaymentDate` PUT، `addSalePayment` / `editSalePayment` / `voidSalePayment` POST، `removeSale` DELETE `/Sale/DeleteSale` | `saleKeys` (`['sales']`)، `warehouseIssueKeys` (`['saleWarehouseIssues']`) |
 | returns | `fetchSalesReturns`، `fetchSalesReturnById`، `createSalesReturn`، `addClaimResolution`، `removeClaimResolution`، `executeGoodsRound`، `executeMoneyEffect`، `rejectSalesReturn`، `cancelSalesReturn`، `reopenSalesReturn`، `removeSalesReturn`، `updateSalesReturnAttachments` روی `/SaleReturn/*`؛ و `fetchReturnableSales`/`fetchSaleForReturn` روی `/Sale/GetSaleList`/`GetSaleDetail` | `salesReturnKeys` (`['salesReturns']`) |
 | installments | `fetchInstallmentPlan`، `fetchInstallmentPlans`، `fetchInstallments`، `createInstallmentPlan`، `updateInstallmentPlan`، `cancelInstallmentPlan`، `payInstallment`، `settleInstallmentPlan` روی `/SaleInstallment/*` | `installmentKeys` (`["saleInstallments"]`) |
 
 هوک‌ها:
-- `src/features/sales/orders/services/mutations.js`: `useCreateSaleMutation`، `useCreateInPersonSaleMutation`، `useCreateInstallmentSaleMutation`، `useIssueInstallmentSaleMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions`. invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
+- `src/features/sales/orders/services/mutations.js`: `useCreateSaleMutation`، `useInPersonSaleMutation`، `useApproveSaleProformaMutation`، `useCheckSaleWarehouseMutation`، `useResolveWarehouseIssueMutation`، `useIssueInstallmentSaleMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions`. invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
 - `src/features/sales/returns/services/`: هوک‌ها نام‌های مستعارِ factoryهای مشترک‌اند — `createReturnQueries` (`src/shared/services/returns/createReturnQueries.js`) و `createReturnMutations` (`src/shared/services/returns/createReturnMutations.js`) با `invalidate: invalidateSalesEcosystem`.
 - `src/features/sales/installments/services/`: `useInstallmentsQuery`، `useInstallmentPlansQuery`، `useInstallmentCountQuery`، `usePayInstallmentMutation`، `useSettleInstallmentPlanMutation`، … و کمک‌تابعِ `applyInstallmentPlan`.
 
@@ -39,19 +39,20 @@
 
 **ثبتِ فروشِ تازه**
 1. `SaleNewPage` → `SaleForm` با `useSaleFormStore` و `useDocumentFormDraft` ([08](../08-client-state-zustand.md)).
-2. `onSubmit` در `SaleForm.jsx`: `saleFormProblem(...)` را چک می‌کند، بدنه را با `buildPayload` + `paymentRows` می‌سازد، `createMutation.mutate(body)`.
+2. `onSubmit` در `SaleForm.jsx`: `saleFormProblem(...)` را چک می‌کند، بدنه را با `buildPayload` می‌سازد، `createMutation.mutate(payload)`. فروشِ تازه همیشه پیش‌فاکتورِ «پیش‌نویس» است و پول نمی‌گیرد.
 3. `useCreateSaleMutation`: `createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) })` → `POST /Sale/CreateSale`.
 4. `onSuccess`: toast، `invalidateSalesEcosystem(queryClient, created.id)`، `customerKeys.all`.
 5. صفحه: `attachments.commit()`، `resetForm()`، `navigate(routeWithId(ROUTES.SALES_DETAIL, id), { replace: true })`.
 
-فروشِ حضوری: `useCreateSaleMutation` → `useCreateInPersonSaleMutation` (`POST /Sale/CreateInPersonSale`)، که `shippingKeys.all` را هم باطل می‌کند.
+**چرخه‌ی تأییدِ پیش‌فاکتور (بکند ۲۰۲۶-۱۰-۱۶)** — مرحله‌ها در `proformaStage` (`src/shared/domain/enums/saleProforma.js`): پیش‌نویس → «مشتری تأیید کرد» (`useApproveSaleProformaMutation`، در `ProformaStageCard`) → بررسیِ انبار (`warehouse/saleCheck`) → دریافت. نوعِ «فاکتور» در فرم فقط در «آماده‌ی پرداخت» و پیش از پایانِ مهلتِ رزرو باز است (`useReservationCountdown`). `UpdateSale` فقط وقتی فرستاده می‌شود که خودِ سند عوض شده (`isSaleDocumentChanged` در `saleFormStore.js`)، چون چرخه را به پیش‌نویس برمی‌گرداند.
+
+فروشِ حضوری (دانه در فرم اسکن شده): `useInPersonSaleMutation` چهار درخواست را پشتِ هم می‌فرستد — `CreateSale` ← `ApproveSaleProforma` ← `CheckSaleWarehouse` (همان دانه‌ها) ← `CompleteInPersonSale` (اتمیک: پرداخت/قرارداد، ارسال، تحویل). شکستِ بعد از ثبت `partiallySaved` می‌گیرد و صفحه پیش‌فاکتور را باز می‌کند. کارتخوانِ ناقص به‌جای قدمِ آخر `AddSalePayment` می‌زند (`deliver: false`).
 
 **ویرایشِ پیش‌فاکتور / صدور / پرداخت («ثبت تغییرات»)** — `useSaleChangesSaver(saleId)` → `runDocumentChanges(SALE_CHANGES_API, saleId, changes)` ([07](../07-server-state-react-query.md)). اولین پرداختِ ورودی فاکتور را صادر می‌کند. موفق → `applySale` (`setQueryData` + invalidate)؛ خطا → `invalidateSalesEcosystem` و `partialSaveMessage`.
 
 **فروشِ اقساطی** — `submitInstallment` در `SaleForm.jsx` قرارداد را با `toApiCreatePlan(planDraft)` می‌سازد:
-- فروشِ تازه: `useCreateInstallmentSaleMutation` → `createSale` بعد `createInstallmentPlan` (`POST /SaleInstallment/CreateSaleInstallmentPlan`). اگر قدمِ دوم شکست بخورد، خطا `partiallySaved` می‌گیرد و صفحه پیش‌فاکتورِ ساخته‌شده را باز می‌کند.
-- پیش‌فاکتورِ موجود: `useIssueInstallmentSaleMutation` → `updateSale` بعد قرارداد.
-- حضوری: قرارداد داخلِ همان `CreateInPersonSale` (`installmentPlan`).
+- پیش‌فاکتورِ «آماده‌ی پرداخت»: `useIssueInstallmentSaleMutation` → (پیوست‌های عوض‌شده) بعد `createInstallmentPlan` (`POST /SaleInstallment/CreateSaleInstallmentPlan`).
+- حضوری: قرارداد داخلِ `CompleteInPersonSale` (`installmentPlan`).
 
 **مرجوعیِ فروش** — `SalesReturnNewPage` گام‌به‌گام (انتخابِ فاکتور با `useReturnableSalesQuery` → ادعاها) → `useCreateSalesReturnMutation`؛ صفحه‌ی جزئیات تصمیم‌ها و اجرای اثرها (`executeGoodsRound`، `executeMoneyEffect`) را با `useSalesReturnActions` انجام می‌دهد. کامپوننت‌ها از `src/shared/components/returns/` ([10](../10-shared-components-catalog.md)).
 
@@ -61,9 +62,10 @@
 
 ## نکته‌ها و بدهی
 
-- نامِ فیلدِ `productIds` در `createSale`/`createInPersonSale` گمراه‌کننده است: بکند لیستِ اقلامِ کامل می‌خواهد (کامنتِ خودِ `src/features/sales/orders/services/api-v1.js`).
+- نامِ فیلدِ `productIds` در `createSale` گمراه‌کننده است: بکند لیستِ اقلامِ کامل می‌خواهد (کامنتِ خودِ `src/features/sales/orders/services/api-v1.js`).
 - `src/features/sales/returns/services/api-v1.js` مستقیم `/Sale/GetSaleList` و `/Sale/GetSaleDetail` را صدا می‌زند، نه تابع‌های `orders`.
 - `orders` و `installments` به هم وابسته‌اند (هر کدام کلید/تابعِ دیگری را import می‌کند)؛ سبکِ import بینِ زیرماژول‌ها مخلوط است (نسبی `../../returns/...` و `@/features/sales/...`).
 - کامنتِ `applyInstallmentPlan` می‌گوید عمداً `invalidateSalesEcosystem` نیست، ولی `orders/services/mutations.js` هر دو را پشتِ هم صدا می‌زند.
 - `useInstallmentsQuery` و `useInstallmentCountQuery` هر دو کلیدِ `installmentKeys.installmentList(params)` دارند؛ چون `queryFn` یکی است (`fetchInstallments(params)`) و شمارش فقط `select` دارد، اشتراکِ کش بی‌خطر است.
 - فروشِ کاملاً نسیه فعلاً ممکن نیست: بکند فروش را فقط با اولین دریافت به فاکتور تبدیل می‌کند (کامنتِ `SaleForm.jsx`).
+- فروشِ حضوری اتمیک نیست (چهار درخواست)؛ بکند دستورِ یک‌جا ندارد.

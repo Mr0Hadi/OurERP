@@ -10,6 +10,7 @@ import {
   Percent,
   Receipt,
   PackageSearch,
+  PackageX,
   Rows3,
   Settings,
   Scale,
@@ -401,6 +402,13 @@ export const navigationData = {
           permission: "AccountingView",
           icon: ArrowLeftRight,
           description: "همه‌ی پرداخت‌ها و دریافت‌ها به تفکیکِ روش",
+        },
+        {
+          title: "گزارش‌های انبار",
+          url: ROUTES.ACCOUNTING_WAREHOUSE_ISSUES,
+          permission: ["AccountingView", "SaleWarehouseIssueResolve"],
+          icon: PackageX,
+          description: "دانه‌های معیوب/مفقودِ بررسیِ انبار: بازگشت، اسقاط یا مرجوعی",
         },
         {
           title: "مالیات ارزش افزوده",

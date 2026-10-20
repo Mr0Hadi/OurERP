@@ -79,6 +79,7 @@ const ROUTE_TITLES = {
   [ROUTES.ACCOUNTING_PURCHASES]: "دفتر خرید",
   [ROUTES.ACCOUNTING_SALE_LINES]: "ریز اقلام فروش",
   [ROUTES.ACCOUNTING_PAYMENTS]: "دریافت و پرداخت",
+  [ROUTES.ACCOUNTING_WAREHOUSE_ISSUES]: "گزارش‌های انبار",
   [ROUTES.ACCOUNTING_TAX]: "مالیات ارزش افزوده",
   [ROUTES.ACCOUNTING_INVENTORY]: "ارزش موجودی",
   [ROUTES.ACCOUNTING_BREAKDOWN]: "تفکیک فروش و خرید",

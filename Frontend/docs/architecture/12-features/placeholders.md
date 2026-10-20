@@ -6,7 +6,7 @@
 | --- | --- | --- | --- |
 | `src/features/invoice/` | `routes.jsx` با مسیرِ نسبیِ `"invoice"` → `pages/InvoicePage.jsx` (۶ خط، `<div>InvoicePage</div>`)؛ بدونِ `lazy()` و `handle.permission` | `/invoice` | نیست |
 | `src/features/transactions/` | همان الگو: `"transactions"` → `pages/TransactionsPage.jsx` (placeholder) | `/transactions` | نیست |
-| `src/features/settings/` | `routes.jsx` با ۹ مسیر (`ROUTES.SETTINGS`، `SETTINGS_GENERAL`، `SETTINGS_COMPANY`، `SETTINGS_INVOICE`، `SETTINGS_TAX`، `SETTINGS_USERS`، `SETTINGS_ROLES`، `SETTINGS_NOTIFICATIONS`، `SETTINGS_BACKUP`) به ۹ صفحه‌ی ۶خطیِ placeholder در `pages/`؛ بدونِ `lazy()` و مجوز | `/settings/...` | نیست |
+| `src/features/settings/` | `ROUTES.SETTINGS` واقعی است: `pages/SystemSettingsPage.jsx` (`api/Setting`، فرم از روی پاسخِ سرور، `SettingView`/`SettingManage`). ۸ مسیرِ دیگر (`SETTINGS_GENERAL`، `SETTINGS_COMPANY`، `SETTINGS_INVOICE`، `SETTINGS_TAX`، `SETTINGS_USERS`، `SETTINGS_ROLES`، `SETTINGS_NOTIFICATIONS`، `SETTINGS_BACKUP`) هنوز صفحه‌ی ۶خطیِ placeholder‌اند | `/settings/...` | `/Setting/GetSystemSettings`، `/Setting/UpdateSystemSettings` |
 | `src/features/reports/` | پوشه‌ی خالی؛ ثبت نشده | — | — |
 
 نکته‌ها:

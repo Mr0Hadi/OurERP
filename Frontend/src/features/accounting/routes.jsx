@@ -10,6 +10,7 @@ const PartyLedgerPage = lazy(() => import("./pages/PartyLedgerPage"));
 const InvoiceJournalPage = lazy(() => import("./pages/InvoiceJournalPage"));
 const SaleLineJournalPage = lazy(() => import("./pages/SaleLineJournalPage"));
 const PaymentJournalPage = lazy(() => import("./pages/PaymentJournalPage"));
+const WarehouseIssuesPage = lazy(() => import("./pages/WarehouseIssuesPage"));
 const TaxReportPage = lazy(() => import("./pages/TaxReportPage"));
 const InventoryValuationPage = lazy(() => import("./pages/InventoryValuationPage"));
 const TradeBreakdownPage = lazy(() => import("./pages/TradeBreakdownPage"));
@@ -37,6 +38,12 @@ const LEGACY_REPORT_REDIRECTS = {
 export const accountingRoutes = [
   { path: ROUTES.ACCOUNTING, handle, element: <AccountingDashboardPage /> },
   { path: ROUTES.ACCOUNTING_PARTIES, handle, element: <PartyBalancesPage /> },
+  // بخش ۱۱ سند: فهرست با `AccountingView` یا `SaleWarehouseIssueResolve`.
+  {
+    path: ROUTES.ACCOUNTING_WAREHOUSE_ISSUES,
+    handle: { permission: ["AccountingView", "SaleWarehouseIssueResolve"] },
+    element: <WarehouseIssuesPage />,
+  },
   { path: ROUTES.ACCOUNTING_PARTY_LEDGER, handle, element: <PartyLedgerPage /> },
   // دو دفتر یک صفحه‌اند؛ `key` تا جابه‌جاییِ مستقیم بینشان صفحه را از نو بسازد (فیلترهای
   // نشانی فقط هنگامِ ورود خوانده می‌شوند).
