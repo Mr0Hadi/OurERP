@@ -119,8 +119,8 @@ namespace WMS.Tests.Unit
         {
             var keys = AllActions().Select(x => x.Key).ToHashSet();
 
-            Assert.Empty(Anonymous.Where(key => !keys.Contains(key)));
-            Assert.Empty(AuthenticatedOnly.Where(key => !keys.Contains(key)));
+            Assert.DoesNotContain(Anonymous, key => !keys.Contains(key));
+            Assert.DoesNotContain(AuthenticatedOnly, key => !keys.Contains(key));
         }
     }
 }

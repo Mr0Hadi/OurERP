@@ -40,7 +40,7 @@ namespace WMS.Tests.Integration
             {
                 SaleId = sale.Id,
                 Payments = new() { new InPersonPaymentDto { Type = PaymentTypeEnum.CASH, Amount = sale.TotalAmount } },
-            });
+            }, TestContext.Current.CancellationToken);
 
             var completed = Assert.IsType<CreatedSaleDto>(res.Data);
             Assert.Equal(SalesStatusEnum.DELIVERED, completed.Status);
@@ -69,7 +69,7 @@ namespace WMS.Tests.Integration
             {
                 SaleId = sale.Id,
                 InstallmentPlan = PlanBody(downPaymentAmount: 2_000_000),
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(SalesStatusEnum.DELIVERED, completed.Status);
             // پیش‌پرداخت — نه پرداخت کامل — فاکتور رسمی را صادر کرده است.
@@ -99,7 +99,7 @@ namespace WMS.Tests.Integration
             {
                 SaleId = sale.Id,
                 Payments = new() { new InPersonPaymentDto { Type = PaymentTypeEnum.CASH, Amount = sale.TotalAmount } },
-            }));
+            }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -117,7 +117,7 @@ namespace WMS.Tests.Integration
             {
                 SaleId = sale.Id,
                 Payments = new() { new InPersonPaymentDto { Type = PaymentTypeEnum.CASH, Amount = sale.TotalAmount - 1 } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
             using var verify = db.NewContext();
             Assert.Equal(SalesStatusEnum.PROFORMA, verify.Sales.Single(x => x.Id == sale.Id).Status);
@@ -135,7 +135,7 @@ namespace WMS.Tests.Integration
             var mediator = ProformaFlow.Mediator(scope, user.Id);
             var sale = await ProformaFlow.ReadyForPaymentAsync(mediator, scenario, barcodes, paymentType: PaymentTypeEnum.INSTALLMENT);
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new CompleteInPersonSaleCommand { SaleId = sale.Id }));
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new CompleteInPersonSaleCommand { SaleId = sale.Id }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -153,7 +153,7 @@ namespace WMS.Tests.Integration
             {
                 SaleId = sale.Id,
                 InstallmentPlan = PlanBody(downPaymentAmount: 0),
-            }));
+            }, TestContext.Current.CancellationToken));
         }
     }
 }

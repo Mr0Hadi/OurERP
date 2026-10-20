@@ -74,15 +74,15 @@ namespace WMS.Tests.Integration
             var userId = SeedUser(db);
             using var scope = db.NewScope(FakeUserContext.WithUserId(userId));
 
-            await Mediator(scope, userId).Send(NewCustomer());
+            await Mediator(scope, userId).Send(NewCustomer(), TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
-            var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync();
+            var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(AuditActionEnum.CreateCustomer, auditEvent.Action);
             Assert.Equal(userId, auditEvent.UserId);
 
             var change = Assert.Single(auditEvent.Changes);
-            var customer = await verify.Customers.SingleAsync();
+            var customer = await verify.Customers.SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(nameof(Customer), change.EntityType);
             Assert.Equal(customer.Id.ToString(), change.EntityKey);
             Assert.Equal(AuditOperationEnum.INSERT, change.Operation);
@@ -121,10 +121,10 @@ namespace WMS.Tests.Integration
                 PostalCode = "1234567890",
                 BalanceType = BalanceTypeEnum.Debtor,
             };
-            await Mediator(scope, userId).Send(update);
+            await Mediator(scope, userId).Send(update, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
-            var change = await verify.AuditEntityChanges.SingleAsync();
+            var change = await verify.AuditEntityChanges.SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(AuditOperationEnum.UPDATE, change.Operation);
 
             var old = Values(change.OldValues);
@@ -142,12 +142,12 @@ namespace WMS.Tests.Integration
             var userId = SeedUser(db);
             using var scope = db.NewScope(FakeUserContext.WithUserId(userId));
             var mediator = Mediator(scope, userId);
-            await mediator.Send(NewCustomer());
-            await mediator.Send(NewCustomer());
+            await mediator.Send(NewCustomer(), TestContext.Current.CancellationToken);
+            await mediator.Send(NewCustomer(), TestContext.Current.CancellationToken);
 
             int customerId;
             using (var context = db.NewContext())
-                customerId = (await context.Customers.OrderBy(x => x.Id).FirstAsync()).Id;
+                customerId = (await context.Customers.OrderBy(x => x.Id).FirstAsync(cancellationToken: TestContext.Current.CancellationToken)).Id;
 
             await mediator.Send(new UpdateCustomerCommand
             {
@@ -158,7 +158,7 @@ namespace WMS.Tests.Integration
                 Address = "تهران",
                 PostalCode = "1234567890",
                 BalanceType = BalanceTypeEnum.Debtor,
-            });
+            }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             var res = await new GetEntityHistoryQueryHandler(verify)
@@ -207,21 +207,21 @@ namespace WMS.Tests.Integration
                 Unit = ProductUnitEnum.Number,
                 ProductCategoryId = categoryId,
                 IsIncomplete = true,
-            });
+            }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
-            var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync();
+            var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(AuditActionEnum.CreateProduct, auditEvent.Action);
 
             // The placeholder insert and the real code written by the second save, under one event.
             var productChanges = auditEvent.Changes.Where(c => c.EntityType == nameof(Product)).ToList();
             Assert.Contains(productChanges, c => c.Operation == AuditOperationEnum.INSERT);
             var codeUpdate = Assert.Single(productChanges, c => c.Operation == AuditOperationEnum.UPDATE);
-            Assert.Equal((await verify.Products.SingleAsync()).Code, Values(codeUpdate.NewValues)["Code"].GetString());
+            Assert.Equal((await verify.Products.SingleAsync(cancellationToken: TestContext.Current.CancellationToken)).Code, Values(codeUpdate.NewValues)["Code"].GetString());
 
             // The next command gets its own event.
-            await mediator.Send(NewCustomer());
-            Assert.Equal(2, await verify.AuditEvents.CountAsync());
+            await mediator.Send(NewCustomer(), TestContext.Current.CancellationToken);
+            Assert.Equal(2, await verify.AuditEvents.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -243,11 +243,11 @@ namespace WMS.Tests.Integration
 
             using var scope = db.NewScope(FakeUserContext.WithUserId(userId));
             var mediator = Mediator(scope, userId);
-            await mediator.Send(new AddSalePaymentCommand { SaleId = saleId, Type = PaymentTypeEnum.CASH, Amount = 500 });
-            await mediator.Send(NewCustomer());
+            await mediator.Send(new AddSalePaymentCommand { SaleId = saleId, Type = PaymentTypeEnum.CASH, Amount = 500 }, TestContext.Current.CancellationToken);
+            await mediator.Send(NewCustomer(), TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
-            var paymentEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync(x => x.Action == AuditActionEnum.AddSalePayment);
+            var paymentEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync(x => x.Action == AuditActionEnum.AddSalePayment, cancellationToken: TestContext.Current.CancellationToken);
             Assert.Contains(paymentEvent.Changes, c => c.EntityType == nameof(PaymentDetail) && c.Operation == AuditOperationEnum.INSERT
                                                        && c.DocumentKind == DocumentKindEnum.SALE && c.DocumentId == saleId);
             var saleChange = Assert.Single(paymentEvent.Changes, c => c.EntityType == nameof(Sale));
@@ -301,18 +301,18 @@ namespace WMS.Tests.Integration
             // Only the installment is tracked: the sale is found through one query for the plan.
             using (var context = db.NewContext())
             {
-                var installment = await context.SaleInstallments.SingleAsync(x => x.Id == installmentId);
+                var installment = await context.SaleInstallments.SingleAsync(x => x.Id == installmentId, cancellationToken: TestContext.Current.CancellationToken);
                 installment.Status = SaleInstallmentStatusEnum.CANCELLED;
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             using var verify = db.NewContext();
-            var change = await verify.AuditEntityChanges.SingleAsync();
+            var change = await verify.AuditEntityChanges.SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(nameof(SaleInstallment), change.EntityType);
             Assert.Equal(DocumentKindEnum.SALE, change.DocumentKind);
             Assert.Equal(saleId, change.DocumentId);
             // Outside any command: no action, no user, and the event is still written.
-            var auditEvent = await verify.AuditEvents.SingleAsync();
+            var auditEvent = await verify.AuditEvents.SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Null(auditEvent.Action);
             Assert.Null(auditEvent.UserId);
         }
@@ -334,12 +334,12 @@ namespace WMS.Tests.Integration
 
             using (var context = db.NewContext())
             {
-                context.SaleItems.Remove(await context.SaleItems.SingleAsync(x => x.Id == itemId));
-                await context.SaveChangesAsync();
+                context.SaleItems.Remove(await context.SaleItems.SingleAsync(x => x.Id == itemId, cancellationToken: TestContext.Current.CancellationToken));
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             using var verify = db.NewContext();
-            var change = await verify.AuditEntityChanges.SingleAsync();
+            var change = await verify.AuditEntityChanges.SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(AuditOperationEnum.DELETE, change.Operation);
             Assert.Equal(itemId.ToString(), change.EntityKey);
             Assert.Equal(saleId, change.DocumentId);
@@ -355,24 +355,24 @@ namespace WMS.Tests.Integration
 
             using (var context = db.NewContext())
             {
-                var user = await context.Users.SingleAsync(x => x.Id == userId);
+                var user = await context.Users.SingleAsync(x => x.Id == userId, cancellationToken: TestContext.Current.CancellationToken);
                 user.RefreshToken = "secret-refresh-token";
                 user.ExpireRefreshToken = DateTime.Now.AddDays(1);
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             using (var verify = db.NewContext())
-                Assert.False(await verify.AuditEvents.AnyAsync()); // session bookkeeping only: nothing to record
+                Assert.False(await verify.AuditEvents.AnyAsync(cancellationToken: TestContext.Current.CancellationToken)); // session bookkeeping only: nothing to record
 
             using (var context = db.NewContext())
             {
-                var user = await context.Users.SingleAsync(x => x.Id == userId);
+                var user = await context.Users.SingleAsync(x => x.Id == userId, cancellationToken: TestContext.Current.CancellationToken);
                 user.PasswordHash = "new-hash";
-                await context.SaveChangesAsync();
+                await context.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             using var check = db.NewContext();
-            var change = await check.AuditEntityChanges.SingleAsync();
+            var change = await check.AuditEntityChanges.SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal("***", Values(change.OldValues)["PasswordHash"].GetString());
             Assert.Equal("***", Values(change.NewValues)["PasswordHash"].GetString());
             Assert.DoesNotContain("new-hash", change.NewValues);
@@ -392,9 +392,9 @@ namespace WMS.Tests.Integration
             }, CancellationToken.None));
 
             using var verify = db.NewContext();
-            Assert.False(await verify.Customers.AnyAsync());
-            Assert.False(await verify.AuditEvents.AnyAsync());
-            Assert.False(await verify.AuditEntityChanges.AnyAsync());
+            Assert.False(await verify.Customers.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+            Assert.False(await verify.AuditEvents.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
+            Assert.False(await verify.AuditEntityChanges.AnyAsync(cancellationToken: TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -408,18 +408,18 @@ namespace WMS.Tests.Integration
                 using (scope.AuditScope.Begin(AuditActionEnum.CreateSale))
                 {
                     scope.Context.Customers.Add(Seed.Customer());
-                    await scope.Context.SaveChangesAsync();
+                    await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
                 }
 
                 Assert.Equal(AuditActionEnum.CompleteInPersonSale, scope.AuditScope.Action);
                 scope.Context.Customers.Add(Seed.Customer("رضا"));
-                await scope.Context.SaveChangesAsync();
+                await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             Assert.Null(scope.AuditScope.Action);
 
             using var verify = db.NewContext();
-            var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync();
+            var auditEvent = await verify.AuditEvents.Include(x => x.Changes).SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(AuditActionEnum.CompleteInPersonSale, auditEvent.Action);
             Assert.Equal(2, auditEvent.Changes.Count);
         }
@@ -431,11 +431,11 @@ namespace WMS.Tests.Integration
             var userId = SeedUser(db);
             using var scope = db.NewScope(FakeUserContext.WithUserId(userId));
             var mediator = Mediator(scope, userId);
-            await mediator.Send(NewCustomer());
-            await mediator.Send(NewCustomer());
+            await mediator.Send(NewCustomer(), TestContext.Current.CancellationToken);
+            await mediator.Send(NewCustomer(), TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
-            var customerId = (await verify.Customers.OrderBy(x => x.Id).FirstAsync()).Id;
+            var customerId = (await verify.Customers.OrderBy(x => x.Id).FirstAsync(cancellationToken: TestContext.Current.CancellationToken)).Id;
             var handler = new GetAuditEventListQueryHandler(verify);
 
             var all = await handler.Handle(new GetAuditEventListQuery { UserId = userId, Action = AuditActionEnum.CreateCustomer, FromDate = DateTime.Today, ToDate = DateTime.Today }, CancellationToken.None);

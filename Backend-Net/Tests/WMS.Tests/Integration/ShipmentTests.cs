@@ -83,7 +83,7 @@ namespace WMS.Tests.Integration
             {
                 Purchase = new ReceivePurchaseCommand { PurchaseId = s.Purchase.Id, Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = s.Item.Id, ArrivedQuantity = 3 } } },
                 PurchaseReturnRounds = new() { new PR.ExecuteGoodsRoundCommand { PurchaseReturnId = returnId, Rounds = new() { new GoodsRoundLineDto { EffectId = effectId, Quantity = 2 } } } },
-            });
+            }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.Equal(8, verify.PurchaseItems.Single(x => x.Id == s.Item.Id).ReceivedQuantity);
@@ -103,7 +103,7 @@ namespace WMS.Tests.Integration
             {
                 Purchase = new ReceivePurchaseCommand { PurchaseId = s.Purchase.Id, Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = s.Item.Id, ArrivedQuantity = 3 } } },
                 PurchaseReturnRounds = new() { new PR.ExecuteGoodsRoundCommand { PurchaseReturnId = returnId, Rounds = new() { new GoodsRoundLineDto { EffectId = effectId, Quantity = 5 } } } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
             using var verify = db.NewContext();
             Assert.Equal(5, verify.PurchaseItems.Single(x => x.Id == s.Item.Id).ReceivedQuantity);
@@ -128,7 +128,7 @@ namespace WMS.Tests.Integration
             {
                 Purchase = new ReceivePurchaseCommand { PurchaseId = s.Purchase.Id, Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = s.Item.Id, ArrivedQuantity = 3 } } },
                 PurchaseReturnRounds = new() { new PR.ExecuteGoodsRoundCommand { PurchaseReturnId = returnId, Rounds = new() { new GoodsRoundLineDto { EffectId = outEffectId, Quantity = 1, Source = ProductUnitStatusEnum.IN_STOCK } } } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
             using var verify = db.NewContext();
             Assert.Equal(5, verify.PurchaseItems.Single(x => x.Id == s.Item.Id).ReceivedQuantity);
@@ -155,7 +155,7 @@ namespace WMS.Tests.Integration
             {
                 Sale = new ShipSaleCommand { SaleId = s.Sale.Id, Items = new() { new ShipSaleItemDto { SaleItemId = s.Item.Id, ShippedQuantity = 2 } } },
                 SaleReturnRounds = new() { new SR.ExecuteGoodsRoundCommand { SaleReturnId = scope.Context.SaleReturns.Single().Id, Rounds = new() { new GoodsRoundLineDto { EffectId = scope.Context.SaleReturnEffects.Single().Id, Quantity = 1 } } } },
-            });
+            }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.Equal(5, verify.SaleItems.Single(x => x.Id == s.Item.Id).ShippedQuantity);

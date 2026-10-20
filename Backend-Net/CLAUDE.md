@@ -99,7 +99,7 @@ All projects target `net10.0`, `Nullable=enable`, `ImplicitUsings=enable`. Solut
 - Add a migration (DbContext is in `Infrastructure`, host in `WMS`):
   `dotnet ef migrations add <Name> --project Infrastructure --startup-project WMS`
 - Run: `dotnet run --project WMS` (SQL Server connection string in `WMS/appsettings.json` → `ConnectionStrings:SqlServer`).
-- Tests: `dotnet test Tests/WMS.Tests` (xUnit; integration tests create throwaway `WMS_Test_{guid}` databases on the local SQL Server `Server=.`).
+- Tests: `dotnet test --project Tests/WMS.Tests` (xunit.v3 on Microsoft.Testing.Platform, opted in by `global.json`; integration tests create throwaway `WMS_Test_{guid}` databases on the local SQL Server `Server=.`).
 
 ## 5. Folder structure
 

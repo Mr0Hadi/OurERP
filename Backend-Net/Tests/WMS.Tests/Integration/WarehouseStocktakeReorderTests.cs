@@ -61,9 +61,9 @@ namespace WMS.Tests.Integration
                 FromWarehouseId = 1,
                 ToWarehouseId = shop.Id,
                 Lines = new() { new() { ProductId = 1, Quantity = 1 } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
-            var flags = Assert.IsType<Dictionary<string, object>>((await mediator.Send(new GetFeatureFlagsQuery())).Data);
+            var flags = Assert.IsType<Dictionary<string, object>>((await mediator.Send(new GetFeatureFlagsQuery(), TestContext.Current.CancellationToken)).Data);
             Assert.Equal(false, flags[SystemSettingCatalog.WarehouseMultiWarehouseEnabled.Key]);
         }
 
@@ -83,13 +83,13 @@ namespace WMS.Tests.Integration
                 FromWarehouseId = 1,
                 ToWarehouseId = shop.Id,
                 Lines = new() { new() { ProductId = product.Id, Quantity = 2 } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(StockTransferStatusEnum.IN_TRANSIT, first.Status);
             Assert.Equal(2, first.Products.Single().Quantity);
             Assert.Equal(3, scope.Context.Products.Single(p => p.Id == product.Id).Stock);
 
-            await mediator.Send(new ReceiveStockTransferCommand { Id = first.Id });
-            var perWarehouse = Assert.IsType<List<ProductWarehouseStockDto>>((await mediator.Send(new GetProductWarehouseStockQuery { ProductId = product.Id })).Data);
+            await mediator.Send(new ReceiveStockTransferCommand { Id = first.Id }, TestContext.Current.CancellationToken);
+            var perWarehouse = Assert.IsType<List<ProductWarehouseStockDto>>((await mediator.Send(new GetProductWarehouseStockQuery { ProductId = product.Id }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(3, perWarehouse.Single(w => w.WarehouseId == 1).InStock);
             Assert.Equal(2, perWarehouse.Single(w => w.WarehouseId == shop.Id).InStock);
             Assert.Equal(5, scope.Context.Products.Single(p => p.Id == product.Id).Stock);
@@ -99,11 +99,11 @@ namespace WMS.Tests.Integration
                 FromWarehouseId = shop.Id,
                 ToWarehouseId = 1,
                 Lines = new() { new() { ProductId = product.Id, Quantity = 1 } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             // Switched off with a transfer on the road: nothing moves, nothing is lost, and it can still be finished.
             await SetAsync(mediator, SystemSettingCatalog.WarehouseMultiWarehouseEnabled, "false");
-            var cancelled = Assert.IsType<StockTransferDto>((await mediator.Send(new CancelStockTransferCommand { Id = second.Id })).Data);
+            var cancelled = Assert.IsType<StockTransferDto>((await mediator.Send(new CancelStockTransferCommand { Id = second.Id }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(StockTransferStatusEnum.CANCELLED, cancelled.Status);
             Assert.Equal(2, scope.Context.ProductUnits.Count(u => u.ProductId == product.Id && u.WarehouseId == shop.Id && u.Status == ProductUnitStatusEnum.IN_STOCK));
 
@@ -121,14 +121,14 @@ namespace WMS.Tests.Integration
             var mediator = Mediator(scope);
             var shop = await SecondWarehouseAsync(mediator);
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new DeleteWarehouseCommand { Id = 1 }));
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new DeleteWarehouseCommand { Id = 1 }, TestContext.Current.CancellationToken));
 
-            var moved = Assert.IsType<WarehouseDto>((await mediator.Send(new UpdateWarehouseCommand { Id = shop.Id, Code = "SHOP", Name = "فروشگاه", IsDefault = true })).Data);
+            var moved = Assert.IsType<WarehouseDto>((await mediator.Send(new UpdateWarehouseCommand { Id = shop.Id, Code = "SHOP", Name = "فروشگاه", IsDefault = true }, TestContext.Current.CancellationToken)).Data);
             Assert.True(moved.IsDefault);
-            var list = Assert.IsType<List<WarehouseDto>>((await mediator.Send(new GetWarehouseListQuery())).Data);
+            var list = Assert.IsType<List<WarehouseDto>>((await mediator.Send(new GetWarehouseListQuery(), TestContext.Current.CancellationToken)).Data);
             Assert.Single(list, w => w.IsDefault);
 
-            await mediator.Send(new DeleteWarehouseCommand { Id = 1 });
+            await mediator.Send(new DeleteWarehouseCommand { Id = 1 }, TestContext.Current.CancellationToken);
             Assert.False(scope.Context.Warehouses.Single(w => w.Id == 1).IsActive);
         }
 
@@ -146,7 +146,7 @@ namespace WMS.Tests.Integration
             var (product, barcodes) = await StockAsync(scope, 3);
 
             var stocktake = await StocktakeAsync(mediator, product.Id);
-            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new ScanStocktakeUnitsCommand { StocktakeId = stocktake.Id, Barcodes = new() { barcodes[0], barcodes[1], barcodes[1], "UNKNOWN-1" } })).Data);
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new ScanStocktakeUnitsCommand { StocktakeId = stocktake.Id, Barcodes = new() { barcodes[0], barcodes[1], barcodes[1], "UNKNOWN-1" } }, TestContext.Current.CancellationToken)).Data);
 
             // Blind while counting (the default): the system quantity is withheld.
             Assert.True(stocktake.IsBlind);
@@ -154,14 +154,14 @@ namespace WMS.Tests.Integration
             Assert.Equal(2, stocktake.Lines.Single().ScannedCount);
             Assert.Equal(new[] { "UNKNOWN-1" }, stocktake.UnknownBarcodes);
 
-            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new SubmitStocktakeCommand { Id = stocktake.Id })).Data);
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new SubmitStocktakeCommand { Id = stocktake.Id }, TestContext.Current.CancellationToken)).Data);
             var line = stocktake.Lines.Single();
             Assert.Equal(3, line.SystemQuantity);
             Assert.Equal(-1, line.Difference);
             Assert.Equal(new[] { barcodes[2] }, line.MissingBarcodes);
             Assert.Equal(3, scope.Context.Products.Single(p => p.Id == product.Id).Stock);
 
-            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new ApproveStocktakeCommand { Id = stocktake.Id })).Data);
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new ApproveStocktakeCommand { Id = stocktake.Id }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(StocktakeStatusEnum.APPROVED, stocktake.Status);
             Assert.Equal(1, stocktake.Lines.Single().AppliedMissing);
@@ -187,15 +187,15 @@ namespace WMS.Tests.Integration
             await scope.ProductUnitService.ConsumeAsync(scope.Context.Products.Single(p => p.Id == product.Id), 1, null, null, null,
                 new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED, DateTime.Now), CancellationToken.None);
             scope.Context.Products.Single(p => p.Id == product.Id).Stock -= 1;
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new CountStocktakeLineCommand { StocktakeId = stocktake.Id, ProductId = product.Id, Quantity = 7 })).Data);
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new CountStocktakeLineCommand { StocktakeId = stocktake.Id, ProductId = product.Id, Quantity = 7 }, TestContext.Current.CancellationToken)).Data);
             Assert.False(stocktake.IsBlind);
             Assert.Equal(StocktakeCountModeEnum.MANUAL, stocktake.Lines.Single().CountMode);
             Assert.Equal(2, stocktake.Lines.Single().Difference);
 
-            await mediator.Send(new SubmitStocktakeCommand { Id = stocktake.Id });
-            await mediator.Send(new ApproveStocktakeCommand { Id = stocktake.Id });
+            await mediator.Send(new SubmitStocktakeCommand { Id = stocktake.Id }, TestContext.Current.CancellationToken);
+            await mediator.Send(new ApproveStocktakeCommand { Id = stocktake.Id }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.Equal(6, verify.Products.Single(p => p.Id == product.Id).Stock);
@@ -212,15 +212,15 @@ namespace WMS.Tests.Integration
             var shop = await SecondWarehouseAsync(mediator);
             var misplaced = scope.Context.ProductUnits.Single(u => u.Barcode == barcodes[1]);
             misplaced.WarehouseId = shop.Id;
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var stocktake = await StocktakeAsync(mediator, product.Id);
-            await mediator.Send(new ScanStocktakeUnitsCommand { StocktakeId = stocktake.Id, Barcodes = barcodes });
-            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new SubmitStocktakeCommand { Id = stocktake.Id })).Data);
+            await mediator.Send(new ScanStocktakeUnitsCommand { StocktakeId = stocktake.Id, Barcodes = barcodes }, TestContext.Current.CancellationToken);
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new SubmitStocktakeCommand { Id = stocktake.Id }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(1, stocktake.Lines.Single().RelocatedCount);
             Assert.Equal(0, stocktake.Lines.Single().MissingCount);
 
-            await mediator.Send(new ApproveStocktakeCommand { Id = stocktake.Id });
+            await mediator.Send(new ApproveStocktakeCommand { Id = stocktake.Id }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.Equal(1, verify.ProductUnits.Single(u => u.Barcode == barcodes[1]).WarehouseId);
@@ -238,7 +238,7 @@ namespace WMS.Tests.Integration
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => StocktakeAsync(mediator, product.Id));
 
-            await mediator.Send(new CancelStocktakeCommand { Id = first.Id });
+            await mediator.Send(new CancelStocktakeCommand { Id = first.Id }, TestContext.Current.CancellationToken);
             await StocktakeAsync(mediator, product.Id);
         }
 
@@ -264,7 +264,7 @@ namespace WMS.Tests.Integration
             scope.Context.Purchases.Add(open);
             scope.Context.SaveChanges();
 
-            var suggestions = Assert.IsType<List<ReorderSuggestionDto>>((await mediator.Send(new GetReorderSuggestionListQuery())).Data);
+            var suggestions = Assert.IsType<List<ReorderSuggestionDto>>((await mediator.Send(new GetReorderSuggestionListQuery(), TestContext.Current.CancellationToken)).Data);
             var suggestion = Assert.Single(suggestions);
             Assert.Equal(3, suggestion.OnOrder);
             // Target 10 - (2 + 3) = 5, rounded up to the minimum order of 4 -> 8.
@@ -276,11 +276,11 @@ namespace WMS.Tests.Integration
             await mediator.Send(new CreatePurchaseDraftsFromReorderCommand
             {
                 Lines = new() { new() { ProductId = product.Id, SupplierId = supplier.Id, Quantity = suggestion.SuggestedQuantity, UnitPrice = suggestion.LastUnitPrice } },
-            });
+            }, TestContext.Current.CancellationToken);
 
             var draft = scope.Context.Purchases.Single(p => p.SupplierId == supplier.Id && p.Status == PurchaseStatusEnum.PROFORMA);
             Assert.Equal(8, scope.Context.PurchaseItems.Single(i => i.PurchaseId == draft.Id).Quantity);
-            Assert.Empty(Assert.IsType<List<ReorderSuggestionDto>>((await mediator.Send(new GetReorderSuggestionListQuery())).Data));
+            Assert.Empty(Assert.IsType<List<ReorderSuggestionDto>>((await mediator.Send(new GetReorderSuggestionListQuery(), TestContext.Current.CancellationToken)).Data));
         }
 
         // ---------------- settings moved off appsettings.json ----------------
@@ -295,7 +295,7 @@ namespace WMS.Tests.Integration
             await mediator.Send(new UpdateSystemSettingsCommand
             {
                 Settings = new() { new() { Key = SystemSettingCatalog.CompanyName.Key, Value = "شرکت آزمایشی" }, new() { Key = SystemSettingCatalog.CompanyCity.Key, Value = "کرمان" } },
-            });
+            }, TestContext.Current.CancellationToken);
 
             var company = await SystemSettingValues.CompanyAsync(scope.Context, CancellationToken.None);
             Assert.Equal("شرکت آزمایشی", company.Name);
