@@ -196,23 +196,58 @@ export const useApproveSaleProformaMutation = () => {
   });
 };
 
-/** بررسیِ انبار — بدنه‌ی `checkSaleWarehouse`. نتیجه (تأیید یا کسری) را صدازننده می‌خواند. */
-export const useCheckSaleWarehouseMutation = () => {
+/**
+ * تأییدِ انبار، با تغییرِ اختیاریِ اقلام. بی‌تغییر: یک `CheckSaleWarehouse`. با تغییر (تعدادِ کمتر یا
+ * حذفِ ردیف، با دلیل): `UpdateSale` (پیش‌فاکتور به پیش‌نویس) ← `ApproveSaleProforma` (همان تأییدِ
+ * مشتری، با نسخه‌ی تازه) ← `CheckSaleWarehouse` با دلیل در `note`، که در تاریخچه‌ی پیش‌فاکتور
+ * می‌ماند. بکند دستورِ یک‌جا برایش ندارد (`frontend-requests.fa.md` بخش ۲۴)، پس زنجیره
+ * `SaleUpdate` هم می‌خواهد و اتمیک نیست.
+ *
+ * `{ sale, quantities, scans, issues, reason }` — `quantities`: `{ [saleItemId]: number }` فقط
+ * ردیف‌های تغییرکرده؛ `scans`: `{ [saleItemId]: string[] }`.
+ * @returns سندِ کاملِ فروش (`WAREHOUSE_CHECKED`)
+ */
+export const useWarehouseApproveMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: checkSaleWarehouse,
+    mutationFn: async ({ sale, quantities = {}, scans, issues = [], reason = "" }) => {
+      const changed = Object.keys(quantities).length > 0;
+      let base = sale;
+      if (changed) {
+        const items = (sale.items || [])
+          .map((item) => ({ ...item, quantity: quantities[item.id] ?? item.quantity }))
+          .filter((item) => Number(item.quantity) > 0);
+        const updated = await updateSale(sale.id, { ...sale, items });
+        base = await approveSaleProforma(sale.id, updated.revision);
+      }
+      if (base.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED || issues.length > 0) {
+        base = await checkSaleWarehouse({
+          saleId: sale.id,
+          revision: base.revision,
+          lines: (base.items || [])
+            .map((item) => {
+              const need = Math.max(0, Number(item.quantity) - (Number(item.reservedQuantity) || 0));
+              return { saleItemId: item.id, productUnitBarcodes: (scans[item.id] || []).slice(0, need) };
+            })
+            .filter((line) => line.productUnitBarcodes.length > 0),
+          issues,
+          note: reason,
+        });
+      }
+      if (base.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
+        throw new Error(`تأیید انبار ثبت نشد: ${shortageNote(base)}`);
+      }
+      return base;
+    },
     onSuccess: (sale) => {
       applySale(queryClient, sale);
       queryClient.invalidateQueries({ queryKey: warehouseIssueKeys.all });
-      if (sale.proformaStage === SaleProformaStageEnum.WAREHOUSE_CHECKED) {
-        toast.success("بررسی انبار ثبت شد؛ کالا رزرو شد و پیش‌فاکتور آماده‌ی پرداخت است");
-      } else {
-        toast.error(`کسری ثبت شد و پیش‌فاکتور به فروش برگشت: ${shortageNote(sale)}`);
-      }
+      toast.success("انبار تأیید کرد؛ کالا رزرو شد و پیش‌فاکتور آماده‌ی پرداخت است");
     },
-    onError: (error, { saleId }) => {
-      invalidateSalesEcosystem(queryClient, saleId);
-      toast.error(getErrorMessage(error, "ثبتِ بررسی انبار انجام نشد"));
+    onError: (error, { sale }) => {
+      invalidateSalesEcosystem(queryClient, sale.id);
+      queryClient.invalidateQueries({ queryKey: warehouseIssueKeys.all });
+      toast.error(getErrorMessage(error, "ثبتِ تأیید انبار انجام نشد"));
     },
   });
 };

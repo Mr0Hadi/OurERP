@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useSaleQuery } from "@/features/sales/orders/services/queries";
-import { useCheckSaleWarehouseMutation } from "@/features/sales/orders/services/mutations";
+import { useWarehouseApproveMutation } from "@/features/sales/orders/services/mutations";
+import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { UNIT_ACTION_REASON_LABELS } from "@/features/warehouse/units/domain/unitVocabulary";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
@@ -25,32 +26,47 @@ import { withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 import SaleCheckItemCard from "../components/SaleCheckItemCard";
 import WarehouseIssueDialog from "../components/WarehouseIssueDialog";
-import { buildCheckCommand, checkSummary, lineNeed, shortageDraft } from "../domain/saleCheck";
+import { approvedQuantity, changeDraft, checkSummary, lineNeed } from "../domain/saleCheck";
 
 /**
- * بررسیِ انبارِ یک پیش‌فاکتور: انباردار دانه‌های هر ردیف را اسکن می‌کند (با ثبت رزرو می‌شوند و
- * پیش‌فاکتور «آماده‌ی پرداخت» می‌شود). اگر کالا کم است، کسری با دلیلِ نوشته‌شده به فروش برمی‌گردد
- * و هیچ دانه‌ای رزرو نمی‌شود. دانه‌ی معیوب/مفقود جدا گزارش می‌شود (`WarehouseIssueDialog`).
+ * بررسیِ انبارِ یک پیش‌فاکتور: انباردار دانه‌های هر ردیف را اسکن می‌کند و تأیید می‌کند (دانه‌ها رزرو
+ * و پیش‌فاکتور «آماده‌ی پرداخت» می‌شود). اگر کالا کم است، تعدادِ ردیف را کم (یا ردیف را حذف)
+ * می‌کند، دلیلش را می‌نویسد و همان را تأیید می‌کند — یک دکمه. دانه‌ی معیوب/مفقود جدا گزارش می‌شود.
  */
 function SaleCheckForm({ sale }) {
   const navigate = useNavigate();
-  const mutation = useCheckSaleWarehouseMutation();
+  const { allows } = usePermission();
+  const canEdit = allows("SaleUpdate");
+  const mutation = useWarehouseApproveMutation();
+  const [quantities, setQuantities] = useState({});
   const [scans, setScans] = useState({});
   const [issues, setIssues] = useState([]);
-  const [note, setNote] = useState("");
+  const [reason, setReason] = useState("");
   const [issueOpen, setIssueOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const { productMap } = useDocumentProducts((sale.items || []).map((item) => item.productId));
   const items = useMemo(() => withProductInfo(sale.items || [], productMap), [sale.items, productMap]);
-  const { short, complete, blockingReason } = checkSummary(items, scans, issues, note);
+  const { changed, blockingReason } = checkSummary(items, { scans, quantities, issues, reason, canEdit });
   const scannedCount = Object.values(scans).reduce((sum, codes) => sum + codes.length, 0);
-  const needTotal = items.reduce((sum, item) => sum + lineNeed(item), 0);
+  const needTotal = items.reduce((sum, item) => sum + lineNeed(item, quantities), 0);
 
-  const dirty = scannedCount > 0 || issues.length > 0 || note.trim() !== "";
+  const dirty = scannedCount > 0 || issues.length > 0 || changed.length > 0 || reason.trim() !== "";
   const blocker = useUnsavedChangesGuard(dirty && !mutation.isSuccess, { reason: "بررسیِ انبارِ پیش‌فاکتور ثبت نشده" });
 
   const excluded = new Set([...Object.values(scans).flat(), ...issues.map((issue) => issue.productUnitBarcode)]);
+
+  const setQuantity = (item, quantity) => {
+    setQuantities((current) => {
+      const next = { ...current };
+      if (quantity === Number(item.quantity)) delete next[item.id];
+      else next[item.id] = quantity;
+      // اسکن‌های بیش از نیازِ تازه کنار می‌روند.
+      const need = lineNeed(item, next);
+      setScans((codes) => ({ ...codes, [item.id]: (codes[item.id] || []).slice(0, need) }));
+      return next;
+    });
+  };
 
   const addIssue = (issue) => {
     setIssues((list) => [...list, issue]);
@@ -63,12 +79,18 @@ function SaleCheckForm({ sale }) {
   };
 
   const submit = () =>
-    mutation.mutate(buildCheckCommand(sale, scans, issues, note), {
-      onSuccess: () => {
-        setConfirmOpen(false);
-        navigate(ROUTES.WAREHOUSE_SALE_CHECK);
+    mutation.mutate(
+      { sale, quantities, scans, issues, reason: reason.trim() },
+      {
+        onSuccess: () => {
+          setConfirmOpen(false);
+          navigate(ROUTES.WAREHOUSE_SALE_CHECK);
+        },
+        onError: () => setConfirmOpen(false),
       },
-    });
+    );
+
+  const label = changed.length > 0 ? "تغییر و تأیید انبار" : "تأیید انبار";
 
   return (
     <div className="container mx-auto max-w-6xl space-y-4">
@@ -76,21 +98,34 @@ function SaleCheckForm({ sale }) {
         <div className="space-y-4 lg:col-span-2">
           <SectionCard
             title={`اقلامِ پیش‌فاکتور — ${sale.customerName || ""}`}
-            description="هر دانه‌ای را که برای این مشتری برمی‌دارید اسکن کنید. با ثبت، همین دانه‌ها برای او رزرو می‌شوند."
+            description={
+              canEdit
+                ? "هر دانه‌ای را که برای مشتری برمی‌دارید اسکن کنید. اگر کالا کم است، تعدادِ تأییدی را کم کنید و دلیلش را بنویسید."
+                : "هر دانه‌ای را که برای مشتری برمی‌دارید اسکن کنید."
+            }
           >
+            {!canEdit && (
+              <Notice tone="info">
+                تغییرِ تعدادِ اقلام دسترسیِ «ویرایش فروش» می‌خواهد. اگر کالا کم است، به فروش خبر دهید.
+              </Notice>
+            )}
             {items.map((item) => (
               <SaleCheckItemCard
                 key={item.id}
                 item={item}
+                quantity={approvedQuantity(item, quantities)}
+                need={lineNeed(item, quantities)}
                 barcodes={scans[item.id] || []}
-                onChange={(codes) => setScans((current) => ({ ...current, [item.id]: codes }))}
+                canEdit={canEdit}
+                onQuantityChange={(quantity) => setQuantity(item, quantity)}
+                onBarcodesChange={(codes) => setScans((current) => ({ ...current, [item.id]: codes }))}
               />
             ))}
           </SectionCard>
 
           <SectionCard
             title="دانه‌ی معیوب یا مفقود"
-            description="نادر است. گزارش، پیش‌فاکتور را متوقف نمی‌کند؛ تصمیمِ دانه با حسابداری است."
+            description="نادر است. دانه به قرنطینه و صفِ حسابداری می‌رود؛ دانه‌ی سالمِ دیگری را در ردیفِ همان کالا اسکن کنید."
             action={
               <Button type="button" size="sm" variant="outline" className="gap-1.5" onClick={() => setIssueOpen(true)}>
                 <Plus className="size-4" />
@@ -134,42 +169,36 @@ function SaleCheckForm({ sale }) {
         </div>
 
         <div className="space-y-4">
-          <SectionCard title="نتیجه‌ی بررسی">
+          <SectionCard title="تأیید انبار">
             <p className="text-sm">
               <span className="font-semibold tabular-nums">{formatNumber(scannedCount)}</span>
               <span className="text-muted-foreground"> از </span>
               <span className="font-semibold tabular-nums">{formatNumber(needTotal)}</span>
               <span className="text-muted-foreground"> دانه اسکن شده</span>
             </p>
-            {!complete && (
+            {changed.length > 0 && (
               <>
                 <Notice tone="caution">
-                  {formatNumber(short.length)} ردیف کامل نیست. اگر کالا کم است، کسری را ثبت کنید: هیچ دانه‌ای رزرو نمی‌شود و
-                  پیش‌فاکتور با دلیلِ شما به فروش برمی‌گردد.
+                  {formatNumber(changed.length)} ردیف تغییر کرده. پیش‌فاکتورِ تغییرکرده به مشتری داده می‌شود؛ دلیل را بنویسید.
                 </Notice>
-                <FormField
-                  label="دلیلِ کسری (برای فروش)"
-                  htmlFor="check-note"
-                  required
-                  hint="فروش با این توضیح پیش‌فاکتور را با مشتری اصلاح می‌کند."
-                >
+                <FormField label="دلیلِ تغییر" htmlFor="check-reason" required hint="در تاریخچه‌ی پیش‌فاکتور برای فروش می‌ماند.">
                   <Textarea
-                    id="check-note"
+                    id="check-reason"
                     rows={3}
-                    value={note}
-                    placeholder={shortageDraft(short, scans)}
-                    onChange={(e) => setNote(e.target.value)}
+                    value={reason}
+                    placeholder={changeDraft(changed, quantities)}
+                    onChange={(e) => setReason(e.target.value)}
                   />
                 </FormField>
-                {!note.trim() && (
+                {!reason.trim() && (
                   <Button
                     type="button"
                     variant="link"
                     size="sm"
                     className="h-auto p-0 text-xs"
-                    onClick={() => setNote(`${shortageDraft(short, scans)} — `)}
+                    onClick={() => setReason(`${changeDraft(changed, quantities)} — `)}
                   >
-                    شروع با فهرستِ کسری
+                    شروع با فهرستِ تغییرها
                   </Button>
                 )}
               </>
@@ -177,14 +206,14 @@ function SaleCheckForm({ sale }) {
           </SectionCard>
 
           <WarehouseSubmitBar
-            label={complete ? "تأیید انبار و رزرو" : "ثبت کسری و برگرداندن به فروش"}
-            complete={complete}
-            canSubmit={complete || scannedCount > 0 || issues.length > 0 || note.trim() !== ""}
+            label={label}
+            complete
+            canSubmit
             blockingReason={blockingReason}
             isBusy={mutation.isPending}
             onSubmit={() => setConfirmOpen(true)}
             onCancel={() => navigate(ROUTES.WAREHOUSE_SALE_CHECK)}
-            hint="پیش‌فاکتور بعد از تأییدِ انبار تا پایانِ مهلتِ رزرو آماده‌ی پرداخت است."
+            hint="پس از تأیید، کالا تا پایانِ مهلتِ رزرو برای مشتری نگه داشته می‌شود."
           />
         </div>
       </div>
@@ -199,18 +228,14 @@ function SaleCheckForm({ sale }) {
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={complete ? "تأیید انبار" : "ثبت کسری"}
-        description={
-          complete
-            ? `${formatNumber(scannedCount)} دانه برای این مشتری رزرو و پیش‌فاکتور آماده‌ی پرداخت می‌شود.${
-                issues.length ? ` ${formatNumber(issues.length)} دانه هم به قرنطینه می‌رود.` : ""
-              }`
-            : `هیچ دانه‌ای رزرو نمی‌شود و پیش‌فاکتور با دلیلِ شما به فروش برمی‌گردد.${
-                issues.length ? ` ${formatNumber(issues.length)} دانه‌ی گزارش‌شده به قرنطینه می‌رود.` : ""
-              }`
-        }
-        destructive={!complete}
-        confirmLabel={complete ? "تأیید و رزرو" : "ثبت کسری"}
+        title={label}
+        description={`${
+          changed.length > 0 ? `پیش‌فاکتور با ${formatNumber(changed.length)} ردیفِ تغییرکرده ذخیره و ` : "پیش‌فاکتور "
+        }تأیید می‌شود و ${formatNumber(scannedCount)} دانه برای مشتری رزرو می‌شود.${
+          issues.length ? ` ${formatNumber(issues.length)} دانه هم به قرنطینه می‌رود.` : ""
+        }`}
+        destructive={false}
+        confirmLabel={label}
         pendingLabel="در حال ثبت..."
         isPending={mutation.isPending}
         onConfirm={submit}

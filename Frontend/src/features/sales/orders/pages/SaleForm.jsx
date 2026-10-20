@@ -43,9 +43,8 @@ import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { isDocumentFormChanged } from "@/shared/store/createDocumentFormStore";
 import { useUpdateGuard } from "@/shared/services/updateSafety";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { reportFormProblem, scrollToSection } from "@/shared/lib/scrollToSection";
+import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
-import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
@@ -266,7 +265,7 @@ export default function SaleForm({ sale }) {
   const isInvoice =
     posLocked ||
     isInPerson ||
-    (readyForPayment && Number(formData.status || SaleStatusEnum.PROFORMA) !== SaleStatusEnum.PROFORMA);
+    (readyForPayment && !documentChanged);
   const invoiceErrors = missingSaleInvoiceFields(formData, isInvoice);
 
   const isBusy =
@@ -284,9 +283,34 @@ export default function SaleForm({ sale }) {
 
   if (!ready) return null;
 
+  // کارِ دکمه‌ی اصلی؛ صفحه فقط همین یک دکمه را دارد (کارتِ مرحله فقط وضعیت را می‌گوید).
+  const attachmentsDirty = !isNew && attachmentsChanged(attachments.filesPayload, sale.attachments);
+  const action = isNew
+    ? isInPerson
+      ? "inPerson"
+      : "create"
+    : documentChanged || attachmentsDirty
+      ? "save"
+      : stage === SaleProformaStageEnum.DRAFT
+        ? "sendToWarehouse"
+        : stage === SaleProformaStageEnum.CUSTOMER_APPROVED
+          ? "awaitWarehouse"
+          : readyForPayment
+            ? "pay"
+            : "expired";
+
   const onSubmit = (e) => {
     e.preventDefault();
     if (posLocked) return;
+    if (action === "sendToWarehouse") {
+      approveMutation.mutate({ saleId: sale.id, revision: sale.revision });
+      return;
+    }
+    if (action === "awaitWarehouse") {
+      navigate(routeWithId(ROUTES.WAREHOUSE_SALE_CHECK_DETAIL, sale.id));
+      return;
+    }
+    if (action === "expired") return;
     const problem = saleFormProblem({ ...problemBase, isInvoice, invoiceErrors });
     if (problem) {
       setShowErrors(true);
@@ -314,16 +338,8 @@ export default function SaleForm({ sale }) {
       createMutation.mutate(payload, { onSuccess: onSaved });
       return;
     }
-    // دریافت روی نسخه‌ی تأییدشده؛ ذخیره‌ی تغییر آن را به پیش‌نویس برمی‌گرداند و سرور دریافت را رد می‌کرد.
-    if (isInvoice && documentChanged) {
-      return reportFormProblem([
-        "پیش‌فاکتور تغییر کرده؛ ذخیره‌اش تأییدها را برمی‌گرداند و دریافت پذیرفته نمی‌شود. نوع سند را «پیش‌فاکتور» کنید و ذخیره کنید، یا تغییرات را برگردانید.",
-        "info",
-      ]);
-    }
-    const sideAttachments = !documentChanged && attachmentsChanged(attachments.filesPayload, sale.attachments)
-      ? attachments.filesPayload
-      : undefined;
+    // `UpdateSale` فقط برای تغییرِ خودِ سند (تأییدها را برمی‌گرداند)؛ پیوستِ تنها راهِ جدای خودش را دارد.
+    const sideAttachments = !documentChanged && attachmentsDirty ? attachments.filesPayload : undefined;
     if (isInstallment && isInvoice) {
       installmentIssueMutation.mutate(
         { attachments: sideAttachments, plan: toApiCreatePlan(planDraft) },
@@ -358,22 +374,22 @@ export default function SaleForm({ sale }) {
     navigate(ROUTES.SALES);
   };
 
-  const canEdit = isNew || allows("SaleUpdate") || (isInvoice && allows("SalePayment"));
-  const submitLabel = isInPerson
-    ? "ثبت و تحویل حضوری"
-    : isNew
-      ? "ثبت پیش‌فاکتور"
-      : isInvoice
-        ? isInstallment
-          ? "صدور فاکتور اقساطی"
-          : "ثبت دریافت و صدور فاکتور"
-        : "ذخیره‌ی پیش‌فاکتور";
-
-  const startPayment = () => {
-    setFormData({ status: SaleStatusEnum.PROCESSING });
-    // کارتِ دریافت بعد از همین رندر ظاهر می‌شود.
-    window.requestAnimationFrame(() => scrollToSection("payment"));
+  const canWarehouseCheck = allows("SaleWarehouseCheck");
+  const ACTIONS = {
+    create: { label: "ثبت پیش‌فاکتور", allowed: true },
+    inPerson: { label: "ثبت و تحویل حضوری", allowed: true },
+    save: { label: "ذخیره‌ی تغییرات", allowed: allows("SaleUpdate") },
+    sendToWarehouse: { label: "مشتری تأیید کرد؛ ارسال به انبار", allowed: allows("SaleUpdate") },
+    awaitWarehouse: canWarehouseCheck
+      ? { label: "بررسی انبار", allowed: true }
+      : { label: "در انتظار بررسی انبار", allowed: true, disabled: true },
+    pay: {
+      label: isInstallment ? "صدور فاکتور اقساطی" : "دریافت و صدور فاکتور",
+      allowed: allows(isInstallment ? "SaleInstallmentManage" : "SalePayment"),
+    },
+    expired: { label: "مهلت رزرو تمام شد", allowed: true, disabled: true },
   };
+  const primary = ACTIONS[action];
 
   return (
     <>
@@ -386,14 +402,6 @@ export default function SaleForm({ sale }) {
                 sale={sale}
                 secondsLeft={secondsLeft}
                 documentChanged={documentChanged}
-                onApprove={
-                  allows("SaleUpdate")
-                    ? () => approveMutation.mutate({ saleId: sale.id, revision: sale.revision })
-                    : undefined
-                }
-                approving={approveMutation.isPending}
-                canCheckWarehouse={allows("SaleWarehouseCheck")}
-                onStartPayment={readyForPayment && !isInvoice && allows("SalePayment") ? startPayment : undefined}
               />
             )}
             <FormSection name="party">
@@ -462,20 +470,6 @@ export default function SaleForm({ sale }) {
             <FormSection name="info">
               <OrderInfoCard
                 kind={isInvoice ? "invoice" : "proforma"}
-                // «فاکتور» یعنی دریافت و صدور؛ فقط در «آماده‌ی پرداخت» (و فروشِ حضوری، که قفل است).
-                onKindChange={
-                  readyForPayment || isInPerson
-                    ? (kind) =>
-                        setFormData({
-                          status: kind === "proforma" ? SaleStatusEnum.PROFORMA : SaleStatusEnum.PROCESSING,
-                        })
-                    : undefined
-                }
-                kindNote={
-                  isInPerson
-                    ? "دانه اسکن شده؛ فروش حضوری است: تأیید، رزرو، دریافت و تحویل همین حالا پشتِ هم انجام می‌شود."
-                    : undefined
-                }
                 formData={formData}
                 onFormChange={setFormData}
                 errors={showErrors ? invoiceErrors ?? {} : {}}
@@ -505,8 +499,9 @@ export default function SaleForm({ sale }) {
               badge={isInPerson && <StatusBadge tone="info">تحویل حضوری</StatusBadge>}
               itemCount={items.length}
               totals={totals}
-              canSubmit={canEdit}
-              submitLabel={submitLabel}
+              canSubmit={primary.allowed}
+              submitLabel={primary.label}
+              submitDisabled={Boolean(primary.disabled)}
               isBusy={isBusy}
               onCancel={leave}
               footer={

@@ -25,7 +25,7 @@
 | installments | `fetchInstallmentPlan`، `fetchInstallmentPlans`، `fetchInstallments`، `createInstallmentPlan`، `updateInstallmentPlan`، `cancelInstallmentPlan`، `payInstallment`، `settleInstallmentPlan` روی `/SaleInstallment/*` | `installmentKeys` (`["saleInstallments"]`) |
 
 هوک‌ها:
-- `src/features/sales/orders/services/mutations.js`: `useCreateSaleMutation`، `useInPersonSaleMutation`، `useApproveSaleProformaMutation`، `useCheckSaleWarehouseMutation`، `useResolveWarehouseIssueMutation`، `useIssueInstallmentSaleMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions`. invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
+- `src/features/sales/orders/services/mutations.js`: `useCreateSaleMutation`، `useInPersonSaleMutation`، `useApproveSaleProformaMutation`، `useWarehouseApproveMutation`، `useResolveWarehouseIssueMutation`، `useIssueInstallmentSaleMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions`. invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
 - `src/features/sales/returns/services/`: هوک‌ها نام‌های مستعارِ factoryهای مشترک‌اند — `createReturnQueries` (`src/shared/services/returns/createReturnQueries.js`) و `createReturnMutations` (`src/shared/services/returns/createReturnMutations.js`) با `invalidate: invalidateSalesEcosystem`.
 - `src/features/sales/installments/services/`: `useInstallmentsQuery`، `useInstallmentPlansQuery`، `useInstallmentCountQuery`، `usePayInstallmentMutation`، `useSettleInstallmentPlanMutation`، … و کمک‌تابعِ `applyInstallmentPlan`.
 
@@ -44,7 +44,7 @@
 4. `onSuccess`: toast، `invalidateSalesEcosystem(queryClient, created.id)`، `customerKeys.all`.
 5. صفحه: `attachments.commit()`، `resetForm()`، `navigate(routeWithId(ROUTES.SALES_DETAIL, id), { replace: true })`.
 
-**چرخه‌ی تأییدِ پیش‌فاکتور (بکند ۲۰۲۶-۱۰-۱۶)** — مرحله‌ها در `proformaStage` (`src/shared/domain/enums/saleProforma.js`): پیش‌نویس → «مشتری تأیید کرد» (`useApproveSaleProformaMutation`، در `ProformaStageCard`) → بررسیِ انبار (`warehouse/saleCheck`) → دریافت. نوعِ «فاکتور» در فرم فقط در «آماده‌ی پرداخت» و پیش از پایانِ مهلتِ رزرو باز است (`useReservationCountdown`). `UpdateSale` فقط وقتی فرستاده می‌شود که خودِ سند عوض شده (`isSaleDocumentChanged` در `saleFormStore.js`)، چون چرخه را به پیش‌نویس برمی‌گرداند.
+**چرخه‌ی تأییدِ پیش‌فاکتور (بکند ۲۰۲۶-۱۰-۱۶)** — مرحله‌ها در `proformaStage` (`src/shared/domain/enums/saleProforma.js`): پیش‌نویس → «مشتری تأیید کرد؛ ارسال به انبار» (`useApproveSaleProformaMutation`) → بررسیِ انبار (`warehouse/saleCheck`؛ تأیید، یا کم‌کردنِ اقلام با دلیل و تأیید: `useWarehouseApproveMutation`) → دریافت یا حذف. صفحه **یک دکمه‌ی اصلی** دارد که کارش از مرحله می‌آید (`action` در `SaleForm.jsx`)؛ `ProformaStageCard` فقط وضعیت، شمارشِ معکوسِ رزرو (`useReservationCountdown`) و تاریخچه را نشان می‌دهد. دریافت فقط در «آماده‌ی پرداخت» و پیش از پایانِ مهلت. `UpdateSale` فقط وقتی فرستاده می‌شود که خودِ سند عوض شده (`isSaleDocumentChanged` در `saleFormStore.js`)، چون چرخه را به پیش‌نویس برمی‌گرداند.
 
 فروشِ حضوری (دانه در فرم اسکن شده): `useInPersonSaleMutation` چهار درخواست را پشتِ هم می‌فرستد — `CreateSale` ← `ApproveSaleProforma` ← `CheckSaleWarehouse` (همان دانه‌ها) ← `CompleteInPersonSale` (اتمیک: پرداخت/قرارداد، ارسال، تحویل). شکستِ بعد از ثبت `partiallySaved` می‌گیرد و صفحه پیش‌فاکتور را باز می‌کند. کارتخوانِ ناقص به‌جای قدمِ آخر `AddSalePayment` می‌زند (`deliver: false`).
 
