@@ -1,5 +1,5 @@
 import { ROUTES } from '@/shared/constants/routes';
-import SettingsHomePage from './pages/SettingsHomePage';
+import SystemSettingsPage from './pages/SystemSettingsPage';
 import GeneralSettingsPage from './pages/GeneralSettingsPage';
 import CompanyProfilePage from './pages/CompanyProfilePage';
 import InvoiceSettingsPage from './pages/InvoiceSettingsPage';
@@ -12,7 +12,9 @@ import BackupSettingsPage from './pages/BackupSettingsPage';
 export const settingsRoutes = [
   {
     path: ROUTES.SETTINGS,
-    element: <SettingsHomePage />,
+    // بخش ۲۲ سند: خواندن با هرکدام از دو دسترسی.
+    handle: { permission: ["SettingView", "SettingManage"] },
+    element: <SystemSettingsPage />,
   },
   {
     path: ROUTES.SETTINGS_GENERAL,

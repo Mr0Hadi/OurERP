@@ -10,6 +10,7 @@ import {
   Percent,
   Receipt,
   Rows3,
+  Settings,
   Scale,
   ShoppingBag,
   Barcode,
@@ -165,6 +166,22 @@ export const navigationData = {
           permission: "PermissionView",
           icon: LayoutTemplate,
           description: "دسترسی‌هایی که معمولاً به کارمندانِ هر واحد داده می‌شود",
+        },
+      ],
+    },
+    {
+      // تنظیماتِ سامانه (`api/Setting`)؛ فیلدها از سرور می‌آیند.
+      title: "تنظیمات",
+      url: ROUTES.SETTINGS,
+      icon: Settings,
+      isActive: false,
+      items: [
+        {
+          title: "تنظیمات سامانه",
+          url: ROUTES.SETTINGS,
+          permission: ["SettingView", "SettingManage"],
+          icon: Settings,
+          description: "مهلت رزرو، اجباری‌بودنِ حساب در پرداخت، دیرکرد و تسویه‌ی اقساط",
         },
       ],
     },
