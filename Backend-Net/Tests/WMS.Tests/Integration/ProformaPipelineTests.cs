@@ -40,7 +40,7 @@ namespace WMS.Tests.Integration
 
             sale = await ProformaFlow.ApproveAsync(mediator, sale);
             Assert.Equal(SaleProformaStageEnum.CUSTOMER_APPROVED, sale.ProformaStage);
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AddSalePaymentCommand { SaleId = sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 }));
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AddSalePaymentCommand { SaleId = sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 }, TestContext.Current.CancellationToken));
 
             sale = await ProformaFlow.CheckAsync(mediator, sale, new() { barcodes[2], barcodes[0] });
             Assert.Equal(SaleProformaStageEnum.WAREHOUSE_CHECKED, sale.ProformaStage);
@@ -50,11 +50,11 @@ namespace WMS.Tests.Integration
             Assert.Equal(1, line.FreeStock);
             Assert.Equal(new[] { SaleProformaEventEnum.CUSTOMER_APPROVED, SaleProformaEventEnum.WAREHOUSE_CHECKED }, sale.ProformaEvents.Select(e => e.Kind));
 
-            sale = Assert.IsType<SaleDto>((await mediator.Send(new AddSalePaymentCommand { SaleId = sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 })).Data);
+            sale = Assert.IsType<SaleDto>((await mediator.Send(new AddSalePaymentCommand { SaleId = sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
             Assert.False(string.IsNullOrEmpty(sale.InvoiceNumber));
 
-            await mediator.Send(new ShipSaleCommand { SaleId = sale.Id, Items = new() { new ShipSaleItemDto { SaleItemId = line.Id, ShippedQuantity = 2 } } });
+            await mediator.Send(new ShipSaleCommand { SaleId = sale.Id, Items = new() { new ShipSaleItemDto { SaleItemId = line.Id, ShippedQuantity = 2 } } }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             var units = verify.ProductUnits.Where(u => barcodes.Contains(u.Barcode)).ToDictionary(u => u.Barcode, u => u.Status);
@@ -73,7 +73,7 @@ namespace WMS.Tests.Integration
             var (mediator, scenario, _) = await SetupAsync(scope, stock: 3);
             var sale = await ProformaFlow.CreateAsync(mediator, scenario, quantity: 1);
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new ApproveSaleProformaCommand { SaleId = sale.Id, Revision = sale.Revision + 1 }));
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new ApproveSaleProformaCommand { SaleId = sale.Id, Revision = sale.Revision + 1 }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -104,7 +104,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(UnitActionReasonEnum.DAMAGED_IN_WAREHOUSE, movement.ActionReason);
             Assert.Equal(DocumentKindEnum.SALE, movement.DocumentKind);
 
-            var list = await mediator.Send(new GetSaleWarehouseIssueListQuery { IsOpen = true });
+            var list = await mediator.Send(new GetSaleWarehouseIssueListQuery { IsOpen = true }, TestContext.Current.CancellationToken);
             var open = (System.Collections.IEnumerable)list.Data!.GetType().GetProperty("SaleWarehouseIssueList")!.GetValue(list.Data)!;
             Assert.Single(open.Cast<SaleWarehouseIssueDto>());
         }
@@ -129,7 +129,7 @@ namespace WMS.Tests.Integration
             using var verify = db.NewContext();
             Assert.Equal(ProductUnitStatusEnum.IN_STOCK, verify.ProductUnits.Single(u => u.Barcode == barcodes[1]).Status);
             Assert.Equal(1, verify.Products.Single(p => p.Id == scenario.Product.Id).Stock);
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AddSalePaymentCommand { SaleId = sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 }));
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AddSalePaymentCommand { SaleId = sale.Id, Type = PaymentTypeEnum.CASH, Amount = 1 }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -147,7 +147,7 @@ namespace WMS.Tests.Integration
                 CustomerId = sale.CustomerId,
                 PaymentType = sale.PaymentType,
                 Items = new() { new UpdateSaleItemDto { Id = line.Id, ProductId = line.ProductId, Quantity = 3, UnitPrice = line.UnitPrice } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(SaleProformaStageEnum.DRAFT, sale.ProformaStage);
             Assert.Equal(1, sale.Revision);
@@ -171,7 +171,7 @@ namespace WMS.Tests.Integration
                 CustomerId = sale.CustomerId,
                 PaymentType = sale.PaymentType,
                 Items = new() { new UpdateSaleItemDto { Id = line.Id, ProductId = line.ProductId, Quantity = line.Quantity, UnitPrice = line.UnitPrice + 500 } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(SaleProformaStageEnum.DRAFT, sale.ProformaStage);
             Assert.Equal(2, sale.Items.Single().ReservedQuantity);
@@ -196,7 +196,7 @@ namespace WMS.Tests.Integration
                 PaymentType = sale.PaymentType,
                 Description = "فقط یادداشت",
                 Items = new() { new UpdateSaleItemDto { Id = line.Id, ProductId = line.ProductId, Quantity = line.Quantity, UnitPrice = line.UnitPrice } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(SaleProformaStageEnum.WAREHOUSE_CHECKED, sale.ProformaStage);
             Assert.Equal(0, sale.Revision);
@@ -227,8 +227,8 @@ namespace WMS.Tests.Integration
             var cancelled = await ProformaFlow.ReadyForPaymentAsync(mediator, scenario, barcodes.Take(1).ToList());
             var deleted = await ProformaFlow.ReadyForPaymentAsync(mediator, scenario, barcodes.Skip(1).ToList());
 
-            await mediator.Send(new ChangeSaleStatusCommand { Id = cancelled.Id, Status = SalesStatusEnum.CANCELLED });
-            await mediator.Send(new DeleteSaleCommand { Id = deleted.Id });
+            await mediator.Send(new ChangeSaleStatusCommand { Id = cancelled.Id, Status = SalesStatusEnum.CANCELLED }, TestContext.Current.CancellationToken);
+            await mediator.Send(new DeleteSaleCommand { Id = deleted.Id }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.All(verify.ProductUnits.Where(u => barcodes.Contains(u.Barcode)), u =>
@@ -254,7 +254,7 @@ namespace WMS.Tests.Integration
                 Id = issueId,
                 Resolution = SaleWarehouseIssueResolutionEnum.SCRAP,
                 Note = "قابل تعمیر نیست",
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(ProductUnitStatusEnum.SCRAPPED, resolved.UnitStatus);
             Assert.NotNull(resolved.ResolvedAt);
@@ -262,7 +262,7 @@ namespace WMS.Tests.Integration
             {
                 Id = issueId,
                 Resolution = SaleWarehouseIssueResolutionEnum.RELEASE,
-            }));
+            }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -274,7 +274,7 @@ namespace WMS.Tests.Integration
             var sale = await ProformaFlow.ApproveAsync(mediator, await ProformaFlow.CreateAsync(mediator, scenario, quantity: 1));
             sale = await ProformaFlow.CheckAsync(mediator, sale, new() { barcodes[1] }, new() { Issue(barcodes[0], UnitActionReasonEnum.MISSING) });
 
-            await mediator.Send(new ResolveSaleWarehouseIssueCommand { Id = sale.WarehouseIssues.Single().Id, Resolution = SaleWarehouseIssueResolutionEnum.RELEASE });
+            await mediator.Send(new ResolveSaleWarehouseIssueCommand { Id = sale.WarehouseIssues.Single().Id, Resolution = SaleWarehouseIssueResolutionEnum.RELEASE }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.Equal(ProductUnitStatusEnum.IN_STOCK, verify.ProductUnits.Single(u => u.Barcode == barcodes[0]).Status);
@@ -294,7 +294,7 @@ namespace WMS.Tests.Integration
             {
                 Id = sale.WarehouseIssues.Single().Id,
                 Resolution = SaleWarehouseIssueResolutionEnum.SUPPLIER_RETURN,
-            }));
+            }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -318,7 +318,7 @@ namespace WMS.Tests.Integration
             var draft = await ProformaFlow.CreateAsync(mediator, scenario, quantity: 1);
             var approved = await ProformaFlow.ApproveAsync(mediator, await ProformaFlow.CreateAsync(mediator, scenario, quantity: 1));
 
-            var res = await mediator.Send(new GetSaleListQuery { ProformaStages = new() { SaleProformaStageEnum.CUSTOMER_APPROVED } });
+            var res = await mediator.Send(new GetSaleListQuery { ProformaStages = new() { SaleProformaStageEnum.CUSTOMER_APPROVED } }, TestContext.Current.CancellationToken);
             var list = ((System.Collections.IEnumerable)res.Data!.GetType().GetProperty("SaleList")!.GetValue(res.Data)!).Cast<SaleListDto>().ToList();
 
             Assert.Equal(approved.Id, Assert.Single(list).Id);

@@ -48,7 +48,7 @@ namespace WMS.Tests.Unit
             // Documents today's state deliberately: the restricted marker exists for a feature
             // that is not built. If this ever fails, it is because that feature arrived - update
             // the expectation, do not delete the concept.
-            Assert.Empty(PermissionExtensions.All.Where(permission => permission.IsRestricted()));
+            Assert.DoesNotContain(PermissionExtensions.All, permission => permission.IsRestricted());
         }
 
         [Fact]

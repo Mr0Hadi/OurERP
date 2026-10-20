@@ -31,7 +31,7 @@ namespace WMS.Tests.Functional
         {
             var client = _factory.CreateClient();
 
-            var response = await client.GetAsync("/api/Product/GetProductList");
+            var response = await client.GetAsync("/api/Product/GetProductList", TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
@@ -47,11 +47,11 @@ namespace WMS.Tests.Functional
 
             // Missing every required field on purpose - model binding should reject this before it
             // ever reaches the handler.
-            var response = await client.PostAsJsonAsync("/api/Product/CreateProduct", new { });
+            var response = await client.PostAsJsonAsync("/api/Product/CreateProduct", new { }, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
-            var body = await response.Content.ReadAsStringAsync();
+            var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
             using var doc = JsonDocument.Parse(body);
             var message = doc.RootElement.TryGetProperty("message", out var m) ? m : doc.RootElement.GetProperty("Message");
             // InvalidModelStateResponseFactory appends the offending field names after the
@@ -76,7 +76,7 @@ namespace WMS.Tests.Functional
             SeedAdminUser(context, "wrongpass-user");
 
             var client = _factory.CreateClient();
-            var response = await client.PostAsJsonAsync("/api/Account/Login", new { Username = "wrongpass-user", Password = "NotTheRealPassword!1" });
+            var response = await client.PostAsJsonAsync("/api/Account/Login", new { Username = "wrongpass-user", Password = "NotTheRealPassword!1" }, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
@@ -90,7 +90,7 @@ namespace WMS.Tests.Functional
             var client = _factory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-            var response = await client.GetAsync("/api/Product/GetProductList");
+            var response = await client.GetAsync("/api/Product/GetProductList", TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }

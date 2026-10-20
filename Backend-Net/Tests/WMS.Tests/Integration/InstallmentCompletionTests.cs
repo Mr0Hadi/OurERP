@@ -66,7 +66,7 @@ namespace WMS.Tests.Integration
             var dues = plan.Installments.OrderBy(i => i.Number).Select(i => i.DueDate).ToList();
             await SettingAsync(mediator, SystemSettingCatalog.InstallmentOverdueGraceDays, ((DateTime.Today - dues[2]).Days + 1).ToString());
 
-            var marked = (int)(await mediator.Send(new MarkOverdueSaleInstallmentsCommand())).Data!;
+            var marked = (int)(await mediator.Send(new MarkOverdueSaleInstallmentsCommand(), TestContext.Current.CancellationToken)).Data!;
 
             Assert.Equal(2, marked);
             using var verify = db.NewContext();
@@ -74,7 +74,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(new[] { SaleInstallmentStatusEnum.OVERDUE, SaleInstallmentStatusEnum.OVERDUE, SaleInstallmentStatusEnum.PENDING,
                 SaleInstallmentStatusEnum.PENDING, SaleInstallmentStatusEnum.PENDING }, statuses);
             // A second run finds nothing new.
-            Assert.Equal(0, (int)(await mediator.Send(new MarkOverdueSaleInstallmentsCommand())).Data!);
+            Assert.Equal(0, (int)(await mediator.Send(new MarkOverdueSaleInstallmentsCommand(), TestContext.Current.CancellationToken)).Data!);
         }
 
         [Fact]
@@ -89,11 +89,11 @@ namespace WMS.Tests.Integration
             Assert.Equal(30, first.DaysLate);
             Assert.Equal(60_000UL, first.PenaltyDue);
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new WaiveSaleInstallmentPenaltyCommand { SaleInstallmentId = first.Id, Amount = 10_000 }));
-            plan = Assert.IsType<SaleInstallmentPlanDto>((await mediator.Send(new WaiveSaleInstallmentPenaltyCommand { SaleInstallmentId = first.Id, Amount = 10_000, Reason = "مشتری قدیمی" })).Data);
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new WaiveSaleInstallmentPenaltyCommand { SaleInstallmentId = first.Id, Amount = 10_000 }, TestContext.Current.CancellationToken));
+            plan = Assert.IsType<SaleInstallmentPlanDto>((await mediator.Send(new WaiveSaleInstallmentPenaltyCommand { SaleInstallmentId = first.Id, Amount = 10_000, Reason = "مشتری قدیمی" }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(50_000UL, plan.Installments.Single(i => i.Id == first.Id).PenaltyDue);
 
-            plan = Assert.IsType<SaleInstallmentPlanDto>((await mediator.Send(new PaySaleInstallmentCommand { SaleInstallmentId = first.Id, PaymentType = PaymentTypeEnum.CASH })).Data);
+            plan = Assert.IsType<SaleInstallmentPlanDto>((await mediator.Send(new PaySaleInstallmentCommand { SaleInstallmentId = first.Id, PaymentType = PaymentTypeEnum.CASH }, TestContext.Current.CancellationToken)).Data);
 
             var paid = plan.Installments.Single(i => i.Id == first.Id);
             Assert.Equal(50_000UL, paid.PenaltyAmount);
@@ -119,7 +119,7 @@ namespace WMS.Tests.Integration
             var (scenario, plan) = await PlanAsync(mediator, scope, DateTime.Today.AddMonths(1));
 
             // Every row is in the future: each carries 2,000,000 x 2,000,000 / 10,000,000 = 400,000 of the charge; half is forgiven.
-            plan = Assert.IsType<SaleInstallmentPlanDto>((await mediator.Send(new SettleSaleInstallmentPlanCommand { PlanId = plan.Id, PaymentType = PaymentTypeEnum.CASH })).Data);
+            plan = Assert.IsType<SaleInstallmentPlanDto>((await mediator.Send(new SettleSaleInstallmentPlanCommand { PlanId = plan.Id, PaymentType = PaymentTypeEnum.CASH }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(SaleInstallmentPlanStatusEnum.SETTLED, plan.Status);
             Assert.Equal(1_000_000UL, plan.EarlySettlementDiscountAmount);
@@ -148,11 +148,11 @@ namespace WMS.Tests.Integration
                 PaymentType = PaymentTypeEnum.CHECK,
                 CheckNumber = "123456",
                 CheckDueDate = DateTime.Today.AddDays(10),
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(2_000_000UL, plan.EarlySettlementDiscountAmount);
             var chequeId = plan.Installments.First().PaymentDetailId!.Value;
 
-            await mediator.Send(new BounceCheckCommand { PaymentDetailId = chequeId, Note = "کسری موجودی" });
+            await mediator.Send(new BounceCheckCommand { PaymentDetailId = chequeId, Note = "کسری موجودی" }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             var reloaded = verify.SaleInstallmentPlans.Include(x => x.Installments).Single(x => x.Id == plan.Id);
@@ -177,7 +177,7 @@ namespace WMS.Tests.Integration
             var refund = new SaleReturnEffect { Direction = ReturnEffectDirectionEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.ON_ACCOUNT, Amount = 3_000_000 };
 
             await SaleReturnMoney.RecordAsync(scope.Context, sale, "R-1", claimId: 77, refund, reversal: false, DateTime.Now, CancellationToken.None);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             using (var verify = db.NewContext())
             {
@@ -191,7 +191,7 @@ namespace WMS.Tests.Integration
             }
 
             await SaleReturnMoney.RecordAsync(scope.Context, sale, "R-1", claimId: 77, refund, reversal: true, DateTime.Now, CancellationToken.None);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             using var after = db.NewContext();
             var restored = after.SaleInstallmentPlans.Include(x => x.Installments).Single(x => x.Id == plan.Id);
@@ -213,7 +213,7 @@ namespace WMS.Tests.Integration
             await SaleReturnMoney.RecordAsync(scope.Context, sale, "R-2", claimId: 78,
                 new SaleReturnEffect { Direction = ReturnEffectDirectionEnum.MONEY_OUT, Method = ReturnPaymentMethodEnum.CASH, Amount = 3_000_000 },
                 reversal: false, DateTime.Now, CancellationToken.None);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
             Assert.Equal(0UL, verify.SaleInstallmentPlans.Single(x => x.Id == plan.Id).ReturnCreditAmount);
