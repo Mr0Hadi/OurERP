@@ -206,7 +206,7 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
 
       {isListOpen && (
         <div className="overflow-hidden rounded-lg border border-border">
-          <ul id={listId} role="listbox" className="custom-scroll max-h-72 divide-y divide-border overflow-y-auto bg-card">
+          <ul id={listId} role="listbox" className="custom-scroll max-h-[55vh] divide-y sm:max-h-72 divide-border overflow-y-auto bg-card">
             {shown.length === 0 && (
               <li className="py-6 text-center text-sm text-muted-foreground">
                 {isSearching ? "در حال جست‌وجو…" : "کالایی یافت نشد"}
@@ -228,7 +228,7 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
                   onPointerDown={() => onPrefetch?.(product)}
                   onClick={() => add(product)}
                   className={cn(
-                    "flex cursor-pointer items-center gap-2.5 px-3 py-2 transition-colors",
+                    "flex min-h-14 cursor-pointer items-center gap-2.5 px-3 py-2.5 transition-colors active:bg-accent sm:py-2",
                     index === activeIndex && "bg-accent",
                   )}
                 >
@@ -236,26 +236,29 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
                     imageKey={product.imageKey}
                     imageUrl={product.imageUrl ?? product.image}
                     alt=""
-                    className="size-10 shrink-0 rounded-md border border-border object-cover"
+                    className="size-12 shrink-0 rounded-md border border-border object-cover sm:size-10"
                     fallback={
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border bg-muted">
+                      <div className="flex size-12 shrink-0 items-center sm:size-10 justify-center rounded-md border border-border bg-muted">
                         <span className="text-[10px] text-muted-foreground">تصویر</span>
                       </div>
                     }
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{product.name}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">
-                      {[product.code, product.brand].filter(Boolean).join(" · ")}
-                      {" · "}
-                      <span className={toneText(stockTone(product))}>
+                    <p className="line-clamp-2 text-sm font-medium leading-snug sm:truncate">{product.name}</p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground">
+                      {[product.code, product.brand].filter(Boolean).length > 0 && (
+                        <span className="max-w-full truncate">
+                          {[product.code, product.brand].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                      <span className={cn("whitespace-nowrap", toneText(stockTone(product)))}>
                         موجودی {formatNumber(product.stock)} {unitLabelOf(product.unit)}
                       </span>
                     </p>
                   </div>
                   <span
                     className={cn(
-                      "flex h-7 min-w-9 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium",
+                      "flex h-9 min-w-10 shrink-0 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium sm:h-7 sm:min-w-9",
                       added > 0 ? "bg-primary/10 text-primary" : "bg-primary text-primary-foreground",
                     )}
                     aria-label={added > 0 ? `یکی دیگر (اکنون ${formatNumber(added)})` : "افزودن"}
