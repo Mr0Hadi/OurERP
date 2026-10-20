@@ -108,5 +108,21 @@ namespace Application.Common.Contracts.ProductUnit
         /// mints the difference if the new stock is higher, scraps the newest units (by serial) if lower.
         /// </summary>
         Task ReconcileStockAsync(Domain.Entities.Product product, int newStock, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        // ---- Warehouses and stocktake (GAP-08, GAP-01) ----
+
+        /// <summary>IN_STOCK units of the product in <paramref name="fromWarehouseId"/> (scanned, or FIFO) put on a transfer: IN_TRANSIT.</summary>
+        Task<List<Domain.Entities.ProductUnit>> DispatchToTransferAsync(Domain.Entities.Product product, int count, int fromWarehouseId, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>IN_TRANSIT (a transfer arriving or called back) or IN_STOCK (relocated by a stocktake) units onto <paramref name="warehouseId"/>'s shelf.</summary>
+        Task PlaceInStockAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, int warehouseId, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>IN_STOCK units a stocktake did not find: SCRAPPED (the movement reason says why).</summary>
+        Task MarkMissingAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>A counted shortage on unlabelled stock: the newest <paramref name="count"/> IN_STOCK units in the warehouse, marked missing.</summary>
+        Task<List<Domain.Entities.ProductUnit>> TakeFromStockAsync(Domain.Entities.Product product, int count, int warehouseId, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        Task<int> DefaultWarehouseIdAsync(CancellationToken cancellationToken);
     }
 }

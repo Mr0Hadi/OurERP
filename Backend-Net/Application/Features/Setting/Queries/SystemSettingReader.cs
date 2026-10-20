@@ -1,3 +1,4 @@
+using Domain.Enums;
 using Application.Common.Contracts.Context;
 using Application.Common.Settings;
 using Application.Features.Setting.Dtos;
@@ -48,6 +49,8 @@ namespace Application.Features.Setting.Queries
                             MinValue = definition.MinValue,
                             MaxValue = definition.MaxValue,
                             Unit = definition.Unit,
+                            MaxLength = definition.Type == SystemSettingTypeEnum.TEXT ? definition.MaxLength : null,
+                            IsPublic = definition.IsPublic,
                             UpdatedAt = row?.UpdatedAt,
                             UpdatedByUserId = row?.UpdatedByUserId,
                             UpdatedByName = row?.UpdatedByName,

@@ -36,6 +36,9 @@ namespace Application.Features.Product.Queries
 
             var data = await _productRepository.GetByIdAsync(request.Id, cancellationToken) ?? throw new NotFoundCustomException("محصول مورد نظر یافت نشد.");
             var dto = _mapper.Map<ProductDto>(data);
+            // GetByIdAsync loads no navigations; the supplier name is read separately.
+            if (data.PreferredSupplierId.HasValue)
+                dto.PreferredSupplierName = await _context.Suppliers.Where(x => x.Id == data.PreferredSupplierId).Select(x => x.CompanyName).FirstOrDefaultAsync(cancellationToken);
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
             dto.QuarantinedCount = await _context.ProductUnits.CountAsync(u => u.ProductId == data.Id && u.Status == ProductUnitStatusEnum.QUARANTINED, cancellationToken);
             dto.ReservedCount = await _context.ProductUnits.CountAsync(u => u.ProductId == data.Id && u.Status == ProductUnitStatusEnum.RESERVED, cancellationToken);

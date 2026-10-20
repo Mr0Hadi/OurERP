@@ -327,6 +327,51 @@ namespace Domain.Enums
         [Description("تکمیل دفتر بهای موجودی")]
         EnsureInventoryCostLedger = 804,
 
+        [Description("ایجاد انبار")]
+        CreateWarehouse = 805,
+
+        [Description("ویرایش انبار")]
+        UpdateWarehouse = 806,
+
+        [Description("حذف انبار")]
+        DeleteWarehouse = 807,
+
+        [Description("ثبت حواله‌ی بین انبار")]
+        CreateStockTransfer = 808,
+
+        [Description("تحویل حواله‌ی بین انبار")]
+        ReceiveStockTransfer = 809,
+
+        [Description("لغو حواله‌ی بین انبار")]
+        CancelStockTransfer = 810,
+
+        [Description("ایجاد انبارگردانی")]
+        CreateStocktake = 811,
+
+        [Description("ثبت شمارش دستی انبارگردانی")]
+        CountStocktakeLine = 812,
+
+        [Description("اسکن انبارگردانی")]
+        ScanStocktakeUnits = 813,
+
+        [Description("حذف اسکن انبارگردانی")]
+        RemoveStocktakeScan = 814,
+
+        [Description("پایان شمارش انبارگردانی")]
+        SubmitStocktake = 815,
+
+        [Description("بازگشایی شمارش انبارگردانی")]
+        ReopenStocktake = 816,
+
+        [Description("تأیید انبارگردانی")]
+        ApproveStocktake = 817,
+
+        [Description("لغو انبارگردانی")]
+        CancelStocktake = 818,
+
+        [Description("ساخت پیش‌فاکتور خرید از پیشنهاد خرید")]
+        CreatePurchaseDraftsFromReorder = 819,
+
         // --- کارت‌خوان ---
         [Description("پرداخت با کارت‌خوان")]
         ChargePos = 900,

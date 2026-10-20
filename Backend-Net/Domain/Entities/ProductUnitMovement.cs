@@ -10,6 +10,9 @@ namespace Domain.Entities
     /// </summary>
     public class ProductUnitMovement
     {
+        /// <summary>The warehouse the unit was in after this movement (null on rows written before 2026-10-19).</summary>
+        public int? WarehouseId { get; set; }
+
         public int Id { get; set; }
 
         public int ProductUnitId { get; set; }

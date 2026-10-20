@@ -53,5 +53,9 @@ namespace Application.Features.Product.Dtos
 
         /// <summary>The shelf, while the unit is here (IN_STOCK or QUARANTINED); null when unknown or gone.</summary>
         public string? BinLocation { get; set; }
+
+        /// <summary>The warehouse the unit is in (or last was). Always set - the default warehouse while multi-warehouse is off.</summary>
+        public int WarehouseId { get; set; }
+        public string? WarehouseName { get; set; }
     }
 }

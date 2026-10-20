@@ -1,3 +1,4 @@
+using Application.Common.Warehouses;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -27,6 +28,12 @@ namespace Application.Features.Sale.Commands
         public int SaleId { get; set; }
         public DateTime? ShippedDate { get; set; }
         public string? ShippingNote { get; set; }
+
+        /// <summary>
+        /// GAP-08: the warehouse the goods leave from (unreserved units are picked there; reserved units are the ones reserved). Used only while the Warehouse.MultiWarehouseEnabled setting is on; ignored while
+        /// off (default warehouse / any warehouse) - see WarehouseScope.
+        /// </summary>
+        public int? WarehouseId { get; set; }
         public string? DriverFullName { get; set; }
         public string? DriverPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
@@ -120,6 +127,7 @@ namespace Application.Features.Sale.Commands
 
             var now = DateTime.Now;
             var shippedAt = request.ShippedDate ?? now;
+            var warehouseId = await WarehouseScope.ResolveAsync(_context, request.WarehouseId, cancellationToken);
 
             foreach (var reqItem in request.Items)
             {
@@ -128,7 +136,7 @@ namespace Application.Features.Sale.Commands
                 if (reqItem.ShippedQuantity > 0)
                 {
                     saleItem.ShippedQuantity += reqItem.ShippedQuantity;
-                    var shipMovement = new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote);
+                    var shipMovement = new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote, WarehouseId: warehouseId);
                     if (reservedByLine[saleItem.Id] > 0)
                     {
                         await _productUnitService.ConsumeReservedAsync(saleItem.Product, reqItem.ShippedQuantity, saleItem.Id, reqItem.ProductUnitBarcodes, shipMovement, cancellationToken);
@@ -145,7 +153,7 @@ namespace Application.Features.Sale.Commands
                 {
                     saleItem.Product.Stock -= reqItem.ExcessQuantity;
                     await _productUnitService.ConsumeAsync(saleItem.Product, reqItem.ExcessQuantity, saleItem.Id, UnitCustodyReasonEnum.EXCESS, reqItem.ExcessProductUnitBarcodes,
-                        new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED_EXCESS, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote),
+                        new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_SHIPPED_EXCESS, shippedAt, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId, Note: request.ShippingNote, WarehouseId: warehouseId),
                         cancellationToken);
                     await _inventoryCostingService.RecordSaleShippedExcessAsync(saleItem.Product, reqItem.ExcessQuantity, saleItem.Id, now, cancellationToken);
                 }

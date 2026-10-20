@@ -1,3 +1,4 @@
+using Application.Common.Settings;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Documents;
 using Application.Common.Dtos;
@@ -31,17 +32,16 @@ namespace Application.Features.Invoice.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IPdfDocumentService _pdfDocumentService;
-        private readonly IConfiguration _configuration;
 
-        public GetPurchaseReturnPdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
+        public GetPurchaseReturnPdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService)
         {
             _context = context;
             _pdfDocumentService = pdfDocumentService;
-            _configuration = configuration;
         }
 
         public async Task<FileResponseDto> Handle(GetPurchaseReturnPdfQuery request, CancellationToken cancellationToken)
         {
+            var company = await SystemSettingValues.CompanyAsync(_context, cancellationToken);
             var purchaseReturn = await _context.PurchaseReturns
                 .AsNoTracking()
                 .WhereNotDeleted()
@@ -86,8 +86,8 @@ namespace Application.Features.Invoice.Queries
                 DocumentNumber = purchaseReturn.ReturnNumber,
                 DocumentDate = purchaseReturn.ReturnDate,
                 StatusText = purchaseReturn.Status.GetDescription(),
-                Description = BuildSummary(purchase.InvoiceNumber, effects, purchaseReturn.Claims.SelectMany(c => c.Resolutions).Any(r => r.IsWriteOff), _configuration),
-                Company = _configuration.GetSection("Company").Get<CompanyInfo>() ?? new CompanyInfo(),
+                Description = BuildSummary(purchase.InvoiceNumber, effects, purchaseReturn.Claims.SelectMany(c => c.Resolutions).Any(r => r.IsWriteOff), company.Currency),
+                Company = company,
                 CounterpartyLabel = "تامین‌کننده",
                 Counterparty = new PartyInfo
                 {
@@ -121,9 +121,8 @@ namespace Application.Features.Invoice.Queries
         }
 
         /// <summary>One sentence per effect kind that occurs, "done of total" for goods and "received / expected" for money.</summary>
-        private static string BuildSummary(string invoiceNumber, List<Domain.Entities.PurchaseReturnEffect> effects, bool hasWriteOff, IConfiguration configuration)
+        private static string BuildSummary(string invoiceNumber, List<Domain.Entities.PurchaseReturnEffect> effects, bool hasWriteOff, string currency)
         {
-            var currency = configuration.GetSection("Company").Get<CompanyInfo>()?.Currency ?? "ریال";
             var parts = new List<string> { $"مرجوعی فاکتور خرید شماره {invoiceNumber}" };
 
             void Goods(ReturnEffectDirectionEnum direction, string label)

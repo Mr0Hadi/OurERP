@@ -300,6 +300,36 @@ namespace Domain.Enums
         [Description("مدیریت دانه‌ها: قرنطینه، آزادسازی و اسقاط")]
         ProductUnitManage = 172,
 
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("مدیریت انبارها")]
+        WarehouseManage = 173,
+
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("مشاهده حواله‌های بین انبار")]
+        StockTransferView = 174,
+
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("ثبت، تحویل و لغو حواله‌ی بین انبار")]
+        StockTransferManage = 175,
+
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("مشاهده انبارگردانی")]
+        StocktakeView = 176,
+
+        /// <summary>Creating a session, scanning and typing counts, submitting.</summary>
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("انجام انبارگردانی (شمارش)")]
+        StocktakeCount = 177,
+
+        /// <summary>Approving the differences - writes stock and losses - and cancelling.</summary>
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("تأیید انبارگردانی و اعمال اختلاف")]
+        StocktakeApprove = 178,
+
+        [PermissionGroup(PermissionGroupEnum.Warehouse)]
+        [Description("مشاهده پیشنهاد خرید (نقطه‌ی سفارش)")]
+        ReorderSuggestionView = 179,
+
         // --- اسناد و چاپ ---
         [PermissionGroup(PermissionGroupEnum.Documents)]
         [Description("بارگذاری فایل و تصویر")]

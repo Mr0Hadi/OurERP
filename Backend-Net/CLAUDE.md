@@ -142,6 +142,9 @@ Backend-Net/
 │   │   ├── Setting/     # Commands/, Queries/, Dtos/ (system settings, 2026-10-17; catalogue in Common/Settings)
 │   │   ├── Treasury/    # Commands/, Queries/, Dtos/ (cash boxes, bank accounts, transfers, statements - 2026-10-17)
 │   │   ├── Cheque/      # Commands/ (Cash/Bounce/EndorseCheck), Queries/ (GetCheckList) - route api/Check, 2026-10-19
+│   │   ├── Warehousing/ # Commands/, Queries/, Dtos/ (warehouses + stock transfers, route api/Warehouse - 2026-10-20)
+│   │   ├── Stocktaking/ # Commands/, Queries/, Dtos/, StocktakeVariance (route api/Stocktake - 2026-10-20)
+│   │   ├── Reorder/     # Queries/ (suggestions), Commands/ (purchase drafts) - route api/Reorder, 2026-10-20
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -2204,6 +2207,43 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
   `SaleInstallmentTests.SettlePlan_...` now asserts the early-settlement discount. **Verified:** suite 1004/1007 - the 3 documented
   environmental failures; the migration chain applies from scratch to a throwaway database (dropped).
 
+**Stocktake (GAP-01), reorder point (GAP-04), multi-warehouse (GAP-08) and the settings page (2026-10-20).** API:
+`docs/api-guide.fa.md` sections 22 (rewritten), 25, 26, 27 and the 2026-10-20 table in section 16; frontend page spec:
+`docs/settings-dashboard.fa.md`. The standing rule this work introduced is section 6b.
+
+- **Settings page.** `SystemSettingDefinition` gained `MaxLength` and `IsPublic`; `GetSystemSettings` sends both. New groups
+  `WAREHOUSE = 4`, `COMPANY = 5`, `SECURITY = 6`. `GET api/Setting/GetFeatureFlags` (no permission, in the coverage test's
+  AuthenticatedOnly list) returns the public settings typed, key -> value. **Moved out of `appsettings.json`:** the `Company` section
+  (now `Company.*`, read by the three PDF queries through `SystemSettingValues.CompanyAsync`; their `IConfiguration` parameter is gone)
+  and the two lockout numbers (`Security.MaxFailedLoginAttempts`/`LockoutMinutes`, read by `LoginUserCommand` through
+  `ISystemSettingService`, its last constructor parameter). `LoginSecurity:RateLimitPerMinutePerIp` stays in appsettings (wired at startup).
+- **Warehouses.** `Warehouse` (unique `Code`, exactly one `IsDefault` via a filtered unique index, seeded `Id = 1` `MAIN`).
+  **`ProductUnit.WarehouseId` is always set** (column default 1) - the on-model; `ProductUnitMovement.WarehouseId` snapshots it.
+  `Product.Stock` stays global; per-warehouse stock is counted from units. Switch `Warehouse.MultiWarehouseEnabled` (default off,
+  public). `Application/Common/Warehouses/WarehouseScope.ResolveAsync` is the one rule: off or nothing requested -> null, so arrivals mint
+  into the default warehouse (`ProductUnitService.DefaultWarehouseIdAsync`) and departures pick from any warehouse. `warehouseId` is an
+  optional field on `ReceivePurchase`, `ShipSale` and both `ExecuteGoodsRound`s, passed through `UnitMovementContext.WarehouseId`.
+- **Stock transfers** (`StockTransfer` + `StockTransferUnit`, `ST-{year}-{seq}`): create needs the switch on; receive and cancel always
+  work (nothing gets stuck). Units go `IN_TRANSIT = 11` (out of Stock, still in inventory value - `GetInventoryValuation.InTransitQuantity`);
+  **no cost-ledger row**. Delete warehouse is refused for the default one and while it holds units, transfers or an open stocktake.
+- **Stocktake** (`Stocktake`, `StocktakeLine`, `StocktakeScan`, `StocktakeSnapshotUnit`; `STK-{year}-{seq}`): COUNTING -> SUBMITTED ->
+  APPROVED, plus reopen and cancel. Creation snapshots the shelf; sales go on meanwhile. **`StocktakeVariance` is the one definition of
+  the differences**, used by the detail reader and by approval. Scan mode: missing = snapshot units not scanned and still IN_STOCK here
+  (-> SCRAPPED + `MANUAL_ADJUSTMENT_OUT`); relocated = scanned units IN_STOCK elsewhere (warehouse changes only); unexpected = reported only.
+  Manual mode: difference vs the snapshot; shortage takes the newest units, surplus mints at purchase price. `Stocktake.BlindCount`
+  (default on) hides system quantities and differences from everyone while COUNTING. Overlapping open stocktakes in one warehouse are refused.
+  Movement reasons 17-21.
+- **Reorder.** `Product.TargetStock`/`LeadTimeDays`/`PreferredSupplierId` (Restrict)/`MinOrderQuantity`; `LowStockThreshold` is the
+  reorder point. `GetReorderSuggestionList` (not paged): stock + on order (PROFORMA drafts included, short-closed excluded) <= reorder point;
+  quantity = max(target - position, MOQ) rounded up to MOQ; supplier = preferred, else latest purchase. `CreatePurchaseDraftsFromReorder`
+  sends one `CreatePurchaseCommand` (PROFORMA) per supplier inside one transaction.
+- Permissions 173-179 (group Warehouse), audit actions 805-819.
+- Migration `20261019201102_warehouses-stocktake-reorder-settings`: tables, columns, default warehouse inserted before the FK, and
+  seed rows for `Company.Name/Address/Province/City` (the values that were in appsettings) where not already present. **Generated, not
+  applied**; the whole chain applies from scratch to a throwaway database (dropped).
+- Tests: `Integration/WarehouseStocktakeReorderTests.cs` (9), two `ListSortingTests` cases. `ProformaFlow` registers
+  `scope.PurchaseRepository`. **Verified:** suite 1013/1016 - the 3 documented environmental failures.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
@@ -2241,6 +2281,30 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
 - **Seed data available**: `scripts/seed-mock-data.sql` loads the frontend's mock fixtures (products, customers, suppliers, purchases, sales, and a coherent set of both kinds of return) into a migrated DB. It refuses to run against non-empty tables unless `@ResetExisting = 1`. Validated end-to-end against a throwaway migrated database.
 - **`SalesStatusEnum.RETURNED` is now reachable** (unlike its still-dead `PurchaseStatusEnum.RETURNED` counterpart) — `RecomputeSaleStatus` sets it once every shipped unit of a sale is settled through return decisions.
 
+## 6b. System settings and feature toggles - the standing rule
+
+Agreed with the user 2026-10-19; applies to every setting and every feature switch added from now on.
+
+- **Business configuration lives on the in-app settings page, never in `appsettings.json`.** Anything the company decides for itself
+  (feature on/off, durations, percentages, company letterhead, login lockout policy) is a `SystemSettingCatalog` entry, stored in
+  `SystemSettings`, edited through `api/Setting` by a user holding `SettingManage` - a real page in the website, like the product list.
+  `appsettings.json` keeps only what a programmer or the host owns: connection strings, keys and secrets, hosts and URLs, CORS, request
+  and upload limits, rate limits wired at startup, background-job technical knobs. When moving a value, remove it from
+  `appsettings.json` and seed its current value in the migration.
+- **A switch never deletes or rewrites data.** Turning a feature off only stops *new* work from entering its flows (the UI hides them,
+  the API ignores the feature's inputs or refuses to start the feature's own operations). Everything already stored stays exactly
+  as it is and stays readable.
+- **The data model is always the "on" model.** Records are written so the "on" flows can read them whatever the switch was at the
+  time: e.g. every unit always has a `WarehouseId` (the default warehouse while multi-warehouse is off), so turning it on later needs
+  no conversion. The migration that introduces a feature backfills these defaults.
+- **Off-mode inputs are valid "on" data, and "on" data stays usable when off.** New flows must accept data from all three periods
+  (before the feature, while it was on, while it was off) together. While off, operations that would otherwise depend on the feature
+  fall back to a neutral behaviour (pick from any warehouse, mint into the default one) instead of failing on old "on" data.
+- **Nothing gets stuck.** Work the feature started while on (an in-transit stock transfer) can still be finished or cancelled after
+  it is switched off.
+- **Toggles are public.** A feature switch is `IsPublic = true` in the catalogue, so every signed-in user can read it through
+  `GET api/Setting/GetFeatureFlags` and the frontend can hide menus; the settings page itself needs `SettingView`/`SettingManage`.
+
 ## 7. Conventions to avoid
 
 - **Don't add `tbl`-prefixed entities** — that is the smshub2 reference style; this project uses plain `Customer`, `Product`, etc.
@@ -2250,6 +2314,7 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
 - **Don't add a global `IsActive` query filter** — soft delete is an explicit `IsActive = false` write; filtering is done per-query.
 - **Don't add repository interfaces beyond the thin per-entity ones.** Tests go in the existing `Tests/WMS.Tests` project, not a second one.
 - **Don't rename the intentional typos** (`Paggination.cs`, `PurchaceStatusEnum`) without asking — they are part of the codebase's existing naming.
+- **Don't put business configuration in `appsettings.json`, and don't let a feature switch delete, rewrite or strand data** - see 6b.
 - **Don't add a synchronous database call.** No `SaveChanges()`, no `ToList()`/`FirstOrDefault()`/`Count()`/`Any()` on an EF `IQueryable` — use the `...Async(cancellationToken)` counterpart. And never block on a `Task` (`.Result`, `.Wait()`, `.GetAwaiter().GetResult()`); it burns a request thread and can deadlock.
 - **Don't drop the `CancellationToken`.** A handler's token must reach the EF call. Calling `GetByIdAsync(request.Id)` and letting the parameter default is a bug, not a shortcut.
 - **Don't fake-async CPU work** — no `Task.Run` around in-memory math, and no `async` on a method with no `await`. See the async-design rule in §3.
