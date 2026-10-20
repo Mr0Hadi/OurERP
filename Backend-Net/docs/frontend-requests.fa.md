@@ -1949,6 +1949,9 @@ git مانده، لو رفته حساب کنید.
 - یک رویدادِ تازه (مثلاً `WAREHOUSE_ADJUSTED`) با `note`، تعدادهای قبل و بعد، و نامِ انباردار.
 - پیش‌فاکتورِ دارای قرارداد اقساط: همان قاعده‌ی `UpdateSale` (۴۰۰ اگر جمع عوض شود).
 
+**۲۴.۲ — `updatedAt` در `SaleDto`.** نمونه‌ی `GetSaleDetail` در `api-guide.fa.md` `updatedAt` دارد ولی `SaleDto` ندارد. فرانت نسخه‌ی سند را
+(برای پرکردنِ دوباره‌ی فرم پس از تغییرِ سرور) از ترکیبِ `revision`، مرحله و اقلام می‌سازد؛ با `updatedAt` ساده‌تر و مطمئن‌تر می‌شد.
+
 **تا آن وقت:** زنجیره‌ی بالا در `useWarehouseApproveMutation` (`Frontend/src/features/sales/orders/services/mutations.js`)؛ انبارداری
 که `SaleUpdate` ندارد فقط می‌تواند همان را تأیید کند.
 
@@ -1980,4 +1983,4 @@ git مانده، لو رفته حساب کنید.
 - [ ] ۲۱ — حسابداری: مانده‌ی اولیه‌ی دستی در مانده‌ها (۲۱.۱)، خروجیِ مالیات و تفکیک (۲۱.۲)، ریزِ اقلامِ خرید (۲۱.۳)، فهرستِ سبکِ کاربران (۲۱.۴)
 - [ ] ۲۲ — دریافت/پرداختِ مستقل از فاکتور (۲۲.۱)، حسابِ بانک/صندوق (۲۲.۲)، چرخه‌ی چک (۲۲.۳)
 - [ ] ۲۳ — خواندنِ مرجوعی برای انبار با `PurchaseReturnExecute`/`SaleReturnExecute` (پنج endpoint)
-- [ ] ۲۴ — تغییرِ اقلام در `CheckSaleWarehouse` (`adjustments` + `note`، اتمیک، با `SaleWarehouseCheck`)
+- [ ] ۲۴ — تغییرِ اقلام در `CheckSaleWarehouse` (`adjustments` + `note`، اتمیک، با `SaleWarehouseCheck`)؛ `updatedAt` در `SaleDto` (۲۴.۲)
