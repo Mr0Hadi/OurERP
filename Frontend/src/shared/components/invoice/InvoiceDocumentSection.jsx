@@ -55,6 +55,9 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  *   که *سرور* می‌سازد و کنارِ ضمیمه‌ها چاپ/دانلود می‌شود. خرید آن را
  *   ندارد: سندش فقط همان چیزی است که کاربر ضمیمه کرده.
  * @param documentId   شناسه‌ی همان سندِ ذخیره‌شده.
+ * @param localPrints  برگه‌هایی که از داده‌ی همین صفحه ساخته و چاپ می‌شوند، نه سند — مثلِ «لیست
+ *   قیمت‌ها»ی فروش برای مشتری پیش از ثبت: `[{ key, label, hint?, onPrint, disabled? }]`. کنارِ سندها
+ *   می‌آیند تا همه‌ی چاپ‌های یک سفارش یک‌جا باشد؛ عنوانشان نباید «فاکتور» باشد (بالا را ببینید).
  */
 export default function InvoiceDocumentSection({
   title,
@@ -67,6 +70,7 @@ export default function InvoiceDocumentSection({
   emptyHint,
   // نامِ فایلِ سندی که سرور می‌سازد؛ پیش‌فرض شماره‌ی سند.
   serverDocumentName,
+  localPrints = [],
 }) {
   const [isBusy, setIsBusy] = useState(false);
   const [excluded, setExcluded] = useState(() => new Set());
@@ -206,6 +210,34 @@ export default function InvoiceDocumentSection({
           <p className="text-xs text-muted-foreground">
             {emptyHint ?? "با افزودنِ فایل، چاپ و دانلود فعال می‌شود."}
           </p>
+        )}
+
+        {localPrints.length > 0 && (
+          <div className="space-y-1 border-t border-border pt-3">
+            {localPrints.map((item) => (
+              <div
+                key={item.key}
+                className="flex min-h-9 items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm"
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">{item.label}</p>
+                  {item.hint && <p className="text-[11px] leading-4 text-muted-foreground">{item.hint}</p>}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
+                  onClick={item.onPrint}
+                  disabled={item.disabled}
+                >
+                  <Printer className="h-4 w-4" />
+                  چاپ
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -12,14 +12,14 @@ import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
- * چاپِ پیش‌نویسِ پیش‌فاکتور برای مشتری، **بدونِ ذخیره** — همان لحظه که اقلام وارد شده‌اند. نامِ
+ * چاپِ «لیست قیمت‌ها» برای مشتری از اقلامِ فرم، **بدونِ ذخیره** — همان لحظه که اقلام وارد شده‌اند. نامِ
  * مشتری اختیاری است و فقط روی برگه می‌آید (سرور فروشِ بی‌مشتری را ثبت نمی‌کند؛ اگر مشتری تأیید کرد،
  * فرم کامل و ثبت می‌شود). چاپ از مسیرِ مشترکِ `usePrint`: پورتالِ زیرِ `body` و پنهان‌شدنِ بقیه‌ی برنامه.
  *
  * @param items     اقلامِ فرم (`productName`، `productCode`، `quantity`، `unitPrice`، `discount`، نرخِ مالیات)
  * @param customerName پیش‌فرضِ نامِ مشتری (اگر در فرم انتخاب شده)
  */
-export default function ProformaDraftPrint({ items, customerName = "", onClose }) {
+export default function PriceListPrint({ items, customerName = "", onClose }) {
   const print = usePrint();
   const [name, setName] = useState(customerName);
   const totals = invoiceTotals(items);
@@ -49,7 +49,7 @@ export default function ProformaDraftPrint({ items, customerName = "", onClose }
         <div className="mx-auto max-w-[210mm] space-y-5 bg-white p-8 text-sm text-black shadow">
           <header className="flex items-start justify-between gap-4 border-b border-black/20 pb-4">
             <div>
-              <h1 className="text-lg font-bold">پیش‌فاکتور (پیش‌نویس)</h1>
+              <h1 className="text-lg font-bold">لیست قیمت‌ها</h1>
               <p className="mt-1 text-xs text-black/60">
                 قیمت‌ها و موجودی تا تأییدِ نهایی و بررسیِ انبار قطعی نیست.
               </p>

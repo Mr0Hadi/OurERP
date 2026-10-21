@@ -62,7 +62,7 @@ export const useMarkSaleDeliveredMutation = (id) => {
 /**
  * ثبتِ پیش‌فاکتورِ تازه پس از تأییدِ مشتری، و (با `send`) فرستادنش به انبار در همان قدم:
  * `CreateSale` ← `ApproveSaleProforma` (نسخه‌ی ۰). پیش‌نویسِ پیش از تأیید چاپی است و ذخیره نمی‌شود
- * (`ProformaDraftPrint`). اگر قدمِ دوم شکست بخورد، پیش‌فاکتور ذخیره مانده (`partiallySaved`، `saleId`)
+ * («لیست قیمت‌ها»، `PriceListPrint`). اگر قدمِ دوم شکست بخورد، پیش‌فاکتور ذخیره مانده (`partiallySaved`، `saleId`)
  * و صفحه‌اش باز می‌شود تا «ارسال به انبار» از همان‌جا زده شود.
  *
  * `{ payload, send }` — `send`: کاربر `SaleUpdate` دارد (تأییدِ مشتری با همان دسترسی است).
