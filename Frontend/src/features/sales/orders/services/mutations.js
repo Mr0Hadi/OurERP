@@ -59,20 +59,43 @@ export const useMarkSaleDeliveredMutation = (id) => {
   });
 };
 
+/**
+ * ثبتِ پیش‌فاکتورِ تازه پس از تأییدِ مشتری، و (با `send`) فرستادنش به انبار در همان قدم:
+ * `CreateSale` ← `ApproveSaleProforma` (نسخه‌ی ۰). پیش‌نویسِ پیش از تأیید چاپی است و ذخیره نمی‌شود
+ * (`ProformaDraftPrint`). اگر قدمِ دوم شکست بخورد، پیش‌فاکتور ذخیره مانده (`partiallySaved`، `saleId`)
+ * و صفحه‌اش باز می‌شود تا «ارسال به انبار» از همان‌جا زده شود.
+ *
+ * `{ payload, send }` — `send`: کاربر `SaleUpdate` دارد (تأییدِ مشتری با همان دسترسی است).
+ * @returns `{ id }`
+ */
 export const useCreateSaleMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    // retry بدون کلید یعنی فاکتورِ تکراری و پرداختِ دوبار ثبت‌شده.
-    mutationFn: (payload) =>
-      createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) }),
-    onSuccess: (created) => {
-      toast.success("پیش‌فاکتور فروش ثبت شد");
-      invalidateSalesEcosystem(queryClient, created?.id ?? null);
+    mutationFn: async ({ payload, send }) => {
+      // retry بدون کلید یعنی پیش‌فاکتورِ تکراری.
+      const created = await createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) });
+      if (!send) return { id: created.id, sent: false };
+      try {
+        await approveSaleProforma(created.id, 0);
+      } catch (error) {
+        error.partiallySaved = true;
+        error.saleId = created.id;
+        throw error;
+      }
+      return { id: created.id, sent: true };
+    },
+    onSuccess: (result) => {
+      toast.success(result.sent ? "پیش‌فاکتور ثبت شد و به انبار رفت" : "پیش‌فاکتور فروش ثبت شد");
+      invalidateSalesEcosystem(queryClient, result.id);
       queryClient.invalidateQueries({ queryKey: customerKeys.all });
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'ثبت فروش انجام نشد'));
+      if (error?.partiallySaved) invalidateSalesEcosystem(queryClient, error.saleId);
+      const reason = getErrorMessage(error, "ثبت فروش انجام نشد");
+      toast.error(
+        error?.partiallySaved ? `${reason} — پیش‌فاکتور ذخیره شد ولی به انبار نرفت؛ از صفحه‌اش دوباره بفرستید.` : reason,
+      );
     },
   });
 };

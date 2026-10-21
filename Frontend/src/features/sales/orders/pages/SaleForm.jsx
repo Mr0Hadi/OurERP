@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
+import { Printer, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -26,6 +26,7 @@ import { salePriceOf } from "@/features/sales/orders/domain/salePricing";
 import { useSaleFormPos } from "../hooks/useSaleFormPos";
 import { useReservationCountdown } from "../hooks/useReservationCountdown";
 import ProformaStageCard from "../components/proforma/ProformaStageCard";
+import ProformaDraftPrint from "../components/proforma/ProformaDraftPrint";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import DocumentFormLayout, {
@@ -79,6 +80,8 @@ const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها ص
  * چیدمان همان نمای فاکتورِ صادرشده است: مشتری ← اقلام ← دریافت‌ها در ستونِ اصلی؛
  * جمع و دکمه‌ی اصلی ← اطلاعاتِ فاکتور ← سند و پیوست در ستونِ کناری.
  *
+ *  - پیش از تأییدِ مشتری چیزی ذخیره نمی‌شود: اقلام وارد و پیش‌نویس چاپ می‌شود (`ProformaDraftPrint`،
+ *    بی‌مشتری). پس از تأیید، فرم کامل و با یک دکمه ثبت و به انبار فرستاده می‌شود.
  *  - چرخه‌ی تأیید (بخش ۱۱ سند): پیش‌نویس ← مشتری تأیید کرد (به انبار) ← انبار تأیید کرد (رزرو) ←
  *    دریافت (فاکتور) یا حذف. **یک دکمه‌ی اصلی** که کارش را `proformaAction` می‌گوید؛
  *    `ProformaStageCard` فقط وضعیت را نشان می‌دهد.
@@ -100,6 +103,7 @@ export default function SaleForm({ sale }) {
   const { allows } = usePermission();
   const [showErrors, setShowErrors] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [printingDraft, setPrintingDraft] = useState(false);
 
   const store = useSaleFormStore();
   const { formData, setFormData, setItems, setPaymentDraft, resetForm } = store;
@@ -373,7 +377,13 @@ export default function SaleForm({ sale }) {
       return;
     }
     if (action === ProformaAction.CREATE) {
-      createMutation.mutate(buildPayload(), { onSuccess: (created) => openSaved(created?.id) });
+      createMutation.mutate(
+        { payload: buildPayload(), send: allows("SaleUpdate") },
+        {
+          onSuccess: (created) => openSaved(created.id),
+          onError: (error) => error?.partiallySaved && openSaved(error.saleId),
+        },
+      );
       return;
     }
     if (isPay) submitPayment();
@@ -387,7 +397,10 @@ export default function SaleForm({ sale }) {
   };
 
   const ACTION_BUTTONS = {
-    [ProformaAction.CREATE]: { label: "ثبت پیش‌فاکتور", allowed: true },
+    [ProformaAction.CREATE]: {
+      label: allows("SaleUpdate") ? "مشتری تأیید کرد؛ ثبت و ارسال به انبار" : "ثبت پیش‌فاکتور",
+      allowed: true,
+    },
     [ProformaAction.IN_PERSON]: { label: "ثبت و تحویل حضوری", allowed: true },
     [ProformaAction.SAVE]: { label: "ذخیره‌ی تغییرات", allowed: allows("SaleUpdate") },
     [ProformaAction.SEND_TO_WAREHOUSE]: { label: "مشتری تأیید کرد؛ ارسال به انبار", allowed: allows("SaleUpdate") },
@@ -518,25 +531,47 @@ export default function SaleForm({ sale }) {
               isBusy={isBusy}
               onCancel={leave}
               footer={
-                !isNew &&
-                allows("SaleDelete") && (
+                isNew ? (
+                  // پیش از تأییدِ مشتری چیزی ذخیره نمی‌شود: پیش‌نویس فقط چاپ و به مشتری داده می‌شود.
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setConfirmDelete(true)}
-                    disabled={isBusy}
+                    className="w-full gap-1.5"
+                    onClick={() => setPrintingDraft(true)}
+                    disabled={items.length === 0}
                   >
-                    <Trash2 className="size-3.5" />
-                    حذف پیش‌فاکتور
+                    <Printer className="size-3.5" />
+                    چاپ پیش‌نویس برای مشتری
                   </Button>
+                ) : (
+                  allows("SaleDelete") && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => setConfirmDelete(true)}
+                      disabled={isBusy}
+                    >
+                      <Trash2 className="size-3.5" />
+                      حذف پیش‌فاکتور
+                    </Button>
+                  )
                 )
               }
             />
           </>
         }
       />
+
+      {printingDraft && (
+        <ProformaDraftPrint
+          items={items}
+          customerName={formData.customerName}
+          onClose={() => setPrintingDraft(false)}
+        />
+      )}
 
       {!isNew && (
         <ConfirmDialog

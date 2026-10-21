@@ -39,8 +39,8 @@
 
 **ثبتِ فروشِ تازه**
 1. `SaleNewPage` → `SaleForm` با `useSaleFormStore` و `useDocumentFormDraft` ([08](../08-client-state-zustand.md)).
-2. `onSubmit` در `SaleForm.jsx`: `saleFormProblem(...)` را چک می‌کند، بدنه را با `buildPayload` می‌سازد، `createMutation.mutate(payload)`. فروشِ تازه همیشه پیش‌فاکتورِ «پیش‌نویس» است و پول نمی‌گیرد.
-3. `useCreateSaleMutation`: `createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) })` → `POST /Sale/CreateSale`.
+2. پیش از تأییدِ مشتری چیزی ذخیره نمی‌شود: «چاپ پیش‌نویس برای مشتری» (`components/proforma/ProformaDraftPrint.jsx`، بی‌مشتری، با `usePrint`). پس از تأیید، `onSubmit` در `SaleForm.jsx` `saleFormProblem(...)` را چک می‌کند و `useCreateSaleMutation` با `{ payload, send }` پیش‌فاکتور را ثبت و (با `SaleUpdate`) همان‌جا به انبار می‌فرستد (`ApproveSaleProforma`). پول نمی‌گیرد.
+3. `useCreateSaleMutation`: `createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) })` → `POST /Sale/CreateSale`، بعد `approveSaleProforma(id, 0)`؛ شکستِ قدمِ دوم `partiallySaved`.
 4. `onSuccess`: toast، `invalidateSalesEcosystem(queryClient, created.id)`، `customerKeys.all`.
 5. صفحه: `attachments.commit()`، `resetForm()`، `navigate(routeWithId(ROUTES.SALES_DETAIL, id), { replace: true })`.
 
