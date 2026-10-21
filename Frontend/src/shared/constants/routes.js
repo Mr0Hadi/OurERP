@@ -51,6 +51,10 @@ export const ROUTES = {
   // فروش
   SALES: "/sales",
   SALES_NEW: "/sales/new",
+  // فروشِ حضوری در پیشخوان (اسکن، دریافت، تحویل).
+  SALES_COUNTER: "/sales/counter",
+  // صفِ صندوق: پیش‌فاکتورهای «آماده‌ی پرداخت».
+  SALES_CASHIER: "/sales/cashier",
   SALES_DETAIL: "/sales/:id",
   SALES_INSTALLMENTS: "/sales/installments",
   SALES_RETURNS_NEW: "/sales/returns/new",

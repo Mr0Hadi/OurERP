@@ -526,7 +526,7 @@ SC.forEach((s,i)=>{const b=el("button","btn",s.n);b.type="button";b.style.textAl
 /* permissions */
 const ROUTES_P=[
  ["/customers","CustomerView","مشتریان"],["/customers/new","CustomerCreate","مشتری جدید"],
- ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/sales/installments","SaleInstallmentView","اقساط"],
+ ["/sales/new","SaleCreate","فروشِ جدید"],["/sales/counter","SaleInPerson","فروشِ پیشخوان"],["/sales/cashier","SalePayment","صندوق"],["/sales/installments","SaleInstallmentView","اقساط"],
  ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
  ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],["/warehouse/sale-check","SaleWarehouseCheck","بررسیِ انبارِ پیش‌فاکتور"],["/accounting/warehouse-issues",["AccountingView","SaleWarehouseIssueResolve"],"گزارش‌های انبار"],["/settings",["SettingView","SettingManage"],"تنظیماتِ سامانه"],
  ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]

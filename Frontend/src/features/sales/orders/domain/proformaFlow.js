@@ -1,5 +1,4 @@
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
 import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 
 /**
@@ -8,7 +7,6 @@ import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
  *
  *  - `create`: فروشِ تازه پس از تأییدِ مشتری — ثبت و ارسال به انبار در یک قدم (پیش‌نویسِ پیش از
  *    تأیید فقط چاپ می‌شود، «لیست قیمت‌ها»، `PriceListPrint`)
- *  - `inPerson`: فروشِ تازه‌ی حضوری (دانه اسکن شده؛ کلِ چرخه پشتِ هم)
  *  - `save`: خودِ پیش‌فاکتور عوض شده (تغییرِ مشتری/اقلام/قیمت/شیوه‌ی پرداخت/سررسید تأییدها را برمی‌گرداند)
  *  - `sendToWarehouse`: پیش‌نویسِ دست‌نخورده؛ مشتری تأیید کرد
  *  - `awaitWarehouse`: در صفِ انبار
@@ -17,7 +15,6 @@ import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
  */
 export const ProformaAction = Object.freeze({
   CREATE: "create",
-  IN_PERSON: "inPerson",
   SAVE: "save",
   SEND_TO_WAREHOUSE: "sendToWarehouse",
   AWAIT_WAREHOUSE: "awaitWarehouse",
@@ -30,8 +27,8 @@ export const ProformaAction = Object.freeze({
  *   در «آماده‌ی پرداخت» فقط `core` مانعِ دریافت است: سررسید بعد از صدور، و توضیح/پیوست (بی‌اثر بر
  *   چرخه) همراهِ دریافت ذخیره می‌شوند.
  */
-export function proformaAction({ isNew, isInPerson, stage, secondsLeft, changes }) {
-  if (isNew) return isInPerson ? ProformaAction.IN_PERSON : ProformaAction.CREATE;
+export function proformaAction({ isNew, stage, secondsLeft, changes }) {
+  if (isNew) return ProformaAction.CREATE;
   const checked = stage === SaleProformaStageEnum.WAREHOUSE_CHECKED;
   if (checked && secondsLeft !== 0) {
     return changes.core ? ProformaAction.SAVE : ProformaAction.PAY;
@@ -45,14 +42,11 @@ export function proformaAction({ isNew, isInPerson, stage, secondsLeft, changes 
 /**
  * `paymentType`ِ بدنه‌ی `CreateSale`/`UpdateSale`. روی پیش‌فاکتورِ ذخیره‌شده سرور تغییرِ آن را تغییرِ
  * شرایط می‌داند و تأییدها را برمی‌گرداند، پس از دریافت‌ها ساخته نمی‌شود: اقساطی یا همان مقدارِ
- * ذخیره‌شده. فروشِ تازه‌ی حضوری (که همین حالا پرداخت می‌شود) از ردیف‌های دریافتش، و پیش‌فاکتورِ تازه
- * «نسیه». نوعِ واقعیِ هر پرداخت روی ردیفِ خودش است.
- *
- * @param inPersonRows ردیف‌های دریافتِ فروشِ تازه‌ی حضوری (برای بقیه خالی)
+ * ذخیره‌شده؛ پیش‌فاکتورِ تازه «نسیه». نوعِ واقعیِ هر پرداخت روی ردیفِ خودش است. (فروشِ پیشخوان که
+ * همین حالا پرداخت می‌شود نوعش را از دریافت‌هایش می‌گیرد — `CounterSalePage`.)
  */
-export function proformaPaymentType(isInstallment, sale, inPersonRows) {
+export function proformaPaymentType(isInstallment, sale) {
   if (isInstallment) return PaymentTypeEnum.INSTALLMENT;
-  if (!sale && inPersonRows) return paymentTypeOf(inPersonRows);
   const stored = sale?.paymentType;
   return stored == null || stored === PaymentTypeEnum.INSTALLMENT ? PaymentTypeEnum.CREDIT : stored;
 }

@@ -48,3 +48,22 @@ export function useSaleWarehouseIssuesQuery(filters, pagination, sorting) {
     placeholderData: keepPreviousData,
   });
 }
+
+/**
+ * صفِ پیش‌فاکتورهای یک مرحله (`GetSaleList` با `proformaStages`) — صفِ انبار (`CUSTOMER_APPROVED`) و
+ * صفِ صندوق (`WAREHOUSE_CHECKED`). کلیدِ کش زیرِ فهرست‌های فروش است تا هر نوشتنِ فروش باطلش کند.
+ */
+export function useProformaQueueQuery(stage, filters, pagination, sorting) {
+  const params = listQuery({
+    filters: { ...filters, proformaStages: stage },
+    pagination,
+    sorting,
+    sortColumns: SALE_SORT_COLUMNS,
+  });
+  return useQuery({
+    queryKey: saleKeys.list(params),
+    queryFn: () => fetchSales(params),
+    placeholderData: keepPreviousData,
+    refetchOnMount: "always",
+  });
+}

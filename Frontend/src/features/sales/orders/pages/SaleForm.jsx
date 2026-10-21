@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Trash2 } from "lucide-react";
+import { PencilLine, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -13,13 +13,12 @@ import {
 import {
   useApproveSaleProformaMutation,
   useCreateSaleMutation,
-  useInPersonSaleMutation,
   useIssueInstallmentSaleMutation,
   useRemoveSaleMutation,
   useSaleChangesSaver,
 } from "@/features/sales/orders/services/mutations";
 import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
-import { saleFormProblem, scannedBarcodesOf } from "@/features/sales/orders/domain/saleRules";
+import { saleFormProblem } from "@/features/sales/orders/domain/saleRules";
 import { ProformaAction, proformaAction, proformaPaymentType } from "@/features/sales/orders/domain/proformaFlow";
 import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
 import { salePriceOf } from "@/features/sales/orders/domain/salePricing";
@@ -34,10 +33,10 @@ import DocumentFormLayout, {
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
 import OrderInfoCard from "@/shared/components/forms/OrderInfoCard";
+import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import PaymentsCard from "@/shared/components/payments/PaymentsCard";
 import InvoiceDocumentSection from "@/shared/components/invoice/InvoiceDocumentSection";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
-import StatusBadge from "@/shared/components/status/StatusBadge";
 import { usePaymentDraft } from "@/shared/hooks/usePaymentDraft";
 import { useDocumentAttachments } from "@/shared/components/invoice/useInvoiceAttachments";
 import { useReturnedNewProduct } from "@/shared/components/products/useReturnedNewProduct";
@@ -89,8 +88,10 @@ const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها ص
  *    پس هنگامِ دریافت فقط تغییرهای بی‌اثر (توضیح، پیوست) پیش از آن و سررسیدِ تازه بعد از صدور
  *    ذخیره می‌شوند، و `paymentType` همیشه همان مقدارِ ذخیره‌شده است (`proformaPaymentType`).
  *  - تاریخِ فاکتور را سرور هنگامِ صدور می‌گذارد؛ فرم آن را نمی‌پرسد.
- *  - اسکنِ دانه در اقلام یعنی «فروشِ حضوری»: یک نفر همه‌ی چرخه را پشتِ هم انجام می‌دهد
- *    (`useInPersonSaleMutation`)؛ همه‌ی دانه‌ها اسکن و کلِ مبلغ دریافت می‌شود.
+ *  - فروشِ حضوری صفحه‌ی خودش را دارد (`sales/counter`)؛ این فرم دانه اسکن نمی‌کند — دانه‌ها را انبار
+ *    در بررسیِ پیش‌فاکتور اسکن می‌کند.
+ *  - پس از ارسال به انبار، مشتری و اقلام فقط‌خواندنی‌اند تا «ویرایش پیش‌فاکتور» زده شود (هر تغییرِ
+ *    آن‌ها تأییدها را برمی‌گرداند).
  *  - کارتخوان: `useSaleFormPos`.
  *  - اقساطی: به‌جای دریافت‌ها قرارداد اقساط (`InstallmentPlanDraftCard`)؛ فاکتور با
  *    پیش‌پرداختِ قرارداد صادر می‌شود.
@@ -104,6 +105,8 @@ export default function SaleForm({ sale }) {
   const [showErrors, setShowErrors] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [printingPriceList, setPrintingPriceList] = useState(false);
+  // پس از ارسال به انبار، مشتری و اقلام قفل‌اند تا کاربر آگاهانه «ویرایش» بزند.
+  const [unlocked, setUnlocked] = useState(false);
 
   const store = useSaleFormStore();
   const { formData, setFormData, setItems, setPaymentDraft, resetForm } = store;
@@ -120,7 +123,6 @@ export default function SaleForm({ sale }) {
 
   const createMutation = useCreateSaleMutation();
   const installmentIssueMutation = useIssueInstallmentSaleMutation(sale?.id);
-  const inPersonMutation = useInPersonSaleMutation();
   const approveMutation = useApproveSaleProformaMutation();
 
   const coreChanged = useSaleFormStore(isSaleCoreChanged);
@@ -150,8 +152,6 @@ export default function SaleForm({ sale }) {
   const items = formData.items || [];
   // پیش‌نمایش با قاعده‌ی سرور؛ جمع فرستاده نمی‌شود.
   const totals = invoiceTotals(items);
-  const scannedBarcodes = scannedBarcodesOf(items);
-  const isInPerson = isNew && Object.keys(scannedBarcodes).length > 0;
   const { productMap } = useDocumentProducts(items.map((item) => item.productId));
   const paid = payments.netPaid;
 
@@ -192,8 +192,6 @@ export default function SaleForm({ sale }) {
   const problemBase = {
     formData,
     items,
-    isInPerson,
-    scannedBarcodes,
     paid,
     total: totals.totalAmount,
     planErrors: existingPlan
@@ -207,12 +205,12 @@ export default function SaleForm({ sale }) {
   const attachmentsDirty = !isNew && attachmentsChanged(attachments.filesPayload, sale.attachments);
   const action = proformaAction({
     isNew,
-    isInPerson,
     stage,
     secondsLeft,
     changes: { core: coreChanged, dueDate: dueDateChanged, info: infoChanged, attachments: attachmentsDirty },
   });
   const isPay = action === ProformaAction.PAY;
+  const lockedAfterApproval = !isNew && stage !== SaleProformaStageEnum.DRAFT && !unlocked && !coreChanged;
 
   /** فرم → بدنه‌ی `CreateSale`/`UpdateSale` (بی ردیف‌های پرداخت). */
   const buildPayload = () => ({
@@ -222,7 +220,7 @@ export default function SaleForm({ sale }) {
     paymentDate: formData.paymentDate || null,
     description: formData.description || "",
     items,
-    paymentType: proformaPaymentType(isInstallment, sale, isInPerson ? payments.rows : undefined),
+    paymentType: proformaPaymentType(isInstallment, sale),
     attachments: attachments.filesPayload,
   });
 
@@ -245,7 +243,6 @@ export default function SaleForm({ sale }) {
     // پولِ فروشِ اقساطی فقط از قرارداد می‌آید؛ کارتخوان روی دریافت‌های عادی است.
     enabled: allows("PosCharge") && !isInstallment,
     sale,
-    isInPerson,
     blockedReason: dueDateChanged
       ? "سررسیدِ تازه را با دکمه‌ی اصلی (همراهِ دریافت) ثبت کنید، یا آن را برگردانید."
       : payments.hasChanges
@@ -271,7 +268,6 @@ export default function SaleForm({ sale }) {
       return {
         payload: buildPayload(),
         draftRows: payments.rows,
-        scannedBarcodes,
         total: totals.totalAmount,
         infoChanges: isNew ? undefined : infoChanges(),
       };
@@ -285,13 +281,12 @@ export default function SaleForm({ sale }) {
   });
 
   // کارتِ دریافت/قرارداد: فقط وقتی پول گرفته می‌شود. وسطِ کارتخوان نباید از صفحه برود.
-  const isInvoice = posLocked || isInPerson || isPay;
+  const isInvoice = posLocked || isPay;
 
   const isBusy =
     createMutation.isPending ||
     approveMutation.isPending ||
     installmentIssueMutation.isPending ||
-    inPersonMutation.isPending ||
     saver.isPending ||
     deleteMutation.isPending ||
     attachments.isUploading ||
@@ -361,21 +356,6 @@ export default function SaleForm({ sale }) {
     }
     if (attachments.isUploading) return toast.error(UPLOADING_MESSAGE);
 
-    if (action === ProformaAction.IN_PERSON) {
-      inPersonMutation.mutate(
-        {
-          payload: buildPayload(),
-          scannedBarcodes,
-          paymentRows: isInstallment ? [] : payments.rows,
-          installmentPlan: isInstallment ? toApiCreatePlan(planDraft) : null,
-        },
-        {
-          onSuccess: (created) => openSaved(created?.id),
-          onError: (error) => error?.partiallySaved && openSaved(error.saleId),
-        },
-      );
-      return;
-    }
     if (action === ProformaAction.CREATE) {
       createMutation.mutate(
         { payload: buildPayload(), send: allows("SaleUpdate") },
@@ -401,7 +381,6 @@ export default function SaleForm({ sale }) {
       label: allows("SaleUpdate") ? "مشتری تأیید کرد؛ ثبت و ارسال به انبار" : "ثبت پیش‌فاکتور",
       allowed: true,
     },
-    [ProformaAction.IN_PERSON]: { label: "ثبت و تحویل حضوری", allowed: true },
     [ProformaAction.SAVE]: { label: "ذخیره‌ی تغییرات", allowed: allows("SaleUpdate") },
     [ProformaAction.SEND_TO_WAREHOUSE]: { label: "مشتری تأیید کرد؛ ارسال به انبار", allowed: allows("SaleUpdate") },
     [ProformaAction.AWAIT_WAREHOUSE]: allows("SaleWarehouseCheck")
@@ -428,26 +407,47 @@ export default function SaleForm({ sale }) {
                 documentChanged={coreChanged || (dueDateChanged && !isPay)}
               />
             )}
-            <FormSection name="party">
-              <SaleCustomerSection
-                selectedId={formData.customerId}
-                selectedName={formData.customerName}
-                onSelect={(id, name) => setFormData({ customerId: id, customerName: name })}
-                onClear={() => setFormData({ customerId: "", customerName: "" })}
-                onAddNew={() => openSubPage(ROUTES.CUSTOMERS_NEW)}
-                error={showErrors && !formData.customerId ? "مشتری را انتخاب کنید" : null}
-              />
-            </FormSection>
-            <FormSection name="items">
-              <SaleItemsSection
-                items={items}
-                onItemsChange={setItems}
-                products={[...productMap.values()]}
-                priceMode={formData.priceMode}
-                onPriceModeChange={(priceMode) => setFormData({ priceMode })}
-                onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
-              />
-            </FormSection>
+            {lockedAfterApproval ? (
+              <>
+                <SaleCustomerSection selectedId={formData.customerId} selectedName={formData.customerName} readOnly />
+                <OrderItemsReadOnly
+                  title="اقلام پیش‌فاکتور"
+                  items={sale.items}
+                  totalAmount={sale.totalAmount}
+                  headerAction={
+                    allows("SaleUpdate") && (
+                      <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setUnlocked(true)}>
+                        <PencilLine className="size-3.5" />
+                        ویرایش پیش‌فاکتور
+                      </Button>
+                    )
+                  }
+                />
+              </>
+            ) : (
+              <>
+                <FormSection name="party">
+                  <SaleCustomerSection
+                    selectedId={formData.customerId}
+                    selectedName={formData.customerName}
+                    onSelect={(id, name) => setFormData({ customerId: id, customerName: name })}
+                    onClear={() => setFormData({ customerId: "", customerName: "" })}
+                    onAddNew={() => openSubPage(ROUTES.CUSTOMERS_NEW)}
+                    error={showErrors && !formData.customerId ? "مشتری را انتخاب کنید" : null}
+                  />
+                </FormSection>
+                <FormSection name="items">
+                  <SaleItemsSection
+                    items={items}
+                    onItemsChange={setItems}
+                    products={[...productMap.values()]}
+                    priceMode={formData.priceMode}
+                    onPriceModeChange={(priceMode) => setFormData({ priceMode })}
+                    onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
+                  />
+                </FormSection>
+              </>
+            )}
           </>
         }
         payments={
@@ -479,11 +479,7 @@ export default function SaleForm({ sale }) {
                   allowRefund={false}
                   posPayment={posPayment}
                   emptyText="هنوز دریافتی ثبت نشده است."
-                  notice={
-                    isInPerson
-                      ? "تحویلِ حضوری: کلِ مبلغ باید دریافت شود."
-                      : "فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مانده بدهیِ مشتری است."
-                  }
+                  notice="فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مانده بدهیِ مشتری است."
                 />
               </FormSection>
             )}
@@ -533,7 +529,6 @@ export default function SaleForm({ sale }) {
             />
             <OrderSummaryCard
               title={isInvoice ? "فاکتور فروش" : "پیش‌فاکتور فروش"}
-              badge={isInPerson && <StatusBadge tone="info">تحویل حضوری</StatusBadge>}
               itemCount={items.length}
               totals={totals}
               canSubmit={primary.allowed}
