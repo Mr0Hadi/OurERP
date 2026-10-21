@@ -47,8 +47,8 @@ export function useShippingForm(sale, { isTracked = () => false } = {}) {
 
   const handleItemChange = (saleItemId, value) =>
     patchItem(saleItemId, (item) => {
-      // سقفِ همین دور، همان چیزی است که بکند هم چک می‌کند.
-      const shippedQuantity = clampQuantity(value, item.remainingQuantity);
+      // سقفِ همین دور، همان چیزی است که بکند هم چک می‌کند (ردیفِ رزروشده: دانه‌های رزرو).
+      const shippedQuantity = clampQuantity(value, item.shippableQuantity);
       return {
         shippedQuantity,
         productUnitBarcodes: item.productUnitBarcodes.slice(0, shippedQuantity),
@@ -81,7 +81,8 @@ export function useShippingForm(sale, { isTracked = () => false } = {}) {
   const blockingReason = (() => {
     for (const item of items) {
       const checks = [
-        [item.shippedQuantity, item.productUnitBarcodes, 'ارسالی'],
+        // دانه‌های رزروشده در بررسیِ انبار اسکن شده‌اند؛ سرور خودش همان‌ها را می‌فرستد.
+        ...(item.reservedQuantity > 0 ? [] : [[item.shippedQuantity, item.productUnitBarcodes, 'ارسالی']]),
         [item.excessQuantity, item.excessProductUnitBarcodes, 'مازاد'],
       ];
       for (const [quantity, barcodes, label] of checks) {
@@ -112,9 +113,11 @@ export function useShippingForm(sale, { isTracked = () => false } = {}) {
       .map((item) => ({
         saleItemId: item.saleItemId,
         shippedQuantity: Number(item.shippedQuantity) || 0,
-        productUnitBarcodes: item.productUnitBarcodes.length
-          ? item.productUnitBarcodes
-          : null,
+        // ردیفِ رزروشده: `null` یعنی «همان دانه‌های رزرو» (به ترتیبِ سریال).
+        productUnitBarcodes:
+          item.reservedQuantity === 0 && item.productUnitBarcodes.length
+            ? item.productUnitBarcodes
+            : null,
         excessQuantity: Number(item.excessQuantity) || 0,
         excessProductUnitBarcodes: item.excessProductUnitBarcodes.length
           ? item.excessProductUnitBarcodes

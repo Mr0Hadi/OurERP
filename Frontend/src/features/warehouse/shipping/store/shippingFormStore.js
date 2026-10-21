@@ -59,6 +59,11 @@ export const useShippingFormStore = create((set, get) => ({
         0,
         (item.quantity || 0) - (item.shippedQuantity || 0),
       );
+      // دانه‌هایی که بررسیِ انبارِ پیش‌فاکتور اسکن و رزرو کرده: همان‌ها ارسال می‌شوند، بی اسکنِ
+      // دوباره، و بیش از آن‌ها از این ردیف نمی‌رود (`ShipSale`).
+      const reservedQuantity = Number(item.reservedQuantity) || 0;
+      const shippableQuantity =
+        reservedQuantity > 0 ? Math.min(remainingQuantity, reservedQuantity) : remainingQuantity;
       return {
         // `SaleItem.Id` — فیلدِ `ShipSaleItemDto.SaleItemId`.
         saleItemId: item.id,
@@ -67,8 +72,12 @@ export const useShippingFormStore = create((set, get) => ({
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         remainingQuantity,
+        reservedQuantity,
+        reservedBarcodes: item.reservedBarcodes || [],
+        // سقفِ همین دور: باقی‌مانده، یا برای ردیفِ رزروشده دانه‌های رزرو.
+        shippableQuantity,
         // مقدارِ همین دور — فیلدِ `ShipSaleItemDto.ShippedQuantity`.
-        shippedQuantity: remainingQuantity,
+        shippedQuantity: shippableQuantity,
         // بارکدِ دانه‌های اسکن‌شده؛ خالی یعنی بکند خودش FIFO انتخاب کند
         // (مگر برای کالای ردیابی‌پذیر).
         productUnitBarcodes: [],
