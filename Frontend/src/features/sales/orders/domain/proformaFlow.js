@@ -1,12 +1,14 @@
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
+import { SaleProformaEventEnum, SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 
 /**
  * کارِ دکمه‌ی اصلیِ فرمِ فروش در چرخه‌ی تأییدِ پیش‌فاکتور (بخش ۱۱ سند). صفحه فقط همین یک دکمه را
  * دارد؛ `ProformaStageCard` فقط وضعیت را می‌گوید.
  *
- *  - `create`: فروشِ تازه پس از تأییدِ مشتری — ثبت و ارسال به انبار در یک قدم (پیش‌نویسِ پیش از
- *    تأیید فقط چاپ می‌شود، «لیست قیمت‌ها»، `PriceListPrint`)
+ *  - `create`: فروشِ تازه پس از تأییدِ مشتری — ثبت و ارسال به انبار در یک قدم (پیش از تأیید فقط
+ *    «لیست قیمت‌ها» چاپ می‌شود، `PriceListPrint`)
+ *  - `reserveInPerson`: فروشِ تازه‌ی حضوری (دانه‌ها جلوی مشتری اسکن شده) — ثبت و رزروِ همان دانه‌ها
+ *    بی صفِ انبار؛ پرداخت بعد، همان‌جا یا در صندوق
  *  - `save`: خودِ پیش‌فاکتور عوض شده (تغییرِ مشتری/اقلام/قیمت/شیوه‌ی پرداخت/سررسید تأییدها را برمی‌گرداند)
  *  - `sendToWarehouse`: پیش‌نویسِ دست‌نخورده؛ مشتری تأیید کرد
  *  - `awaitWarehouse`: در صفِ انبار
@@ -15,6 +17,7 @@ import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
  */
 export const ProformaAction = Object.freeze({
   CREATE: "create",
+  RESERVE_IN_PERSON: "reserveInPerson",
   SAVE: "save",
   SEND_TO_WAREHOUSE: "sendToWarehouse",
   AWAIT_WAREHOUSE: "awaitWarehouse",
@@ -27,8 +30,8 @@ export const ProformaAction = Object.freeze({
  *   در «آماده‌ی پرداخت» فقط `core` مانعِ دریافت است: سررسید بعد از صدور، و توضیح/پیوست (بی‌اثر بر
  *   چرخه) همراهِ دریافت ذخیره می‌شوند.
  */
-export function proformaAction({ isNew, stage, secondsLeft, changes }) {
-  if (isNew) return ProformaAction.CREATE;
+export function proformaAction({ isNew, isInPerson, stage, secondsLeft, changes }) {
+  if (isNew) return isInPerson ? ProformaAction.RESERVE_IN_PERSON : ProformaAction.CREATE;
   const checked = stage === SaleProformaStageEnum.WAREHOUSE_CHECKED;
   if (checked && secondsLeft !== 0) {
     return changes.core ? ProformaAction.SAVE : ProformaAction.PAY;
@@ -49,4 +52,22 @@ export function proformaPaymentType(isInstallment, sale) {
   if (isInstallment) return PaymentTypeEnum.INSTALLMENT;
   const stored = sale?.paymentType;
   return stored == null || stored === PaymentTypeEnum.INSTALLMENT ? PaymentTypeEnum.CREDIT : stored;
+}
+
+/**
+ * یادداشتِ بررسیِ انبارِ فروشِ حضوری. دانه‌ها را خودِ فروشنده هنگامِ ثبت اسکن کرده و بررسیِ انبار با
+ * همین یادداشت ثبت می‌شود؛ صفحه‌ها از روی آن می‌فهمند کالا جلوی مشتری است و با پرداختِ کامل همان‌جا
+ * تحویل می‌شود (`CompleteInPersonSale`).
+ *
+ * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴.۵ — پرچمِ «حضوری» روی خودِ فروش به‌جای یادداشت.
+ */
+export const IN_PERSON_CHECK_NOTE = "فروش حضوری: دانه‌ها هنگامِ ثبتِ پیش‌فاکتور جلوی مشتری اسکن شد.";
+
+/** پیش‌فاکتورِ «آماده‌ی پرداخت»ی که دانه‌هایش در فروشِ حضوری اسکن و رزرو شده‌اند. */
+export function isInPersonProforma(sale) {
+  if (Number(sale?.proformaStage) !== SaleProformaStageEnum.WAREHOUSE_CHECKED) return false;
+  const lastCheck = [...(sale.proformaEvents || [])]
+    .reverse()
+    .find((event) => event.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED);
+  return lastCheck?.note === IN_PERSON_CHECK_NOTE;
 }

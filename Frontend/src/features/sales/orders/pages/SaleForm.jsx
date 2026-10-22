@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { PencilLine, Trash2 } from "lucide-react";
+import { PackageOpen, PencilLine, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -12,14 +12,22 @@ import {
 } from "@/features/sales/orders/store/saleFormStore";
 import {
   useApproveSaleProformaMutation,
+  useCompleteInPersonMutation,
   useCreateSaleMutation,
   useIssueInstallmentSaleMutation,
+  useReleaseReservationMutation,
   useRemoveSaleMutation,
   useSaleChangesSaver,
+  useSalePosActions,
 } from "@/features/sales/orders/services/mutations";
 import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
-import { saleFormProblem } from "@/features/sales/orders/domain/saleRules";
-import { ProformaAction, proformaAction, proformaPaymentType } from "@/features/sales/orders/domain/proformaFlow";
+import { saleFormProblem, scannedBarcodesOf } from "@/features/sales/orders/domain/saleRules";
+import {
+  ProformaAction,
+  isInPersonProforma,
+  proformaAction,
+  proformaPaymentType,
+} from "@/features/sales/orders/domain/proformaFlow";
 import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
 import { salePriceOf } from "@/features/sales/orders/domain/salePricing";
 import { useSaleFormPos } from "../hooks/useSaleFormPos";
@@ -88,8 +96,9 @@ const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها ص
  *    پس هنگامِ دریافت فقط تغییرهای بی‌اثر (توضیح، پیوست) پیش از آن و سررسیدِ تازه بعد از صدور
  *    ذخیره می‌شوند، و `paymentType` همیشه همان مقدارِ ذخیره‌شده است (`proformaPaymentType`).
  *  - تاریخِ فاکتور را سرور هنگامِ صدور می‌گذارد؛ فرم آن را نمی‌پرسد.
- *  - فروشِ حضوری صفحه‌ی خودش را دارد (`sales/counter`)؛ این فرم دانه اسکن نمی‌کند — دانه‌ها را انبار
- *    در بررسیِ پیش‌فاکتور اسکن می‌کند.
+ *  - فروشِ حضوری: اگر در فروشِ تازه دانه‌ها جلوی مشتری اسکن شوند، ثبت همان‌ها را بی صفِ انبار رزرو
+ *    می‌کند (تا مهلتِ تنظیمات)؛ پرداخت بعد، همین‌جا یا در صندوق. روی چنین پیش‌فاکتوری دریافتِ کامل
+ *    کالا را همان‌جا تحویل می‌دهد (`useCompleteInPersonMutation`). رزرو را می‌شود دستی آزاد کرد.
  *  - پس از ارسال به انبار، مشتری و اقلام فقط‌خواندنی‌اند تا «ویرایش پیش‌فاکتور» زده شود (هر تغییرِ
  *    آن‌ها تأییدها را برمی‌گرداند).
  *  - کارتخوان: `useSaleFormPos`.
@@ -124,6 +133,10 @@ export default function SaleForm({ sale }) {
   const createMutation = useCreateSaleMutation();
   const installmentIssueMutation = useIssueInstallmentSaleMutation(sale?.id);
   const approveMutation = useApproveSaleProformaMutation();
+  const completeMutation = useCompleteInPersonMutation(sale?.id);
+  const releaseMutation = useReleaseReservationMutation();
+  const posActions = useSalePosActions();
+  const [confirmRelease, setConfirmRelease] = useState(false);
 
   const coreChanged = useSaleFormStore(isSaleCoreChanged);
   const dueDateChanged = useSaleFormStore(isSaleDueDateChanged);
@@ -152,6 +165,11 @@ export default function SaleForm({ sale }) {
   const items = formData.items || [];
   // پیش‌نمایش با قاعده‌ی سرور؛ جمع فرستاده نمی‌شود.
   const totals = invoiceTotals(items);
+  // فروشِ تازه با دانه‌ی اسکن‌شده = فروشِ حضوری (کالا جلوی مشتری است).
+  const scannedBarcodes = isNew ? scannedBarcodesOf(items) : {};
+  const isInPerson = Object.keys(scannedBarcodes).length > 0;
+  // پیش‌فاکتورِ ذخیره‌شده‌ی حضوری: دریافتِ کامل همان‌جا تحویل می‌دهد.
+  const inPersonReady = isInPersonProforma(sale);
   const { productMap } = useDocumentProducts(items.map((item) => item.productId));
   const paid = payments.netPaid;
 
@@ -192,6 +210,8 @@ export default function SaleForm({ sale }) {
   const problemBase = {
     formData,
     items,
+    isInPerson,
+    scannedBarcodes,
     paid,
     total: totals.totalAmount,
     planErrors: existingPlan
@@ -205,6 +225,7 @@ export default function SaleForm({ sale }) {
   const attachmentsDirty = !isNew && attachmentsChanged(attachments.filesPayload, sale.attachments);
   const action = proformaAction({
     isNew,
+    isInPerson,
     stage,
     secondsLeft,
     changes: { core: coreChanged, dueDate: dueDateChanged, info: infoChanged, attachments: attachmentsDirty },
@@ -265,15 +286,8 @@ export default function SaleForm({ sale }) {
         toast.error(UPLOADING_MESSAGE);
         throw new Error(UPLOADING_MESSAGE);
       }
-      return {
-        payload: buildPayload(),
-        draftRows: payments.rows,
-        total: totals.totalAmount,
-        infoChanges: isNew ? undefined : infoChanges(),
-      };
+      return { infoChanges: infoChanges() };
     },
-    onPersisted: attachments.commit,
-    onCreated: (created) => openSaved(created?.id),
     onIssued: () => {
       attachments.commit();
       resetForm();
@@ -282,10 +296,14 @@ export default function SaleForm({ sale }) {
 
   // کارتِ دریافت/قرارداد: فقط وقتی پول گرفته می‌شود. وسطِ کارتخوان نباید از صفحه برود.
   const isInvoice = posLocked || isPay;
+  // حضوری و کلِ مبلغ (یا قرارداد با پیش‌پرداخت) ⇒ تحویلِ همین‌جا؛ کمتر ⇒ فاکتور و ارسالِ انبار.
+  const deliverNow = isPay && inPersonReady && (isInstallment || paid === Number(sale?.totalAmount));
 
   const isBusy =
     createMutation.isPending ||
     approveMutation.isPending ||
+    completeMutation.isPending ||
+    releaseMutation.isPending ||
     installmentIssueMutation.isPending ||
     saver.isPending ||
     deleteMutation.isPending ||
@@ -307,8 +325,23 @@ export default function SaleForm({ sale }) {
   };
 
   /** دریافت (یا قرارداد) روی پیش‌فاکتورِ «آماده‌ی پرداخت» — فاکتور را صادر می‌کند. */
-  const submitPayment = () => {
+  const submitPayment = async () => {
     const { update, attachments: attachmentFiles } = infoChanges();
+    if (deliverNow) {
+      // تحویلِ همان‌جا (اتمیک)؛ تغییرهای بی‌اثر پیش از آن. سررسید برای فروشِ تمام‌پرداخت معنایی ندارد.
+      try {
+        await posActions.saveInfo(sale.id, { update, attachments: attachmentFiles });
+      } catch {
+        return;
+      }
+      completeMutation.mutate(
+        isInstallment
+          ? { installmentPlan: toApiCreatePlan(planDraft) }
+          : { paymentRows: payments.rows.filter((row) => row.pending === "add") },
+        { onSuccess: () => afterSave(null) },
+      );
+      return;
+    }
     // سررسید روی پیش‌فاکتور تأییدها را برمی‌گرداند؛ بعد از صدور روی فاکتور ذخیره می‌شود.
     const paymentDate = dueDateChanged ? formData.paymentDate || null : undefined;
     if (isInstallment) {
@@ -356,9 +389,9 @@ export default function SaleForm({ sale }) {
     }
     if (attachments.isUploading) return toast.error(UPLOADING_MESSAGE);
 
-    if (action === ProformaAction.CREATE) {
+    if (action === ProformaAction.CREATE || action === ProformaAction.RESERVE_IN_PERSON) {
       createMutation.mutate(
-        { payload: buildPayload(), send: allows("SaleUpdate") },
+        { payload: buildPayload(), send: allows("SaleUpdate"), scannedBarcodes },
         {
           onSuccess: (created) => openSaved(created.id),
           onError: (error) => error?.partiallySaved && openSaved(error.saleId),
@@ -381,13 +414,21 @@ export default function SaleForm({ sale }) {
       label: allows("SaleUpdate") ? "مشتری تأیید کرد؛ ثبت و ارسال به انبار" : "ثبت پیش‌فاکتور",
       allowed: true,
     },
+    [ProformaAction.RESERVE_IN_PERSON]: {
+      label: "ثبت و رزرو کالا",
+      allowed: allows("SaleUpdate") && allows("SaleWarehouseCheck"),
+    },
     [ProformaAction.SAVE]: { label: "ذخیره‌ی تغییرات", allowed: allows("SaleUpdate") },
     [ProformaAction.SEND_TO_WAREHOUSE]: { label: "مشتری تأیید کرد؛ ارسال به انبار", allowed: allows("SaleUpdate") },
     [ProformaAction.AWAIT_WAREHOUSE]: allows("SaleWarehouseCheck")
       ? { label: "بررسی انبار", allowed: true }
       : { label: "در انتظار بررسی انبار", allowed: true, disabled: true },
     [ProformaAction.PAY]: {
-      label: isInstallment ? "صدور فاکتور اقساطی" : "دریافت و صدور فاکتور",
+      label: deliverNow
+        ? "دریافت و تحویل"
+        : isInstallment
+          ? "صدور فاکتور اقساطی"
+          : "دریافت و صدور فاکتور",
       allowed: allows(isInstallment ? "SaleInstallmentManage" : "SalePayment"),
     },
     [ProformaAction.EXPIRED]: { label: "مهلت رزرو تمام شد", allowed: true, disabled: true },
@@ -444,6 +485,8 @@ export default function SaleForm({ sale }) {
                     priceMode={formData.priceMode}
                     onPriceModeChange={(priceMode) => setFormData({ priceMode })}
                     onAddNewProduct={() => openSubPage(ROUTES.WAREHOUSE_PRODUCTS_NEW)}
+                    // اسکنِ دانه فقط در فروشِ تازه (حضوری)؛ بقیه را انبار اسکن می‌کند.
+                    trackUnits={isNew}
                   />
                 </FormSection>
               </>
@@ -479,7 +522,11 @@ export default function SaleForm({ sale }) {
                   allowRefund={false}
                   posPayment={posPayment}
                   emptyText="هنوز دریافتی ثبت نشده است."
-                  notice="فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مانده بدهیِ مشتری است."
+                  notice={
+                    inPersonReady
+                      ? "کالا جلوی مشتری است: با دریافتِ کلِ مبلغ همین‌جا تحویل می‌شود؛ با دریافتِ کمتر فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند."
+                      : "فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مانده بدهیِ مشتری است."
+                  }
                 />
               </FormSection>
             )}
@@ -537,19 +584,35 @@ export default function SaleForm({ sale }) {
               isBusy={isBusy}
               onCancel={leave}
               footer={
-                !isNew &&
-                allows("SaleDelete") && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    onClick={() => setConfirmDelete(true)}
-                    disabled={isBusy}
-                  >
-                    <Trash2 className="size-3.5" />
-                    حذف پیش‌فاکتور
-                  </Button>
+                !isNew && (
+                  <>
+                    {stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && allows("SaleUpdate") && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full gap-1.5"
+                        onClick={() => setConfirmRelease(true)}
+                        disabled={isBusy}
+                      >
+                        <PackageOpen className="size-3.5" />
+                        آزاد کردن رزرو
+                      </Button>
+                    )}
+                    {allows("SaleDelete") && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setConfirmDelete(true)}
+                        disabled={isBusy}
+                      >
+                        <Trash2 className="size-3.5" />
+                        حذف پیش‌فاکتور
+                      </Button>
+                    )}
+                  </>
                 )
               }
             />
@@ -562,6 +625,20 @@ export default function SaleForm({ sale }) {
           items={items}
           customerName={formData.customerName}
           onClose={() => setPrintingPriceList(false)}
+        />
+      )}
+
+      {!isNew && (
+        <ConfirmDialog
+          open={confirmRelease}
+          onOpenChange={setConfirmRelease}
+          title="آزاد کردن رزرو"
+          description="دانه‌های رزروشده به موجودیِ قابلِ فروش برمی‌گردند و پیش‌فاکتور با همان اقلام به پیش‌نویس برمی‌گردد. برای فروش دوباره باید رزرو یا بررسیِ انبار شود."
+          confirmLabel="آزاد کن"
+          pendingLabel="در حال آزادسازی..."
+          destructive={false}
+          isPending={releaseMutation.isPending}
+          onConfirm={() => releaseMutation.mutate(sale, { onSuccess: () => setConfirmRelease(false) })}
         />
       )}
 

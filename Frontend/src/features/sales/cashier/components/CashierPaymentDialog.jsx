@@ -4,7 +4,12 @@ import { Link } from "react-router-dom";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { SALE_PAYMENT_SIDE } from "@/features/sales/orders/domain/salePayments";
 import { useReservationCountdown } from "@/features/sales/orders/hooks/useReservationCountdown";
-import { useSaleChangesSaver, useSalePosActions } from "@/features/sales/orders/services/mutations";
+import { isInPersonProforma } from "@/features/sales/orders/domain/proformaFlow";
+import {
+  useCompleteInPersonMutation,
+  useSaleChangesSaver,
+  useSalePosActions,
+} from "@/features/sales/orders/services/mutations";
 import { useSaleQuery } from "@/features/sales/orders/services/queries";
 import Notice from "@/shared/components/feedback/Notice";
 import PaymentsCard from "@/shared/components/payments/PaymentsCard";
@@ -47,6 +52,7 @@ function PaymentBody({ saleId, onClose }) {
   const { data: sale, isLoading } = useSaleQuery(saleId);
   const payments = usePaymentDraft(sale?.paymentDetails || [], SALE_PAYMENT_SIDE.direction);
   const saver = useSaleChangesSaver(saleId);
+  const completeMutation = useCompleteInPersonMutation(saleId);
   const posActions = useSalePosActions();
   const [posLocked, setPosLocked] = useState(false);
   const secondsLeft = useReservationCountdown(sale);
@@ -62,10 +68,17 @@ function PaymentBody({ saleId, onClose }) {
 
   const expired = secondsLeft === 0;
   const isInstallment = sale.paymentType === PaymentTypeEnum.INSTALLMENT;
-  const busy = saver.isPending || posLocked;
+  const busy = saver.isPending || completeMutation.isPending || posLocked;
+  // فروشِ حضوری (کالا جلوی مشتری) با دریافتِ کلِ مبلغ همین‌جا تحویل می‌شود.
+  const deliverNow = isInPersonProforma(sale) && payments.netPaid === Number(sale.totalAmount);
 
   const submit = () =>
-    saver.mutate({ paymentDraft: payments }, { onSuccess: onClose });
+    deliverNow
+      ? completeMutation.mutate(
+          { paymentRows: payments.rows.filter((row) => row.pending === "add") },
+          { onSuccess: onClose },
+        )
+      : saver.mutate({ paymentDraft: payments }, { onSuccess: onClose });
 
   return (
     <>
@@ -110,7 +123,11 @@ function PaymentBody({ saleId, onClose }) {
           canManage={allows("SalePayment")}
           allowRefund={false}
           emptyText="هنوز دریافتی ثبت نشده است."
-          notice="با اولین دریافت فاکتور صادر می‌شود؛ مانده بدهیِ مشتری است."
+          notice={
+            isInPersonProforma(sale)
+              ? "فروشِ حضوری: با دریافتِ کلِ مبلغ کالا همین‌جا تحویل می‌شود؛ با دریافتِ کمتر فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند."
+              : "با اولین دریافت فاکتور صادر می‌شود؛ مانده بدهیِ مشتری است."
+          }
           posPayment={
             allows("PosCharge")
               ? {
@@ -134,7 +151,7 @@ function PaymentBody({ saleId, onClose }) {
         </Button>
         {!expired && !isInstallment && (
           <Button type="button" onClick={submit} disabled={busy || !payments.hasChanges}>
-            {saver.isPending ? "در حال ثبت…" : "ثبت دریافت و صدور فاکتور"}
+            {busy ? "در حال ثبت…" : deliverNow ? "دریافت و تحویل" : "ثبت دریافت و صدور فاکتور"}
           </Button>
         )}
       </DialogFooter>

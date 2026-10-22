@@ -11,7 +11,6 @@ import {
   Receipt,
   PackageSearch,
   Wallet,
-  ScanBarcode,
   PackageX,
   Rows3,
   Settings,
@@ -321,16 +320,9 @@ export const navigationData = {
         {
           title: "ثبت فروش جدید",
           url: ROUTES.SALES_NEW,
-          permission: "SaleCreate",
+          permission: ["SaleCreate", "SaleInPerson"],
           icon: FilePlus,
-          description: "لیست قیمت برای مشتری، و پس از تأییدش پیش‌فاکتور و ارسال به انبار",
-        },
-        {
-          title: "فروش پیشخوان",
-          url: ROUTES.SALES_COUNTER,
-          permission: "SaleInPerson",
-          icon: ScanBarcode,
-          description: "فروشِ حضوری: اسکنِ کالا، دریافت و تحویلِ همان‌جا",
+          description: "لیست قیمت، پیش‌فاکتور، یا فروشِ حضوری با اسکنِ کالا",
         },
         {
           title: "صندوق",

@@ -15,6 +15,7 @@ import { gregorianToPersianDateTime } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { cn } from "@/shared/lib/utils";
 import { formatCountdown } from "../../hooks/useReservationCountdown";
+import { isInPersonProforma } from "../../domain/proformaFlow";
 
 const STEPS = ["پیش‌فاکتور", "تأیید مشتری", "تأیید انبار", "دریافت و صدور"];
 
@@ -33,9 +34,10 @@ export default function ProformaStageCard({ sale, secondsLeft, documentChanged }
   const events = sale.proformaEvents || [];
   const last = events.at(-1);
   const shortage = stage === SaleProformaStageEnum.DRAFT && last?.kind === SaleProformaEventEnum.WAREHOUSE_SHORTAGE;
-  // تغییرِ انبار: آخرین تأییدِ انبار با یادداشت (دلیلِ تغییرِ اقلام).
+  const inPerson = isInPersonProforma(sale);
+  // تغییرِ انبار: آخرین تأییدِ انبار با یادداشت (دلیلِ تغییرِ اقلام) — جز یادداشتِ ثابتِ فروشِ حضوری.
   const warehouseNote =
-    stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && last?.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED
+    !inPerson && stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && last?.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED
       ? last.note
       : null;
   const expired = stage === SaleProformaStageEnum.WAREHOUSE_CHECKED && secondsLeft === 0;
@@ -48,7 +50,9 @@ export default function ProformaStageCard({ sale, secondsLeft, documentChanged }
         ? "در صفِ انبار: انباردار کالا را برمی‌دارد و اسکن می‌کند؛ اگر چیزی کم باشد با دلیل اصلاح و تأیید می‌کند."
         : expired
           ? "مهلتِ رزرو تمام شد و پرداخت پذیرفته نمی‌شود. کالا به‌زودی آزاد و پیش‌فاکتور برای بررسیِ دوباره به انبار برمی‌گردد."
-          : "کالا برای مشتری رزرو شده است. پیش‌فاکتور را به مشتری بدهید: اگر خواست، دریافت را ثبت کنید تا فاکتور صادر شود؛ اگر نخواست، پیش‌فاکتور را حذف کنید.";
+          : inPerson
+            ? "فروشِ حضوری: دانه‌های اسکن‌شده برای مشتری رزرو است. پرداخت همین‌جا یا در صندوق؛ با دریافتِ کلِ مبلغ کالا همان‌جا تحویل می‌شود. اگر مشتری نخواست، رزرو را آزاد یا پیش‌فاکتور را حذف کنید."
+            : "کالا برای مشتری رزرو شده است. پیش‌فاکتور را به مشتری بدهید: اگر خواست، دریافت را ثبت کنید تا فاکتور صادر شود؛ اگر نخواست، پیش‌فاکتور را حذف کنید.";
 
   return (
     <Card className="gap-3">

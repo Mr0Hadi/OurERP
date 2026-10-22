@@ -1,100 +1,52 @@
 import { useRef, useState } from "react";
 
-import { useInPersonSaleMutation, useSalePosActions } from "../services/mutations";
+import { useSalePosActions } from "../services/mutations";
 import { newPosReference } from "@/shared/domain/pos/posSession";
-import { rowsTotal } from "@/shared/domain/payments/paymentSplit";
-import { paymentTypeOf } from "@/shared/domain/payments/paymentRows";
 
 /**
- * «دریافت با کارتخوان» در فرمِ فروش — پیکربندیِ `posPayment`ِ `PaymentsCard`.
+ * «دریافت با کارتخوان» روی پیش‌فاکتورِ «آماده‌ی پرداخت» — پیکربندیِ `posPayment`ِ `PaymentsCard`.
+ * فروشِ تازه پول نمی‌گیرد (اول ثبت می‌شود)، پس کارتخوان فقط روی پیش‌فاکتورِ ذخیره‌شده است.
  *
- * دریافت فقط دو جا ممکن است (چرخه‌ی تأیید، ۲۰۲۶-۱۰-۱۶):
- *  - فروشِ حضوریِ تازه: خودِ تأیید «ثبت» است؛ کلِ چرخه (`useInPersonSaleMutation`) با
- *    دریافت‌های فرم به‌اضافه‌ی تکه‌ی کارتخوان اجرا می‌شود. کلِ مبلغ ⇒ تحویلِ همان‌جا؛ کمتر ⇒
- *    فاکتور با همان دریافت‌ها صادر و کالا رزرو برای ارسالِ انبار (پولِ کشیده‌شده گم نمی‌شود).
- *  - پیش‌فاکتورِ «آماده‌ی پرداخت»: پیش از کارت‌کشیدن تغییرهای بی‌اثر بر چرخه (توضیح، پیوست)
- *    ذخیره می‌شوند (`snapshot.infoChanges`)؛ بعد `AddSalePayment` فاکتور را صادر می‌کند. تغییرِ
- *    شرایط یا سررسید، و دریافت‌های ثبت‌نشده‌ی دیگر مانع‌اند (`blockedReason`).
+ * پیش از کارت‌کشیدن تغییرهای بی‌اثر بر چرخه (توضیح، پیوست) ذخیره می‌شوند (`snapshot.infoChanges`)؛
+ * بعد `AddSalePayment` فاکتور را صادر می‌کند. رسید تا «بستن» می‌ماند و بعد صفحه‌ی فاکتور باز می‌شود.
+ * کارتخوان همان لحظه ثبت می‌شود و تحویلِ حضوری را انجام نمی‌دهد: دانه‌های رزرو برای ارسالِ انبار
+ * می‌مانند.
  *
- * ثبت از روی *نسخه‌ای* از فرم است که پیش از کارت‌کشیدن اعتبارسنجی شد (`snapshot`)؛ «ثبتِ
- * دوباره» همان بدنه را می‌فرستد و کلیدِ ایدمپوتنسی از محتواست.
- *
- * @param enabled         کاربر `PosCharge` دارد
- * @param sale            پیش‌فاکتورِ ثبت‌شده؛ خالی برای فروشِ تازه
- * @param isInPerson      فروشِ تازه‌ی حضوری (دانه اسکن شده)
- * @param blockedReason   چرا الان روی پیش‌فاکتور نمی‌شود کارت کشید (یا `undefined`)
- * @param takeSnapshot    پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و
- *                        `{ payload, draftRows, scannedBarcodes, total, infoChanges }`
- * @param onPersisted     `() => void` — فروشِ تازه همین الان روی سرور ساخته شد
- * @param onCreated       `(created) => void` — بعد از «بستن»ِ رسیدِ فروشِ تازه
- * @param onIssued        `() => void` — بعد از «بستن»ِ رسیدِ پیش‌فاکتورِ صادرشده (پیش از `apply`)
+ * @param enabled       کاربر `PosCharge` دارد
+ * @param sale          پیش‌فاکتورِ ثبت‌شده؛ خالی ⇒ کارتخوانی نیست
+ * @param blockedReason چرا الان نمی‌شود کارت کشید (یا `undefined`)
+ * @param takeSnapshot  پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و `{ infoChanges }`
+ * @param onIssued      `() => void` — بعد از «بستن»ِ رسید (پیش از `apply`)
  * @returns `{ posPayment, posLocked }` — `posLocked`: تا پایانِ کار دکمه‌ی اصلی بسته است
  */
-export function useSaleFormPos({
-  enabled,
-  sale,
-  isInPerson,
-  blockedReason,
-  takeSnapshot,
-  onPersisted,
-  onCreated,
-  onIssued,
-}) {
-  const inPersonMutation = useInPersonSaleMutation();
+export function useSaleFormPos({ enabled, sale, blockedReason, takeSnapshot, onIssued }) {
   const posActions = useSalePosActions();
   const [posLocked, setPosLocked] = useState(false);
-  // `snapshot` سندی که پیش از کارت‌کشیدن اعتبارسنجی شد؛ `outcome` سندِ ساخته/صادرشده تا «بستن»ِ رسید.
-  const runRef = useRef({ snapshot: null, outcome: null });
+  // سندِ صادرشده تا «بستن»ِ رسید.
+  const outcomeRef = useRef(null);
 
-  if (!enabled || (!sale && !isInPerson)) return { posPayment: undefined, posLocked };
+  if (!enabled || !sale) return { posPayment: undefined, posLocked };
 
-  const prepare = () => {
-    runRef.current = { snapshot: takeSnapshot(), outcome: null };
-    return runRef.current.snapshot;
+  const posPayment = {
+    prepare: async () => {
+      outcomeRef.current = null;
+      const { infoChanges } = takeSnapshot();
+      await posActions.saveInfo(sale.id, infoChanges);
+    },
+    record: (_result, context) => posActions.recordPayment(sale.id, context),
+    onRecorded: (latest) => {
+      outcomeRef.current = latest;
+    },
+    onDone: () => {
+      onIssued();
+      posActions.apply(outcomeRef.current);
+    },
+    onLockChange: setPosLocked,
+    reference: () => newPosReference(`sale-${sale.id}`),
+    doneLabel: "مشاهده‌ی فاکتور",
+    blockedReason,
+    hint: "با تأییدِ کارتخوان فاکتور صادر می‌شود.",
   };
-
-  const posPayment = !sale
-    ? {
-        prepare,
-        record: async (_result, { rows }) => {
-          const { payload, draftRows, scannedBarcodes, total } = runRef.current.snapshot;
-          const paymentRows = [...draftRows, ...rows];
-          const created = await inPersonMutation.mutateAsync({
-            // فروشِ تازه: نوع از همه‌ی دریافت‌ها، با تکه‌ی کارتخوان.
-            payload: { ...payload, paymentType: paymentTypeOf(paymentRows) },
-            scannedBarcodes,
-            paymentRows,
-            deliver: rowsTotal(paymentRows) >= total,
-          });
-          runRef.current.outcome = created;
-          onPersisted?.();
-          return created;
-        },
-        reference: () => newPosReference("sale-new"),
-        onDone: () => onCreated(runRef.current.outcome),
-        onLockChange: setPosLocked,
-        doneLabel: "مشاهده‌ی فاکتور",
-        hint: "فروشِ حضوری فقط با دریافتِ کلِ مبلغ همین‌جا تحویل می‌شود؛ وگرنه فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند.",
-      }
-    : {
-        prepare: async () => {
-          const { infoChanges } = prepare();
-          await posActions.saveInfo(sale.id, infoChanges);
-        },
-        record: (_result, context) => posActions.recordPayment(sale.id, context),
-        onRecorded: (latest) => {
-          runRef.current.outcome = latest;
-        },
-        onDone: () => {
-          onIssued();
-          posActions.apply(runRef.current.outcome);
-        },
-        onLockChange: setPosLocked,
-        reference: () => newPosReference(`sale-${sale.id}`),
-        doneLabel: "مشاهده‌ی فاکتور",
-        blockedReason,
-        hint: "با تأییدِ کارتخوان فاکتور صادر می‌شود.",
-      };
 
   return { posPayment, posLocked };
 }

@@ -526,7 +526,7 @@ SC.forEach((s,i)=>{const b=el("button","btn",s.n);b.type="button";b.style.textAl
 /* permissions */
 const ROUTES_P=[
  ["/customers","CustomerView","مشتریان"],["/customers/new","CustomerCreate","مشتری جدید"],
- ["/sales/new","SaleCreate","فروشِ جدید"],["/sales/counter","SaleInPerson","فروشِ پیشخوان"],["/sales/cashier","SalePayment","صندوق"],["/sales/installments","SaleInstallmentView","اقساط"],
+ ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/sales/cashier","SalePayment","صندوق"],["/sales/installments","SaleInstallmentView","اقساط"],
  ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
  ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],["/warehouse/sale-check","SaleWarehouseCheck","بررسیِ انبارِ پیش‌فاکتور"],["/accounting/warehouse-issues",["AccountingView","SaleWarehouseIssueResolve"],"گزارش‌های انبار"],["/settings",["SettingView","SettingManage"],"تنظیماتِ سامانه"],
  ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]
@@ -618,7 +618,7 @@ renderWiz("start");
 const KEYS=["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all","purchaseKeys.detail","purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","supplierKeys.all","customerKeys.lists","customerKeys.detail","authKeys.session","authKeys.myPermissions","userKeys.*","teamKeys.all","departmentKeys.all","permissionKeys.user"];
 const MUT=[
  {n:"useCreateSaleMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"invalidateSalesEcosystem(queryClient, created.id) + customerKeys.all"},
- {n:"useInPersonSaleMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"CreateSale → ApproveSaleProforma → CheckSaleWarehouse → CompleteInPersonSale؛ شکستِ میانه: partiallySaved."},
+ {n:"useCompleteInPersonMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"CompleteInPersonSale روی پیش‌فاکتورِ حضوریِ آماده‌ی پرداخت: پرداخت، ارسال و تحویل."},
  {n:"useSaleChangesSaver (ثبت تغییرات)",set:["saleKeys.detail"],hit:["saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"applySale: setQueryData برای جزئیات، بقیه با invalidateSalesEcosystem({ freshSale: true })."},
  {n:"useCreatePurchaseMutation",set:["purchaseKeys.detail"],hit:["purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","productKeys.all","productUnitKeys.all","supplierKeys.all"],note:"applyPurchase: setQueryData + invalidatePurchaseEcosystem({ freshPurchase: true }) + supplierKeys.all"},
  {n:"useUpdateCustomerMutation",set:[],hit:["customerKeys.lists","customerKeys.detail"],note:"الگوی ساده: lists() و detail(id)."},

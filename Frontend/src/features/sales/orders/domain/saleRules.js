@@ -1,6 +1,6 @@
 import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
-import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * قاعده‌های سندِ فروش — همان چیزی که بکند (`CreateSale`/`UpdateSale`/
@@ -81,8 +81,11 @@ function inPersonScanProblem(items, scanned) {
  * نخستین دلیلی که ثبتِ فرمِ فروش را ناممکن می‌کند: `[پیام، بخشِ فرم]` یا `null`
  * (`reportFormProblem`).
  *
- * `forPos`: پیش از کارت‌کشیدن، وقتی دریافت هنوز نیامده؛ قاعده‌های دریافت (دریافتِ
- * کاملِ حضوری، «فاکتور با اولین دریافت») هنوز برقرار نیستند.
+ * `forPos`: پیش از کارت‌کشیدن، وقتی دریافت هنوز نیامده؛ قاعده‌ی «فاکتور با اولین دریافت» هنوز
+ * برقرار نیست.
+ *
+ * `isInPerson`: فروشِ تازه با دانه‌های اسکن‌شده — همه‌ی دانه‌ها باید اسکن شده باشند. پول هنگامِ ثبت
+ * گرفته نمی‌شود؛ بعد، روی پیش‌فاکتورِ «آماده‌ی پرداخت».
  *
  * فروشِ اقساطی (`planErrors` پُر یا خالی، نه `undefined`): فاکتور با پیش‌پرداختِ قرارداد صادر
  * می‌شود و تحویلِ حضوری هم با همان، پس قاعده‌های «دریافت» جایشان را به خطاهای قرارداد
@@ -96,7 +99,6 @@ export function saleFormProblem({
   isInPerson,
   scannedBarcodes,
   paid,
-  total,
   planErrors,
   forPos = false,
 }) {
@@ -109,11 +111,6 @@ export function saleFormProblem({
   if (planErrors) {
     const [first] = Object.values(planErrors);
     return isInvoice && first ? [`قرارداد اقساط: ${first}.`, "payment"] : null;
-  }
-  if (isInPerson) {
-    if (paid < total && !forPos) {
-      return [`در تحویلِ حضوری کلِ ${formatRial(total)} باید دریافت شود.`, "payment"];
-    }
   }
   if (isInvoice && paid <= 0 && !forPos) {
     return ["فاکتورِ فروش با اولین دریافت صادر می‌شود؛ دریافت را ثبت کنید یا پیش‌فاکتور ثبت کنید.", "payment"];

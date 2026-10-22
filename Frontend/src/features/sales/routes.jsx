@@ -4,7 +4,6 @@ import { ROUTES } from "@/shared/constants/routes";
 const SaleNewPage = lazy(() => import("./orders/pages/SaleNewPage"));
 const SalePage = lazy(() => import("./orders/pages/SalePage"));
 const SaleDetailPage = lazy(() => import("./orders/pages/SaleDetailPage"));
-const CounterSalePage = lazy(() => import("./counter/pages/CounterSalePage"));
 const CashierQueuePage = lazy(() => import("./cashier/pages/CashierQueuePage"));
 const SalesReturnsListPage = lazy(() => import("./returns/pages/SalesReturnsListPage"));
 const SalesReturnNewPage = lazy(() => import("./returns/pages/SalesReturnNewPage"));
@@ -24,13 +23,8 @@ export const salesRoutes = [
   },
   {
     path: ROUTES.SALES_NEW,
-    handle: { permission: "SaleCreate" },
+    handle: { permission: ["SaleCreate", "SaleInPerson"] },
     element: <SaleNewPage />,
-  },
-  {
-    path: ROUTES.SALES_COUNTER,
-    handle: { permission: "SaleInPerson" },
-    element: <CounterSalePage />,
   },
   {
     path: ROUTES.SALES_CASHIER,

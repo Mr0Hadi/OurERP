@@ -1,14 +1,13 @@
 # sales — فروش، مرجوعیِ فروش، اقساط
 
-پنج زیرماژول در `src/features/sales/`: `orders/`، `counter/` (فروشِ پیشخوان)، `cashier/` (صفِ صندوق)، `returns/`، `installments/`؛ یک `routes.jsx` (همه‌ی صفحه‌ها `lazy()`).
+چهار زیرماژول در `src/features/sales/`: `orders/`، `cashier/` (صفِ صندوق)، `returns/`، `installments/`؛ یک `routes.jsx` (همه‌ی صفحه‌ها `lazy()`).
 
 ## مسیرها
 
 | `ROUTES` | آدرس | مجوز | صفحه |
 | --- | --- | --- | --- |
 | `SALES` | `/sales` | `SaleView` | `src/features/sales/orders/pages/SalePage.jsx` |
-| `SALES_NEW` | `/sales/new` | `SaleCreate` | `src/features/sales/orders/pages/SaleNewPage.jsx` |
-| `SALES_COUNTER` | `/sales/counter` | `SaleInPerson` | `src/features/sales/counter/pages/CounterSalePage.jsx` (اسکن، دریافتِ کامل، تحویل؛ `useCounterSaleStore` و `useInPersonSaleMutation`) |
+| `SALES_NEW` | `/sales/new` | `["SaleCreate", "SaleInPerson"]` | `src/features/sales/orders/pages/SaleNewPage.jsx` |
 | `SALES_CASHIER` | `/sales/cashier` | `SalePayment` | `src/features/sales/cashier/pages/CashierQueuePage.jsx` (صفِ «آماده‌ی پرداخت» با `useProformaQueueQuery`؛ دریافت در `CashierPaymentDialog`) |
 | `SALES_DETAIL` | `/sales/:id` | `SaleView` | `src/features/sales/orders/pages/SaleDetailPage.jsx` |
 | `SALES_INSTALLMENTS` | `/sales/installments` | `SaleInstallmentView` | `src/features/sales/installments/pages/InstallmentsPage.jsx` |
@@ -27,7 +26,7 @@
 | installments | `fetchInstallmentPlan`، `fetchInstallmentPlans`، `fetchInstallments`، `createInstallmentPlan`، `updateInstallmentPlan`، `cancelInstallmentPlan`، `payInstallment`، `settleInstallmentPlan` روی `/SaleInstallment/*` | `installmentKeys` (`["saleInstallments"]`) |
 
 هوک‌ها:
-- `src/features/sales/orders/services/mutations.js`: `useCreateSaleMutation`، `useInPersonSaleMutation`، `useApproveSaleProformaMutation`، `useWarehouseApproveMutation`، `useResolveWarehouseIssueMutation`، `useIssueInstallmentSaleMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions`. invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
+- `src/features/sales/orders/services/mutations.js`: `useCreateSaleMutation`، `useCompleteInPersonMutation`، `useReleaseReservationMutation`، `useApproveSaleProformaMutation`، `useWarehouseApproveMutation`، `useResolveWarehouseIssueMutation`، `useIssueInstallmentSaleMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions`. invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
 - `src/features/sales/returns/services/`: هوک‌ها نام‌های مستعارِ factoryهای مشترک‌اند — `createReturnQueries` (`src/shared/services/returns/createReturnQueries.js`) و `createReturnMutations` (`src/shared/services/returns/createReturnMutations.js`) با `invalidate: invalidateSalesEcosystem`.
 - `src/features/sales/installments/services/`: `useInstallmentsQuery`، `useInstallmentPlansQuery`، `useInstallmentCountQuery`، `usePayInstallmentMutation`، `useSettleInstallmentPlanMutation`، … و کمک‌تابعِ `applyInstallmentPlan`.
 
@@ -48,7 +47,7 @@
 
 **چرخه‌ی تأییدِ پیش‌فاکتور (بکند ۲۰۲۶-۱۰-۱۶)** — مرحله‌ها در `proformaStage` (`src/shared/domain/enums/saleProforma.js`): پیش‌نویس → «مشتری تأیید کرد؛ ارسال به انبار» (`useApproveSaleProformaMutation`) → بررسیِ انبار (`warehouse/saleCheck`؛ تأیید، یا کم‌کردنِ اقلام با دلیل و تأیید: `useWarehouseApproveMutation`) → دریافت یا حذف. صفحه **یک دکمه‌ی اصلی** دارد که کارش را `proformaAction` می‌گوید (`src/features/sales/orders/domain/proformaFlow.js`)؛ پس از ارسال به انبار مشتری و اقلام فقط‌خواندنی‌اند تا «ویرایش پیش‌فاکتور»؛ `ProformaStageCard` فقط وضعیت، شمارشِ معکوسِ رزرو (`useReservationCountdown`) و تاریخچه را نشان می‌دهد. دریافت فقط در «آماده‌ی پرداخت» و پیش از پایانِ مهلت. `UpdateSale` با تغییرِ مشتری، اقلام، قیمت/تخفیف، `paymentType` یا سررسید تأییدها را برمی‌گرداند؛ selectorهای `isSaleCoreChanged`/`isSaleDueDateChanged`/`isSaleInfoChanged` در `saleFormStore.js` تغییرها را جدا می‌کنند. هنگامِ دریافت فقط توضیح/پیوست پیش از آن و سررسید بعد از صدور ذخیره می‌شوند، و `paymentType` همان مقدارِ ذخیره‌شده است (`proformaPaymentType`). تاریخِ فاکتور را سرور با صدور می‌گذارد (`OrderInfoCard` با `showInvoiceDate={false}`).
 
-فروشِ حضوری صفحه‌ی خودش را دارد (`sales/counter`؛ `SaleForm` دیگر دانه اسکن نمی‌کند — `SaleItemsSection` با `trackUnits` فقط در پیشخوان). `useInPersonSaleMutation` چهار درخواست را پشتِ هم می‌فرستد — `CreateSale` ← `ApproveSaleProforma` ← `CheckSaleWarehouse` (همان دانه‌ها) ← `CompleteInPersonSale` (اتمیک: پرداخت/قرارداد، ارسال، تحویل). شکستِ بعد از ثبت `partiallySaved` می‌گیرد و صفحه پیش‌فاکتور را باز می‌کند. کارتخوانِ ناقص به‌جای قدمِ آخر `AddSalePayment` می‌زند (`deliver: false`).
+فروشِ حضوری = دانه‌ی اسکن‌شده در فروشِ تازه (`SaleItemsSection` با `trackUnits={isNew}`): «ثبت و رزرو کالا» با `useCreateSaleMutation({ scannedBarcodes })` ثبت ← تأییدِ مشتری ← `CheckSaleWarehouse` با `IN_PERSON_CHECK_NOTE` (بی صفِ انبار). پرداخت بعد، همان‌جا یا در صندوق؛ دریافتِ کامل روی چنین پیش‌فاکتوری (`isInPersonProforma`) با `useCompleteInPersonMutation` (`CompleteInPersonSale`) همان‌جا تحویل می‌دهد. «آزاد کردن رزرو»: `useReleaseReservationMutation`. شکستِ بعد از ثبت `partiallySaved` می‌گیرد و صفحه پیش‌فاکتور را باز می‌کند.
 
 **ویرایشِ پیش‌فاکتور / صدور / پرداخت («ثبت تغییرات»)** — `useSaleChangesSaver(saleId)` → `runDocumentChanges(SALE_CHANGES_API, saleId, changes)` ([07](../07-server-state-react-query.md)). اولین پرداختِ ورودی فاکتور را صادر می‌کند. موفق → `applySale` (`setQueryData` + invalidate)؛ خطا → `invalidateSalesEcosystem` و `partialSaveMessage`.
 
