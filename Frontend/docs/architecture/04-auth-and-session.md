@@ -10,7 +10,7 @@
 | --- | --- |
 | `src/features/auth/store/authStore.js` | `useAuthStore` — فقط توکن‌ها و پرچم‌ها، persist در `localStorage["auth-storage"]` |
 | `src/features/auth/services/api-v1.js` | `login`، `logout`، `getUserInfo`، `getMyPermissions` |
-| `src/features/auth/services/queries.js` | `useLoginMutation`، `useSessionCheck`، `useLogoutMutation`، `useUserInfoQuery`، `useMyPermissionsQuery` |
+| `src/features/auth/services/queries.js` | `useLoginMutation`، `useSessionCheck`، `useLogoutMutation`، `useUserInfoQuery`، `useMyPermissionsQuery`، `useFeatureFlagsQuery` |
 | `src/features/auth/services/queryKeys.js` | `authKeys.session()`، `authKeys.myPermissions()` |
 | `src/features/auth/hooks/useCurrentUser.js` | `useCurrentUser()` — دادهِ `useUserInfoQuery` یا `null` |
 | `src/features/auth/pages/LoginPage.jsx` | فرم (react-hook-form) + سنجشِ خودکارِ نشست |

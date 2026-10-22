@@ -52,6 +52,10 @@ export const navigationData = {
   // که دست‌کم یکی از فرزندانش دیده شود. آیتمِ بدون `permission` برای هر
   // کاربرِ واردشده نمایش داده می‌شود.
   //
+  // `featureFlag` (اختیاری، روی والد یا زیرآیتم) کلیدِ یک سوییچِ `GetFeatureFlags`
+  // است (مثلاً `"Warehouse.MultiWarehouseEnabled"`)؛ آیتم فقط وقتی دیده می‌شود
+  // که آن سوییچ روشن باشد (`useFeatureFlags` در `features/auth/hooks/`).
+  //
   // فقط *ساختارِ* منو. هویتِ کاربر و واحد/تیمِ او اینجا نیست: صفتِ خودِ
   // اوست در بکند (`User.DepartmentId`/`User.TeamId`) و سایدبار آن را از
   // `useUserInfoQuery` می‌گیرد.

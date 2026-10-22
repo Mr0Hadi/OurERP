@@ -19,23 +19,28 @@ import {
   satisfies,
   usePermission,
 } from "@/features/auth/hooks/usePermission";
+import { useFeatureFlags } from "@/features/auth/hooks/useFeatureFlags";
 
 const data = navigationData;
 
-function filterNav(items, names) {
+/** آیتم دیده شود؟ هم دسترسی (`permission`) و هم سوییچِ قابلیت (`featureFlag`). */
+function visible(item, allowed, isOn) {
+  return allowed(item.permission) && isOn(item.featureFlag);
+}
+
+function filterNav(items, allowed, isOn) {
   return items.flatMap((item) => {
-    if (!satisfies(names, item.permission)) return [];
+    if (!visible(item, allowed, isOn)) return [];
     if (!item.items?.length) return [item];
 
-    const children = item.items.filter((sub) =>
-      satisfies(names, sub.permission),
-    );
+    const children = item.items.filter((sub) => visible(sub, allowed, isOn));
     return children.length ? [{ ...item, items: children }] : [];
   });
 }
 
 export function AppSidebar({ ...props }) {
   const { names, isPending, isError } = usePermission();
+  const { isOn } = useFeatureFlags();
   const { pathname } = useLocation();
   const { setOpenMobile } = useSidebar();
 
@@ -44,12 +49,14 @@ export function AppSidebar({ ...props }) {
     setOpenMobile(false);
   }, [pathname, setOpenMobile]);
 
-  // اگر فهرستِ دسترسی نیامد، منو بی‌فیلتر نشان داده می‌شود — مثلِ `allows` و
+  // اگر فهرستِ دسترسی نیامد، منو از نظرِ دسترسی بی‌فیلتر است — مثلِ `allows` و
   // `PermissionGate` که در این حالت صفحه را باز می‌گذارند و تصمیم با ۴۰۳ِ سرور است.
+  // سوییچِ قابلیت اما همیشه اعمال می‌شود: تا نیامده، آیتمِ وابسته به آن پنهان است.
   const navMain = useMemo(() => {
-    if (isError) return data.navMain;
-    return isPending ? [] : filterNav(data.navMain, names);
-  }, [names, isPending, isError]);
+    if (isPending && !isError) return [];
+    const allowed = isError ? () => true : (required) => satisfies(names, required);
+    return filterNav(data.navMain, allowed, isOn);
+  }, [names, isPending, isError, isOn]);
 
   return (
     <Sidebar variant="inset" {...props}>

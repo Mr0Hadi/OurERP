@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { login, logout, getUserInfo, getMyPermissions } from "./api-v1";
+import { login, logout, getUserInfo, getMyPermissions, getFeatureFlags } from "./api-v1";
 import { authKeys } from "./queryKeys";
 import { useAuthStore } from "../store/authStore";
 
@@ -116,6 +116,23 @@ export function useMyPermissionsQuery() {
   return useQuery({
     queryKey: authKeys.myPermissions(),
     queryFn: getMyPermissions,
+    enabled: isAuthenticated,
+    retry: false,
+    staleTime: 5 * 60 * 1000, // ۵ دقیقه
+  });
+}
+
+/**
+ * سوییچ‌های قابلیت — `GetFeatureFlags`. مثلِ دسترسی‌ها در کشِ React Query است، نه
+ * localStorage؛ ذخیره‌ی صفحه‌ی تنظیمات (`useUpdateSystemSettingsMutation`) صریحاً
+ * invalidateاش می‌کند تا منو همان لحظه عوض شود.
+ */
+export function useFeatureFlagsQuery() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  return useQuery({
+    queryKey: authKeys.featureFlags(),
+    queryFn: getFeatureFlags,
     enabled: isAuthenticated,
     retry: false,
     staleTime: 5 * 60 * 1000, // ۵ دقیقه

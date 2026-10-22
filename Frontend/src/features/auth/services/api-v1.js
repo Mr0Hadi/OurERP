@@ -50,3 +50,13 @@ export async function getMyPermissions() {
   const { data } = await axiosInstance.get("/Permission/GetMyPermissions");
   return data;
 }
+
+/**
+ * سوییچ‌های عمومیِ قابلیت‌ها از `GET api/Setting/GetFeatureFlags` — نگاشتِ کلید ← مقدارِ
+ * تایپ‌شده (`{ "Warehouse.MultiWarehouseEnabled": false, ... }`). بدونِ دسترسیِ خاص، برای
+ * هر کاربرِ واردشده؛ فقط تنظیم‌هایی که در کاتالوگِ سرور `isPublic` هستند.
+ */
+export async function getFeatureFlags() {
+  const { data } = await axiosInstance.get("/Setting/GetFeatureFlags");
+  return data ?? {};
+}

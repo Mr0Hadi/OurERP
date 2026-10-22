@@ -18,6 +18,7 @@
 | `src/features/*/routes.jsx` | `handle: { permission }` روی هر مسیر |
 | `src/features/permissions/` | صفحه‌های مدیریتِ دسترسی |
 | `../Backend-Net/Domain/Enums/PermissionEnum.cs` | منبعِ نام‌ها (بیرون از `Frontend/`) |
+| `src/features/auth/hooks/useFeatureFlags.js` | سوییچ‌های قابلیت: `flagIsOn(flags, key)` و `useFeatureFlags()` → `{ isPending, isError, isOn, value }` |
 
 ## چطور کار می‌کند
 
@@ -88,6 +89,15 @@ endpointها (`src/features/permissions/services/api-v1.js`): `getUserPermission
 - `usePermissionDraft` (`src/features/permissions/hooks/usePermissionDraft.js`) فقط یک بار از سرور مقدار می‌گیرد تا refetchِ پس‌زمینه تیک‌های ذخیره‌نشده را پاک نکند؛ `commit(saved)` بعد از ذخیره. کمک‌تابع‌های مجموعه در `src/features/permissions/components/permissionSets.js`.
 - `useUpdateUserPermissionsMutation` (`src/features/permissions/services/mutations.js`) بعد از موفقیت `permissionKeys.user(userId)` **و** `authKeys.myPermissions()` را invalidate می‌کند تا اگر ادمین مجوزِ خودش را عوض کرد، منو و گارد فوراً تازه شوند.
 
+### سوییچ‌های قابلیت (Feature flags)
+
+محورِ دوم، جدا از دسترسی: بعضی قابلیت‌ها با یک تنظیمِ سامانه روشن/خاموش می‌شوند (مثلاً `Warehouse.MultiWarehouseEnabled`). `GET /Setting/GetFeatureFlags` (بدونِ دسترسیِ خاص) تنظیم‌های `isPublic`ِ کاتالوگِ سرور را به شکلِ نگاشتِ کلید ← مقدارِ تایپ‌شده می‌دهد.
+
+- `useFeatureFlagsQuery` در `src/features/auth/services/queries.js` (کلید `authKeys.featureFlags()`، `staleTime` ۵ دقیقه)؛ `useUpdateSystemSettingsMutation` بعد از ذخیره invalidateاش می‌کند.
+- `useFeatureFlags().isOn(key)`: کلیدِ خالی ← true؛ کلیدِ نیامده یا ناشناخته ← **خاموش** (همان پیش‌فرضِ سرور).
+- منو: `featureFlag` روی والد یا زیرآیتمِ `navigationData.js`؛ `filterNav` هم دسترسی و هم سوییچ را می‌سنجد. سوییچ برخلافِ دسترسی در `isError` هم اعمال می‌شود.
+- مسیر گاردِ سوییچ ندارد؛ سرور خودش قاعده را اعمال می‌کند (مثلاً ثبتِ حواله با چندانبارِ خاموش ۴۰۰ می‌دهد).
+
 ## قراردادها و نکته‌ها
 
 - نام‌ها باید دقیقاً اعضای `PermissionEnum` در `../Backend-Net/Domain/Enums/PermissionEnum.cs` باشند. همه‌ی ۴۹ نامِ متمایزی که الان در `src/` به شکلِ `permission: …`، `can(…)` یا `allows(…)` آمده‌اند (`routes.jsx`ها، `navigationData.js`، صفحه‌ها) در آن enum وجود دارند (بررسی‌شده با grep). فهرستِ ثابتی از نام‌ها در فرانت نیست؛ غلطِ تایپی فقط با این بررسی پیدا می‌شود.
@@ -103,6 +113,7 @@ endpointها (`src/features/permissions/services/api-v1.js`): `getUserPermission
 | صفحه‌ای را محافظت کنم | `handle: { permission: "X" }` در `src/features/<f>/routes.jsx` |
 | کامپوننتی که خودش مجوزش را می‌سنجد | الگو: `AuditHistoryButton` (`AuditLogView`) در `src/features/audit/components/AuditHistoryButton.jsx` — بی‌مجوز `null` |
 | آیتمِ منو را محدود کنم | `permission` روی زیرآیتم در `src/shared/constants/navigationData.js` |
+| آیتم/بخشی را به سوییچِ قابلیت ببندم | منو: `featureFlag: "<کلید>"` در `navigationData.js`؛ داخلِ صفحه: `useFeatureFlags().isOn("<کلید>")` |
 | دکمه‌ای را محدود کنم | `const { allows } = usePermission()` از `@/features/auth/hooks/usePermission`؛ الگو: `src/features/sales/orders/pages/SaleIssuedView.jsx` |
 | مجوزِ تازه (سمتِ سرور) | فرانت نمی‌سازد؛ در `Backend-Net/docs/frontend-requests.fa.md` درخواست بنویسید، بعد نامش را مصرف کنید |
 | ظاهرِ «دسترسی ندارید» | `src/app/layouts/ForbiddenPage.jsx` |

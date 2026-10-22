@@ -29,7 +29,7 @@
 | `queries.refetchOnWindowFocus` | `true` | کاربرانِ چندساعته |
 | `mutations.retry` | فقط ۴۰۹، تا ۳ بار، فاصله ۱ ثانیه | ۴۰۹ = درخواستِ اولِ همین Idempotency-Key هنوز روی سرور است ([06](06-api-layer.md)) |
 
-`staleTime`ِ بیشتر فقط جایی گذاشته شده که داده کم‌تغییر است: `useUserInfoQuery` ۱۰ دقیقه، `useMyPermissionsQuery` ۵ دقیقه، گزینه‌های انتخابگرِ مشتری/تامین‌کننده ۳۰ ثانیه (`src/features/customers/services/queries.js`، `src/features/suppliers/services/queries.js`)، چند query در `src/features/warehouse/products/services/queries.js` (۳۰ تا ۶۰ ثانیه)، و `Infinity` در `src/shared/services/files/queries.js`.
+`staleTime`ِ بیشتر فقط جایی گذاشته شده که داده کم‌تغییر است: `useUserInfoQuery` ۱۰ دقیقه، `useMyPermissionsQuery` و `useFeatureFlagsQuery` ۵ دقیقه، گزینه‌های انتخابگرِ مشتری/تامین‌کننده ۳۰ ثانیه (`src/features/customers/services/queries.js`، `src/features/suppliers/services/queries.js`)، چند query در `src/features/warehouse/products/services/queries.js` (۳۰ تا ۶۰ ثانیه)، و `Infinity` در `src/shared/services/files/queries.js`.
 
 ### سه فایل برای هر سرویس
 
