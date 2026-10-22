@@ -33,6 +33,7 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import PartyOnAccountBar from "@/features/treasury/partyPayments/components/PartyOnAccountBar";
 
 function CustomerDetailForm({ customerData }) {
   const navigate = useNavigate();
@@ -149,6 +150,10 @@ function CustomerDetailForm({ customerData }) {
           </div>
         </div>
       </form>
+
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <PartyOnAccountBar customerId={customerData.id} />
+      </div>
 
       {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی بالای فرم «مانده‌ی اولیه»ِ دستی است. */}
       {canViewStatement && (

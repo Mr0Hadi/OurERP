@@ -43,6 +43,7 @@ export default function ProformaPaymentSection({ sale, payment, payments }) {
             title="دریافت‌ها"
             draft={payments}
             side={SALE_PAYMENT_SIDE}
+            allocations={sale.paymentAllocations}
             total={sale.totalAmount}
             payable={sale.payableAmount}
             canManage={allows("SalePayment")}

@@ -130,6 +130,7 @@ export default function SaleIssuedView({ sale }) {
               title="دریافت‌ها"
               draft={draft.payments}
               side={SALE_PAYMENT_SIDE}
+              allocations={sale.paymentAllocations}
               total={sale.totalAmount}
               payable={sale.payableAmount}
               canManage={allows("SalePayment") && !isInstallment}

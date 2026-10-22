@@ -32,6 +32,7 @@ import {
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import PartyOnAccountBar from "@/features/treasury/partyPayments/components/PartyOnAccountBar";
 
 function SupplierDetailForm({ supplierData }) {
   const navigate = useNavigate();
@@ -150,6 +151,10 @@ const {
           </div>
         </div>
       </form>
+
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <PartyOnAccountBar supplierId={supplierData.id} />
+      </div>
 
       {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی بالای فرم «مانده‌ی اولیه»ِ دستی است. */}
       {canViewStatement && (

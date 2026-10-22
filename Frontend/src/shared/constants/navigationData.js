@@ -43,6 +43,7 @@ import {
   Warehouse,
   Car,
   History,
+  HandCoins,
 } from "lucide-react";
 
 export const navigationData = {
@@ -348,6 +349,13 @@ export const navigationData = {
           permission: ["BankAccountView", "BankAccountManage"],
           icon: Landmark,
           description: "صندوق‌ها و حساب‌های بانکی: مانده، گردش و انتقال بین حساب‌ها",
+        },
+        {
+          title: "علی‌الحساب",
+          url: ROUTES.TREASURY_PARTY_PAYMENTS,
+          permission: ["PartyStatementView", "PartyPaymentCreate"],
+          icon: HandCoins,
+          description: "دریافت و پرداختِ بی فاکتور و تخصیص به فاکتورها",
         },
       ],
     },

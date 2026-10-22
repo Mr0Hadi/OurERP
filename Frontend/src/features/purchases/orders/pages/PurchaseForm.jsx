@@ -238,6 +238,7 @@ export default function PurchaseForm({ purchase }) {
               <PaymentsCard
                 draft={payments}
                 side={PURCHASE_PAYMENT_SIDE}
+                allocations={purchase?.paymentAllocations}
                 total={totals.totalAmount}
                 canManage={isInvoice && (isNew || allows("PurchasePayment"))}
                 allowRefund={false}

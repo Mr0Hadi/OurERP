@@ -1,6 +1,6 @@
 # treasury — خزانه‌داری
 
-یک جا برای هرچه پول جابه‌جا می‌کند: صفِ صندوق، اقساط، صندوق‌ها و حساب‌های بانکی؛ و جای دریافت/پرداختِ مستقل از فاکتور و چک‌ها (GAP-03، هنوز ساخته نشده). `src/features/treasury/` با `routes.jsx` و زیرماژول‌های `cashier/` و `bankAccounts/`. صفحه‌ی اقساط کدش در `src/features/sales/installments/` می‌ماند (منطقِ فروش است) و فقط مسیرش این‌جاست.
+یک جا برای هرچه پول جابه‌جا می‌کند: صفِ صندوق، اقساط، صندوق‌ها و حساب‌های بانکی، و دریافت/پرداختِ علی‌الحساب؛ و جای چک‌ها (GAP-03.3، هنوز ساخته نشده). `src/features/treasury/` با `routes.jsx` و زیرماژول‌های `cashier/`، `bankAccounts/` و `partyPayments/`. صفحه‌ی اقساط کدش در `src/features/sales/installments/` می‌ماند (منطقِ فروش است) و فقط مسیرش این‌جاست.
 
 ## مسیرها
 
@@ -10,6 +10,7 @@
 | `TREASURY_CASHIER` | `/treasury/cashier` | `SalePayment` | `src/features/treasury/cashier/pages/CashierQueuePage.jsx` |
 | `TREASURY_CASHIER_DETAIL` | `/treasury/cashier/:id` | `SalePayment` | `src/features/treasury/cashier/pages/CashierPaymentPage.jsx` |
 | `TREASURY_INSTALLMENTS` | `/treasury/installments` | `SaleInstallmentView` | `src/features/sales/installments/pages/InstallmentsPage.jsx` |
+| `TREASURY_PARTY_PAYMENTS`، `TREASURY_PARTY_PAYMENTS_DETAIL` | `/treasury/party-payments`، `/treasury/party-payments/:id` | `PartyStatementView` یا `PartyPaymentCreate` | `src/features/treasury/partyPayments/pages/PartyPaymentsPage.jsx`، `PartyPaymentDetailPage.jsx` |
 | `TREASURY_ACCOUNTS`، `TREASURY_ACCOUNTS_DETAIL` | `/treasury/accounts`، `/treasury/accounts/:id` | `BankAccountView` یا `BankAccountManage` | `src/features/treasury/bankAccounts/pages/BankAccountsPage.jsx` |
 | `LEGACY_SALES_CASHIER`، `LEGACY_SALES_INSTALLMENTS` | `/sales/cashier`، `/sales/installments` | — | ریدایرکت با همان query |
 
@@ -26,7 +27,17 @@
 - کلیدها در `src/shared/services/bankAccounts/queryKeys.js` (ریشه‌ی `["bankAccounts"]`) چون انتخابگرِ حسابِ فرم‌های پرداخت (`BankAccountSelect`) هم زیرِ همین ریشه است؛ هر نوشتن همه را باطل می‌کند.
 - انتخابگرِ حساب روی هر ثبتِ پول: `PaymentMethodEditor` (پرداخت‌های سند، صندوق، فروشِ حضوری)، `InstallmentPaymentFields` (پیش‌پرداخت، قسط، تسویه). فقط نقدی و انتقال (`takesBankAccount`)؛ چک هنگامِ وصول حساب می‌گیرد. پیش‌فرضی انتخاب نمی‌شود؛ پولِ بی‌حساب در `unassignedNet` می‌ماند. پولِ مرجوعی‌ها هنوز حساب نمی‌گیرد (سمتِ سرور).
 
+## علی‌الحساب (`partyPayments/`)
+
+- پولِ بی فاکتور از مشتری یا به تامین‌کننده (`api/PartyAccount` بخشِ پرداخت). فهرست: `ListPageLayout` + `PartyPaymentFilters` (`usePartyPaymentFilterStore`، نام‌های `GetPartyPaymentListQuery`) + `PartyPaymentTable`؛ `?customerId=`/`?supplierId=` یک‌بار پیش از اولین درخواست.
+- جزئیات: مشخصات، تخصیص‌ها (فعال و برداشته‌شده) با «برداشتن» (`RemovePartyPaymentAllocation`)، «تخصیص» (`AllocateDialog`) و «ابطال» (`PartyPaymentVoid`؛ تا تخصیصِ فعال هست بسته).
+- `PartyPaymentFormDialog`: طرف (یا ثابت از صفحه‌ی شخص)، جهت (طبیعی یا برگرداندنِ بستانکاری)، روش، مبلغ، تاریخ، مرجع، صندوق/حساب، شرح و تخصیصِ اختیاری در همان درخواست. کارتخوان و فیلدهای تکمیلیِ چک ندارد.
+- `AllocationEditor` مشترکِ فرم و `AllocateDialog`؛ قواعد (جهتِ طبیعی، سقفِ هر فاکتور و جمع، «پرکردنِ خودکار» قدیمی‌ترین سررسید اول) در `domain/partyPayment.js`.
+- `PartyOnAccountBar` در صفحه‌ی جزئیاتِ مشتری و تامین‌کننده.
+- روی فاکتور: `PaymentsCard` پارامترِ `allocations` (`paymentAllocations`ِ سند) را جزوِ «پرداخت‌شده» می‌شمارد و فقط نمایش می‌دهد؛ سقفِ پولِ برگشتی همان پرداخت‌های خودِ سند است.
+- بعد از هر نوشتن: فهرست‌ها، فاکتورهای قابلِ تخصیص، مشتری/تامین‌کننده (مانده و گردش)، فروش یا خرید، صندوق/بانک و حسابداری باطل می‌شوند.
+
 ## importهای بیرونی
 
 `sales` (سرویس‌ها، دامنه و کامپوننت‌های `orders` و `installments`)، `auth` (`usePermission`).
-`bankAccounts/` فقط از `shared/` و `auth` می‌خواند.
+`bankAccounts/` فقط از `shared/` و `auth` می‌خواند. `partyPayments/`: `customers`، `suppliers` (گزینه‌ها و کلیدها)، `sales/orders`، `purchases/orders`، `accounting` (کلیدها برای باطل‌کردن).

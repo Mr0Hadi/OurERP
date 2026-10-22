@@ -63,6 +63,8 @@ export const ROUTES = {
   TREASURY_INSTALLMENTS: "/treasury/installments",
   TREASURY_ACCOUNTS: "/treasury/accounts",
   TREASURY_ACCOUNTS_DETAIL: "/treasury/accounts/:id",
+  TREASURY_PARTY_PAYMENTS: "/treasury/party-payments",
+  TREASURY_PARTY_PAYMENTS_DETAIL: "/treasury/party-payments/:id",
   SALES_RETURNS_NEW: "/sales/returns/new",
   SALES_RETURNS_LIST: "/sales/returns",
   SALES_RETURNS_DETAIL: "/sales/returns/:id",

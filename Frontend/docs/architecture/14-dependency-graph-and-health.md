@@ -118,6 +118,7 @@ pnpm knip
 | `sales/installments` → `dashboardKeys` | `src/features/sales/installments/services/mutations.js` با کلیدِ دست‌ساز | `dashboardKeys.queue(source)` در `src/features/dashboard/services/queryKeys.js`؛ یا رویدادِ «سند تغییر کرد» که داشبورد گوش دهد |
 | `partyAccount` ↔ `customers`/`suppliers` | `src/features/partyAccount/services/queries.js` | کلیدِ صورت‌حساب را در خودِ `customerKeys`/`supplierKeys` تعریف کنید و به `partyAccount` پاس دهید |
 | `employees` ↔ `organization` | فایل ۰۲ | قابلِ قبول (یک حوزه)؛ در صورتِ رشد، یک فیچرِ `org` |
+| `treasury/partyPayments` ↔ `customers`/`suppliers` | `PartyOnAccountBar` در صفحه‌ی جزئیاتِ مشتری/تامین‌کننده؛ `partyPayments` گزینه‌های مشتری/تامین‌کننده و کلیدهایشان را می‌خواند | قابلِ قبول تا وقتی فقط یک کامپوننت از `treasury` در صفحه‌ی شخص است؛ اگر بیشتر شد، نوار را با `children`/slot از بیرون بدهید |
 | `sales/orders` ↔ `sales/installments` | `src/features/sales/orders/services/mutations.js`، `src/features/sales/installments/services/mutations.js` | قابلِ قبول (یک فیچر)؛ کامنتِ متناقضِ `applyInstallmentPlan` را اصلاح کنید |
 
 ### placeholder و کدِ مرده
