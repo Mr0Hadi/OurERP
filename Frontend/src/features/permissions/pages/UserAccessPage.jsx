@@ -23,7 +23,7 @@ import { useDepartmentOptionsQuery } from "@/features/organization/departments/s
 import MasterListPane from "@/shared/components/layout/MasterListPane";
 import { initialsOf } from "@/shared/lib/initialsOf";
 import UserPermissionsPanel from "../components/UserPermissionsPanel";
-import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
+import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";

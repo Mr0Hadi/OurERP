@@ -19,7 +19,7 @@ import {
 } from "../services/queries";
 import GroupChips from "./GroupChips";
 import UserPermissionsPanel from "./UserPermissionsPanel";
-import UnsavedChangesDialog from "./UnsavedChangesDialog";
+import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDialog";
 import { difference, toNumberSet } from "./permissionSets";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import Notice from "@/shared/components/feedback/Notice";

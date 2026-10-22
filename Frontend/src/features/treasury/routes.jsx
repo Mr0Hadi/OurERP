@@ -1,5 +1,7 @@
 import { lazy } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+
+import RedirectKeepingSearch from "@/shared/components/layout/RedirectKeepingSearch";
 
 import { ROUTES } from "@/shared/constants/routes";
 
@@ -8,11 +10,6 @@ const CashierPaymentPage = lazy(() => import("./cashier/pages/CashierPaymentPage
 // اقساط منطقِ فروش است (`sales/installments`) ولی جای مدیریتش، کنارِ بقیه‌ی پول، خزانه‌داری است.
 const InstallmentsPage = lazy(() => import("@/features/sales/installments/pages/InstallmentsPage"));
 
-/** نشانیِ قدیمی → نشانیِ تازه، با همان پارامترها (`?view=overdue&customerId=`). */
-function RedirectKeepingSearch({ to }) {
-  const { search } = useLocation();
-  return <Navigate to={{ pathname: to, search }} replace />;
-}
 
 /**
  * خزانه‌داری: هرچه پول جابه‌جا می‌کند یک‌جا — صفِ صندوق و اقساط، و جای حساب‌های بانک/صندوق، دریافت و

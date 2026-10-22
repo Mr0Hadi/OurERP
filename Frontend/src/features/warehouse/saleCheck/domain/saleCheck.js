@@ -19,7 +19,7 @@ export const DEFECT_REASONS = [
 /** تعدادِ تأییدیِ ردیف: تغییرِ انبار، یا همان سفارش. */
 export const approvedQuantity = (item, quantities) => quantities[item.id] ?? (Number(item.quantity) || 0);
 
-export const isLineChanged = (item, quantities) => approvedQuantity(item, quantities) !== (Number(item.quantity) || 0);
+const isLineChanged = (item, quantities) => approvedQuantity(item, quantities) !== (Number(item.quantity) || 0);
 
 /**
  * چند دانه‌ی این ردیف باید اسکن شود. ردیفِ تغییرکرده رزروش را از دست می‌دهد (سرور با تغییرِ

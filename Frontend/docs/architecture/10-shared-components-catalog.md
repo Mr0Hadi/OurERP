@@ -48,6 +48,7 @@ flowchart LR
 | `detailsColumn(getPath)` (`columns.jsx`) | ستونِ استانداردِ «جزئیات»؛ در موبایل کلِ کارت لینک می‌شود | ۹ |
 | `DataTablePagination` | صفحه‌بندی بیرون از `DataTable` | ۴ |
 | `PaymentProgress` | نوارِ «پرداخت‌شده از کل» در ردیف | ۲ |
+| `RefreshButton` | «تازه‌سازی»ِ فهرستِ زنده در `actions`ِ `ListPageLayout` (صف‌های انبار و صندوق) | ۲ |
 | `TableLoadingSkeleton` | اسکلتونِ جدول | ۲ |
 | `MobileRowCards`، `SortIcon`، `DetailsLink` | داخلی | — |
 
@@ -57,6 +58,7 @@ flowchart LR
 | --- | --- | --- |
 | `ListPageLayout` | پوسته‌ی هر صفحه‌ی لیست: `title`، `icon`، `description`، `create`، `actions` | ۱۱ |
 | `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها) | ۴ |
+| `RedirectKeepingSearch` | در `routes.jsx`: نشانیِ قدیمی → تازه با همان query (صفحه‌ی جابه‌جاشده) | ۲ |
 | `PageHeaderActions` | دکمه‌ی صفحه در هدرِ اپ کنارِ عنوان (پورتال به `headerStore.actionsSlot`)؛ مثلاً «تاریخچه» در صفحه‌های جزئیات ([08](08-client-state-zustand.md)) | ۲ |
 | `AppSidebar`، `NavMain`، `NavSecondary`، `NavTools`، `NavUser`، `NavWorkspace`، `AppBreadcrumb`، `RouteLoadingOverlay` | فقط پوسته‌ی برنامه ([03](03-bootstrap-and-routing.md)) | ۱–۲ |
 
@@ -80,6 +82,7 @@ flowchart LR
 | `QueryErrorState` | خطای لیست با «تلاش دوباره» (جای جدول) | ۱۵ |
 | `DetailErrorState` | صفحه‌ی جزئیات: «پیدا نشد» (۴۰۴) را از «واکشی شکست خورد» جدا می‌کند | ۱۴ |
 | `Notice` | باکسِ توضیح/هشدار با tone | ۱۴ |
+| `UnsavedChangesDialog` | «تغییرات ذخیره نشده» با `blocker`ِ `useUnsavedChangesGuard` (یا کنترل‌شده با `open`) | ۶ |
 | `FetchingOverlay` | پوششِ واکشیِ دوباره (نه بارِ اول) | ۹ |
 | `ProgressStat` | پیشرفتِ شمارشی | ۴ |
 

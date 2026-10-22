@@ -304,3 +304,18 @@ export async function removeSale(id) {
   });
   return data ?? { id };
 }
+
+/**
+ * endpointهای «ثبت تغییرات»ِ یک فروش برای `runDocumentChanges` (`shared/services/documentChanges.js`):
+ * سند، دریافت‌ها، سررسید، پیوست‌ها و وضعیت، هر کدام با endpointِ خودش.
+ */
+export const SALE_DOCUMENT_CHANGES_API = Object.freeze({
+  idField: "saleId",
+  update: updateSale,
+  addPayment: addSalePayment,
+  editPayment: editSalePayment,
+  voidPayment: voidSalePayment,
+  paymentDate: updateSalePaymentDate,
+  attachments: updateSaleAttachments,
+  status: changeSaleStatus,
+});

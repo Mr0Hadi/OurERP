@@ -10,7 +10,7 @@ import { useDepartmentUserCountQuery } from "@/features/employees/services/queri
 
 import MasterListPane from "@/shared/components/layout/MasterListPane";
 import DepartmentTemplatePanel from "../components/DepartmentTemplatePanel";
-import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
+import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";

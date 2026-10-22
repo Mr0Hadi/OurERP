@@ -6,7 +6,7 @@ import Notice from "@/shared/components/feedback/Notice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import UnsavedChangesDialog from "@/features/permissions/components/UnsavedChangesDialog";
+import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import SettingGroupNav from "../components/SettingGroupNav";
 import SettingsSaveBar from "../components/SettingsSaveBar";

@@ -9,18 +9,16 @@ const EMPTY_FORM = {
   customerId: "",
   customerName: "",
   invoiceNumber: "",
-  invoiceDate: "",
   paymentDate: "",
   description: "",
-  status: "",
   items: [],
   // دریافت‌های ثبت‌نشده (`usePaymentDraft`).
   paymentDraft: EMPTY_PAYMENT_DRAFT,
   // قیمتِ پیش‌فرضِ اقلامِ تازه: خرده (`retailPrice`) یا همکار/عمده
   // (`wholeSalePrice`). فقط فرم است؛ به سرور نمی‌رود.
   priceMode: "retail",
-  // فروشِ اقساطی (`paymentType = INSTALLMENT`) و پیش‌نویسِ قراردادش؛ قرارداد با صدورِ
-  // فاکتور ثبت می‌شود (`CreateSaleInstallmentPlan`)، نه با خودِ فروش.
+  // شیوه‌ی پرداخت و پیش‌نویسِ قرارداد اقساط، که فقط در مرحله‌ی دریافت انتخاب و ثبت می‌شوند
+  // (`useProformaPayment`)؛ در store تا رفتن به صفحه‌ی فرعی و برگشتن پاک نشوند.
   installment: false,
   installmentPlan: EMPTY_PLAN_DRAFT,
 };
@@ -35,12 +33,10 @@ function formFromSale(sale) {
     customerId: sale.customerId || "",
     customerName: sale.customerName || "",
     invoiceNumber: sale.invoiceNumber || "",
-    invoiceDate: sale.invoiceDate || "",
     paymentDate: sale.paymentDate || "",
     description: sale.description || "",
-    status: sale.status ?? "",
     installment,
-    // پیش‌فاکتورِ اقساطی قراردادش را هنگامِ صدور می‌گیرد؛ اولین سررسید پیش‌فرض یک ماه بعد.
+    // اولین سررسیدِ قرارداد پیش‌فرض یک ماه بعد.
     installmentPlan: installment
       ? { ...EMPTY_PLAN_DRAFT, firstDueDate: addMonthsIso(todayIso(), 1) }
       : EMPTY_PLAN_DRAFT,
@@ -77,7 +73,7 @@ const changedBy = (pick) => (state) =>
 
 /**
  * مشتری، اقلام، قیمت/تخفیف — ذخیره‌اش پیش‌فاکتور را به پیش‌نویس برمی‌گرداند. شیوه‌ی پرداخت (`installment`)
- * نیست: فقط در مرحله‌ی دریافت انتخاب می‌شود و همان‌جا ثبت (`ensureProformaPaymentType`).
+ * نیست: فقط در مرحله‌ی دریافت انتخاب می‌شود و همان‌جا ثبت (`useProformaPayment`).
  */
 export const isSaleCoreChanged = changedBy((form) => [
   String(form.customerId ?? ""),
@@ -93,5 +89,5 @@ export const isSaleCoreChanged = changedBy((form) => [
 /** مهلتِ پرداخت — روی پیش‌فاکتور چرخه را برمی‌گرداند؛ بعد از صدورِ فاکتور آزاد است. */
 export const isSaleDueDateChanged = changedBy((form) => form.paymentDate || "");
 
-/** توضیح — اثری روی چرخه ندارد و هم‌زمان با دریافت ذخیره می‌شود. (تاریخِ فاکتور را سرور هنگامِ صدور می‌گذارد.) */
+/** توضیح — اثری روی چرخه ندارد و هم‌زمان با دریافت ذخیره می‌شود. */
 export const isSaleInfoChanged = changedBy((form) => form.description || "");

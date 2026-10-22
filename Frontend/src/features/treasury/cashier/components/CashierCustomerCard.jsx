@@ -17,9 +17,8 @@ import { formatRial } from "@/shared/lib/numberFormat";
  * پیش‌پرداخت بگیرد. بی دسترسیِ `CustomerView` فقط نام (از خودِ فروش) نشان داده می‌شود.
  *
  * @param saleTotal جمعِ همین پیش‌فاکتور (برای «اعتبارِ مانده پس از این فروش»)
- * @param compact   برای ستونِ کناری: عددها ردیفِ «برچسب / مقدار» به‌جای سه خانه‌ی کنارِ هم
  */
-export default function CashierCustomerCard({ customerId, customerName, saleTotal, compact = false }) {
+export default function CashierCustomerCard({ customerId, customerName, saleTotal }) {
   const { allows } = usePermission();
   const canView = allows("CustomerView");
   const { data: customer, isLoading } = useCustomerQuery(canView ? customerId : null);
@@ -54,9 +53,8 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
   // اعتبارِ مانده اگر همین فروش کامل نسیه بماند.
   const creditLeft = creditLimit > 0 ? creditLimit - Math.max(0, balance) - (Number(saleTotal) || 0) : null;
   const place = [customer.province, customer.city].filter(Boolean).join("، ");
-  const itemClass = compact
-    ? "flex items-center justify-between gap-3 py-2"
-    : "space-y-1 rounded-lg bg-muted/50 p-2.5";
+  // ستونِ کناری باریک است: ردیفِ «برچسب / مقدار».
+  const itemClass = "flex items-center justify-between gap-3 py-2";
 
   return (
     <SectionCard title={customerName} description="مشتری" action={action}>
@@ -75,11 +73,7 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
         )}
       </div>
 
-      <dl
-        className={
-          compact ? "divide-y rounded-lg bg-muted/50 px-3 text-sm" : "grid grid-cols-1 gap-2 text-sm sm:grid-cols-3"
-        }
-      >
+      <dl className="divide-y rounded-lg bg-muted/50 px-3 text-sm">
         <div className={itemClass}>
           <dt className="text-xs text-muted-foreground">مانده‌ی حساب</dt>
           <dd>
@@ -91,7 +85,7 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
           <dd className="font-medium tabular-nums">{creditLimit > 0 ? formatRial(creditLimit) : "تعریف نشده"}</dd>
         </div>
         <div className={itemClass}>
-          <dt className="text-xs text-muted-foreground">{compact ? "اعتبارِ مانده پس از فروش" : "اعتبارِ مانده پس از این فروش"}</dt>
+          <dt className="text-xs text-muted-foreground">اعتبارِ مانده پس از فروش</dt>
           <dd
             className={
               creditLeft == null ? "text-muted-foreground" : creditLeft < 0 ? "font-medium text-destructive" : "font-medium"

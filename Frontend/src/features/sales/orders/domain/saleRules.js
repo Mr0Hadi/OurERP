@@ -78,42 +78,17 @@ function inPersonScanProblem(items, scanned) {
 }
 
 /**
- * نخستین دلیلی که ثبتِ فرمِ فروش را ناممکن می‌کند: `[پیام، بخشِ فرم]` یا `null`
- * (`reportFormProblem`).
+ * نخستین دلیلی که ثبتِ پیش‌فاکتور (تازه یا ذخیره‌ی تغییرات) را ناممکن می‌کند: `[پیام، بخشِ فرم]` یا `null`
+ * (`reportFormProblem`). قاعده‌های دریافت جدایند (`useProformaPayment`).
  *
- * `forPos`: پیش از کارت‌کشیدن، وقتی دریافت هنوز نیامده؛ قاعده‌ی «فاکتور با اولین دریافت» هنوز
- * برقرار نیست.
- *
- * `isInPerson`: فروشِ تازه با دانه‌های اسکن‌شده — همه‌ی دانه‌ها باید اسکن شده باشند. پول هنگامِ ثبت
- * گرفته نمی‌شود؛ بعد، روی پیش‌فاکتورِ «آماده‌ی پرداخت».
- *
- * فروشِ اقساطی (`planErrors` پُر یا خالی، نه `undefined`): فاکتور با پیش‌پرداختِ قرارداد صادر
- * می‌شود و تحویلِ حضوری هم با همان، پس قاعده‌های «دریافت» جایشان را به خطاهای قرارداد
- * (`planDraftErrors`) می‌دهند.
- *
+ * @param isInPerson فروشِ تازه با دانه‌های اسکن‌شده — همه‌ی دانه‌ها باید اسکن شده باشند
  */
-export function saleFormProblem({
-  formData,
-  items,
-  isInvoice,
-  isInPerson,
-  scannedBarcodes,
-  paid,
-  planErrors,
-  forPos = false,
-}) {
+export function saleFormProblem({ formData, items, isInPerson = false, scannedBarcodes = {} }) {
   if (!formData.customerId) return ["مشتری را انتخاب کنید.", "party"];
   if (items.length === 0) return ["دست‌کم یک کالا اضافه کنید.", "items"];
   if (isInPerson) {
     const scanProblem = inPersonScanProblem(items, scannedBarcodes);
     if (scanProblem) return [scanProblem, "items"];
-  }
-  if (planErrors) {
-    const [first] = Object.values(planErrors);
-    return isInvoice && first ? [`قرارداد اقساط: ${first}.`, "payment"] : null;
-  }
-  if (isInvoice && paid <= 0 && !forPos) {
-    return ["فاکتورِ فروش با اولین دریافت صادر می‌شود؛ دریافت را ثبت کنید یا پیش‌فاکتور ثبت کنید.", "payment"];
   }
   return null;
 }

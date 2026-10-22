@@ -14,8 +14,8 @@
 
 ## صندوق
 
-- فهرست: `useProformaQueueQuery(WAREHOUSE_CHECKED)` و فیلترهای مشترکِ `ProformaQueueFilters` / `createProformaQueueFilterStore` از `sales/orders` (تازه‌سازی هر ۳۰ ثانیه). مهلتِ رزروِ هر ردیف: `cashier/components/ReservationTimer.jsx`.
-- دریافت: صفحه‌ی جدا `cashier/pages/CashierPaymentPage.jsx` (`DocumentFormLayout`): ستونِ پهن شیوه‌ی پرداخت و دریافت؛ ستونِ کناری مشتری (`cashier/components/CashierCustomerCard.jsx` — تماس، مانده، سقف و اعتبارِ مانده پس از این فروش؛ با `CustomerView`)، و جمع؛ زیرِ هر دو با `below`ِ `DocumentFormLayout` و تمام‌عرض سه تب — اقلام، گردشِ حساب (`PartyStatementCard`، با `PartyStatementView`) و قراردادهای اقساطِ مشتری (`CustomerInstallmentsCard`) — که فقط با بازشدن خوانده می‌شوند؛ و دریافت. پیش‌پرداختِ قرارداد با روشِ «انتقال بانکی» با کارتخوان هم گرفته می‌شود (`DownPaymentPosPanel` در `sales/installments`، از `InstallmentPlanDraftCard.posPayment`). صندوقدار شیوه‌ی پرداخت را انتخاب می‌کند (نقد/نسیه یا اقساطی)؛ پیش از دریافت `ensureProformaPaymentType` آن را ثبت می‌کند. نقد/نسیه: `useSaleChangesSaver` با `paymentDraft` (کارتخوان با `useSalePosActions`)؛ اقساطی: `useIssueInstallmentSaleMutation`؛ فروشِ حضوری (`isInPersonProforma`) با پرداختِ کامل یا قرارداد: `useCompleteInPersonMutation`.
+- فهرست: `useProformaQueueQuery(WAREHOUSE_CHECKED)`، فیلترهای مشترکِ `ProformaQueueFilters`/`createProformaQueueFilterStore` و ستون‌های `proformaQueueColumns` از `sales/orders`؛ تازه‌سازی هر ۳۰ ثانیه و `RefreshButton`.
+- دریافت: `cashier/pages/CashierPaymentPage.jsx` (`DocumentFormLayout`) — ستونِ پهن `ProformaPaymentSection` با `useProformaPayment` (همان منطقِ فرمِ فروش: شیوه‌ی پرداخت، قرارداد، کارتخوان، تحویلِ حضوری)؛ ستونِ کناری `CashierCustomerCard` (تماس، مانده، سقف و اعتبارِ مانده پس از این فروش؛ با `CustomerView`) و جمع؛ زیرِ هر دو و تمام‌عرض (`below`) `CashierCustomerTabs` — اقلام، گردشِ حساب (`PartyStatementCard`، با `PartyStatementView`) و قراردادهای اقساطِ مشتری (`CustomerInstallmentsCard`)، که فقط با بازشدنِ تب خوانده می‌شوند. پیش‌فاکتوری که دیگر آماده‌ی پرداخت نیست: `ProformaUnavailable`.
 
 ## importهای بیرونی
 

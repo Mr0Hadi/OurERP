@@ -45,8 +45,7 @@ export function proformaAction({ isNew, isInPerson, stage, secondsLeft, changes 
 /**
  * `paymentType`ِ بدنه‌ی `CreateSale`/`UpdateSale`. روی پیش‌فاکتورِ ذخیره‌شده سرور تغییرِ آن را تغییرِ
  * شرایط می‌داند و تأییدها را برمی‌گرداند، پس از دریافت‌ها ساخته نمی‌شود: اقساطی یا همان مقدارِ
- * ذخیره‌شده؛ پیش‌فاکتورِ تازه «نسیه». نوعِ واقعیِ هر پرداخت روی ردیفِ خودش است. (فروشِ پیشخوان که
- * همین حالا پرداخت می‌شود نوعش را از دریافت‌هایش می‌گیرد — `CounterSalePage`.)
+ * ذخیره‌شده؛ پیش‌فاکتورِ تازه «نسیه». نوعِ واقعیِ هر پرداخت روی ردیفِ خودش است.
  */
 export function proformaPaymentType(isInstallment, sale) {
   if (isInstallment) return PaymentTypeEnum.INSTALLMENT;
@@ -70,11 +69,25 @@ export const IN_PERSON_CHECK_NOTE = "فروش حضوری: دانه‌ها هنگ
  */
 const AUTO_RECHECK_NOTE = "کالای همه‌ی اقلام از بررسی قبلی انبار رزرو مانده است.";
 
-/** پیش‌فاکتورِ «آماده‌ی پرداخت»ی که دانه‌هایش در فروشِ حضوری اسکن و رزرو شده‌اند. */
-export function isInPersonProforma(sale) {
-  if (Number(sale?.proformaStage) !== SaleProformaStageEnum.WAREHOUSE_CHECKED) return false;
-  const lastCheck = [...(sale.proformaEvents || [])]
+/** آخرین «تأییدِ انبار»ِ واقعیِ پیش‌فاکتورِ «آماده‌ی پرداخت» (جز تأییدِ خودکار)، یا `undefined`. */
+function lastWarehouseCheck(sale) {
+  if (Number(sale?.proformaStage) !== SaleProformaStageEnum.WAREHOUSE_CHECKED) return undefined;
+  return [...(sale.proformaEvents || [])]
     .reverse()
     .find((event) => event.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED && event.note !== AUTO_RECHECK_NOTE);
-  return lastCheck?.note === IN_PERSON_CHECK_NOTE;
+}
+
+/** پیش‌فاکتورِ «آماده‌ی پرداخت»ی که دانه‌هایش در فروشِ حضوری اسکن و رزرو شده‌اند. */
+export function isInPersonProforma(sale) {
+  return lastWarehouseCheck(sale)?.note === IN_PERSON_CHECK_NOTE;
+}
+
+/**
+ * دلیلی که انباردار هنگامِ تغییرِ اقلام نوشت (`{ note, userName }`)، یا `null` — یادداشت‌های ثابتِ فروشِ حضوری
+ * و تأییدِ خودکار دلیلِ تغییر نیستند.
+ */
+export function warehouseChangeNote(sale) {
+  const check = lastWarehouseCheck(sale);
+  if (!check?.note || check.note === IN_PERSON_CHECK_NOTE) return null;
+  return { note: check.note, userName: check.userName };
 }
