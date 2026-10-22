@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Percent,
   Receipt,
+  Landmark,
   PackageSearch,
   Wallet,
   PackageX,
@@ -325,20 +326,6 @@ export const navigationData = {
           description: "لیست قیمت، پیش‌فاکتور، یا فروشِ حضوری با اسکنِ کالا",
         },
         {
-          title: "صندوق",
-          url: ROUTES.SALES_CASHIER,
-          permission: "SalePayment",
-          icon: Wallet,
-          description: "پیش‌فاکتورهای تأییدشده‌ی انبار، منتظرِ پرداختِ مشتری",
-        },
-        {
-          title: "اقساط",
-          url: ROUTES.SALES_INSTALLMENTS,
-          permission: "SaleInstallmentView",
-          icon: CalendarClock,
-          description: "اقساطِ فروش‌های اقساطی، سررسیدها و دریافت",
-        },
-        {
           title: "ثبت مرجوعی از مشتری",
           url: ROUTES.SALES_RETURNS_NEW,
           permission: "SaleReturnCreate",
@@ -351,6 +338,29 @@ export const navigationData = {
           permission: "SaleReturnView",
           icon: List,
           description: "مشاهده لیست مرجوعی‌ها",
+        },
+      ],
+    },
+    {
+      // خزانه‌داری: صندوق و اقساط، و جای حساب‌های بانک/صندوق، دریافت/پرداختِ مستقل، انتقال‌ها و چک‌ها.
+      title: "خزانه‌داری",
+      url: ROUTES.TREASURY,
+      icon: Landmark,
+      isActive: false,
+      items: [
+        {
+          title: "صندوق",
+          url: ROUTES.TREASURY_CASHIER,
+          permission: "SalePayment",
+          icon: Wallet,
+          description: "پیش‌فاکتورهای آماده‌ی پرداخت: دریافت و صدورِ فاکتور",
+        },
+        {
+          title: "اقساط",
+          url: ROUTES.TREASURY_INSTALLMENTS,
+          permission: "SaleInstallmentView",
+          icon: CalendarClock,
+          description: "اقساطِ فروش‌های اقساطی، سررسیدها و دریافت",
         },
       ],
     },

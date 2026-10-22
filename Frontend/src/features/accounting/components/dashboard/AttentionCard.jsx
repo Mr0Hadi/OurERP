@@ -67,7 +67,7 @@ export default function AttentionCard({ data, isLoading }) {
           title="اقساطِ سررسیدگذشته"
           detail={`${formatNumber(data?.installments?.overdueCount)} قسط`}
           amount={data?.installments?.overdueAmount}
-          to={withFilters(ROUTES.SALES_INSTALLMENTS, { view: "overdue" })}
+          to={withFilters(ROUTES.TREASURY_INSTALLMENTS, { view: "overdue" })}
         />
         <AttentionRow
           icon={CalendarClock}
@@ -75,7 +75,7 @@ export default function AttentionCard({ data, isLoading }) {
           detail={`${formatNumber(data?.installments?.dueNext30DaysCount)} قسط`}
           amount={data?.installments?.dueNext30DaysAmount}
           tone="warning"
-          to={withFilters(ROUTES.SALES_INSTALLMENTS, { view: "upcoming" })}
+          to={withFilters(ROUTES.TREASURY_INSTALLMENTS, { view: "upcoming" })}
         />
         <AttentionRow
           icon={FileWarning}

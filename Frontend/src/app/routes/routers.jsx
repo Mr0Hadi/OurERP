@@ -19,6 +19,7 @@ import { settingsRoutes } from "@/features/settings/routes";
 import { transactionsRoutes } from "@/features/transactions/routes";
 import { purchasesRoutes } from "@/features/purchases/routes";
 import { salesRoutes } from "@/features/sales/routes";
+import { treasuryRoutes } from "@/features/treasury/routes";
 import { employeesRoutes } from "@/features/employees/routes";
 import { organizationRoutes } from "@/features/organization/routes";
 import { permissionsRoutes } from "@/features/permissions/routes";
@@ -58,6 +59,7 @@ export const router = createBrowserRouter([
           ...warehouseRoutes,
           ...invoiceRoutes,
           ...salesRoutes,
+          ...treasuryRoutes,
           ...suppliersRoutes,
           ...accountingRoutes,
           ...settingsRoutes,

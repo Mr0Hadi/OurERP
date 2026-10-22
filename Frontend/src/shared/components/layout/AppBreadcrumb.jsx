@@ -48,9 +48,12 @@ const ROUTE_TITLES = {
 
   [ROUTES.SALES]: "فروش",
   [ROUTES.SALES_NEW]: "ثبت فروش جدید",
-  [ROUTES.SALES_CASHIER]: "صندوق",
   [ROUTES.SALES_RETURNS_LIST]: "مرجوعی‌های فروش",
   [ROUTES.SALES_RETURNS_NEW]: "ثبت مرجوعی فروش",
+
+  [ROUTES.TREASURY]: "خزانه‌داری",
+  [ROUTES.TREASURY_CASHIER]: "صندوق",
+  [ROUTES.TREASURY_INSTALLMENTS]: "اقساط",
 
   [ROUTES.WAREHOUSE]: "انبار",
   [ROUTES.WAREHOUSE_PRODUCTS]: "کالاهای انبار",

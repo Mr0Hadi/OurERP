@@ -51,10 +51,15 @@ export const ROUTES = {
   // فروش
   SALES: "/sales",
   SALES_NEW: "/sales/new",
-  // صفِ صندوق: پیش‌فاکتورهای «آماده‌ی پرداخت».
-  SALES_CASHIER: "/sales/cashier",
   SALES_DETAIL: "/sales/:id",
-  SALES_INSTALLMENTS: "/sales/installments",
+  // نشانی‌های قدیمی؛ به خزانه‌داری هدایت می‌شوند.
+  LEGACY_SALES_INSTALLMENTS: "/sales/installments",
+  LEGACY_SALES_CASHIER: "/sales/cashier",
+
+  // خزانه‌داری: صندوق، اقساط، و (بعداً) حساب‌های بانک/صندوق، دریافت‌ها و انتقال‌ها.
+  TREASURY: "/treasury",
+  TREASURY_CASHIER: "/treasury/cashier",
+  TREASURY_INSTALLMENTS: "/treasury/installments",
   SALES_RETURNS_NEW: "/sales/returns/new",
   SALES_RETURNS_LIST: "/sales/returns",
   SALES_RETURNS_DETAIL: "/sales/returns/:id",

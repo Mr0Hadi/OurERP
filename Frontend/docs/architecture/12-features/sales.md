@@ -1,6 +1,6 @@
 # sales — فروش، مرجوعیِ فروش، اقساط
 
-چهار زیرماژول در `src/features/sales/`: `orders/`، `cashier/` (صفِ صندوق)، `returns/`، `installments/`؛ یک `routes.jsx` (همه‌ی صفحه‌ها `lazy()`).
+سه زیرماژول در `src/features/sales/`: `orders/`، `returns/`، `installments/`؛ صفحه‌ی اقساط و صفِ صندوق در [treasury](treasury.md) سوار می‌شوند. یک `routes.jsx` (همه‌ی صفحه‌ها `lazy()`).
 
 ## مسیرها
 
@@ -8,9 +8,7 @@
 | --- | --- | --- | --- |
 | `SALES` | `/sales` | `SaleView` | `src/features/sales/orders/pages/SalePage.jsx` |
 | `SALES_NEW` | `/sales/new` | `["SaleCreate", "SaleInPerson"]` | `src/features/sales/orders/pages/SaleNewPage.jsx` |
-| `SALES_CASHIER` | `/sales/cashier` | `SalePayment` | `src/features/sales/cashier/pages/CashierQueuePage.jsx` (صفِ «آماده‌ی پرداخت» با `useProformaQueueQuery` + فیلترهای مشترکِ `ProformaQueueFilters`/`createProformaQueueFilterStore`، تازه‌سازی هر ۳۰ ثانیه؛ دریافت در `CashierPaymentDialog`) |
 | `SALES_DETAIL` | `/sales/:id` | `SaleView` | `src/features/sales/orders/pages/SaleDetailPage.jsx` |
-| `SALES_INSTALLMENTS` | `/sales/installments` | `SaleInstallmentView` | `src/features/sales/installments/pages/InstallmentsPage.jsx` |
 | `SALES_RETURNS_LIST` | `/sales/returns` | `SaleReturnView` | `src/features/sales/returns/pages/SalesReturnsListPage.jsx` |
 | `SALES_RETURNS_NEW` | `/sales/returns/new` | `SaleReturnCreate` | `src/features/sales/returns/pages/SalesReturnNewPage.jsx` |
 | `SALES_RETURNS_DETAIL` | `/sales/returns/:id` | `SaleReturnView` | `src/features/sales/returns/pages/SalesReturnDetailPage.jsx` |

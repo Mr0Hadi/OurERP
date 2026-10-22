@@ -103,7 +103,7 @@ export default function CustomerInstallmentsCard({ customerId }) {
           </>
         )}
         <Button asChild variant="ghost" size="sm" className="w-full gap-1.5">
-          <Link to={`${ROUTES.SALES_INSTALLMENTS}?view=unpaid&customerId=${customerId}`}>
+          <Link to={`${ROUTES.TREASURY_INSTALLMENTS}?view=unpaid&customerId=${customerId}`}>
             همه‌ی اقساطِ پرداخت‌نشده‌ی این مشتری
             <ChevronLeft className="size-3.5" />
           </Link>
