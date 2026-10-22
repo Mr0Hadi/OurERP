@@ -31,7 +31,7 @@
 | units | `fetchProductUnits` GET `/Product/GetProductUnitList`، `fetchAllProductUnits` (صفحه‌به‌صفحه ۲۰۰تایی تا ۲۰۰۰)، `fetchProductUnitSummary`، `fetchProductUnitHistory`، `resolveScannedCode`، `markProductUnitsPrinted` POST، `applyProductUnitAction` POST (ایدمپوتنت)، `setProductUnitLocation` POST | `productUnitKeys` (`["productUnits"]`) |
 | vehicles | `/Vehicle/GetVehicleList` (take ۵۰۰)، `GetVehicleProductList`، `CreateVehicle`، `UpdateVehicle`، `DeleteVehicle`، `AddProductsToVehicle`، `RemoveProductFromVehicle` | `vehicleKeys` (`["vehicles"]`) |
 | receiving | `fetchReceivablePurchases` GET `/Purchase/GetPurchaseList`، `fetchPurchaseReceivingInfo` GET `/PurchaseReturn/GetPurchaseReceivingInfo`، `fetchPurchaseReturnPendingEffects`، `receiveShipment` POST `/Shipment/ReceiveShipment` | `receivingKeys` (`['receiving']`) |
-| saleCheck | `useSaleCheckQueueQuery` (`fetchSales` با `proformaStages = 1`)، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useWarehouseApproveMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
+| saleCheck | `useProformaQueueQuery(CUSTOMER_APPROVED)` و فیلترهای `ProformaQueueFilters` از `sales/orders`، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useWarehouseApproveMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
 | shipping | `fetchShippableSales` GET `/Sale/GetSaleList`، `fetchSaleForShipping` GET `/Sale/GetSaleDetail`، `fetchSaleReturnPendingEffects`، `dispatchShipment` POST `/Shipment/DispatchShipment` | `shippingKeys` (`['shipping']`) |
 
 هوک‌های پرکاربرد برای بقیه‌ی برنامه: `useDocumentProducts`، `useProductSearchQuery`، `useProductsOptionsQuery` (`src/features/warehouse/products/services/queries.js`)؛ `UnitsPageLink` (`src/features/warehouse/units/components/UnitsPageLink.jsx`).

@@ -53,6 +53,14 @@ export function useSaleWarehouseIssuesQuery(filters, pagination, sorting) {
  * صفِ پیش‌فاکتورهای یک مرحله (`GetSaleList` با `proformaStages`) — صفِ انبار (`CUSTOMER_APPROVED`) و
  * صفِ صندوق (`WAREHOUSE_CHECKED`). کلیدِ کش زیرِ فهرست‌های فروش است تا هر نوشتنِ فروش باطلش کند.
  */
+/** فیلترهای فعلیِ یک صفِ پیش‌فاکتور (`createProformaQueueFilterStore`)؛ نامِ مشتری با تأخیر. */
+export function useProformaQueueFilters(useStore) {
+  return useDebouncedFilters(useStore, {
+    text: ["customerName"],
+    instant: ["customerId", "paymentType", "fromPaymentDate", "toPaymentDate"],
+  });
+}
+
 export function useProformaQueueQuery(stage, filters, pagination, sorting) {
   const params = listQuery({
     filters: { ...filters, proformaStages: stage },
@@ -65,5 +73,7 @@ export function useProformaQueueQuery(stage, filters, pagination, sorting) {
     queryFn: () => fetchSales(params),
     placeholderData: keepPreviousData,
     refetchOnMount: "always",
+    // صف زنده است: پیش‌فاکتورِ تازه و مهلت‌های گذشته بی‌رفرش دیده شوند.
+    refetchInterval: 30_000,
   });
 }
