@@ -24,7 +24,6 @@ import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import { toPaymentPayload } from "@/shared/domain/payments/paymentRows";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { SaleProformaEventEnum, SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { IN_PERSON_CHECK_NOTE } from "../domain/proformaFlow";
 import { createInstallmentPlan } from "@/features/sales/installments/services/api-v1";
@@ -43,22 +42,6 @@ function applySale(queryClient, sale) {
   invalidateSalesEcosystem(queryClient, sale?.id, { freshSale: true });
   queryClient.invalidateQueries({ queryKey: customerKeys.all });
 }
-
-/**
- * «تحویل کامل» (فقط از «ارسال شده»): مشتری کالا را تحویل گرفته. دکمه‌ی خودش را
- * دارد چون کارِ جدایی است؛ بقیه‌ی تغییرهای فروشِ صادرشده با «ثبت تغییرات» می‌روند.
- */
-export const useMarkSaleDeliveredMutation = (id) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => changeSaleStatus(id, SaleStatusEnum.DELIVERED),
-    onSuccess: (updated) => {
-      applySale(queryClient, updated);
-      toast.success("تحویل کامل ثبت شد");
-    },
-    onError: (error) => toast.error(getErrorMessage(error, "ثبتِ تحویل انجام نشد")),
-  });
-};
 
 /**
  * ثبتِ پیش‌فاکتورِ تازه پس از تأییدِ مشتری (پیش از آن فقط «لیست قیمت‌ها» چاپ می‌شود):

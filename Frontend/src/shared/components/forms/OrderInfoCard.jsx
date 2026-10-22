@@ -49,8 +49,8 @@ function ReadOnlyValue({ children }) {
  * @param showInvoiceDate تاریخِ فاکتور پیش از صدور (پیش‌فرض بله). فروش آن را نمی‌خواهد: سرور با صدور
  *   تاریخ می‌گذارد.
  * @param showDueDate سررسید حتی روی پیش‌فاکتور (پیش‌فرض فقط فاکتور) — در فروش جزوِ شرایطِ پیش‌فاکتور است.
- * @param status `{ value, options: [{ value, label }], onChange }` — با یک گزینه
- *   (فقط وضعیتِ فعلی) فیلد دیده نمی‌شود.
+ * @param status `{ value, options: [{ value, label }], onChange, hint? }` — با یک گزینه (فقط وضعیتِ
+ *   فعلی) به‌جای منو فقط‌خواندنی است. `hint` (متن یا عنصر) زیرِ فیلد: قدمِ بعدی.
  * @param children انتخاب‌های اضافه‌ی هر سمت زیرِ «نوع سند» (فروش: شیوه‌ی پرداخت)
  */
 export default function OrderInfoCard({
@@ -71,7 +71,8 @@ export default function OrderInfoCard({
   const isInvoice = issued || kind === "invoice";
   const dueDateVisible = showDueDate ?? isInvoice;
   const invoiceDateVisible = isInvoice && (issued || showInvoiceDate);
-  const showStatus = status && status.options.length > 1;
+  const showStatus = Boolean(status);
+  const statusLabel = status?.options.find((option) => Number(option.value) === Number(status.value))?.label;
 
   return (
     <SectionCard title="اطلاعات فاکتور" action={headerAction}>
@@ -129,19 +130,29 @@ export default function OrderInfoCard({
           )}
           {showStatus && (
             <Field label="وضعیت" className="col-span-2">
-              <Select value={String(status.value)} onValueChange={(next) => status.onChange(Number(next))}>
-                <SelectTrigger className="h-9! w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {status.options.map((option) => (
-                    <SelectItem key={option.value} value={String(option.value)}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {status.hint && <p className="text-xs text-muted-foreground">{status.hint}</p>}
+              {status.options.length > 1 ? (
+                // `key`: وقتی وضعیت و گزینه‌ها با هم عوض می‌شوند (مثلاً پس از ارسالِ انبار) منو از نو ساخته
+                // شود — Radix برچسبِ گزینه‌ی تازه را پیدا نمی‌کرد و فیلد خالی می‌ماند. برچسب صریح هم داده می‌شود.
+                <Select
+                  key={status.options.map((option) => option.value).join(",")}
+                  value={String(status.value)}
+                  onValueChange={(next) => status.onChange(Number(next))}
+                >
+                  <SelectTrigger className="h-9! w-full">
+                    <SelectValue>{statusLabel}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {status.options.map((option) => (
+                      <SelectItem key={option.value} value={String(option.value)}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <ReadOnlyValue>{statusLabel}</ReadOnlyValue>
+              )}
+              {status.hint && <div className="text-xs leading-5 text-muted-foreground">{status.hint}</div>}
             </Field>
           )}
         </div>

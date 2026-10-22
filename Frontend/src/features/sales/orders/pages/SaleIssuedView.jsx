@@ -7,7 +7,6 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 import { useSaleChangesSaver, useSalePosActions } from "@/features/sales/orders/services/mutations";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
-import SaleDeliveryNotice from "../components/forms/SaleDeliveryNotice";
 import DocumentFormLayout, {
   OrderSummaryCard,
 } from "@/shared/components/forms/DocumentFormLayout";
@@ -25,7 +24,8 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
 import { RETURNABLE_SALE_STATUSES, hasAnythingShipped, saleStatusOptions } from "../domain/saleRules";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
-import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import { SALE_STATUS_LABELS, SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
+import SaleStatusHint from "../components/forms/SaleStatusHint";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import InstallmentPlanCard from "@/features/sales/installments/components/InstallmentPlanCard";
@@ -87,7 +87,6 @@ export default function SaleIssuedView({ sale }) {
         onSubmit={onSubmit}
         main={
           <>
-            <SaleDeliveryNotice sale={sale} canDeliver={canUpdate} canShip={allows("SaleShip")} />
             <SaleCustomerSection
               selectedId={sale.customerId}
               selectedName={sale.customerName}
@@ -162,11 +161,15 @@ export default function SaleIssuedView({ sale }) {
               formData={{ ...sale, paymentDate: draft.dueDate }}
               onFormChange={({ paymentDate }) => draft.setDueDate(paymentDate)}
               headerAction={!isCancelled && <IssuedInvoiceNotice movedLabel="ارسال" />}
-              status={
-                canUpdate
-                  ? { value: Number(draft.status), options: saleStatusOptions(sale), onChange: draft.setStatus }
-                  : undefined
-              }
+              status={{
+                value: Number(draft.status),
+                // بی دسترسیِ ویرایش فقط وضعیتِ فعلی (فقط‌خواندنی).
+                options: canUpdate
+                  ? saleStatusOptions(sale)
+                  : [{ value: sale.status, label: SALE_STATUS_LABELS[sale.status] }],
+                onChange: draft.setStatus,
+                hint: <SaleStatusHint sale={sale} canShip={allows("SaleShip")} />,
+              }}
             />
             <InvoiceDocumentSection
               title="فاکتور"
