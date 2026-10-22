@@ -40,6 +40,9 @@ export default function PartyBalanceFilters() {
   return (
     <FilterPanel
       onReset={resetFilters}
+      dateRowClassName="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-4 pt-3 border-t border-border"
+      resetWrapperClassName="flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end"
+      resetButtonClassName="w-full px-4"
       dateRow={
         <>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

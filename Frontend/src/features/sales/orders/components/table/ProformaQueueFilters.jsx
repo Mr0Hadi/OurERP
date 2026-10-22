@@ -31,8 +31,6 @@ export default function ProformaQueueFilters({ useStore }) {
       store={useStore}
       firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
       primary={<FilterSearchInput placeholder="نامِ مشتری..." value={store.customerName} onChange={onSearch} />}
-      // دو تاریخ در ردیفِ پنج‌ستونیِ پیش‌فرض جا نمی‌شوند؛ هر کدام یک‌سومِ ردیف.
-      dateRowClassName="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-4 pt-3 border-t border-border"
       dateRow={
         <>
           <FilterDateInput label="سررسید از" value={store.fromPaymentDate} onChange={store.setFromPaymentDate} />

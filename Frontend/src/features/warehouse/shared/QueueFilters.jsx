@@ -33,9 +33,6 @@ export default function QueueFilters({ useStore, party, statusOptions, searchPla
     <FilterPanel
       onReset={store.resetFilters}
       firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-      dateRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border"
-      resetWrapperClassName="flex items-end sm:col-span-2 lg:col-span-2 lg:justify-end"
-      resetButtonClassName="w-full lg:w-auto px-4"
       dateRow={
         <>
           <FilterDateInput label="از تاریخ" value={store.fromDate} onChange={store.setFromDate} />
