@@ -117,6 +117,7 @@ flowchart LR
 | --- | --- | --- |
 | `PaymentsCard` | همه‌ی پرداخت‌های یک سند؛ جز کارتخوان، همه در پیش‌نویسِ `usePaymentDraft` تا «ثبت تغییرات» | ۴ |
 | `PaymentForm`، `PaymentRow`، `PaymentMethodEditor`، `useFormPosPayment`، `pos/PosPaymentPanel`، `pos/PosReadyForm`، `pos/PosResultViews` | داخلیِ `PaymentsCard` | — |
+| `BankAccountSelect` | صندوق/حسابِ یک دریافت/پرداختِ نقدی یا انتقالی (`GetBankAccountOptions`)؛ «بدون حساب» = `null`؛ بی حسابِ تعریف‌شده چیزی رندر نمی‌کند | ۲ |
 
 ### `returns/` (مرجوعیِ خرید و فروش، [11](11-domain-layer.md))
 

@@ -12,6 +12,7 @@ export const toMoneyRow = (entry) => ({
   paidAt: entry.paidAt || undefined,
   checkNumber: entry.checkNumber,
   transferRef: entry.transferRef,
+  bankAccountId: entry.bankAccountId,
 });
 
 /**

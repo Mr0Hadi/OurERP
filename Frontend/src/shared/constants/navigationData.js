@@ -342,6 +342,13 @@ export const navigationData = {
           icon: CalendarClock,
           description: "اقساطِ فروش‌های اقساطی، سررسیدها و دریافت",
         },
+        {
+          title: "صندوق و بانک",
+          url: ROUTES.TREASURY_ACCOUNTS,
+          permission: ["BankAccountView", "BankAccountManage"],
+          icon: Landmark,
+          description: "صندوق‌ها و حساب‌های بانکی: مانده، گردش و انتقال بین حساب‌ها",
+        },
       ],
     },
     {

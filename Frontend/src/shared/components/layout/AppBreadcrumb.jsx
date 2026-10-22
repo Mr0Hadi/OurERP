@@ -55,6 +55,7 @@ const ROUTE_TITLES = {
   [ROUTES.TREASURY]: "خزانه‌داری",
   [ROUTES.TREASURY_CASHIER]: "صندوق",
   [ROUTES.TREASURY_INSTALLMENTS]: "اقساط",
+  [ROUTES.TREASURY_ACCOUNTS]: "صندوق و بانک",
 
   [ROUTES.WAREHOUSE]: "انبار",
   [ROUTES.WAREHOUSE_PRODUCTS]: "کالاهای انبار",

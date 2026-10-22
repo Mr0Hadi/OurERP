@@ -14,11 +14,13 @@ import {
 } from "@/shared/components/ui/select";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
+import BankAccountSelect from "./BankAccountSelect";
 import {
   PAYMENT_REFERENCE_FIELDS,
   PAYMENT_TYPE_LABELS,
   PaymentTypeEnum,
 } from "@/shared/domain/enums/paymentType";
+import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
 import {
   ROW_PAYMENT_TYPES,
   addMixedRow,
@@ -37,7 +39,7 @@ import { cn } from "@/shared/lib/utils";
 /**
  * روش و مبلغِ یک پرداخت (فرمِ «ثبت پرداخت»ِ `PaymentsCard`): نقدی، انتقال بانکی،
  * چک یا **ترکیبی** — یعنی مبلغ بینِ چند روش تقسیم شود و هر تکه مرجعِ خودش را
- * داشته باشد.
+ * داشته باشد. نقدی و انتقال صندوق/حسابِ خودشان را هم می‌گیرند (`BankAccountSelect`).
  *
  * مبلغ با باقیمانده پیش‌پر است (`payable`)؛ در ترکیبی آخرین تکه خودکار
  * «باقیمانده» را می‌گیرد.
@@ -87,7 +89,7 @@ export default function PaymentMethodEditor({
   );
 }
 
-/** روشِ تکی: مبلغ، تاریخ و (برای چک/انتقال) شماره‌ی پیگیری. */
+/** روشِ تکی: مبلغ، تاریخ، (برای چک/انتقال) شماره‌ی پیگیری و (برای نقدی/انتقال) صندوق/حساب. */
 function SingleRow({ row, payable, onChange }) {
   const reference = PAYMENT_REFERENCE_FIELDS[row.type];
   const full = Math.max(0, Number(payable) || 0);
@@ -134,6 +136,16 @@ function SingleRow({ row, payable, onChange }) {
             value={row[reference.field] || ""}
             onChange={(e) => onChange({ [reference.field]: e.target.value })}
             className="h-9"
+          />
+        </div>
+      )}
+      {takesBankAccount(row.type) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">صندوق / حساب</Label>
+          <BankAccountSelect
+            value={row.bankAccountId}
+            onChange={(bankAccountId) => onChange({ bankAccountId })}
+            paymentType={row.type}
           />
         </div>
       )}
@@ -210,6 +222,14 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
                   onChange={(isoDate) => onChange(row.id, { paidAt: isoDate || "" })}
                   placeholder="تاریخ: امروز"
                 />
+                {takesBankAccount(row.type) && (
+                  <BankAccountSelect
+                    value={row.bankAccountId}
+                    onChange={(bankAccountId) => onChange(row.id, { bankAccountId })}
+                    paymentType={row.type}
+                    aria-label={`صندوق/حسابِ تکه‌ی ${formatNumber(index + 1)}`}
+                  />
+                )}
               </div>
             </li>
           );

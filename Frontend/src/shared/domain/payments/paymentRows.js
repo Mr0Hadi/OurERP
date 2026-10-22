@@ -12,7 +12,13 @@ import { nowLocalIso } from "@/shared/lib/dateUtils";
 export const EMPTY_PAYMENT_DRAFT = Object.freeze({ changes: {}, added: [] });
 
 /**
- * بدنه‌ی API برای یک ردیفِ پرداخت؛ مرجعِ چک/حواله فقط برای همان روش.
+ * روش‌هایی که همان لحظه پول را از صندوق/حسابی جابه‌جا می‌کنند و `bankAccountId` می‌گیرند. نسیه پولی
+ * جابه‌جا نمی‌کند و چک هنگامِ وصول حساب می‌گیرد (`api-guide` بخش‌های ۲۳ و ۲۴).
+ */
+export const takesBankAccount = (type) => type === PaymentTypeEnum.CASH || type === PaymentTypeEnum.TRANSFER;
+
+/**
+ * بدنه‌ی API برای یک ردیفِ پرداخت؛ مرجعِ چک/حواله و صندوق/حساب فقط برای همان روش‌ها.
  * `withDirection: false` برای جایی که سرور جهت را خودش می‌گذارد (ثبتِ سند،
  * اصلاحِ پرداخت).
  */
@@ -25,6 +31,7 @@ export function toPaymentPayload(values, { withDirection = true } = {}) {
     checkNumber: values.type === PaymentTypeEnum.CHECK ? values.checkNumber || undefined : undefined,
     transferRef:
       values.type === PaymentTypeEnum.TRANSFER ? values.transferRef || undefined : undefined,
+    bankAccountId: takesBankAccount(values.type) ? values.bankAccountId || undefined : undefined,
   };
 }
 

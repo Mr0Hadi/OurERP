@@ -1,5 +1,6 @@
 import { PaymentTypeEnum, PAYMENT_REFERENCE_FIELDS } from "@/shared/domain/enums/paymentType";
 import { ROW_PAYMENT_TYPES } from "@/shared/domain/payments/paymentSplit";
+import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
 import { isInstallmentUnpaid, SaleInstallmentStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { todayIso } from "@/shared/lib/dateUtils";
 
@@ -19,12 +20,13 @@ export const INSTALLMENT_PAYMENT_TYPES = ROW_PAYMENT_TYPES;
  */
 export const INSTALLMENT_COUNT_PRESETS = Object.freeze([3, 6, 12, 18, 24]);
 
-/** فیلدهای پرداختِ یک قسط/پیش‌پرداخت (`paymentType` + مرجع + تاریخ). */
+/** فیلدهای پرداختِ یک قسط/پیش‌پرداخت (`paymentType` + مرجع + تاریخ + صندوق/حساب). */
 export const EMPTY_INSTALLMENT_PAYMENT = Object.freeze({
   paymentType: PaymentTypeEnum.CASH,
   checkNumber: "",
   transferRef: "",
   paidAt: "",
+  bankAccountId: null,
 });
 
 /** پیش‌نویسِ فرمِ قرارداد (همان نام‌های `CreateSaleInstallmentPlanCommand`). */
@@ -149,7 +151,9 @@ export function planDraftErrors(draft, { payable, withDownPayment = false } = {}
   return errors;
 }
 
-/** فیلدهای پرداخت برای بدنه‌ی API؛ مرجعِ چک/حواله فقط برای همان روش، تاریخِ خالی یعنی «الان». */
+/**
+ * فیلدهای پرداخت برای بدنه‌ی API؛ مرجعِ چک/حواله و صندوق/حساب فقط برای همان روش‌ها، تاریخِ خالی یعنی «الان».
+ */
 export function toApiInstallmentPayment(payment) {
   const reference = PAYMENT_REFERENCE_FIELDS[payment.paymentType];
   return {
@@ -157,6 +161,7 @@ export function toApiInstallmentPayment(payment) {
     checkNumber: reference?.field === "checkNumber" ? payment.checkNumber || null : null,
     transferRef: reference?.field === "transferRef" ? payment.transferRef || null : null,
     paidAt: payment.paidAt || null,
+    bankAccountId: takesBankAccount(payment.paymentType) ? payment.bankAccountId || null : null,
   };
 }
 

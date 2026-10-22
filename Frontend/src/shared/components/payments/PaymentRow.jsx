@@ -50,6 +50,7 @@ export default function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, 
           {" · "}
           {row.paidAt ? gregorianToPersian(row.paidAt) : "امروز"}
           {reference && <span dir="ltr"> · {reference}</span>}
+          {row.bankAccountTitle && ` · ${row.bankAccountTitle}`}
         </p>
       </div>
       <div className="flex shrink-0 gap-0.5">

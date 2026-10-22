@@ -61,6 +61,8 @@ export const ROUTES = {
   TREASURY_CASHIER: "/treasury/cashier",
   TREASURY_CASHIER_DETAIL: "/treasury/cashier/:id",
   TREASURY_INSTALLMENTS: "/treasury/installments",
+  TREASURY_ACCOUNTS: "/treasury/accounts",
+  TREASURY_ACCOUNTS_DETAIL: "/treasury/accounts/:id",
   SALES_RETURNS_NEW: "/sales/returns/new",
   SALES_RETURNS_LIST: "/sales/returns",
   SALES_RETURNS_DETAIL: "/sales/returns/:id",

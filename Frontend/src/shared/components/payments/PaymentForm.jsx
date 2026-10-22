@@ -20,6 +20,7 @@ function initialValue(mode, row) {
         paidAt: toDateOnly(row.paidAt) || "",
         checkNumber: row.checkNumber || "",
         transferRef: row.transferRef || "",
+        bankAccountId: row.bankAccountId ?? null,
       },
     ],
   };

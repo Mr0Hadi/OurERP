@@ -53,7 +53,7 @@ pnpm knip
 
 نتیجه (2026-10-16):
 - فایل‌های بی‌استفاده: `src/shared/components/app-update/AppUpdateDialog.jsx`، `src/shared/components/app-update/UpdateAvailableToast.jsx`، `src/shared/services/appUpdate.js`.
-- export‌های بی‌استفاده: `MATERIAL_THEMES` (`src/shared/components/theme/themeClasses.js`)، `validateIranianCard` و `validateIranianShaba` (`src/shared/lib/iranian-bank.js`)، `getUpdateBlocker` (`src/shared/services/updateSafety.js`).
+- export‌های بی‌استفاده: `MATERIAL_THEMES` (`src/shared/components/theme/themeClasses.js`)، `getUpdateBlocker` (`src/shared/services/updateSafety.js`).
 - راهنمای پیکربندی: الگوهای `src/main.jsx` و `structure.js` در `entry`ِ `knip.json` تکراری‌اند.
 
 ### بقیه
@@ -129,7 +129,7 @@ pnpm knip
 | صفحه‌ی placeholder با مسیر | `src/features/suppliers/pages/SupplierEditPage.jsx` (`ROUTES.SUPPLIERS_EDIT`) | حذفِ مسیر (ویرایش در `SupplierDetailPage` است) |
 | کلیدهای breadcrumb بدونِ صفحه | `INVOICE_*`، `TRANSACTIONS_*`، `WAREHOUSE_STOCK`، `WAREHOUSE_TRANSACTIONS`، `TOOLS_*`، `FEEDBACK` در `AppBreadcrumb.jsx` و `src/shared/constants/routes.js` | حذف |
 | فایل‌های بروزرسانیِ PWA | `src/shared/components/app-update/*`، `src/shared/services/appUpdate.js` | تصمیمِ PWA (فایل ۰۱)؛ اگر برنمی‌گردد حذف |
-| exportهای بی‌استفاده | `MATERIAL_THEMES`، `validateIranianCard`، `validateIranianShaba`، `getUpdateBlocker`، `canAny` در `src/features/auth/hooks/usePermission.js` | حذف |
+| exportهای بی‌استفاده | `MATERIAL_THEMES`، `getUpdateBlocker`، `canAny` در `src/features/auth/hooks/usePermission.js` | حذف |
 
 ### پیکربندی و ابزار
 

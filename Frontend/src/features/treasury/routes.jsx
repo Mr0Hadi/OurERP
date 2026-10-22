@@ -7,9 +7,11 @@ import { ROUTES } from "@/shared/constants/routes";
 
 const CashierQueuePage = lazy(() => import("./cashier/pages/CashierQueuePage"));
 const CashierPaymentPage = lazy(() => import("./cashier/pages/CashierPaymentPage"));
+const BankAccountsPage = lazy(() => import("./bankAccounts/pages/BankAccountsPage"));
 // اقساط منطقِ فروش است (`sales/installments`) ولی جای مدیریتش، کنارِ بقیه‌ی پول، خزانه‌داری است.
 const InstallmentsPage = lazy(() => import("@/features/sales/installments/pages/InstallmentsPage"));
 
+const bankAccountPermission = ["BankAccountView", "BankAccountManage"];
 
 /**
  * خزانه‌داری: هرچه پول جابه‌جا می‌کند یک‌جا — صفِ صندوق و اقساط، و جای حساب‌های بانک/صندوق، دریافت و
@@ -20,6 +22,8 @@ export const treasuryRoutes = [
   { path: ROUTES.TREASURY_CASHIER, handle: { permission: "SalePayment" }, element: <CashierQueuePage /> },
   { path: ROUTES.TREASURY_CASHIER_DETAIL, handle: { permission: "SalePayment" }, element: <CashierPaymentPage /> },
   { path: ROUTES.TREASURY_INSTALLMENTS, handle: { permission: "SaleInstallmentView" }, element: <InstallmentsPage /> },
+  { path: ROUTES.TREASURY_ACCOUNTS, handle: { permission: bankAccountPermission }, element: <BankAccountsPage /> },
+  { path: ROUTES.TREASURY_ACCOUNTS_DETAIL, handle: { permission: bankAccountPermission }, element: <BankAccountsPage /> },
   { path: ROUTES.LEGACY_SALES_CASHIER, element: <RedirectKeepingSearch to={ROUTES.TREASURY_CASHIER} /> },
   { path: ROUTES.LEGACY_SALES_INSTALLMENTS, element: <RedirectKeepingSearch to={ROUTES.TREASURY_INSTALLMENTS} /> },
 ];
