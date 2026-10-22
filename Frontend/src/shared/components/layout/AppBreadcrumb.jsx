@@ -1,3 +1,4 @@
+import { cn } from "@/shared/lib/utils";
 import React from "react";
 import { useLocation, Link } from "react-router-dom";
 import { ROUTES } from "@/shared/constants/routes";
@@ -190,9 +191,10 @@ export function AppBreadcrumb() {
   const breadcrumbs = buildBreadcrumbs(pathname);
 
   return (
-    <Breadcrumb dir='ltr'>
-      <BreadcrumbList>
-        <BreadcrumbItem>
+    // در موبایل فقط صفحه‌ی فعلی (یک خط و کوتاه‌شده) — مسیرِ کامل در هدرِ کوچک چند خط می‌شد و بیرون می‌زد.
+    <Breadcrumb dir='ltr' className="min-w-0">
+      <BreadcrumbList className="flex-nowrap md:flex-wrap">
+        <BreadcrumbItem className={cn(breadcrumbs.length > 0 && "hidden md:inline-flex")}>
           <BreadcrumbLink asChild>
             <Link to={ROUTES.DASHBOARD}>خانه</Link>
           </BreadcrumbLink>
@@ -203,10 +205,10 @@ export function AppBreadcrumb() {
 
           return (
             <React.Fragment key={crumb.path}>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden md:block" />
+              <BreadcrumbItem className={cn("min-w-0", !isLast && "hidden md:inline-flex")}>
                 {isLast ? (
-                  <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate">{crumb.title}</BreadcrumbPage>
                 ) : NON_LINKABLE.has(crumb.path) ? (
                   <span className="text-muted-foreground">{crumb.title}</span>
                 ) : (
