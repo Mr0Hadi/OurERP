@@ -59,6 +59,7 @@ export const ROUTES = {
   // خزانه‌داری: صندوق، اقساط، و (بعداً) حساب‌های بانک/صندوق، دریافت‌ها و انتقال‌ها.
   TREASURY: "/treasury",
   TREASURY_CASHIER: "/treasury/cashier",
+  TREASURY_CASHIER_DETAIL: "/treasury/cashier/:id",
   TREASURY_INSTALLMENTS: "/treasury/installments",
   SALES_RETURNS_NEW: "/sales/returns/new",
   SALES_RETURNS_LIST: "/sales/returns",

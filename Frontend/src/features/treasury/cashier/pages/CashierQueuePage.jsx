@@ -1,9 +1,11 @@
 import { RefreshCw, Wallet } from "lucide-react";
-import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import ProformaQueueFilters from "@/features/sales/orders/components/table/ProformaQueueFilters";
-import { useProformaQueueFilters, useProformaQueueQuery } from "@/features/sales/orders/services/queries";
+import {
+  useProformaQueueFilters,
+  useProformaQueueQuery,
+} from "@/features/sales/orders/services/queries";
 import { createProformaQueueFilterStore } from "@/features/sales/orders/store/proformaQueueFilterStore";
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
@@ -14,88 +16,106 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
-import CashierPaymentDialog from "../components/CashierPaymentDialog";
 import ReservationTimer from "../components/ReservationTimer";
 
 /** فیلترهای صفِ صندوق (جدا از صفِ انبار). */
 const useCashierFilterStore = createProformaQueueFilterStore();
 
-function columns(onPay) {
-  return [
-    {
-      accessorKey: "customerName",
-      meta: { mobile: "title" },
-      header: "مشتری",
-      cell: ({ row }) => (
-        <Link className="font-medium hover:underline" to={routeWithId(ROUTES.SALES_DETAIL, row.original.id)}>
-          {row.original.customerName}
-        </Link>
-      ),
-    },
-    {
-      id: "number",
-      meta: { mobile: "subtitle" },
-      header: "پیش‌فاکتور",
-      enableSorting: false,
-      cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">#{row.original.id}</span>,
-    },
-    {
-      accessorKey: "paymentType",
-      header: "شیوه‌ی پرداخت",
-      cell: (info) => <PaymentTypeBadge type={info.getValue()} />,
-    },
-    {
-      accessorKey: "paymentDate",
-      header: "سررسید",
-      cell: (info) => (
-        <span className="tabular-nums text-sm">{info.getValue() ? gregorianToPersian(info.getValue()) : "—"}</span>
-      ),
-    },
-    {
-      id: "reservation",
-      meta: { mobile: "badge" },
-      header: "مهلتِ رزرو",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <ReservationTimer
-          key={`${row.original.id}:${row.original.reservationSecondsLeft}`}
-          secondsLeft={row.original.reservationSecondsLeft}
-        />
-      ),
-    },
-    {
-      accessorKey: "totalAmount",
-      meta: { mobile: "highlight" },
-      header: "قابل پرداخت (ریال)",
-      cell: ({ row }) => (
-        <span className="font-semibold tabular-nums">
-          {formatNumber(row.original.payableAmount ?? row.original.totalAmount)}
-        </span>
-      ),
-    },
-    {
-      id: "actions",
-      // بی‌برچسب: در موبایل فوترِ کارت می‌شود.
-      header: "",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <Button
-          size="sm"
-          className="w-full gap-1 md:w-auto"
-          disabled={row.original.reservationSecondsLeft === 0}
-          onClick={() => onPay(row.original.id)}
-        >
-          <Wallet className="size-4" />
-          دریافت
+const COLUMNS = [
+  {
+    accessorKey: "customerName",
+    meta: { mobile: "title" },
+    header: "مشتری",
+    cell: ({ row }) => (
+      <Link
+        className="font-medium hover:underline"
+        to={routeWithId(ROUTES.SALES_DETAIL, row.original.id)}
+      >
+        {row.original.customerName}
+      </Link>
+    ),
+  },
+  {
+    id: "number",
+    meta: { mobile: "subtitle" },
+    header: "پیش‌فاکتور",
+    enableSorting: false,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs text-muted-foreground">
+        #{row.original.id}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "paymentType",
+    header: "شیوه‌ی پرداخت",
+    cell: (info) => <PaymentTypeBadge type={info.getValue()} />,
+  },
+  {
+    accessorKey: "paymentDate",
+    header: "سررسید",
+    cell: (info) => (
+      <span className="tabular-nums text-sm">
+        {info.getValue() ? gregorianToPersian(info.getValue()) : "—"}
+      </span>
+    ),
+  },
+  {
+    id: "reservation",
+    meta: { mobile: "badge" },
+    header: "مهلتِ رزرو",
+    enableSorting: false,
+    cell: ({ row }) => (
+      <ReservationTimer
+        key={`${row.original.id}:${row.original.reservationSecondsLeft}`}
+        secondsLeft={row.original.reservationSecondsLeft}
+      />
+    ),
+  },
+  {
+    accessorKey: "totalAmount",
+    meta: { mobile: "highlight" },
+    header: "قابل پرداخت (ریال)",
+    cell: ({ row }) => (
+      <span className="font-semibold tabular-nums">
+        {formatNumber(row.original.payableAmount ?? row.original.totalAmount)}
+      </span>
+    ),
+  },
+  {
+    id: "actions",
+    // بی‌برچسب: در موبایل فوترِ کارت می‌شود.
+    header: "",
+    enableSorting: false,
+    cell: ({ row }) =>
+      row.original.reservationSecondsLeft === 0 ? (
+        <span className="text-xs text-muted-foreground">مهلت تمام شد</span>
+      ) : (
+        <Button asChild size="sm" className="w-full gap-1 md:w-auto">
+          <Link
+            to={routeWithId(ROUTES.TREASURY_CASHIER_DETAIL, row.original.id)}
+          >
+            <Wallet className="size-4" />
+            دریافت
+          </Link>
         </Button>
       ),
-    },
-  ];
+  },
+];
+
+function CashierTable(props) {
+  return (
+    <DataTable
+      {...props}
+      columns={COLUMNS}
+      emptyMessage="پیش‌فاکتوری منتظرِ پرداخت نیست."
+    />
+  );
 }
 
 /**
  * صفِ صندوق: پیش‌فاکتورهایی که انبار تأیید کرده (یا در فروشِ حضوری رزرو شده) و منتظرِ پولِ مشتری‌اند.
- * صندوقدار از همین‌جا دریافت را ثبت می‌کند و فاکتور صادر می‌شود؛ فهرست هر ۳۰ ثانیه تازه می‌شود.
+ * هر ردیف صفحه‌ی دریافتِ خودش را باز می‌کند (`CashierPaymentPage`) که فاکتور را صادر می‌کند؛ فهرست هر ۳۰ ثانیه تازه می‌شود.
  */
 export default function CashierQueuePage() {
   const listState = useCashierFilterStore();
@@ -106,14 +126,6 @@ export default function CashierQueuePage() {
     listState.pagination,
     listState.sorting,
   );
-  const [payingId, setPayingId] = useState(null);
-
-  const [Table] = useState(() => {
-    const tableColumns = columns(setPayingId);
-    return function CashierTable(props) {
-      return <DataTable {...props} columns={tableColumns} emptyMessage="پیش‌فاکتوری منتظرِ پرداخت نیست." />;
-    };
-  });
 
   return (
     <ListPageLayout
@@ -130,13 +142,14 @@ export default function CashierQueuePage() {
           onClick={() => query.refetch()}
           disabled={query.isFetching}
         >
-          <RefreshCw className={query.isFetching ? "size-4 animate-spin" : "size-4"} />
+          <RefreshCw
+            className={query.isFetching ? "size-4 animate-spin" : "size-4"}
+          />
         </Button>
       }
     >
       <ProformaQueueFilters useStore={useCashierFilterStore} />
-      <ServerTable query={query} listState={listState} table={Table} />
-      <CashierPaymentDialog saleId={payingId} onClose={() => setPayingId(null)} />
+      <ServerTable query={query} listState={listState} table={CashierTable} />
     </ListPageLayout>
   );
 }

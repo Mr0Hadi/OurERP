@@ -8,13 +8,14 @@
 | --- | --- | --- | --- |
 | `TREASURY` | `/treasury` | — | ریدایرکت به صندوق |
 | `TREASURY_CASHIER` | `/treasury/cashier` | `SalePayment` | `src/features/treasury/cashier/pages/CashierQueuePage.jsx` |
+| `TREASURY_CASHIER_DETAIL` | `/treasury/cashier/:id` | `SalePayment` | `src/features/treasury/cashier/pages/CashierPaymentPage.jsx` |
 | `TREASURY_INSTALLMENTS` | `/treasury/installments` | `SaleInstallmentView` | `src/features/sales/installments/pages/InstallmentsPage.jsx` |
 | `LEGACY_SALES_CASHIER`، `LEGACY_SALES_INSTALLMENTS` | `/sales/cashier`، `/sales/installments` | — | ریدایرکت با همان query |
 
 ## صندوق
 
 - فهرست: `useProformaQueueQuery(WAREHOUSE_CHECKED)` و فیلترهای مشترکِ `ProformaQueueFilters` / `createProformaQueueFilterStore` از `sales/orders` (تازه‌سازی هر ۳۰ ثانیه). مهلتِ رزروِ هر ردیف: `cashier/components/ReservationTimer.jsx`.
-- دریافت: `cashier/components/CashierPaymentDialog.jsx`. صندوقدار شیوه‌ی پرداخت را انتخاب می‌کند (نقد/نسیه یا اقساطی)؛ پیش از دریافت `ensureProformaPaymentType` آن را ثبت می‌کند. نقد/نسیه: `useSaleChangesSaver` با `paymentDraft` (کارتخوان با `useSalePosActions`)؛ اقساطی: `useIssueInstallmentSaleMutation`؛ فروشِ حضوری (`isInPersonProforma`) با پرداختِ کامل یا قرارداد: `useCompleteInPersonMutation`.
+- دریافت: صفحه‌ی جدا `cashier/pages/CashierPaymentPage.jsx` (`DocumentFormLayout`): مشتری (`cashier/components/CashierCustomerCard.jsx` — تماس، مانده، سقف و اعتبارِ مانده پس از این فروش؛ با `CustomerView`)، قراردادهای اقساطِ مشتری (`CustomerInstallmentsCard`)، اقلام، و دریافت. صندوقدار شیوه‌ی پرداخت را انتخاب می‌کند (نقد/نسیه یا اقساطی)؛ پیش از دریافت `ensureProformaPaymentType` آن را ثبت می‌کند. نقد/نسیه: `useSaleChangesSaver` با `paymentDraft` (کارتخوان با `useSalePosActions`)؛ اقساطی: `useIssueInstallmentSaleMutation`؛ فروشِ حضوری (`isInPersonProforma`) با پرداختِ کامل یا قرارداد: `useCompleteInPersonMutation`.
 
 ## importهای بیرونی
 
