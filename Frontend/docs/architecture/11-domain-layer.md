@@ -47,7 +47,7 @@ enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً ک�
 
 - `src/features/sales/orders/domain/saleRules.js` — `canCancelSale`، `saleStatusOptions`، `RETURNABLE_SALE_STATUSES`، `missingSaleInvoiceFields`، `saleFormProblem`، `hasAnythingShipped`، `scannedBarcodesOf`
 - `src/features/purchases/orders/domain/purchaseRules.js` — `canCancelPurchase`، `purchaseStatusTargets`، `canClosePurchaseItem`، `canReopenPurchaseItem`، `stillOwedOf`
-- `src/features/sales/installments/domain/installmentPlan.js` — `previewInstallmentPlan`، `planDraftErrors`، `EMPTY_PLAN_DRAFT`
+- `src/features/sales/installments/domain/installmentPlan.js` — `previewInstallmentPlan`، `planDraftErrors`، `EMPTY_PLAN_DRAFT`، `overdueOf`، `installmentPayableToday`، `grossPenaltyOf`، `penaltyWaiveErrors`
 - `src/features/warehouse/receiving/domain/receivingVocabulary.js`، `src/features/warehouse/shipping/domain/shippingVocabulary.js` — کدام وضعیت‌ها در صفِ دریافت/ارسال‌اند
 - `src/features/warehouse/units/domain/unitVocabulary.js`، `labelTemplate.js` — بخش‌بندیِ دانه‌ها و قالبِ برچسب
 - `src/features/dashboard/domain/widgetRegistry.js` — `WIDGETS`، `defaultLayout`، `resolveLayout` (معماریِ ویجتِ داشبورد؛ [12-features](12-features/README.md))

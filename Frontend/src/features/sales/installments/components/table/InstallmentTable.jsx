@@ -8,14 +8,13 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import {
   INSTALLMENT_STATUS_TONES,
-  installmentDisplayStatus,
   isInstallmentUnpaid,
 } from "@/shared/domain/enums/saleInstallment";
-import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatDigits, formatNumber } from "@/shared/lib/numberFormat";
 import { toneRow } from "@/shared/lib/tone";
 
-function columnsFor({ today, onPay }) {
+function columnsFor({ onPay }) {
   return [
     {
       accessorKey: "customerName",
@@ -56,7 +55,7 @@ function columnsFor({ today, onPay }) {
       accessorKey: "status",
       meta: { mobile: "badge" },
       header: "وضعیت",
-      cell: ({ row }) => <InstallmentStatusBadge installment={row.original} today={today} />,
+      cell: (info) => <InstallmentStatusBadge status={info.getValue()} />,
     },
     {
       accessorKey: "paidAt",
@@ -103,16 +102,14 @@ function columnsFor({ today, onPay }) {
  * @param onPay `(row) => void` — بدونِ آن ستونِ «دریافت» نیست (دسترسیِ `SaleInstallmentPay`)
  */
 export default function InstallmentTable({ onPay, ...tableProps }) {
-  const today = todayIso();
-
   return (
     <DataTable
       {...tableProps}
-      columns={columnsFor({ today, onPay })}
+      columns={columnsFor({ onPay })}
       getRowKey={(row) => row.original.installmentId}
       rowClassName={({ original }) =>
         isInstallmentUnpaid(original.status)
-          ? toneRow(INSTALLMENT_STATUS_TONES[installmentDisplayStatus(original, today)])
+          ? toneRow(INSTALLMENT_STATUS_TONES[original.status])
           : ""
       }
       emptyMessage="قسطی با این فیلترها یافت نشد."

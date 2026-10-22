@@ -9,8 +9,10 @@ import { idempotent, normalizeListResponse } from "@/shared/services/api/contrac
  * و همه‌ی مبالغ را سرور حساب می‌کند. پولِ فروشِ اقساطی فقط از این مسیر جابه‌جا می‌شود
  * (`AddSalePayment` تا ابطالِ قرارداد ۴۰۰ می‌دهد).
  *
- *  - پرداختِ جزئی وجود ندارد: یک قسط = یک پرداختِ کامل به مبلغِ همان سطر.
- *  - `OVERDUE` را سرور نمی‌نویسد؛ دیرکرد از `dueDate` تشخیص داده می‌شود.
+ *  - پرداختِ جزئی وجود ندارد: یک قسط = یک پرداختِ کامل به مبلغِ همان سطر + جریمه‌ی دیرکردش.
+ *  - `OVERDUE` را سرویسِ پس‌زمینه‌ی سرور هر ساعت می‌نویسد (با مهلتِ ارفاق).
+ *  - جریمه‌ی دیرکرد جزوِ `totalAmount`/`paidAmount`ِ قرارداد نیست؛ روی هر سطر `penaltyDue`
+ *    (اگر امروز پرداخت شود) و `penaltyAmount` (گرفته‌شده) می‌آید.
  */
 
 /** `SaleInstallmentListSortEnum`، بر اساسِ شناسه‌ی ستونِ جدول. */
@@ -84,7 +86,7 @@ export async function cancelInstallmentPlan(id) {
   return data;
 }
 
-/** پرداختِ یک قسطِ کامل؛ مبلغ را سرور از خودِ سطر برمی‌دارد. */
+/** پرداختِ یک قسطِ کامل؛ مبلغ (قسط + جریمه‌ی دیرکرد) را سرور از خودِ سطر حساب می‌کند. */
 export async function payInstallment(body, { idempotencyKey } = {}) {
   const { data } = await axiosInstance.post(
     "/SaleInstallment/PaySaleInstallment",
@@ -94,12 +96,25 @@ export async function payInstallment(body, { idempotencyKey } = {}) {
   return data;
 }
 
-/** تسویه‌ی کامل: همه‌ی مانده (`remainingAmount`) یکجا، بدونِ تخفیف. */
+/**
+ * تسویه‌ی کامل: همه‌ی مانده یکجا. سرور سودِ اقساطِ سررسیدنشده را به اندازه‌ی تنظیمِ
+ * `Installment.EarlySettlementDiscountPercentage` می‌بخشد و جریمه‌ی اقساطِ دیرشده را اضافه می‌کند.
+ */
 export async function settleInstallmentPlan(body, { idempotencyKey } = {}) {
   const { data } = await axiosInstance.post(
     "/SaleInstallment/SettleSaleInstallmentPlan",
     body,
     idempotent(idempotencyKey),
   );
+  return data;
+}
+
+/**
+ * `POST WaiveSaleInstallmentPenalty` — بخشودگیِ جریمه‌ی یک قسطِ پرداخت‌نشده (`amount` ریال؛ جایگزینِ
+ * بخشودگیِ قبلی، `0` = برداشتن). برای مبلغِ بیش از صفر `reason` الزامی است. دسترسی
+ * `SaleInstallmentPenaltyWaive`. خروجی سندِ کاملِ قرارداد.
+ */
+export async function waiveInstallmentPenalty(body) {
+  const { data } = await axiosInstance.post("/SaleInstallment/WaiveSaleInstallmentPenalty", body);
   return data;
 }

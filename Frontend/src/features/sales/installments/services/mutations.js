@@ -6,6 +6,7 @@ import {
   payInstallment,
   settleInstallmentPlan,
   updateInstallmentPlan,
+  waiveInstallmentPenalty,
 } from "./api-v1";
 import { installmentKeys } from "./queryKeys";
 import { toApiInstallmentPayment, toApiUpdatePlan } from "../domain/installmentPlan";
@@ -82,4 +83,13 @@ export const useCancelInstallmentPlanMutation = () =>
     mutationFn: (planId) => cancelInstallmentPlan(planId),
     success: "قرارداد اقساطی ابطال شد",
     failure: "ابطالِ قرارداد انجام نشد",
+  });
+
+/** `{ installmentId, amount, reason }` — جایگزینِ بخشودگیِ قبلیِ همان قسط؛ `amount = 0` برش می‌دارد. */
+export const useWaiveInstallmentPenaltyMutation = () =>
+  usePlanMutation({
+    mutationFn: ({ installmentId, amount, reason }) =>
+      waiveInstallmentPenalty({ saleInstallmentId: installmentId, amount, reason: reason?.trim() || null }),
+    success: "بخشودگیِ جریمه ثبت شد",
+    failure: "ثبتِ بخشودگیِ جریمه انجام نشد",
   });

@@ -15,7 +15,7 @@ import { useInstallmentFilterStore } from "../store/installmentFilterStore";
 import { INSTALLMENT_VIEWS, installmentListParams } from "../domain/installmentViews";
 
 /**
- * «اقساط» — همه‌ی اقساطِ فروش‌های اقساطی، با نماهای پرداخت‌نشده / سررسیدگذشته / پیش‌رو و
+ * «اقساط» — همه‌ی اقساطِ فروش‌های اقساطی، با نماهای سررسیدگذشته / در انتظار / پیش‌رو و
  * دریافتِ مستقیمِ هر قسط. فیلتر و صفحه‌بندی سمتِ سرور (`GetSaleInstallmentList`).
  *
  * `?view=overdue&customerId=5` (از داشبورد و صفحه‌ی مشتری) یک‌بار هنگامِ ورود اعمال می‌شود.
@@ -48,14 +48,14 @@ export default function InstallmentsPage() {
     <ListPageLayout
       title="اقساط فروش"
       icon={CalendarClock}
-      description="اقساطِ قراردادهای فروشِ اقساطی؛ هر قسط یکجا و به مبلغِ کامل دریافت می‌شود."
+      description="اقساطِ قراردادهای فروشِ اقساطی؛ هر قسط یکجا و به مبلغِ کامل، همراهِ جریمه‌ی دیرکرد، دریافت می‌شود."
     >
       <InstallmentFilters customers={customers} isCustomersLoading={isCustomersLoading} />
       <ServerTable
         query={query}
         listState={listState}
         table={InstallmentTable}
-        onPay={allows("SaleInstallmentPay") ? (row) => setPayTarget({ kind: "pay", installment: row, invoiceNumber: row.invoiceNumber, customerName: row.customerName }) : undefined}
+        onPay={allows("SaleInstallmentPay") ? (row) => setPayTarget({ kind: "pay", saleId: row.saleId, installment: row, invoiceNumber: row.invoiceNumber, customerName: row.customerName }) : undefined}
       />
       <InstallmentPaymentDialog target={payTarget} onOpenChange={(open) => !open && setPayTarget(null)} />
     </ListPageLayout>
