@@ -1,9 +1,14 @@
-import { ExternalLink } from "lucide-react";
+import { BookOpenText, CalendarClock, ExternalLink, Package } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { usePermission } from "@/features/auth/hooks/usePermission";
+import { useCustomerQuery } from "@/features/customers/services/queries";
+import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
+import { openingBalanceOf, partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
 import InstallmentPlanDraftCard from "@/features/sales/installments/components/InstallmentPlanDraftCard";
 import ProformaPlanNotice from "@/features/sales/installments/components/ProformaPlanNotice";
@@ -81,6 +86,9 @@ function CashierPaymentForm({ sale }) {
   const [installmentChoice, setInstallmentChoice] = useState(null);
   const [planDraft, setPlanDraft] = useState(() => ({ ...EMPTY_PLAN_DRAFT, firstDueDate: addMonthsIso(todayIso(), 1) }));
   const secondsLeft = useReservationCountdown(sale);
+  // مانده‌ی اولیه‌ی دستیِ مشتری برای گردشِ حساب (همان کشِ کارتِ مشتری).
+  const { data: customer } = useCustomerQuery(allows("CustomerView") ? sale.customerId : null);
+  const canSeeStatement = allows("PartyStatementView");
 
   const expired = secondsLeft === 0;
   const isInstallment = installmentChoice ?? sale.paymentType === PaymentTypeEnum.INSTALLMENT;
@@ -125,9 +133,12 @@ function CashierPaymentForm({ sale }) {
       setSwitchingType(false);
     }
     if (isInstallment) {
-      const plan = toApiCreatePlan(planDraft);
-      if (inPerson) completeMutation.mutate({ installmentPlan: plan }, { onSuccess: finish });
-      else issueMutation.mutate({ plan }, { onSuccess: finish });
+      try {
+        await registerPlan(planDraft);
+        finish();
+      } catch {
+        // پیامِ خطا را خودِ mutation داده است.
+      }
       return;
     }
     if (deliverNow) {
@@ -138,6 +149,35 @@ function CashierPaymentForm({ sale }) {
       return;
     }
     saver.mutate({ paymentDraft: payments }, { onSuccess: finish });
+  };
+
+  /** ثبتِ قرارداد (و تحویلِ حضوری) با پیش‌پرداختِ این پیش‌نویس — دستی یا پس از کارتخوان. */
+  const registerPlan = (draft) => {
+    const plan = toApiCreatePlan(draft);
+    return inPerson ? completeMutation.mutateAsync({ installmentPlan: plan }) : issueMutation.mutateAsync({ plan });
+  };
+
+  // کارت‌کشیدنِ پیش‌پرداخت: پیش از کارت قرارداد سنجیده و شیوه‌ی «اقساطی» ثبت می‌شود؛ با تأییدِ دستگاه
+  // قرارداد با پیش‌پرداختِ «انتقال بانکی» و شماره‌ی پیگیریِ دستگاه ثبت می‌شود.
+  const downPaymentPos = {
+    prepare: async () => {
+      if (Object.keys(planErrors).length > 0) {
+        setShowErrors(true);
+        throw new Error("plan");
+      }
+      try {
+        await ensureProformaPaymentType(sale, proformaPaymentType(true, sale));
+      } catch (error) {
+        toast.error(getErrorMessage(error, "ثبتِ شیوه‌ی پرداخت انجام نشد"));
+        throw error;
+      }
+    },
+    record: (_result, { transferRef }) =>
+      registerPlan({ ...planDraft, paymentType: PaymentTypeEnum.TRANSFER, transferRef, paidAt: "" }),
+    onDone: finish,
+    onLockChange: setPosLocked,
+    reference: () => newPosReference(`sale-${sale.id}`),
+    doneLabel: "بازگشت به صندوق",
   };
 
   const submitLabel = isInstallment
@@ -155,8 +195,44 @@ function CashierPaymentForm({ sale }) {
         main={
           <>
             <CashierCustomerCard customerId={sale.customerId} customerName={sale.customerName} saleTotal={total} />
-            {allows("SaleInstallmentView") && <CustomerInstallmentsCard customerId={sale.customerId} />}
-            <OrderItemsReadOnly title="اقلام پیش‌فاکتور" items={sale.items} totalAmount={sale.totalAmount} />
+            {/* جزئیات در تب: صفحه شلوغ نمی‌شود و گردش/اقساط فقط با بازشدنِ تب خوانده می‌شوند. */}
+            <Tabs defaultValue="items" className="gap-3">
+              <TabsList className="w-full sm:w-fit">
+                <TabsTrigger value="items" className="flex-1 gap-1.5 sm:flex-none">
+                  <Package className="size-4" />
+                  اقلام ({formatNumber(sale.items.length)})
+                </TabsTrigger>
+                {canSeeStatement && (
+                  <TabsTrigger value="statement" className="flex-1 gap-1.5 sm:flex-none">
+                    <BookOpenText className="size-4" />
+                    گردش حساب
+                  </TabsTrigger>
+                )}
+                {allows("SaleInstallmentView") && (
+                  <TabsTrigger value="installments" className="flex-1 gap-1.5 sm:flex-none">
+                    <CalendarClock className="size-4" />
+                    اقساط
+                  </TabsTrigger>
+                )}
+              </TabsList>
+              <TabsContent value="items">
+                <OrderItemsReadOnly title="اقلام پیش‌فاکتور" items={sale.items} totalAmount={sale.totalAmount} />
+              </TabsContent>
+              {canSeeStatement && (
+                <TabsContent value="statement">
+                  <PartyStatementCard
+                    customerId={sale.customerId}
+                    totalBalance={customer ? partyBalanceOf(customer) : undefined}
+                    openingBalance={customer ? openingBalanceOf(customer) : 0}
+                  />
+                </TabsContent>
+              )}
+              {allows("SaleInstallmentView") && (
+                <TabsContent value="installments">
+                  <CustomerInstallmentsCard customerId={sale.customerId} />
+                </TabsContent>
+              )}
+            </Tabs>
           </>
         }
         payments={
@@ -190,6 +266,7 @@ function CashierPaymentForm({ sale }) {
                       onChange={(patch) => setPlanDraft((draft) => ({ ...draft, ...patch }))}
                       preview={planPreview}
                       errors={showErrors ? planErrors : {}}
+                      posPayment={allows("PosCharge") ? downPaymentPos : undefined}
                       blockedReason={
                         allows("SaleInstallmentManage")
                           ? null

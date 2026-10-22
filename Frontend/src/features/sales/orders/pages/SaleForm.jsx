@@ -57,6 +57,8 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { newPosReference } from "@/shared/domain/pos/posSession";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import SectionCard from "@/shared/components/forms/SectionCard";
@@ -141,6 +143,8 @@ export default function SaleForm({ sale }) {
   const posActions = useSalePosActions();
   const [confirmRelease, setConfirmRelease] = useState(false);
   const [switchingType, setSwitchingType] = useState(false);
+  // کارت‌کشیدنِ پیش‌پرداختِ قرارداد اقساط در جریان است.
+  const [planPosLocked, setPlanPosLocked] = useState(false);
 
   const coreChanged = useSaleFormStore(isSaleCoreChanged);
   const dueDateChanged = useSaleFormStore(isSaleDueDateChanged);
@@ -307,6 +311,7 @@ export default function SaleForm({ sale }) {
     createMutation.isPending ||
     approveMutation.isPending ||
     switchingType ||
+    planPosLocked ||
     completeMutation.isPending ||
     releaseMutation.isPending ||
     installmentIssueMutation.isPending ||
@@ -327,6 +332,34 @@ export default function SaleForm({ sale }) {
     attachments.commit();
     resetForm();
     if (latest) store.initializeFrom(latest);
+  };
+
+  // کارت‌کشیدنِ پیش‌پرداختِ قرارداد اقساط (روشِ «انتقال بانکی»): پیش از کارت قرارداد سنجیده، شیوه‌ی
+  // «اقساطی» و تغییرهای بی‌اثر ثبت می‌شوند؛ با تأییدِ دستگاه قرارداد با شماره‌ی پیگیریِ دستگاه ثبت می‌شود.
+  const downPaymentPos = {
+    prepare: async () => {
+      if (planErrors && Object.keys(planErrors).length > 0) {
+        setShowErrors(true);
+        throw new Error("plan");
+      }
+      try {
+        await ensureProformaPaymentType(sale, proformaPaymentType(true, sale));
+        await posActions.saveInfo(sale.id, infoChanges());
+      } catch (error) {
+        toast.error(getErrorMessage(error, "آماده‌سازیِ پیش‌فاکتور انجام نشد"));
+        throw error;
+      }
+    },
+    record: (_result, { transferRef }) => {
+      const plan = toApiCreatePlan({ ...planDraft, paymentType: PaymentTypeEnum.TRANSFER, transferRef, paidAt: "" });
+      return deliverNow
+        ? completeMutation.mutateAsync({ installmentPlan: plan })
+        : installmentIssueMutation.mutateAsync({ plan });
+    },
+    onDone: () => afterSave(null),
+    onLockChange: setPlanPosLocked,
+    reference: () => newPosReference(`sale-${sale.id}`),
+    doneLabel: "مشاهده‌ی فاکتور",
   };
 
   /** دریافت (یا قرارداد) روی پیش‌فاکتورِ «آماده‌ی پرداخت» — فاکتور را صادر می‌کند. */
@@ -535,6 +568,7 @@ export default function SaleForm({ sale }) {
                     errors={showErrors ? planErrors : {}}
                     taxUnknown={totals.taxUnknown}
                     blockedReason={planBlockedReason}
+                    posPayment={isPay && allows("PosCharge") ? downPaymentPos : undefined}
                   />
                 )}
               </FormSection>

@@ -49,7 +49,7 @@
 
 **ویرایشِ پیش‌فاکتور / صدور / پرداخت («ثبت تغییرات»)** — `useSaleChangesSaver(saleId)` → `runDocumentChanges(SALE_CHANGES_API, saleId, changes)` ([07](../07-server-state-react-query.md)). اولین پرداختِ ورودی فاکتور را صادر می‌کند. موفق → `applySale` (`setQueryData` + invalidate)؛ خطا → `invalidateSalesEcosystem` و `partialSaveMessage`.
 
-**فروشِ اقساطی** — `submitPayment` در `SaleForm.jsx` قرارداد را با `toApiCreatePlan(planDraft)` می‌سازد:
+**فروشِ اقساطی** — پیش‌پرداخت با روشِ «انتقال بانکی» با کارتخوان هم گرفته می‌شود (`installments/components/DownPaymentPosPanel.jsx`). `submitPayment` در `SaleForm.jsx` قرارداد را با `toApiCreatePlan(planDraft)` می‌سازد:
 - پیش‌فاکتورِ «آماده‌ی پرداخت»: `useIssueInstallmentSaleMutation` → (پیوست‌های عوض‌شده) بعد `createInstallmentPlan` (`POST /SaleInstallment/CreateSaleInstallmentPlan`).
 - حضوری: قرارداد داخلِ `CompleteInPersonSale` (`installmentPlan`).
 
