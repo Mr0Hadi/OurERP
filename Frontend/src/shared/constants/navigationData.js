@@ -108,7 +108,8 @@ export const navigationData = {
       ],
     },
     {
-      title: "کارمندان",
+      // کارمندان، ساختارِ سازمانی، سطحِ دسترسی و تاریخچه‌ی تغییرات — مدیریتِ افراد و کارشان یک‌جا.
+      title: "کارمندان و سازمان",
       url: ROUTES.EMPLOYEES,
       icon: UserCog,
       isActive: false,
@@ -127,14 +128,6 @@ export const navigationData = {
           icon: PlusCircle,
           description: "ثبت کارمند و ساخت حساب کاربری",
         },
-      ],
-    },
-    {
-      title: "ساختار سازمانی",
-      url: ROUTES.ORGANIZATION,
-      icon: Building2,
-      isActive: false,
-      items: [
         {
           title: "واحدهای سازمانی",
           url: ROUTES.ORG_DEPARTMENTS,
@@ -149,14 +142,6 @@ export const navigationData = {
           icon: Users,
           description: "تعریف تیم‌های هر واحد و تعیین مدیر تیم",
         },
-      ],
-    },
-    {
-      title: "سطح دسترسی",
-      url: ROUTES.ACCESS_USERS,
-      icon: KeyRound,
-      isActive: false,
-      items: [
         {
           title: "دسترسی کارمندان",
           url: ROUTES.ACCESS_USERS,
@@ -170,6 +155,13 @@ export const navigationData = {
           permission: "PermissionView",
           icon: LayoutTemplate,
           description: "دسترسی‌هایی که معمولاً به کارمندانِ هر واحد داده می‌شود",
+        },
+        {
+          title: "گزارش فعالیت کاربران",
+          url: ROUTES.AUDIT,
+          permission: "AuditLogView",
+          icon: History,
+          description: "هر ثبت، ویرایش و حذف با نامِ کاربر، زمان و مقدارهای قبل و بعد",
         },
       ],
     },
@@ -186,22 +178,6 @@ export const navigationData = {
           permission: ["SettingView", "SettingManage"],
           icon: Settings,
           description: "مهلت رزرو، اجباری‌بودنِ حساب در پرداخت، دیرکرد و تسویه‌ی اقساط",
-        },
-      ],
-    },
-    {
-      // تاریخچه‌ی تغییرات (`api/Audit`)؛ تاریخچه‌ی هر سند/رکورد هم از دکمه‌ی «تاریخچه»ِ صفحه‌اش.
-      title: "تاریخچه تغییرات",
-      url: ROUTES.AUDIT,
-      icon: History,
-      isActive: false,
-      items: [
-        {
-          title: "گزارش فعالیت کاربران",
-          url: ROUTES.AUDIT,
-          permission: "AuditLogView",
-          icon: History,
-          description: "هر ثبت، ویرایش و حذف با نامِ کاربر، زمان و مقدارهای قبل و بعد",
         },
       ],
     },
