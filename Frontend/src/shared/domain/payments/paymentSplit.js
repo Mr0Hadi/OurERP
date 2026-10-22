@@ -1,11 +1,12 @@
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { EMPTY_CHEQUE_FIELDS } from "@/shared/domain/payments/paymentRows";
 
 /**
  * پرداختی که در فرمِ «ثبت پرداخت» ساخته می‌شود (`PaymentMethodEditor`): روش
  * (نقدی، انتقال بانکی، چک یا ترکیبی) و مبلغ‌ها.
  *
  * شکل: `{ method, rows }` — `rows` هر کدام
- * `{ id, type, amount, paidAt, checkNumber, transferRef, bankAccountId }`؛ روشِ تکی یک ردیف دارد
+ * `{ id, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName }`؛ روشِ تکی یک ردیف دارد
  * و ترکیبی چند ردیف. `method` خالی یعنی هنوز انتخاب نشده (نقدی).
  *
  * مبلغِ `null` یعنی «باقیمانده»: در روشِ تکی کلِ مانده، در ترکیبی هر چه از
@@ -24,7 +25,7 @@ const DEFAULT_METHOD = PaymentTypeEnum.CASH;
 const rowId = () => `row-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
 export function newPaymentRow(type = DEFAULT_METHOD, amount = null) {
-  return { id: rowId(), type, amount, paidAt: "", checkNumber: "", transferRef: "", bankAccountId: null };
+  return { id: rowId(), type, amount, paidAt: "", checkNumber: "", transferRef: "", bankAccountId: null, ...EMPTY_CHEQUE_FIELDS };
 }
 
 export function methodOf(split) {

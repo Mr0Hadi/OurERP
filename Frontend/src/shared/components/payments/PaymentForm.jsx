@@ -7,6 +7,7 @@ import { toMoneyRow, useFormPosPayment } from "./useFormPosPayment";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { ROW_PAYMENT_TYPES, liveRows, newPaymentRow, resolvedRows, rowsTotal } from "@/shared/domain/payments/paymentSplit";
 import { toDateOnly } from "@/shared/lib/dateUtils";
+import { chequeFieldsOf } from "@/shared/domain/payments/paymentRows";
 import { formatRial } from "@/shared/lib/numberFormat";
 
 /** مقدارِ اولیه‌ی فرم: اصلاح از روی همان ردیف، بقیه نقدی با «کلِ مانده». */
@@ -21,6 +22,7 @@ function initialValue(mode, row) {
         checkNumber: row.checkNumber || "",
         transferRef: row.transferRef || "",
         bankAccountId: row.bankAccountId ?? null,
+        ...chequeFieldsOf(row),
       },
     ],
   };

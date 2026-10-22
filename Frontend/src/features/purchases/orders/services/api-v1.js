@@ -181,12 +181,12 @@ export async function updatePurchasePaymentDate(id, paymentDate) {
  * برگرداند. روی خریدِ لغوشده فقط `IN` پذیرفته می‌شود.
  */
 export async function addPurchasePayment(
-  { purchaseId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, direction },
+  { purchaseId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName, direction },
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/Purchase/AddPurchasePayment",
-    { purchaseId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, direction },
+    { purchaseId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName, direction },
     idempotent(idempotencyKey),
   );
   return fromApiPurchase(data);
@@ -194,12 +194,12 @@ export async function addPurchasePayment(
 
 /** ردیفِ قبلی باطل و ردیفِ تازه با همان جهت ثبت می‌شود؛ `id`ِ ردیف عوض می‌شود. */
 export async function editPurchasePayment(
-  { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId },
+  { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName },
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/Purchase/EditPurchasePayment",
-    { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId },
+    { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName },
     idempotent(idempotencyKey),
   );
   return fromApiPurchase(data);

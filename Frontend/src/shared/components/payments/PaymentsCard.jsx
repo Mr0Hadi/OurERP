@@ -7,7 +7,7 @@ import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentForm from "./PaymentForm";
 import PaymentRow from "./PaymentRow";
-import { isNormalPayment } from "@/shared/domain/payments/paymentRows";
+import { isChequeSettled, isNormalPayment } from "@/shared/domain/payments/paymentRows";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
@@ -178,7 +178,7 @@ export default function PaymentsCard({
               key={row.id}
               row={row}
               isRefund={row.direction === refundDirection}
-              manageable={canManage && !row.voidedAt && isNormalPayment(row)}
+              manageable={canManage && !row.voidedAt && isNormalPayment(row) && !isChequeSettled(row)}
               onEdit={() => setForm({ mode: "edit", row })}
               onVoid={() => draft.void(row.id)}
               onUndo={() => draft.undo(row.id)}

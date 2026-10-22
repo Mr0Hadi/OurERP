@@ -267,24 +267,24 @@ export async function updateSalePaymentDate(id, paymentDate) {
  * قراردادش لغو نشده از این مسیر پرداخت نمی‌گیرد.
  */
 export async function addSalePayment(
-  { saleId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, direction },
+  { saleId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName, direction },
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/Sale/AddSalePayment",
-    { saleId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, direction },
+    { saleId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName, direction },
     idempotent(idempotencyKey),
   );
   return fromApiSale(data);
 }
 
 export async function editSalePayment(
-  { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId },
+  { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName },
   { idempotencyKey } = {},
 ) {
   const { data } = await axiosInstance.post(
     "/Sale/EditSalePayment",
-    { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId },
+    { paymentId, type, amount, paidAt, checkNumber, transferRef, bankAccountId, checkDueDate, checkBankName, checkDrawerName },
     idempotent(idempotencyKey),
   );
   return fromApiSale(data);

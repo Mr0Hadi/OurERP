@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { PAYMENT_PURPOSE_LABELS } from "@/shared/domain/enums/paymentDirection";
+import { CHEQUE_STATUS_LABELS, CHEQUE_STATUS_TONES, ChequeStatusEnum } from "@/shared/domain/enums/chequeStatus";
 import { isNormalPayment } from "@/shared/domain/payments/paymentRows";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatRial } from "@/shared/lib/numberFormat";
@@ -42,7 +43,14 @@ export default function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, 
           {!isNormalPayment(row) && (
             <StatusBadge tone="special" size="sm">{PAYMENT_PURPOSE_LABELS[row.purpose] ?? "اقساط"}</StatusBadge>
           )}
-          {row.voidedAt && <StatusBadge tone="danger" size="sm">باطل‌شده</StatusBadge>}
+          {/* چکِ برگشتی هم ابطال‌شده است ولی «برگشتی» گویاتر است؛ چکِ در جریانی که اشتباهی ثبت و ابطال شد «باطل‌شده». */}
+          {row.checkStatus != null && !(row.voidedAt && Number(row.checkStatus) === ChequeStatusEnum.PENDING) ? (
+            <StatusBadge tone={CHEQUE_STATUS_TONES[row.checkStatus]} size="sm">
+              چک {CHEQUE_STATUS_LABELS[row.checkStatus]}
+            </StatusBadge>
+          ) : (
+            row.voidedAt && <StatusBadge tone="danger" size="sm">باطل‌شده</StatusBadge>
+          )}
           {badge && <StatusBadge tone={badge.tone} size="sm">{badge.label}</StatusBadge>}
         </div>
         <p className="truncate text-xs text-muted-foreground">
@@ -50,6 +58,8 @@ export default function PaymentRow({ row, isRefund, manageable, onEdit, onVoid, 
           {" · "}
           {row.paidAt ? gregorianToPersian(row.paidAt) : "امروز"}
           {reference && <span dir="ltr"> · {reference}</span>}
+          {row.checkDueDate && ` · سررسید ${gregorianToPersian(row.checkDueDate)}`}
+          {row.checkBankName && ` · ${row.checkBankName}`}
           {row.bankAccountTitle && ` · ${row.bankAccountTitle}`}
         </p>
       </div>

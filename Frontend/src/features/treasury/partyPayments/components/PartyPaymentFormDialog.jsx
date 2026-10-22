@@ -18,8 +18,9 @@ import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
 import BankAccountSelect from "@/shared/components/payments/BankAccountSelect";
+import ChequeFields from "@/shared/components/payments/ChequeFields";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
-import { PAYMENT_REFERENCE_FIELDS, PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { PAYMENT_REFERENCE_FIELDS, PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
 import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
@@ -147,6 +148,9 @@ function FormBody({ party, onClose, onSaved }) {
               />
             </FormField>
           )}
+          {draft.type === PaymentTypeEnum.CHECK && (
+            <ChequeFields value={draft} onChange={patch} idPrefix="party-pay-cheque" />
+          )}
           {takesBankAccount(draft.type) && (
             <FormField label="صندوق / حساب" htmlFor="party-pay-account">
               <BankAccountSelect
@@ -199,7 +203,7 @@ function FormBody({ party, onClose, onSaved }) {
 
 /**
  * ثبتِ دریافت/پرداختِ علی‌الحساب (`AddPartyPayment`، دسترسیِ `PartyPaymentCreate`)، با تخصیصِ اختیاری در همان
- * درخواست. کارتخوان و فیلدهای تکمیلیِ چک اینجا نیستند.
+ * درخواست. کارتخوان اینجا نیست.
  *
  * @param party   `{ customerId }` یا `{ supplierId }` برای طرفِ ثابت (صفحه‌ی مشتری/تامین‌کننده)؛ خالی = انتخاب در فرم
  * @param onSaved `(payment) => void` — `PartyPaymentDto`ِ ثبت‌شده

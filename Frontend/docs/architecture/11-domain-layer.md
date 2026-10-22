@@ -8,7 +8,7 @@
 
 | مسیر | محتوا |
 | --- | --- |
-| `src/shared/domain/enums/` | ۱۸ فایل enum (`purchaseStatus.js`، `saleStatus.js`، `paymentType.js`، `unitStatus.js`، `saleInstallment.js`، `bankAccount.js`، `documentKind.js`، …) |
+| `src/shared/domain/enums/` | ۱۹ فایل enum (`purchaseStatus.js`، `saleStatus.js`، `paymentType.js`، `unitStatus.js`، `saleInstallment.js`، `bankAccount.js`، `chequeStatus.js`، `documentKind.js`، …) |
 | `src/shared/domain/returns/` | مدلِ مرجوعیِ مشترکِ خرید/فروش (۱۲ فایل) |
 | `src/shared/domain/payments/` | `paymentRows.js`، `paymentSplit.js` |
 | `src/shared/domain/invoice/` | `lineMath.js`، `lineFromProduct.js` |
@@ -62,7 +62,7 @@ enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً ک�
 ### ۴. پرداخت
 
 - `src/shared/domain/payments/paymentSplit.js` — فرمِ «ثبت پرداخت»: `{ method, rows }`؛ `amount: null` یعنی «باقیمانده». `newPaymentRow`، `addMixedRow`، `switchMethod`، `resolvedRows`، `rowsTotal`.
-- `src/shared/domain/payments/paymentRows.js` — پیش‌نویسِ پرداخت‌های سند (`EMPTY_PAYMENT_DRAFT`) و تبدیل به payload (`toPaymentPayload`، `toApiPaymentRows`؛ `bankAccountId` فقط برای روش‌های `takesBankAccount`). مصرف: `usePaymentDraft` (`src/shared/hooks/usePaymentDraft.js`)، `PaymentsCard`، `runDocumentChanges`.
+- `src/shared/domain/payments/paymentRows.js` — پیش‌نویسِ پرداخت‌های سند (`EMPTY_PAYMENT_DRAFT`) و تبدیل به payload (`toPaymentPayload`، `toApiPaymentRows`؛ `bankAccountId` فقط برای روش‌های `takesBankAccount`، فیلدهای چک با `toApiChequeFields`، `isChequeSettled`). مصرف: `usePaymentDraft` (`src/shared/hooks/usePaymentDraft.js`)، `PaymentsCard`، `runDocumentChanges`.
 - جهتِ هر سند: `SALE_PAYMENT_SIDE` (`src/features/sales/orders/domain/salePayments.js`) و `PURCHASE_PAYMENT_SIDE` (`src/features/purchases/orders/domain/purchasePayments.js`).
 - کارتخوان: `posSessionReducer` و `PosStatus` در `src/shared/domain/pos/posSession.js`؛ `isPosBusy`، `holdsMoney`، `canStartPos`.
 

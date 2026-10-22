@@ -1,7 +1,7 @@
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
 import { PAYMENT_REFERENCE_FIELDS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { ROW_PAYMENT_TYPES } from "@/shared/domain/payments/paymentSplit";
-import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
+import { EMPTY_CHEQUE_FIELDS, takesBankAccount, toApiChequeFields } from "@/shared/domain/payments/paymentRows";
 
 /**
  * دریافت/پرداختِ علی‌الحساب و تخصیص — قواعدِ خالص (بی React، بی شبکه)، همان قاعده‌های
@@ -44,6 +44,7 @@ export const emptyPartyPaymentDraft = ({ customerId = null, supplierId = null } 
   transferRef: "",
   bankAccountId: null,
   description: "",
+  ...EMPTY_CHEQUE_FIELDS,
 });
 
 export function partyPaymentDraftErrors(draft) {
@@ -69,6 +70,7 @@ export function toApiPartyPayment(draft, allocations = []) {
     transferRef: reference?.field === "transferRef" ? draft.transferRef || null : null,
     bankAccountId: takesBankAccount(draft.type) ? draft.bankAccountId || null : null,
     description: draft.description.trim() || null,
+    ...toApiChequeFields(draft),
     allocations,
   };
 }

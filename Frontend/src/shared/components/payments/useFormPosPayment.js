@@ -13,6 +13,9 @@ export const toMoneyRow = (entry) => ({
   checkNumber: entry.checkNumber,
   transferRef: entry.transferRef,
   bankAccountId: entry.bankAccountId,
+  checkDueDate: entry.checkDueDate,
+  checkBankName: entry.checkBankName,
+  checkDrawerName: entry.checkDrawerName,
 });
 
 /**

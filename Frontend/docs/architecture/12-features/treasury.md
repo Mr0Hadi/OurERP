@@ -1,6 +1,6 @@
 # treasury — خزانه‌داری
 
-یک جا برای هرچه پول جابه‌جا می‌کند: صفِ صندوق، اقساط، صندوق‌ها و حساب‌های بانکی، و دریافت/پرداختِ علی‌الحساب؛ و جای چک‌ها (GAP-03.3، هنوز ساخته نشده). `src/features/treasury/` با `routes.jsx` و زیرماژول‌های `cashier/`، `bankAccounts/` و `partyPayments/`. صفحه‌ی اقساط کدش در `src/features/sales/installments/` می‌ماند (منطقِ فروش است) و فقط مسیرش این‌جاست.
+یک جا برای هرچه پول جابه‌جا می‌کند: صفِ صندوق، اقساط، صندوق‌ها و حساب‌های بانکی، دریافت/پرداختِ علی‌الحساب و چک‌ها (GAP-03). `src/features/treasury/` با `routes.jsx` و زیرماژول‌های `cashier/`، `bankAccounts/`، `partyPayments/` و `cheques/`. صفحه‌ی اقساط کدش در `src/features/sales/installments/` می‌ماند (منطقِ فروش است) و فقط مسیرش این‌جاست.
 
 ## مسیرها
 
@@ -11,6 +11,7 @@
 | `TREASURY_CASHIER_DETAIL` | `/treasury/cashier/:id` | `SalePayment` | `src/features/treasury/cashier/pages/CashierPaymentPage.jsx` |
 | `TREASURY_INSTALLMENTS` | `/treasury/installments` | `SaleInstallmentView` | `src/features/sales/installments/pages/InstallmentsPage.jsx` |
 | `TREASURY_PARTY_PAYMENTS`، `TREASURY_PARTY_PAYMENTS_DETAIL` | `/treasury/party-payments`، `/treasury/party-payments/:id` | `PartyStatementView` یا `PartyPaymentCreate` | `src/features/treasury/partyPayments/pages/PartyPaymentsPage.jsx`، `PartyPaymentDetailPage.jsx` |
+| `TREASURY_CHEQUES` | `/treasury/cheques` | `CheckView` یا `CheckManage` | `src/features/treasury/cheques/pages/ChequesPage.jsx` |
 | `TREASURY_ACCOUNTS`، `TREASURY_ACCOUNTS_DETAIL` | `/treasury/accounts`، `/treasury/accounts/:id` | `BankAccountView` یا `BankAccountManage` | `src/features/treasury/bankAccounts/pages/BankAccountsPage.jsx` |
 | `LEGACY_SALES_CASHIER`، `LEGACY_SALES_INSTALLMENTS` | `/sales/cashier`، `/sales/installments` | — | ریدایرکت با همان query |
 
@@ -37,7 +38,14 @@
 - روی فاکتور: `PaymentsCard` پارامترِ `allocations` (`paymentAllocations`ِ سند) را جزوِ «پرداخت‌شده» می‌شمارد و فقط نمایش می‌دهد؛ سقفِ پولِ برگشتی همان پرداخت‌های خودِ سند است.
 - بعد از هر نوشتن: فهرست‌ها، فاکتورهای قابلِ تخصیص، مشتری/تامین‌کننده (مانده و گردش)، فروش یا خرید، صندوق/بانک و حسابداری باطل می‌شوند.
 
+## چک‌ها (`cheques/`)
+
+- فهرستِ `GetCheckList` (هر ردیفِ پرداختِ `CHECK`؛ `id` = شناسه‌ی ردیفِ پرداخت): `ChequeSummary` (جمع‌های `summary`)، `ChequeFilters` (`statuses` چندتایی با `FilterMultiChoice`، پیش‌فرض «در جریان»؛ مرتب‌سازیِ پیش‌فرض سررسید صعودی)، `ChequeTable` با منوی کارها.
+- `ChequeActionDialog` (`{ kind, cheque }`): وصول (حساب الزامی مگر چک حساب داشته باشد یا خرج‌شده باشد)، برگشت (اثرش بسته به `purpose`/علی‌الحساب/خرج‌شده شرح داده می‌شود)، خرج به تامین‌کننده (خرید از `useAllocatableDocumentsQuery`ِ `partyPayments`، یا علی‌الحساب). قواعدِ مجاز بودن در `domain/cheque.js`؛ چکِ پیش‌پرداختِ قرارداد برگشت نمی‌خورد.
+- بعد از هر کار همه‌ی کش‌های پولی باطل می‌شوند (`MONEY_KEYS`).
+- ثبتِ چک در همه‌ی فرم‌های پرداخت: `ChequeFields` (سررسید، بانک، صاحب حساب) در `PaymentMethodEditor`، `InstallmentPaymentFields` و `PartyPaymentFormDialog`؛ بدنه با `toApiChequeFields` (`paymentRows.js`). `PaymentRow` وضعیتِ چک را نشان می‌دهد و چکِ سرنوشت‌دار (`isChequeSettled`) اصلاح/ابطال نمی‌شود.
+
 ## importهای بیرونی
 
 `sales` (سرویس‌ها، دامنه و کامپوننت‌های `orders` و `installments`)، `auth` (`usePermission`).
-`bankAccounts/` فقط از `shared/` و `auth` می‌خواند. `partyPayments/`: `customers`، `suppliers` (گزینه‌ها و کلیدها)، `sales/orders`، `purchases/orders`، `accounting` (کلیدها برای باطل‌کردن).
+`bankAccounts/` فقط از `shared/` و `auth` می‌خواند. `partyPayments/`: `customers`، `suppliers` (گزینه‌ها و کلیدها)، `sales/orders`، `purchases/orders`، `accounting` (کلیدها برای باطل‌کردن). `cheques/`: همان‌ها به‌اضافه‌ی `sales/installments` (کلید) و `partyPayments/` (فاکتورهای قابلِ تخصیص).

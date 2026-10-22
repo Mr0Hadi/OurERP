@@ -15,6 +15,7 @@ import {
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import BankAccountSelect from "./BankAccountSelect";
+import ChequeFields from "./ChequeFields";
 import {
   PAYMENT_REFERENCE_FIELDS,
   PAYMENT_TYPE_LABELS,
@@ -89,7 +90,7 @@ export default function PaymentMethodEditor({
   );
 }
 
-/** روشِ تکی: مبلغ، تاریخ، (برای چک/انتقال) شماره‌ی پیگیری و (برای نقدی/انتقال) صندوق/حساب. */
+/** روشِ تکی: مبلغ، تاریخ، (برای چک/انتقال) شماره‌ی پیگیری، (چک) سررسید/بانک/صاحب حساب و (نقدی/انتقال) صندوق/حساب. */
 function SingleRow({ row, payable, onChange }) {
   const reference = PAYMENT_REFERENCE_FIELDS[row.type];
   const full = Math.max(0, Number(payable) || 0);
@@ -138,6 +139,9 @@ function SingleRow({ row, payable, onChange }) {
             className="h-9"
           />
         </div>
+      )}
+      {row.type === PaymentTypeEnum.CHECK && (
+        <ChequeFields value={row} onChange={onChange} idPrefix={`cheque-${row.id}`} />
       )}
       {takesBankAccount(row.type) && (
         <div className="space-y-1.5">
@@ -222,6 +226,14 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
                   onChange={(isoDate) => onChange(row.id, { paidAt: isoDate || "" })}
                   placeholder="تاریخ: امروز"
                 />
+                {row.type === PaymentTypeEnum.CHECK && (
+                  <ChequeFields
+                    value={row}
+                    onChange={(patch) => onChange(row.id, patch)}
+                    idPrefix={`cheque-${row.id}`}
+                    compact
+                  />
+                )}
                 {takesBankAccount(row.type) && (
                   <BankAccountSelect
                     value={row.bankAccountId}

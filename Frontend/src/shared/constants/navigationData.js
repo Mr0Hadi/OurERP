@@ -44,6 +44,7 @@ import {
   Car,
   History,
   HandCoins,
+  FileCheck2,
 } from "lucide-react";
 
 export const navigationData = {
@@ -356,6 +357,13 @@ export const navigationData = {
           permission: ["PartyStatementView", "PartyPaymentCreate"],
           icon: HandCoins,
           description: "دریافت و پرداختِ بی فاکتور و تخصیص به فاکتورها",
+        },
+        {
+          title: "چک‌ها",
+          url: ROUTES.TREASURY_CHEQUES,
+          permission: ["CheckView", "CheckManage"],
+          icon: FileCheck2,
+          description: "چک‌های دریافتی و پرداختی: سررسید، وصول، برگشت و خرج",
         },
       ],
     },

@@ -1,6 +1,6 @@
 import { PaymentTypeEnum, PAYMENT_REFERENCE_FIELDS } from "@/shared/domain/enums/paymentType";
 import { ROW_PAYMENT_TYPES } from "@/shared/domain/payments/paymentSplit";
-import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
+import { EMPTY_CHEQUE_FIELDS, takesBankAccount, toApiChequeFields } from "@/shared/domain/payments/paymentRows";
 import { isInstallmentUnpaid, SaleInstallmentStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { todayIso } from "@/shared/lib/dateUtils";
 
@@ -20,13 +20,14 @@ export const INSTALLMENT_PAYMENT_TYPES = ROW_PAYMENT_TYPES;
  */
 export const INSTALLMENT_COUNT_PRESETS = Object.freeze([3, 6, 12, 18, 24]);
 
-/** فیلدهای پرداختِ یک قسط/پیش‌پرداخت (`paymentType` + مرجع + تاریخ + صندوق/حساب). */
+/** فیلدهای پرداختِ یک قسط/پیش‌پرداخت (`paymentType` + مرجع + تاریخ + صندوق/حساب + فیلدهای چک). */
 export const EMPTY_INSTALLMENT_PAYMENT = Object.freeze({
   paymentType: PaymentTypeEnum.CASH,
   checkNumber: "",
   transferRef: "",
   paidAt: "",
   bankAccountId: null,
+  ...EMPTY_CHEQUE_FIELDS,
 });
 
 /** پیش‌نویسِ فرمِ قرارداد (همان نام‌های `CreateSaleInstallmentPlanCommand`). */
@@ -162,6 +163,7 @@ export function toApiInstallmentPayment(payment) {
     transferRef: reference?.field === "transferRef" ? payment.transferRef || null : null,
     paidAt: payment.paidAt || null,
     bankAccountId: takesBankAccount(payment.paymentType) ? payment.bankAccountId || null : null,
+    ...toApiChequeFields(payment, payment.paymentType),
   };
 }
 
