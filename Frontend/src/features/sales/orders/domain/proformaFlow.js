@@ -9,7 +9,7 @@ import { SaleProformaEventEnum, SaleProformaStageEnum } from "@/shared/domain/en
  *    «لیست قیمت‌ها» چاپ می‌شود، `PriceListPrint`)
  *  - `reserveInPerson`: فروشِ تازه‌ی حضوری (دانه‌ها جلوی مشتری اسکن شده) — ثبت و رزروِ همان دانه‌ها
  *    بی صفِ انبار؛ پرداخت بعد، همان‌جا یا در صندوق
- *  - `save`: خودِ پیش‌فاکتور عوض شده (تغییرِ مشتری/اقلام/قیمت/شیوه‌ی پرداخت/سررسید تأییدها را برمی‌گرداند)
+ *  - `save`: خودِ پیش‌فاکتور عوض شده (تغییرِ مشتری/اقلام/قیمت/سررسید تأییدها را برمی‌گرداند؛ شیوه‌ی پرداخت فقط هنگامِ دریافت)
  *  - `sendToWarehouse`: پیش‌نویسِ دست‌نخورده؛ مشتری تأیید کرد
  *  - `awaitWarehouse`: در صفِ انبار
  *  - `pay`: «آماده‌ی پرداخت» و رزرو زنده — دریافت/قرارداد فاکتور را صادر می‌کند
@@ -63,11 +63,18 @@ export function proformaPaymentType(isInstallment, sale) {
  */
 export const IN_PERSON_CHECK_NOTE = "فروش حضوری: دانه‌ها هنگامِ ثبتِ پیش‌فاکتور جلوی مشتری اسکن شد.";
 
+/**
+ * یادداشتی که سرور روی «تأییدِ انبار»ِ خودکار می‌گذارد: تأییدِ دوباره‌ی مشتری وقتی همه‌ی اقلام هنوز
+ * رزروند (مثلاً پس از ثبتِ شیوه‌ی پرداخت) مستقیم «آماده‌ی پرداخت» می‌شود. آن رویداد بررسیِ تازه نیست،
+ * پس در تشخیصِ حضوری از رویش می‌گذریم (`ApproveSaleProformaCommand`).
+ */
+const AUTO_RECHECK_NOTE = "کالای همه‌ی اقلام از بررسی قبلی انبار رزرو مانده است.";
+
 /** پیش‌فاکتورِ «آماده‌ی پرداخت»ی که دانه‌هایش در فروشِ حضوری اسکن و رزرو شده‌اند. */
 export function isInPersonProforma(sale) {
   if (Number(sale?.proformaStage) !== SaleProformaStageEnum.WAREHOUSE_CHECKED) return false;
   const lastCheck = [...(sale.proformaEvents || [])]
     .reverse()
-    .find((event) => event.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED);
+    .find((event) => event.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED && event.note !== AUTO_RECHECK_NOTE);
   return lastCheck?.note === IN_PERSON_CHECK_NOTE;
 }

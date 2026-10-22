@@ -199,6 +199,27 @@ export const useReleaseReservationMutation = () => {
   });
 };
 
+/**
+ * شیوه‌ی پرداختِ پیش‌فاکتورِ «آماده‌ی پرداخت» را همان لحظه‌ی دریافت ثبت می‌کند (نقد/نسیه ⇄ اقساطی).
+ * سرور قرارداد را فقط روی فروشِ اقساطی و دریافتِ عادی را فقط روی غیراقساطی می‌پذیرد، و تغییرِ
+ * `paymentType` در `UpdateSale` پیش‌فاکتور را به پیش‌نویس می‌برد؛ پس پشتِ هم `UpdateSale` (فقط همین
+ * فیلد) و `ApproveSaleProforma`، که چون رزروها مانده‌اند مستقیم «آماده‌ی پرداخت» برمی‌گردد. اگر مهلتِ
+ * رزرو گذشته باشد به صفِ انبار می‌رود و خطا می‌دهد.
+ *
+ * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴.۴ — تغییرِ شیوه‌ی پرداخت نباید تأییدها را برگرداند.
+ *
+ * @returns سندِ تازه (یا همان سند اگر شیوه عوض نشده)
+ */
+export async function ensureProformaPaymentType(sale, paymentType) {
+  if (Number(sale.paymentType) === Number(paymentType)) return sale;
+  const updated = await updateSale(sale.id, { ...sale, paymentType });
+  const approved = await approveSaleProforma(sale.id, updated.revision);
+  if (approved.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
+    throw new Error("شیوه‌ی پرداخت ثبت شد ولی مهلتِ رزرو گذشته بود؛ پیش‌فاکتور برای بررسیِ دوباره به انبار رفت.");
+  }
+  return approved;
+}
+
 /** «مشتری تأیید کرد». `{ saleId, revision }`. */
 export const useApproveSaleProformaMutation = () => {
   const queryClient = useQueryClient();

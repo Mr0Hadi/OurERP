@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 
-import { useSalePosActions } from "../services/mutations";
+import { ensureProformaPaymentType, useSalePosActions } from "../services/mutations";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 
 /**
@@ -15,7 +15,8 @@ import { newPosReference } from "@/shared/domain/pos/posSession";
  * @param enabled       کاربر `PosCharge` دارد
  * @param sale          پیش‌فاکتورِ ثبت‌شده؛ خالی ⇒ کارتخوانی نیست
  * @param blockedReason چرا الان نمی‌شود کارت کشید (یا `undefined`)
- * @param takeSnapshot  پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و `{ infoChanges }`
+ * @param takeSnapshot  پیش از ارسال به دستگاه: اعتبارسنجی (خطا ⇒ کارت نمی‌خورد) و `{ paymentType, infoChanges }`
+ *                      — شیوه‌ی پرداختِ انتخاب‌شده پیش از کارت ثبت می‌شود (`ensureProformaPaymentType`)
  * @param onIssued      `() => void` — بعد از «بستن»ِ رسید (پیش از `apply`)
  * @returns `{ posPayment, posLocked }` — `posLocked`: تا پایانِ کار دکمه‌ی اصلی بسته است
  */
@@ -30,7 +31,8 @@ export function useSaleFormPos({ enabled, sale, blockedReason, takeSnapshot, onI
   const posPayment = {
     prepare: async () => {
       outcomeRef.current = null;
-      const { infoChanges } = takeSnapshot();
+      const { paymentType, infoChanges } = takeSnapshot();
+      await ensureProformaPaymentType(sale, paymentType);
       await posActions.saveInfo(sale.id, infoChanges);
     },
     record: (_result, context) => posActions.recordPayment(sale.id, context),

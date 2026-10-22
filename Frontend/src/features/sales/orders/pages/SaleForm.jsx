@@ -19,7 +19,9 @@ import {
   useRemoveSaleMutation,
   useSaleChangesSaver,
   useSalePosActions,
+  ensureProformaPaymentType,
 } from "@/features/sales/orders/services/mutations";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { saleFormProblem, scannedBarcodesOf } from "@/features/sales/orders/domain/saleRules";
 import {
@@ -57,6 +59,7 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
+import SectionCard from "@/shared/components/forms/SectionCard";
 import InstallmentPlanDraftCard from "@/features/sales/installments/components/InstallmentPlanDraftCard";
 import ProformaPlanNotice from "@/features/sales/installments/components/ProformaPlanNotice";
 import {
@@ -92,7 +95,7 @@ const UPLOADING_MESSAGE = "تا پایان بارگذاری پیوست‌ها ص
  *  - چرخه‌ی تأیید (بخش ۱۱ سند): پیش‌نویس ← مشتری تأیید کرد (به انبار) ← انبار تأیید کرد (رزرو) ←
  *    دریافت (فاکتور) یا حذف. **یک دکمه‌ی اصلی** که کارش را `proformaAction` می‌گوید؛
  *    `ProformaStageCard` فقط وضعیت را نشان می‌دهد.
- *  - `UpdateSale` با تغییرِ مشتری، اقلام، قیمت/تخفیف، شیوه‌ی پرداخت یا سررسید تأییدها را برمی‌گرداند؛
+ *  - `UpdateSale` با تغییرِ مشتری، اقلام، قیمت/تخفیف یا سررسید تأییدها را برمی‌گرداند (شیوه‌ی پرداخت فقط هنگامِ دریافت انتخاب و با `ensureProformaPaymentType` ثبت می‌شود)؛
  *    پس هنگامِ دریافت فقط تغییرهای بی‌اثر (توضیح، پیوست) پیش از آن و سررسیدِ تازه بعد از صدور
  *    ذخیره می‌شوند، و `paymentType` همیشه همان مقدارِ ذخیره‌شده است (`proformaPaymentType`).
  *  - تاریخِ فاکتور را سرور هنگامِ صدور می‌گذارد؛ فرم آن را نمی‌پرسد.
@@ -137,6 +140,7 @@ export default function SaleForm({ sale }) {
   const releaseMutation = useReleaseReservationMutation();
   const posActions = useSalePosActions();
   const [confirmRelease, setConfirmRelease] = useState(false);
+  const [switchingType, setSwitchingType] = useState(false);
 
   const coreChanged = useSaleFormStore(isSaleCoreChanged);
   const dueDateChanged = useSaleFormStore(isSaleDueDateChanged);
@@ -286,7 +290,7 @@ export default function SaleForm({ sale }) {
         toast.error(UPLOADING_MESSAGE);
         throw new Error(UPLOADING_MESSAGE);
       }
-      return { infoChanges: infoChanges() };
+      return { paymentType: proformaPaymentType(isInstallment, sale), infoChanges: infoChanges() };
     },
     onIssued: () => {
       attachments.commit();
@@ -302,6 +306,7 @@ export default function SaleForm({ sale }) {
   const isBusy =
     createMutation.isPending ||
     approveMutation.isPending ||
+    switchingType ||
     completeMutation.isPending ||
     releaseMutation.isPending ||
     installmentIssueMutation.isPending ||
@@ -326,6 +331,16 @@ export default function SaleForm({ sale }) {
 
   /** دریافت (یا قرارداد) روی پیش‌فاکتورِ «آماده‌ی پرداخت» — فاکتور را صادر می‌کند. */
   const submitPayment = async () => {
+    // شیوه‌ی پرداختِ انتخاب‌شده، پیش از هر دریافتی (سرور قرارداد/دریافت را با آن می‌سنجد).
+    setSwitchingType(true);
+    try {
+      await ensureProformaPaymentType(sale, proformaPaymentType(isInstallment, sale));
+    } catch (error) {
+      toast.error(getErrorMessage(error, "ثبتِ شیوه‌ی پرداخت انجام نشد"));
+      return;
+    } finally {
+      setSwitchingType(false);
+    }
     const { update, attachments: attachmentFiles } = infoChanges();
     if (deliverNow) {
       // تحویلِ همان‌جا (اتمیک)؛ تغییرهای بی‌اثر پیش از آن. سررسید برای فروشِ تمام‌پرداخت معنایی ندارد.
@@ -495,6 +510,19 @@ export default function SaleForm({ sale }) {
         }
         payments={
           <>
+            {/* شیوه‌ی پرداخت فقط هنگامِ دریافت انتخاب می‌شود (پیش از آن تأییدها را برمی‌گرداند). */}
+            {isInvoice && (isInstallment || allows("SaleInstallmentManage")) && (
+              <SectionCard title="شیوه‌ی پرداخت">
+                <StatusChoice
+                  label="شیوه‌ی پرداخت"
+                  options={PAYMENT_TERMS_OPTIONS}
+                  value={isInstallment}
+                  onChange={setInstallment}
+                  // قراردادِ موجود و دریافتِ کارتخوانِ در جریان شیوه را قفل می‌کنند.
+                  disabled={Boolean(existingPlan) || posLocked || isBusy}
+                />
+              </SectionCard>
+            )}
             {isInvoice && isInstallment && (
               <FormSection name="payment">
                 {existingPlan ? (
@@ -543,16 +571,6 @@ export default function SaleForm({ sale }) {
                 formData={formData}
                 onFormChange={setFormData}
               >
-                {(isInstallment || allows("SaleInstallmentManage")) && (
-                  <StatusChoice
-                    label="شیوه‌ی پرداخت"
-                    options={PAYMENT_TERMS_OPTIONS}
-                    value={isInstallment}
-                    onChange={setInstallment}
-                    // قراردادِ موجود و دریافتِ کارتخوانِ در جریان شیوه را قفل می‌کنند.
-                    disabled={Boolean(existingPlan) || posLocked}
-                  />
-                )}
               </OrderInfoCard>
             </FormSection>
             <InvoiceDocumentSection

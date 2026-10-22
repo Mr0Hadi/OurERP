@@ -75,10 +75,12 @@ export const useSaleFormStore = createDocumentFormStore({
 const changedBy = (pick) => (state) =>
   state.formData !== state.baseline && JSON.stringify(pick(state.formData)) !== JSON.stringify(pick(state.baseline));
 
-/** مشتری، اقلام، قیمت/تخفیف، شیوه‌ی پرداخت — ذخیره‌اش پیش‌فاکتور را به پیش‌نویس برمی‌گرداند. */
+/**
+ * مشتری، اقلام، قیمت/تخفیف — ذخیره‌اش پیش‌فاکتور را به پیش‌نویس برمی‌گرداند. شیوه‌ی پرداخت (`installment`)
+ * نیست: فقط در مرحله‌ی دریافت انتخاب می‌شود و همان‌جا ثبت (`ensureProformaPaymentType`).
+ */
 export const isSaleCoreChanged = changedBy((form) => [
   String(form.customerId ?? ""),
-  Boolean(form.installment),
   (form.items || []).map((item) => [
     Number(item.id) || 0,
     Number(item.productId) || 0,

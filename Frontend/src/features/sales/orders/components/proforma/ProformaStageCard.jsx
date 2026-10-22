@@ -110,7 +110,7 @@ export default function ProformaStageCard({ sale, secondsLeft, documentChanged }
 
         {documentChanged && stage !== SaleProformaStageEnum.DRAFT && (
           <Notice tone="caution">
-            ذخیره‌ی تغییرِ کالا، تعداد، قیمت، مشتری یا شیوه‌ی پرداخت، پیش‌فاکتور را به پیش‌نویس برمی‌گرداند و باید دوباره
+            ذخیره‌ی تغییرِ کالا، تعداد، قیمت یا مشتری، پیش‌فاکتور را به پیش‌نویس برمی‌گرداند و باید دوباره
             به تأیید مشتری و انبار برسد.
           </Notice>
         )}
