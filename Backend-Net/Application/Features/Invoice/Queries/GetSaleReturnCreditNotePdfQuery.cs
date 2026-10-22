@@ -1,4 +1,5 @@
-﻿using Application.Common.Contracts.Context;
+using Application.Common.Settings;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Documents;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos;
@@ -28,17 +29,16 @@ namespace Application.Features.Invoice.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IPdfDocumentService _pdfDocumentService;
-        private readonly IConfiguration _configuration;
 
-        public GetSaleReturnCreditNotePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
+        public GetSaleReturnCreditNotePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService)
         {
             _context = context;
             _pdfDocumentService = pdfDocumentService;
-            _configuration = configuration;
         }
 
         public async Task<FileResponseDto> Handle(GetSaleReturnCreditNotePdfQuery request, CancellationToken cancellationToken)
         {
+            var company = await SystemSettingValues.CompanyAsync(_context, cancellationToken);
             var saleReturn = await _context.SaleReturns
                 .WhereNotDeleted()
                 .WithReturnGraph()
@@ -83,7 +83,7 @@ namespace Application.Features.Invoice.Queries
                 DocumentDate = saleReturn.UpdatedAt,
                 StatusText = saleReturn.Status.ToString(),
                 Description = $"مرجوعی مربوط به فاکتور فروش شماره {sale.InvoiceNumber}",
-                Company = _configuration.GetSection("Company").Get<CompanyInfo>() ?? new CompanyInfo(),
+                Company = company,
                 CounterpartyLabel = "مشتری",
                 Counterparty = new PartyInfo
                 {

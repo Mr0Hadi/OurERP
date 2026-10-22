@@ -1,3 +1,4 @@
+using Application.Common.Warehouses;
 using Application.Common.Returns;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
@@ -42,6 +43,12 @@ namespace Application.Features.Purchase.Commands
         public int PurchaseId { get; set; }
         public DateTime? ReceivedDate { get; set; }
         public string? ReceivingNote { get; set; }
+
+        /// <summary>
+        /// GAP-08: the warehouse the goods arrive in (new units are placed there). Used only while the Warehouse.MultiWarehouseEnabled setting is on; ignored while
+        /// off (default warehouse / any warehouse) - see WarehouseScope.
+        /// </summary>
+        public int? WarehouseId { get; set; }
         public string? DriverPhoneNumber { get; set; }
         public string? DriverFullName { get; set; }
         public string? VehiclePlate { get; set; }
@@ -159,7 +166,8 @@ namespace Application.Features.Purchase.Commands
 
             var now = DateTime.Now;
             var receivedAt = request.ReceivedDate ?? now;
-            var movement = new UnitMovementContext(ProductUnitMovementReasonEnum.PURCHASE_RECEIVED, receivedAt, DocumentKindEnum.PURCHASE, purchase.Id, SupplierId: purchase.SupplierId, Note: request.ReceivingNote);
+            var warehouseId = await WarehouseScope.ResolveAsync(_context, request.WarehouseId, cancellationToken);
+            var movement = new UnitMovementContext(ProductUnitMovementReasonEnum.PURCHASE_RECEIVED, receivedAt, DocumentKindEnum.PURCHASE, purchase.Id, SupplierId: purchase.SupplierId, Note: request.ReceivingNote, WarehouseId: warehouseId);
 
             var lines = new List<object>();
 

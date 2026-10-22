@@ -70,7 +70,7 @@ namespace WMS.Tests.Functional
         {
             var client = await SignedInAsync(PermissionEnum.CustomerView, PermissionEnum.CustomerImport);
 
-            var response = await client.GetAsync("/api/DataTransfer/Export?resource=customers&format=1");
+            var response = await client.GetAsync("/api/DataTransfer/Export?resource=customers&format=1", TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
@@ -80,11 +80,11 @@ namespace WMS.Tests.Functional
         {
             var client = await SignedInAsync(PermissionEnum.CustomerExport);
 
-            var response = await client.GetAsync("/api/DataTransfer/Export?resource=customers&format=1&fullName=x");
+            var response = await client.GetAsync("/api/DataTransfer/Export?resource=customers&format=1&fullName=x", TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("text/csv", response.Content.Headers.ContentType!.MediaType);
-            var bytes = await response.Content.ReadAsByteArrayAsync();
+            var bytes = await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
             Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, bytes[..3]);
         }
 
@@ -93,8 +93,8 @@ namespace WMS.Tests.Functional
         {
             var client = await SignedInAsync(PermissionEnum.CustomerView, PermissionEnum.CustomerCreate, PermissionEnum.CustomerExport);
 
-            var preview = await client.PostAsync("/api/DataTransfer/PreviewImport", Upload("customers", CustomerCsv));
-            var commit = await client.PostAsync("/api/DataTransfer/CommitImport", Upload("customers", CustomerCsv));
+            var preview = await client.PostAsync("/api/DataTransfer/PreviewImport", Upload("customers", CustomerCsv), TestContext.Current.CancellationToken);
+            var commit = await client.PostAsync("/api/DataTransfer/CommitImport", Upload("customers", CustomerCsv), TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Forbidden, preview.StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, commit.StatusCode);
@@ -105,7 +105,7 @@ namespace WMS.Tests.Functional
         {
             var client = await SignedInAsync(PermissionEnum.ProductImport);
 
-            var response = await client.PostAsync("/api/DataTransfer/CommitImport", Upload("customers", CustomerCsv));
+            var response = await client.PostAsync("/api/DataTransfer/CommitImport", Upload("customers", CustomerCsv), TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
@@ -113,7 +113,7 @@ namespace WMS.Tests.Functional
         [Fact]
         public async Task Anonymous_Is401()
         {
-            var response = await _factory.CreateClient().GetAsync("/api/DataTransfer/Export?resource=customers");
+            var response = await _factory.CreateClient().GetAsync("/api/DataTransfer/Export?resource=customers", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
@@ -121,7 +121,7 @@ namespace WMS.Tests.Functional
         public async Task UnknownResource_Is404()
         {
             var client = await SignedInAsync(PermissionEnum.CustomerExport);
-            var response = await client.GetAsync("/api/DataTransfer/Export?resource=saleInvoices");
+            var response = await client.GetAsync("/api/DataTransfer/Export?resource=saleInvoices", TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
@@ -131,12 +131,12 @@ namespace WMS.Tests.Functional
             var client = await SignedInAsync(PermissionEnum.CustomerImport);
             var csv = $"نام,نام خانوادگی,شماره تماس,آدرس\nمریم,احمدی,0912{Random.Shared.Next(1000000, 9999999)},تهران\n";
 
-            var preview = await client.PostAsync("/api/DataTransfer/PreviewImport", Upload("customers", csv));
+            var preview = await client.PostAsync("/api/DataTransfer/PreviewImport", Upload("customers", csv), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
 
-            var commit = await client.PostAsync("/api/DataTransfer/CommitImport", Upload("customers", csv));
+            var commit = await client.PostAsync("/api/DataTransfer/CommitImport", Upload("customers", csv), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, commit.StatusCode);
-            Assert.Contains("1 ردیف وارد شد", await commit.Content.ReadAsStringAsync());
+            Assert.Contains("1 ردیف وارد شد", await commit.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -144,7 +144,7 @@ namespace WMS.Tests.Functional
         {
             var client = await SignedInAsync(PermissionEnum.ProductExport);
 
-            var body = await client.GetStringAsync("/api/DataTransfer/GetResources");
+            var body = await client.GetStringAsync("/api/DataTransfer/GetResources", TestContext.Current.CancellationToken);
             using var doc = JsonDocument.Parse(body);
             var data = doc.RootElement.TryGetProperty("data", out var d) ? d : doc.RootElement.GetProperty("Data");
             var resources = (data.TryGetProperty("resources", out var r) ? r : data.GetProperty("Resources")).EnumerateArray().ToList();

@@ -29,6 +29,7 @@ namespace WMS.Tests.Support
             services.AddSingleton(scope.PurchaseReturnCalculation);
             services.AddSingleton(scope.SaleReturnCalculation);
             services.AddSingleton(scope.PurchaseReturnRepository);
+            services.AddSingleton(scope.PurchaseRepository);
             services.AddSingleton(scope.SaleReturnRepository);
             services.AddSingleton(scope.SaleInstallmentPlanRepository);
             services.AddSingleton(scope.ProductUnitService);

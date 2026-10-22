@@ -1,4 +1,6 @@
-﻿using Application.Common.Contracts.Context;
+using Common.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
@@ -38,6 +40,12 @@ namespace Application.Features.Product.Commands
         public Domain.Enums.TaxCategoryEnum TaxCategory { get; set; } = Domain.Enums.TaxCategoryEnum.TAXABLE;
         public int Stock { get; set; }
         public int LowStockThreshold { get; set; }
+
+        /// <summary>Reorder (GAP-04): order back up to this level when stock falls to LowStockThreshold (the reorder point). Null = up to the reorder point.</summary>
+        public int? TargetStock { get; set; }
+        public int? LeadTimeDays { get; set; }
+        public int? PreferredSupplierId { get; set; }
+        public int? MinOrderQuantity { get; set; }
         /// <summary>
         /// The bucket object key returned as <c>objectKey</c> by POST api/File/UploadImage,
         /// or as <c>imageKey</c> on any read response. A full image URL is also accepted and
@@ -76,6 +84,12 @@ namespace Application.Features.Product.Commands
             RuleFor(x => x.TaxCategory).IsInEnum().WithMessage("وضعیت مالیاتی کالا نامعتبر است.");
             RuleFor(x => x.Stock).GreaterThanOrEqualTo(0).WithMessage("موجودی نمی‌تواند منفی باشد.");
             RuleFor(x => x.LowStockThreshold).GreaterThanOrEqualTo(0).WithMessage("حداقل موجودی نمی‌تواند منفی باشد.");
+
+            RuleFor(x => x.TargetStock).GreaterThanOrEqualTo(x => x.LowStockThreshold).When(x => x.TargetStock.HasValue)
+                .WithMessage("سقف موجودی نمی‌تواند از نقطه‌ی سفارش کمتر باشد.");
+            RuleFor(x => x.LeadTimeDays).InclusiveBetween(0, 365).When(x => x.LeadTimeDays.HasValue).WithMessage("زمان تحویل باید بین ۰ و ۳۶۵ روز باشد.");
+            RuleFor(x => x.MinOrderQuantity).GreaterThan(0).When(x => x.MinOrderQuantity.HasValue).WithMessage("حداقل مقدار سفارش باید از صفر بیشتر باشد.");
+            RuleFor(x => x.PreferredSupplierId).GreaterThan(0).When(x => x.PreferredSupplierId.HasValue).WithMessage("تامین‌کننده‌ی ترجیحی نامعتبر است.");
             RuleFor(x => x.ProductCategoryId).GreaterThan(0).WithMessage(Validation.RequiredMessage("شناسه دسته‌بندی محصول"));
             RuleFor(x => x.Unit).IsInEnum().WithMessage("واحد محصول نامعتبر است.");
         }
@@ -107,6 +121,9 @@ namespace Application.Features.Product.Commands
         public async Task<ResponseDto> Handle(CreateProductCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
+
+            if (request.PreferredSupplierId.HasValue && !await _context.Suppliers.AnyAsync(x => x.Id == request.PreferredSupplierId && x.IsActive, cancellationToken))
+                throw new ValidationCustomException("تامین‌کننده‌ی ترجیحی یافت نشد.");
 
             var product = BuildEntity(request, _mapper, _objectStorageService);
             var vehicleIds = await VehicleRules.ResolveVehicleIdsAsync(_context, request.VehicleIds, cancellationToken);

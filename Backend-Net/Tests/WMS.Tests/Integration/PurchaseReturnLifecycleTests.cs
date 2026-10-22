@@ -943,7 +943,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(0, effect.AppliedQuantity);
             Assert.Equal(stockBefore, scope.Context.Products.Local.Single(x => x.Id == scenario.Product.Id).Stock);
 
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
             using var verify = db.NewContext();
             Assert.Equal(0, verify.PurchaseReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).AppliedQuantity);
             Assert.Empty(verify.PurchaseReturnEffectRounds);

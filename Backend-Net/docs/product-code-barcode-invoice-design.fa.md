@@ -375,7 +375,7 @@ public class BarcodeRenderOptions
 
 | نیاز | راه‌حل |
 |---|---|
-| اطلاعات فروشنده (نام شرکت، کد اقتصادی، شناسه ملی، آدرس، تلفن، لوگو) | بخش `Company` در `appsettings.json` |
+| اطلاعات فروشنده (نام شرکت، کد اقتصادی، شناسه ملی، آدرس، تلفن، لوگو) | صفحه‌ی تنظیمات سامانه، گروه «مشخصات شرکت» (`Company.*`؛ تا ۲۰۲۶-۱۰-۲۰ بخش `Company` در `appsettings.json`) |
 | تاریخ شمسی | `Common/Extensions/PersianDate.cs` روی `PersianCalendar` توکار |
 | مبلغ به حروف | `Common/Extensions/NumberToPersianWords.cs` |
 | ارقام فارسی | اکستنشن `ToPersianDigits()` |

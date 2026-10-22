@@ -82,7 +82,7 @@ namespace WMS.Tests.Integration
             {
                 PaymentDetailId = payment.Id,
                 Allocations = new() { new() { SaleId = first.Id, Amount = 3_000 }, new() { SaleId = second.Id, Amount = 1_500 } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(4_500, payment.AllocatedAmount);
             Assert.Equal(500, payment.UnallocatedAmount);
@@ -114,19 +114,19 @@ namespace WMS.Tests.Integration
             {
                 PaymentDetailId = payment.Id,
                 Allocations = new() { new() { SaleId = first.Id, Amount = 3_001 } },
-            }));
+            }, TestContext.Current.CancellationToken));
             await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AllocatePartyPaymentCommand
             {
                 PaymentDetailId = payment.Id,
                 Allocations = new() { new() { SaleId = first.Id, Amount = 3_000 }, new() { SaleId = second.Id, Amount = 1_500 } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
             var stranger = Seed.ShippedSale(scope.Context, orderedQuantity: 1, shippedQuantity: 1, stock: 0, unitPrice: 1_000);
             await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AllocatePartyPaymentCommand
             {
                 PaymentDetailId = payment.Id,
                 Allocations = new() { new() { SaleId = stranger.Sale.Id, Amount = 100 } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
             using var verify = db.NewContext();
             Assert.Empty(verify.PaymentAllocations);
@@ -156,13 +156,13 @@ namespace WMS.Tests.Integration
             var (customer, first, _) = TwoOpenSales(scope);
             var payment = await ReceiveAsync(mediator, customer.Id, 3_000, allocations: new() { new() { SaleId = first.Id, Amount = 3_000 } });
 
-            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new VoidPartyPaymentCommand { PaymentDetailId = payment.Id }));
+            await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new VoidPartyPaymentCommand { PaymentDetailId = payment.Id }, TestContext.Current.CancellationToken));
 
-            payment = Assert.IsType<PartyPaymentDto>((await mediator.Send(new RemovePartyPaymentAllocationCommand { AllocationId = payment.Allocations.Single().Id })).Data);
+            payment = Assert.IsType<PartyPaymentDto>((await mediator.Send(new RemovePartyPaymentAllocationCommand { AllocationId = payment.Allocations.Single().Id }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(3_000, payment.UnallocatedAmount);
             Assert.NotNull(payment.Allocations.Single().VoidedAt);
 
-            payment = Assert.IsType<PartyPaymentDto>((await mediator.Send(new VoidPartyPaymentCommand { PaymentDetailId = payment.Id })).Data);
+            payment = Assert.IsType<PartyPaymentDto>((await mediator.Send(new VoidPartyPaymentCommand { PaymentDetailId = payment.Id }, TestContext.Current.CancellationToken)).Data);
             Assert.NotNull(payment.VoidedAt);
             Assert.Equal(0, payment.UnallocatedAmount);
 
@@ -183,11 +183,11 @@ namespace WMS.Tests.Integration
             scope.Context.SaveChanges();
             var payment = await ReceiveAsync(mediator, scenario.Customer.Id, 3_000, allocations: new() { new() { SaleId = scenario.Sale.Id, Amount = 3_000 } });
 
-            var cancelled = Assert.IsType<SaleDto>((await mediator.Send(new ChangeSaleStatusCommand { Id = scenario.Sale.Id, Status = SalesStatusEnum.CANCELLED })).Data);
+            var cancelled = Assert.IsType<SaleDto>((await mediator.Send(new ChangeSaleStatusCommand { Id = scenario.Sale.Id, Status = SalesStatusEnum.CANCELLED }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(0UL, cancelled.PaidAmount);
             Assert.NotNull(Assert.Single(cancelled.PaymentAllocations).VoidedAt);
-            var after = Assert.IsType<PartyPaymentDto>((await mediator.Send(new GetPartyPaymentDetailQuery { Id = payment.Id })).Data);
+            var after = Assert.IsType<PartyPaymentDto>((await mediator.Send(new GetPartyPaymentDetailQuery { Id = payment.Id }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(3_000, after.UnallocatedAmount);
         }
 
@@ -207,14 +207,14 @@ namespace WMS.Tests.Integration
             {
                 PaymentDetailId = payment.Id,
                 Allocations = new() { new() { SaleId = sale.Id, Amount = 1_000 } },
-            }));
+            }, TestContext.Current.CancellationToken));
 
             sale = await ProformaFlow.CheckAsync(mediator, await ProformaFlow.ApproveAsync(mediator, sale), barcodes);
             await mediator.Send(new AllocatePartyPaymentCommand
             {
                 PaymentDetailId = payment.Id,
                 Allocations = new() { new() { SaleId = sale.Id, Amount = 1_000 } },
-            });
+            }, TestContext.Current.CancellationToken);
 
             sale = await ProformaFlow.DetailAsync(mediator, sale.Id);
             Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
@@ -237,14 +237,14 @@ namespace WMS.Tests.Integration
                 Direction = PaymentDirectionEnum.OUT,
                 Type = PaymentTypeEnum.CASH,
                 Amount = 1_000,
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.False(refund.CanAllocate);
             await Assert.ThrowsAsync<ValidationCustomException>(() => mediator.Send(new AllocatePartyPaymentCommand
             {
                 PaymentDetailId = refund.Id,
                 Allocations = new() { new() { SaleId = first.Id, Amount = 1_000 } },
-            }));
+            }, TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -261,7 +261,7 @@ namespace WMS.Tests.Integration
                 Type = PaymentTypeEnum.TRANSFER,
                 Amount = 10_000,
                 Allocations = new() { new() { PurchaseId = purchase.Purchase.Id, Amount = 8_000 } },
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(PaymentDirectionEnum.OUT, payment.Direction);
             Assert.Equal(2_000, payment.UnallocatedAmount);
@@ -282,7 +282,7 @@ namespace WMS.Tests.Integration
             second.PaymentDate = DateTime.Today.AddDays(2);
             scope.Context.SaveChanges();
 
-            var documents = Assert.IsType<List<AllocatableDocumentDto>>((await mediator.Send(new GetAllocatableDocumentListQuery { CustomerId = customer.Id })).Data);
+            var documents = Assert.IsType<List<AllocatableDocumentDto>>((await mediator.Send(new GetAllocatableDocumentListQuery { CustomerId = customer.Id }, TestContext.Current.CancellationToken)).Data);
 
             Assert.Equal(new[] { second.Id, first.Id }, documents.Select(d => d.SaleId!.Value));
             Assert.Equal(2_000UL, documents[0].RemainingAmount);
@@ -298,7 +298,7 @@ namespace WMS.Tests.Integration
             var open = await ReceiveAsync(mediator, customer.Id, 1_000);
             await ReceiveAsync(mediator, customer.Id, 3_000, allocations: new() { new() { SaleId = first.Id, Amount = 3_000 } });
 
-            var data = (await mediator.Send(new GetPartyPaymentListQuery { CustomerId = customer.Id, HasUnallocated = true })).Data!;
+            var data = (await mediator.Send(new GetPartyPaymentListQuery { CustomerId = customer.Id, HasUnallocated = true }, TestContext.Current.CancellationToken)).Data!;
             var rows = (List<PartyPaymentDto>)data.GetType().GetProperty("PartyPaymentList")!.GetValue(data)!;
 
             Assert.Equal(open.Id, Assert.Single(rows).Id);
@@ -315,24 +315,24 @@ namespace WMS.Tests.Integration
             var bank = await AccountAsync(mediator, "بانک ملت");
 
             // Money in on an invoice and on account, both into the cash box; a supplier paid from it.
-            await mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CASH, Amount = 3_000, BankAccountId = cash.Id });
+            await mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CASH, Amount = 3_000, BankAccountId = cash.Id }, TestContext.Current.CancellationToken);
             await ReceiveAsync(mediator, customer.Id, 500, cash.Id);
             var supplier = Seed.PendingPurchase(scope.Context).Supplier;
-            await mediator.Send(new AddPartyPaymentCommand { SupplierId = supplier.Id, Type = PaymentTypeEnum.CASH, Amount = 700, BankAccountId = cash.Id });
+            await mediator.Send(new AddPartyPaymentCommand { SupplierId = supplier.Id, Type = PaymentTypeEnum.CASH, Amount = 700, BankAccountId = cash.Id }, TestContext.Current.CancellationToken);
 
             var transfer = Assert.IsType<BankAccountTransferDto>((await mediator.Send(new TransferBetweenBankAccountsCommand
             {
                 FromBankAccountId = cash.Id,
                 ToBankAccountId = bank.Id,
                 Amount = 2_000,
-            })).Data);
+            }, TestContext.Current.CancellationToken)).Data);
 
-            var list = Assert.IsType<BankAccountListDto>((await mediator.Send(new GetBankAccountListQuery())).Data);
+            var list = Assert.IsType<BankAccountListDto>((await mediator.Send(new GetBankAccountListQuery(), TestContext.Current.CancellationToken)).Data);
             Assert.Equal(1_000 + 3_000 + 500 - 700 - 2_000, list.Accounts.Single(x => x.Id == cash.Id).Balance);
             Assert.Equal(2_000, list.Accounts.Single(x => x.Id == bank.Id).Balance);
             Assert.Equal(3_800, list.TotalBalance);
 
-            var statement = Assert.IsType<BankAccountStatementDto>((await mediator.Send(new GetBankAccountStatementQuery { BankAccountId = cash.Id })).Data);
+            var statement = Assert.IsType<BankAccountStatementDto>((await mediator.Send(new GetBankAccountStatementQuery { BankAccountId = cash.Id }, TestContext.Current.CancellationToken)).Data);
             Assert.Equal(1_000, statement.OpeningBalance);
             Assert.Equal(4, statement.Rows.Count);
             Assert.Equal(1_800, statement.ClosingBalance);
@@ -340,8 +340,8 @@ namespace WMS.Tests.Integration
             Assert.Contains(statement.Rows, r => r.IsOnAccount && r.In == 500);
             Assert.Contains(statement.Rows, r => r.Kind == BankAccountMovementKindEnum.TRANSFER_OUT && r.Out == 2_000 && r.CounterpartBankAccountId == bank.Id);
 
-            await mediator.Send(new VoidBankAccountTransferCommand { Id = transfer.Id });
-            list = Assert.IsType<BankAccountListDto>((await mediator.Send(new GetBankAccountListQuery())).Data);
+            await mediator.Send(new VoidBankAccountTransferCommand { Id = transfer.Id }, TestContext.Current.CancellationToken);
+            list = Assert.IsType<BankAccountListDto>((await mediator.Send(new GetBankAccountListQuery(), TestContext.Current.CancellationToken)).Data);
             Assert.Equal(3_800, list.Accounts.Single(x => x.Id == cash.Id).Balance);
             Assert.Equal(0, list.Accounts.Single(x => x.Id == bank.Id).Balance);
         }
@@ -354,17 +354,17 @@ namespace WMS.Tests.Integration
             var mediator = Mediator(scope);
             var (customer, first, _) = TwoOpenSales(scope);
             var closed = await AccountAsync(mediator, "حساب بسته");
-            await mediator.Send(new DeleteBankAccountCommand { Id = closed.Id });
+            await mediator.Send(new DeleteBankAccountCommand { Id = closed.Id }, TestContext.Current.CancellationToken);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => ReceiveAsync(mediator, customer.Id, 100, closed.Id));
 
-            await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = SystemSettingCatalog.PaymentRequireBankAccount.Key, Value = "true" } } });
+            await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = SystemSettingCatalog.PaymentRequireBankAccount.Key, Value = "true" } } }, TestContext.Current.CancellationToken);
             await Assert.ThrowsAsync<ValidationCustomException>(() => ReceiveAsync(mediator, customer.Id, 100));
             await Assert.ThrowsAsync<ValidationCustomException>(() =>
-                mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CASH, Amount = 100 }));
+                mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CASH, Amount = 100 }, TestContext.Current.CancellationToken));
 
             // A CREDIT row moves no money, so it needs no account.
-            await mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CREDIT, Amount = 100 });
+            await mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CREDIT, Amount = 100 }, TestContext.Current.CancellationToken);
         }
 
         [Fact]
@@ -394,7 +394,7 @@ namespace WMS.Tests.Integration
             var cash = await AccountAsync(mediator, "صندوق", BankAccountKindEnum.CASH_BOX);
             await ReceiveAsync(mediator, customer.Id, 900, cash.Id);
 
-            var data = (await mediator.Send(new GetPaymentJournalQuery { CustomerId = customer.Id, IsOnAccount = true })).Data!;
+            var data = (await mediator.Send(new GetPaymentJournalQuery { CustomerId = customer.Id, IsOnAccount = true }, TestContext.Current.CancellationToken)).Data!;
             var rows = (List<PaymentJournalRowDto>)data.GetType().GetProperty("PaymentJournal")!.GetValue(data)!;
 
             var row = Assert.Single(rows);

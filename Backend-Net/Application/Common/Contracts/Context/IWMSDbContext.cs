@@ -59,6 +59,13 @@ namespace Application.Common.Contracts.Context
         DbSet<BankAccountTransfer> BankAccountTransfers { get; }
         DbSet<PaymentAllocation> PaymentAllocations { get; }
         DbSet<SaleInstallmentReturnCredit> SaleInstallmentReturnCredits { get; }
+        DbSet<Warehouse> Warehouses { get; }
+        DbSet<StockTransfer> StockTransfers { get; }
+        DbSet<StockTransferUnit> StockTransferUnits { get; }
+        DbSet<Stocktake> Stocktakes { get; }
+        DbSet<StocktakeLine> StocktakeLines { get; }
+        DbSet<StocktakeScan> StocktakeScans { get; }
+        DbSet<StocktakeSnapshotUnit> StocktakeSnapshotUnits { get; }
 
         DbSet<T> Set<T>() where T : class;
 

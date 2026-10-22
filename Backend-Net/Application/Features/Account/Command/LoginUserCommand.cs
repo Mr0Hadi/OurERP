@@ -1,4 +1,6 @@
-﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Settings;
+using Application.Common.Settings;
+using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Token;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
@@ -50,22 +52,23 @@ namespace Application.Features.Account.Command
         private readonly IUserRepository _userRepository;
         private readonly IUserSessionService _userSessionService;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IConfiguration _configuration;
+        private readonly ISystemSettingService _systemSettingService;
 
-        public LoginUserCommandHandler(IUserRepository userRepository, IUserSessionService userSessionService, IUnitOfWork unitOfWork, IConfiguration configuration)
+        public LoginUserCommandHandler(IUserRepository userRepository, IUserSessionService userSessionService, IUnitOfWork unitOfWork, ISystemSettingService systemSettingService)
         {
             _userRepository = userRepository;
             _userSessionService = userSessionService;
             _unitOfWork = unitOfWork;
-            _configuration = configuration;
+            _systemSettingService = systemSettingService;
         }
 
         public async Task<ResponseDto> Handle(LoginUserCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
 
-            var maxFailedAttempts = ReadSetting("LoginSecurity:MaxFailedAttempts", DefaultMaxFailedAttempts);
-            var lockoutMinutes = ReadSetting("LoginSecurity:LockoutMinutes", DefaultLockoutMinutes);
+            // The lockout policy is the company's, on the settings page (Security group).
+            var maxFailedAttempts = (int)await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.SecurityMaxFailedLoginAttempts, cancellationToken);
+            var lockoutMinutes = (int)await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.SecurityLockoutMinutes, cancellationToken);
 
             var user = await _userRepository.GetByUsernameAsync(request.Username, cancellationToken);
 
@@ -141,10 +144,6 @@ namespace Application.Features.Account.Command
                 new { RemainingSeconds = Math.Max(0, (int)Math.Ceiling(remaining.TotalSeconds)) });
         }
 
-        private int ReadSetting(string key, int fallback)
-        {
-            return int.TryParse(_configuration[key], out var value) && value > 0 ? value : fallback;
-        }
     }
 
 }

@@ -58,6 +58,9 @@ namespace Application.Features.Product.Queries
         /// <summary>Shelf code prefix ("A-03" finds every shelf of aisle A, bay 03); normalised like the stored value.</summary>
         public string? BinLocation { get; set; }
 
+        /// <summary>Only units in (or last in) this warehouse.</summary>
+        public int? WarehouseId { get; set; }
+
         /// <summary>On CreatedAt - when the unit entered the warehouse.</summary>
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
@@ -150,6 +153,9 @@ namespace Application.Features.Product.Queries
 
             if (request.CustomerId.HasValue)
                 query = query.Where(x => _context.Sales.Any(s => s.CustomerId == request.CustomerId && s.Items.Any(i => i.Id == x.SaleItemId)));
+
+            if (request.WarehouseId.HasValue)
+                query = query.Where(x => x.WarehouseId == request.WarehouseId);
 
             var binPrefix = BinLocations.Normalize(request.BinLocation);
             if (binPrefix != null)

@@ -162,7 +162,7 @@ namespace WMS.Tests.Integration
         public async Task DeleteImage_RemovesObjectFromBucket()
         {
             var storage = new FakeObjectStorage();
-            var uploaded = await storage.UploadAsync(Bytes(), "old.png", "image/png", ImageFolderEnum.PRODUCTS);
+            var uploaded = await storage.UploadAsync(Bytes(), "old.png", "image/png", ImageFolderEnum.PRODUCTS, TestContext.Current.CancellationToken);
 
             var handler = new DeleteImageCommandHandler(storage);
             await handler.Handle(new DeleteImageCommand { ObjectKey = uploaded.ObjectKey }, CancellationToken.None);

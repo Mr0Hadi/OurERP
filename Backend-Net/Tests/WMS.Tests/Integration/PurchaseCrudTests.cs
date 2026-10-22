@@ -542,7 +542,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var scenario = Seed.PendingPurchase(scope.Context, orderedQuantity: 1, stock: 0);
             scenario.Purchase.PaymentDate = new DateTime(2026, 9, 15);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var handler = new GetPurchaseListQueryHandler(scope.Db);
             var inRange = await handler.Handle(new GetPurchaseListQuery { FromPaymentDate = new DateTime(2026, 9, 1), ToPaymentDate = new DateTime(2026, 9, 30) }, CancellationToken.None);

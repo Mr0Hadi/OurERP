@@ -32,6 +32,12 @@ namespace Application.Features.Setting.Dtos
         /// <summary>Unit to print after the value, e.g. «دقیقه».</summary>
         public string? Unit { get; set; }
 
+        /// <summary>Longest accepted text of a TEXT setting.</summary>
+        public int? MaxLength { get; set; }
+
+        /// <summary>A feature switch every signed-in user can read through GetFeatureFlags (the frontend hides menus with it).</summary>
+        public bool IsPublic { get; set; }
+
         /// <summary>Last change; null while the setting is on its default.</summary>
         public DateTime? UpdatedAt { get; set; }
         public int? UpdatedByUserId { get; set; }

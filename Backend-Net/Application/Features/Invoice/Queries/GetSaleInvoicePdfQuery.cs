@@ -1,3 +1,4 @@
+using Application.Common.Settings;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Documents;
 using Application.Common.Dtos;
@@ -18,17 +19,16 @@ namespace Application.Features.Invoice.Queries
     {
         private readonly IWMSDbContext _context;
         private readonly IPdfDocumentService _pdfDocumentService;
-        private readonly IConfiguration _configuration;
 
-        public GetSaleInvoicePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService, IConfiguration configuration)
+        public GetSaleInvoicePdfQueryHandler(IWMSDbContext context, IPdfDocumentService pdfDocumentService)
         {
             _context = context;
             _pdfDocumentService = pdfDocumentService;
-            _configuration = configuration;
         }
 
         public async Task<FileResponseDto> Handle(GetSaleInvoicePdfQuery request, CancellationToken cancellationToken)
         {
+            var company = await SystemSettingValues.CompanyAsync(_context, cancellationToken);
             var sale = await _context.Sales
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
@@ -62,7 +62,7 @@ namespace Application.Features.Invoice.Queries
                 PaymentDueDate = sale.PaymentDate,
                 StatusText = sale.Status.ToString(),
                 Description = sale.Description,
-                Company = _configuration.GetSection("Company").Get<CompanyInfo>() ?? new CompanyInfo(),
+                Company = company,
                 CounterpartyLabel = "خریدار",
                 Counterparty = new PartyInfo
                 {

@@ -391,7 +391,7 @@ namespace WMS.Tests.Integration
                 CreatedAt = DateTime.Now,
             });
 
-            await Assert.ThrowsAsync<DbUpdateException>(() => scope.Context.SaveChangesAsync());
+            await Assert.ThrowsAsync<DbUpdateException>(() => scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken));
         }
     }
 }

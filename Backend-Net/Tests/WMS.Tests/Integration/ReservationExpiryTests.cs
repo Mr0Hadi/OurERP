@@ -58,11 +58,11 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             var (mediator, scenario, barcodes) = await SetupAsync(scope, stock: 2);
 
-            await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = SystemSettingCatalog.SaleReservationMinutes.Key, Value = "3" } } });
+            await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = SystemSettingCatalog.SaleReservationMinutes.Key, Value = "3" } } }, TestContext.Current.CancellationToken);
             var sale = await ProformaFlow.ReadyForPaymentAsync(mediator, scenario, barcodes.Take(1).ToList());
             Assert.InRange(sale.ReservationSecondsLeft!.Value, 170, 180);
 
-            await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = SystemSettingCatalog.SaleReservationMinutes.Key, Value = "0" } } });
+            await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = SystemSettingCatalog.SaleReservationMinutes.Key, Value = "0" } } }, TestContext.Current.CancellationToken);
             var never = await ProformaFlow.ReadyForPaymentAsync(mediator, scenario, barcodes.Skip(1).ToList());
             Assert.Null(never.ReservationExpiresAt);
             Assert.Null(never.ReservationSecondsLeft);
@@ -80,7 +80,7 @@ namespace WMS.Tests.Integration
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => PayAsync(mediator, sale.Id));
             // Still inside the grace: the sweep leaves it alone.
-            Assert.False((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id })).Data!);
+            Assert.False((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id }, TestContext.Current.CancellationToken)).Data!);
             Assert.Equal(1, (await ProformaFlow.DetailAsync(mediator, sale.Id)).Items.Single().ReservedQuantity);
         }
 
@@ -94,7 +94,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(1, scope.Context.Products.Single(p => p.Id == scenario.Product.Id).Stock);
 
             await ExpireAsync(scope, sale.Id, SaleProformaPipeline.ExpirySweepGrace + TimeSpan.FromSeconds(1));
-            Assert.True((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id })).Data!);
+            Assert.True((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id }, TestContext.Current.CancellationToken)).Data!);
 
             sale = await ProformaFlow.DetailAsync(mediator, sale.Id);
             Assert.Equal(SaleProformaStageEnum.CUSTOMER_APPROVED, sale.ProformaStage);
@@ -109,7 +109,7 @@ namespace WMS.Tests.Integration
             }
 
             // A second run finds nothing to do.
-            Assert.False((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id })).Data!);
+            Assert.False((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id }, TestContext.Current.CancellationToken)).Data!);
 
             // The warehouse checks again (any unit will do), the clock restarts, and the customer can pay.
             sale = await ProformaFlow.CheckAsync(mediator, sale, new() { barcodes[1] });
@@ -132,7 +132,7 @@ namespace WMS.Tests.Integration
 
             // Even a stray deadline left on an issued sale is ignored.
             await ExpireAsync(scope, sale.Id, TimeSpan.FromHours(1));
-            Assert.False((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id })).Data!);
+            Assert.False((bool)(await mediator.Send(new ReleaseExpiredSaleReservationCommand { SaleId = sale.Id }, TestContext.Current.CancellationToken)).Data!);
             Assert.Equal(1, (await ProformaFlow.DetailAsync(mediator, sale.Id)).Items.Single().ReservedQuantity);
         }
 
@@ -147,22 +147,22 @@ namespace WMS.Tests.Integration
 
             SystemSettingDto Read(object data) => Assert.Single(Assert.IsType<List<SystemSettingGroupDto>>(data).SelectMany(g => g.Settings), s => s.Key == key);
 
-            var initial = Read((await mediator.Send(new GetSystemSettingsQuery())).Data!);
+            var initial = Read((await mediator.Send(new GetSystemSettingsQuery(), TestContext.Current.CancellationToken)).Data!);
             Assert.Equal("10", initial.Value);
             Assert.True(initial.IsDefault);
             Assert.Equal(SystemSettingTypeEnum.INTEGER, initial.Type);
 
-            var updated = Read((await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = key, Value = " 25 " } } })).Data!);
+            var updated = Read((await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = key, Value = " 25 " } } }, TestContext.Current.CancellationToken)).Data!);
             Assert.Equal("25", updated.Value);
             Assert.False(updated.IsDefault);
             Assert.Equal(user.Id, updated.UpdatedByUserId);
             Assert.NotNull(updated.UpdatedAt);
-            Assert.Equal(25, await scope.SystemSettings.GetIntegerAsync(SystemSettingCatalog.SaleReservationMinutes));
+            Assert.Equal(25, await scope.SystemSettings.GetIntegerAsync(SystemSettingCatalog.SaleReservationMinutes, TestContext.Current.CancellationToken));
 
-            var reset = Read((await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = key, Value = null } } })).Data!);
+            var reset = Read((await mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = key, Value = null } } }, TestContext.Current.CancellationToken)).Data!);
             Assert.True(reset.IsDefault);
             Assert.Empty(scope.Context.SystemSettings);
-            Assert.Equal(10, await scope.SystemSettings.GetIntegerAsync(SystemSettingCatalog.SaleReservationMinutes));
+            Assert.Equal(10, await scope.SystemSettings.GetIntegerAsync(SystemSettingCatalog.SaleReservationMinutes, TestContext.Current.CancellationToken));
         }
 
         [Theory]
@@ -177,7 +177,7 @@ namespace WMS.Tests.Integration
             var mediator = ProformaFlow.Mediator(scope);
 
             await Assert.ThrowsAsync<ValidationCustomException>(() =>
-                mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = key, Value = value } } }));
+                mediator.Send(new UpdateSystemSettingsCommand { Settings = new() { new() { Key = key, Value = value } } }, TestContext.Current.CancellationToken));
             Assert.Empty(scope.Context.SystemSettings);
         }
     }
