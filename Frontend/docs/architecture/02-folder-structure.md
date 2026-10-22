@@ -87,14 +87,14 @@ flowchart TD
 
 ## قراردادها و نکته‌ها
 
-- **import بین فیچرها — وضعیتِ فعلی (نه قاعده).** شمارش = تعدادِ خطوطِ import با `@/features/<دیگر>` در فایل‌های فیچرِ واردکننده (grep، 2026-10-17):
+- **import بین فیچرها — وضعیتِ فعلی (نه قاعده).** شمارش = تعدادِ خطوطِ import با `@/features/<دیگر>` در فایل‌های فیچرِ واردکننده (grep، 2026-10-22):
 
 | واردکننده | واردشده | تعداد |
 | --- | --- | --- |
 | `accounting` | `organization` ۲، `employees` ۲؛ `auth`، `customers`، `suppliers`، `warehouse` هر کدام ۱ | ۸ |
 | `audit` | `auth` ۲، `employees` ۱ | ۳ |
 | `customers` | `partyAccount` | ۹ |
-| `customers` | `auth` ۱، `sales` ۱، `audit` ۱ | ۳ |
+| `customers` | `auth` ۱، `sales` ۱، `audit` ۱، `treasury` ۱ | ۴ |
 | `dashboard` | `auth` ۳، `warehouse` ۲، `accounting` ۱، `sales` ۱ | ۷ |
 | `employees` | `organization` ۶، `auth` ۳، `audit` ۲، `permissions` ۱ | ۱۲ |
 | `organization` | `employees` ۷، `auth` ۲، `audit` ۲، `permissions` ۱ | ۱۲ |
@@ -102,11 +102,12 @@ flowchart TD
 | `permissions` | `auth` ۸، `organization` ۳، `employees` ۲ | ۱۳ |
 | `purchases` | `warehouse` ۶، `suppliers` ۴، `auth` ۴، `audit` ۲، `partyAccount` ۱ | ۱۷ |
 | `sales` | `warehouse` ۸، `customers` ۶، `auth` ۶، `audit` ۲، `partyAccount` ۱، `dashboard` ۱ | ۲۴ |
-| `suppliers` | `partyAccount` ۹، `auth` ۱، `audit` ۱ | ۱۱ |
+| `suppliers` | `partyAccount` ۹، `auth` ۱، `audit` ۱، `treasury` ۱ | ۱۲ |
+| `treasury` | `sales` ۱۶، `auth` ۷، `customers` ۷، `suppliers` ۶، `partyAccount` ۴، `accounting` ۲، `purchases` ۲ | ۴۴ |
 | `warehouse` | `auth` ۸، `purchases` ۷، `sales` ۵، `suppliers` ۳، `customers` ۲، `audit` ۱ | ۲۶ |
 
   **جهتِ عادی:** هر فیچر → `auth` (هوکِ مجوز)؛ اسناد → داده‌ی پایه (`sales`/`purchases` → `warehouse`، `customers`، `suppliers`)؛ `customers`/`suppliers` → `partyAccount`؛ گزارش‌ها (`dashboard`، `accounting`) → هر فیچری که می‌خوانند؛ صفحه‌های جزئیات → `audit` (فقط `AuditHistoryButton`/`UserActivityButton`).
-  **جهتِ غیرمنتظره — اضافه نکنید:** داده‌ی پایه → اسناد یا گزارش. نمونه‌های موجود: `warehouse` → `purchases`/`sales` (کلید و `sharedInvalidation` و mutationهای مرجوعی، برای صفِ دریافت/ارسال)، `sales/installments/services/mutations.js` → `dashboardKeys` از `@/features/dashboard/services/queryKeys`، `partyAccount/services/queries.js` → `customerKeys`/`supplierKeys` (چرخه‌ی دوطرفه با `customers`/`suppliers` در سطحِ فیچر)، و `employees` ↔ `organization` دوطرفه. هیچ‌کدام در سطحِ فایل حلقه نمی‌سازند (madge).
+  **جهتِ غیرمنتظره — اضافه نکنید:** داده‌ی پایه → اسناد یا گزارش. نمونه‌های موجود: `warehouse` → `purchases`/`sales` (کلید و `sharedInvalidation` و mutationهای مرجوعی، برای صفِ دریافت/ارسال)، `sales/installments/services/mutations.js` → `dashboardKeys` از `@/features/dashboard/services/queryKeys`، `partyAccount/services/queries.js` → `customerKeys`/`supplierKeys` (چرخه‌ی دوطرفه با `customers`/`suppliers` در سطحِ فیچر)، `customers`/`suppliers` → `treasury` (فقط `PartyOnAccountBar`) در برابرِ `treasury` → `customers`/`suppliers`، و `employees` ↔ `organization` دوطرفه. هیچ‌کدام در سطحِ فایل حلقه نمی‌سازند (madge).
 - **`shared/` در ۹ فایل از `features/` import می‌کند** (خلافِ قاعده‌ی لایه‌ها؛ پیشنهادِ رفع هر کدام در [14](14-dependency-graph-and-health.md)):
   - `src/shared/services/api/axios.js` و `src/shared/components/layout/AppSidebar.jsx`، `NavUser.jsx`، `NavWorkspace.jsx` → `@/features/auth/...`
   - `src/shared/components/forms/PartyPickerCard.jsx` → `@/features/partyAccount/...`
