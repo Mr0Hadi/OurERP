@@ -7,7 +7,7 @@ export default function FilterDateInput({ label, value, onChange }) {
       <Label className="whitespace-nowrap font-medium text-foreground text-sm">
         {label}
       </Label>
-      <PersianDatePicker value={value} onChange={onChange} className="flex-1" />
+      <PersianDatePicker value={value} onChange={onChange} className="flex-1 min-w-44" />
     </div>
   );
 }

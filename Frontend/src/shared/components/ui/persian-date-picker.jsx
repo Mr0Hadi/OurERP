@@ -40,7 +40,7 @@ export default function PersianDatePicker({
 
   if (!ready) {
     return (
-      <div className="relative w-full">
+      <div className="relative w-full min-w-44">
         <input
           id={id}
           readOnly
@@ -81,10 +81,10 @@ export default function PersianDatePicker({
       locale={persian_fa}
       calendarPosition="bottom-right"
       disabled={disabled}
-      containerClassName="w-full"
+      containerClassName="w-full min-w-44"
       className="rmdp-app-calendar"
       render={(val, openCalendar) => (
-        <div className="relative w-full">
+        <div className="relative w-full min-w-44">
           <input
             id={id}
             readOnly
