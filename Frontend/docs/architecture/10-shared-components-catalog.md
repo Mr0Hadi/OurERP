@@ -101,7 +101,7 @@ flowchart LR
 | `FormField`، `FormSelectField` | فیلدِ react-hook-form با label و خطا | ۶، ۳ |
 | `FormSectionCard` | کارتِ بخشِ فرم با هدرِ آیکون‌دار (مشتری، تامین‌کننده، …) | ۱۱ |
 | `SectionCard` | کارتِ بخشِ صفحه‌ی سند (هدرِ ساده + `action`) | ۸ |
-| `DocumentFormLayout` + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
+| `DocumentFormLayout` (`main`/`payments`/`aside`، و `below` تمام‌عرض) + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
 | `StatusChoice` | انتخابِ وضعیت به‌صورتِ دکمه | ۷ |
 | `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد، مبلغ به حروف | ۵–۶ |
 | `OrderInfoCard`، `OrderItemsReadOnly`، `OrderLogisticsSection`، `TransporterSection`، `PartySection` | بخش‌های سندِ خرید/فروش (`OrderInfoCard`: `showInvoiceDate`/`showDueDate` برای فروش، که تاریخِ فاکتور را سرور می‌گذارد و سررسید جزوِ پیش‌فاکتور است) | ۲–۴ |

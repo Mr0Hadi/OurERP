@@ -18,9 +18,11 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
  * `payments` (کارتِ پرداخت‌ها) در دسکتاپ آخرِ ستونِ اصلی است؛ در موبایل بین «سند
  * فاکتور/پیش‌فاکتور» و کارتِ جمع و ثبت (آخرین فرزندِ `aside`) می‌نشیند.
  *
+ * `below` (اختیاری) زیرِ هر دو ستون و تمام‌عرض است — جزئیاتی که جای ستون ندارند (مثلاً تب‌های صندوق).
+ *
  * کلِ صفحه یک `<form>` است؛ دکمه‌ی اصلیِ `OrderSummaryCard` آن را می‌فرستد.
  */
-export default function DocumentFormLayout({ main, payments, aside, onSubmit }) {
+export default function DocumentFormLayout({ main, payments, aside, below, onSubmit }) {
   // submitِ فرمِ یک دیالوگ از portal در درختِ React تا اینجا بالا می‌آید؛
   // فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
   const handleSubmit = (event) => {
@@ -46,6 +48,7 @@ export default function DocumentFormLayout({ main, payments, aside, onSubmit }) 
           {aside}
         </aside>
       </div>
+      {below && <div className="min-w-0">{below}</div>}
     </form>
   );
 }
