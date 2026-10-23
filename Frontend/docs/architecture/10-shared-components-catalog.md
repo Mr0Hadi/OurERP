@@ -132,7 +132,7 @@ flowchart LR
 | `dataTransfer/` | `DataTransferActions` (۹)؛ داخلی: `ImportDialog`، `ImportResultView` | دکمه‌ی ورود/خروجیِ CSV/Excel در سرتیترِ لیست؛ مجاز بودن از سرور (`GetResources`) |
 | `files/` | `RemoteImage` (۵)، `ImageUploadField` (۳)، `FileUploadList`، `ImageLightbox` | تصویر از سرور، آپلودِ تصویر/پیوست |
 | `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton` | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها |
-| `print/` | `BarcodeGraphic`، `QrCodeGraphic`، `LabelSheet`، `sheetPresets.js`، `usePrint` | چاپ برچسب و صفحه با مرورگر (`[data-print-root]`) |
+| `print/` | `BarcodeGraphic`، `QrCodeGraphic`، `LabelSheet`، `sheetPresets.js`، `usePrint` | چاپ برچسب و صفحه با مرورگر (`[data-print-root]`)؛ حالتِ چاپ (`body.printing` و `@page`) تا unmountِ پورتال می‌ماند، نه تا `afterprint` — در کرومِ اندروید `afterprint` فوراً می‌آید و پیش‌نمایش بعد از پاک‌سازی ساخته می‌شد |
 | `barcode/` | `CameraScanButton` (۳)، `UnitBarcodeScanList` (۲)؛ داخلی: `CameraScanner`، `BarcodeScanField` | اسکنِ بارکد با دوربین |
 | `map/` | `LocationPickerMap` (۱)؛ داخلی: `MapCanvas`، `MapSearchBar`، `nominatim.js` | انتخابِ مکان روی نقشه (Leaflet + Nominatim) |
 | `products/` | `ProductPicker`، `DocumentItemsSection`، `useReturnedNewProduct` | انتخابِ کالا و برگشت از «کالای جدید» |
