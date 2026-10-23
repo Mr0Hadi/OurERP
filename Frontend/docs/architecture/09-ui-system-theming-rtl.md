@@ -85,6 +85,11 @@ export const SALE_STATUS_TONES = Object.freeze({
 - سایدبار: `<AppSidebar side="right" />` در `src/app/layouts/AppLayout.jsx`.
 - در موبایل سایدبار داخلِ `Sheet` باز می‌شود؛ `AppSidebar` با هر تغییرِ `pathname` (`useLocation`) `setOpenMobile(false)` می‌زند، پس با رفتن به هر صفحه دراور خودکار بسته می‌شود (برای همهٔ لینک‌های `Nav*`، بدون دست‌زدن به تک‌تک آن‌ها).
 - toastها `direction: "rtl"` در `src/app/providers/ToastProvider.jsx`.
+
+### پوسته روی موبایل
+
+- **`*:min-w-0` روی ظرفِ صفحه:** صفحه آیتمِ فلکس است؛ بدونِ آن `min-width:auto` می‌گذاشت جدولِ عریض (مثلاً `min-w-[560px]`ِ گردش حساب در جزئیاتِ مشتری/تامین‌کننده) کلِ صفحه را پهن کند و کروم صفحه را کوچک‌نمایی می‌کرد. جدولِ عریض حالا داخلِ `overflow-x-auto`ِ خودش اسکرول می‌شود.
+- **دکمه‌ی متن‌دار در ستونِ موبایل** (`flex-col sm:flex-row` با `flex-1`): ارتفاعِ ثابت (`h-7`/`h-8`) نگذارید؛ `ACTION_BUTTON_CLASS` (`src/shared/components/returns/actionButtonClass.js`) ارتفاع را حداقلی و متن را شکستنی می‌کند. مصرف‌کننده‌ها: صفحه‌های مرجوعی و `ReceivingUnlistedItemsSection`.
 - کلاس‌های جهت: کدِ فعلی بیشتر کلاسِ فیزیکی (`ml-*`، `mr-*`) دارد تا منطقی (`ms-*`، `me-*`)؛ قراردادِ واحدی نیست (پایین). برای کدِ تازه کلاسِ منطقی امن‌تر است.
 
 ### فارسی‌سازیِ داده

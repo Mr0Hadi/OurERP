@@ -75,7 +75,8 @@ export default function AppLayout() {
             </div>
             <AppBreadcrumb />
           </header>
-          <div className="relative flex min-h-[calc(100svh-4rem)] p-4">
+          {/* `*:min-w-0`: صفحه آیتمِ فلکس است و بدونِ آن جدولِ عریض (مثلاً گردش حساب) کلِ صفحه را روی موبایل پهن می‌کرد. */}
+          <div className="relative flex min-h-[calc(100svh-4rem)] p-4 *:min-w-0">
             <RouteLoadingOverlay contained />
             <Suspense fallback={<ContentSpinner />}>
               <PermissionGate>
