@@ -42,6 +42,7 @@
 | ۲۳ | کارِ انبار روی مرجوعی (عودت، اسقاط، آزادسازی، تحویلِ برگشتی) بدونِ دسترسی به صفحه‌های مرجوعی: خواندن با `*ReturnExecute` | **بالا** |
 | ۲۵ | تکمیلِ اقساط (GAP-26): فیلترِ چندوضعیتی برای «همه‌ی پرداخت‌نشده‌ها»، جریمه روی فهرستِ اقساط، پیش‌نمایشِ مبلغِ تسویه‌ی زودهنگام | متوسط |
 | ۲۶ | صندوق و بانک و چک (GAP-03): حساب روی پولِ مرجوعی‌ها، `voidedAt` روی چک | متوسط |
+| ۲۷ | داده‌ی سندهای چاپی (فاکتور/پیش‌فاکتور فروش، برگهٔ طلبکاری، برگهٔ مرجوعی خرید) به‌صورت JSON تا فرانت همان سند را با کاغذ و چیدمانِ دلخواه چاپ کند | متوسط |
 
 ---
 
@@ -2013,6 +2014,81 @@ git مانده، لو رفته حساب کنید.
 می‌آیند (سرور ۴۰۰ می‌دهد). درخواست: `voidedAt` (مثلِ `PaymentDetailDto`).
 **تا آن وقت:** صفحه‌ی چک‌ها چکِ ابطال‌شده را مثلِ در جریان نشان می‌دهد.
 
+## بخشِ ۲۷ — داده‌ی سندهای چاپی برای چاپ در مرورگر (۲۰۲۶-۱۰-۲۳)
+
+**وضعِ فعلی.** سه سندِ رسمی فقط به‌صورت PDF می‌آیند: `Invoice/GetSaleInvoicePdf`، `Invoice/GetSaleReturnCreditNotePdf` و
+`Invoice/GetPurchaseReturnPdf`. هر سه از یک `InvoiceDocumentModel` ساخته و با قالبِ Excel (هفت قلم در هر صفحه، اندازه و چیدمانِ
+ثابت) به PDF تبدیل می‌شوند. فرانت حالا یک «استودیوی چاپ» دارد (کاغذ A3/A4/A5/Letter/دلخواه، جهت، حاشیه، اندازه‌ی متن، ستون‌ها
+و بخش‌های نمایشی، پیش‌نمایشِ دقیق) و می‌خواهد همین سندها را با همان داده و ظاهری نزدیک به قالبِ رسمی، ولی با کاغذ و چیدمانِ
+انتخابیِ کاربر، در مرورگر چاپ کند. PDF و آن سه endpoint برای دانلود و بایگانی **بی‌تغییر می‌مانند**.
+
+چرا داده‌ی جزئیاتِ سفارش کافی نیست: (۱) اطلاعاتِ شرکت فقط با `SettingView` خوانده می‌شود و فروشنده/انباردار معمولاً آن را ندارد؛
+(۲) مبالغ باید همان عددهای ذخیره‌شده‌ی سرور باشد، نه محاسبه‌ی دوباره در فرانت؛ (۳) برگه‌ی طلبکاری و برگه‌ی مرجوعی خرید را خودِ
+سرور از درختِ مرجوعی می‌سازد (یک سطر برای هر ادعا، خلاصه‌ی تصمیم‌ها در توضیحات) و فرانت نباید آن را بازسازی کند.
+
+### ۲۷.۱ — سه endpointِ JSON کنارِ سه endpointِ PDF (متوسط)
+
+| endpoint | پارامتر | معادلِ PDF |
+|---|---|---|
+| `GET Invoice/GetSaleInvoiceDocument` | `saleId` | `GetSaleInvoicePdf` |
+| `GET Invoice/GetSaleReturnCreditNoteDocument` | `saleReturnId` | `GetSaleReturnCreditNotePdf` |
+| `GET Invoice/GetPurchaseReturnDocument` | `purchaseReturnId` | `GetPurchaseReturnPdf` |
+
+- همان دسترسیِ PDFها (`InvoicePrint`) و همان خطاها (۴۰۴ برای سندِ ناموجود، ۴۰۰ برای برگه‌ی طلبکاریِ بی‌اثرِ پولی).
+- پاسخ در پوششِ معمولِ `ResponseDto` (`Data`)، نه فایل.
+- **پیشنهادِ پیاده‌سازی:** ساختِ `InvoiceDocumentModel` در هر سه query به یک متد (یا builderِ مشترک) برود و هر دو endpoint (PDF و JSON)
+  از همان استفاده کنند؛ تا سند و داده‌ی چاپی هرگز با هم فرق نکنند.
+
+### ۲۷.۲ — شکلِ پاسخ (`InvoiceDocumentDto`)
+
+همان `InvoiceDocumentModel`، با چند فیلدِ اضافه که قالبِ Excel نداشت ولی برای چاپِ درست لازم است (camelCase روی سیم):
+
+```json
+{
+  "title": "پیش‌فاکتور فروش",
+  "isProforma": true,
+  "documentNumber": "INV-1405-0012",
+  "documentDate": "2026-10-20T10:15:00",
+  "paymentDueDate": "2026-11-20T00:00:00",
+  "statusText": "پیش‌فاکتور",
+  "description": "توضیحاتِ سند",
+  "notes": ["سود اقساط: ۱٬۲۰۰٬۰۰۰ ریال", "مهلت پرداخت: ۱۴۰۵/۰۸/۲۹"],
+  "company": { "name": "…", "nationalId": "…", "economicCode": "…", "registrationNumber": "…", "address": "…",
+               "phoneNumber": "…", "postalCode": "…", "province": "…", "city": "…", "currency": "ریال" },
+  "counterpartyLabel": "خریدار",
+  "counterparty": { "name": "…", "nationalId": "…", "economicCode": "…", "registrationNumber": "…", "address": "…",
+                    "phoneNumber": "…", "postalCode": "…", "province": "…", "city": "…" },
+  "lines": [
+    { "rowNumber": 1, "productCode": "14050608-10", "productName": "لنت ترمز جلو", "unit": "عدد",
+      "quantity": 2, "unitPrice": 4500000, "grossAmount": 9000000, "discountAmount": 450000,
+      "netAmount": 8550000, "taxPercent": 10, "taxAmount": 855000, "lineTotal": 9405000 }
+  ],
+  "subTotal": 9000000, "totalDiscount": 450000, "totalTax": 855000, "grandTotal": 9405000,
+  "installmentChargeAmount": null, "payableAmount": null, "paidAmount": 0, "balance": 9405000
+}
+```
+
+فیلدهای تازه نسبت به `InvoiceDocumentModel`:
+
+| فیلد | توضیح |
+|---|---|
+| `isProforma` | سندِ فروش در `PROFORMA` است (برای دو برگه‌ی مرجوعی همیشه `false`) |
+| `title` | **برای پیش‌فاکتور «پیش‌فاکتور فروش»**؛ الان PDF برای پیش‌فاکتور هم «فاکتور فروش» چاپ می‌کند، که بهتر است همان‌جا هم درست شود |
+| `statusText` | برچسبِ فارسیِ وضعیت (`GetDescription()`)، نه نامِ انگلیسیِ عضوِ enum که الان در مدل است |
+| `notes` | همان متن‌هایی که PDF در خانه‌ی توضیحات (`AE29`) می‌گذارد (سود اقساط و جمعِ قابلِ پرداخت، مهلتِ پرداخت، خلاصه‌ی تصمیم‌های مرجوعی)، هر کدام یک سطر، **بدونِ** `description` |
+| `lines[].unit` | برچسبِ فارسیِ واحدِ کالا (`Product.Unit.GetDescription()`)؛ قالبِ Excel همیشه «عدد» می‌نویسد |
+| `lines[].grossAmount`، `netAmount`، `taxPercent` | همان مقدارهای ذخیره‌شده‌ی `InvoiceLineMath` روی قلم (`IInvoiceLine`)؛ برای دو برگه‌ی مرجوعی: `grossAmount = netAmount = lineTotal` و `taxPercent = 0` |
+
+- مبالغ عدد (ریال، صحیح) و تاریخ‌ها ISO مثلِ بقیه‌ی API؛ قالب‌بندیِ فارسی کارِ فرانت است.
+- فیلدِ خالی `null` بیاید، نه رشته‌ی خالی.
+- `notes` و `description` جدا باشند تا فرانت هر کدام را جای خودش بگذارد (کاربر می‌تواند نمایششان را جدا خاموش کند).
+
+**در فرانت:** `Frontend/src/shared/services/invoice/api-v1.js` (`getInvoiceDocument`)، هوکِ `useInvoiceDocumentQuery`
+(`Frontend/src/shared/services/invoice/queries.js`) و استودیوی `Frontend/src/shared/components/invoice/print/InvoicePrintStudio.jsx`
+طوری نوشته شده‌اند که انگار این بند پیاده شده؛ پرچم یا حالتِ موقت ندارند.
+**تا آن وقت:** دکمه‌ی «طراحی و چاپ» در کارتِ سند پوسته را باز می‌کند و خطای سرور (۴۰۴ مسیرِ ناموجود) را نشان می‌دهد؛ چاپ و دانلودِ
+PDFِ رسمی مثلِ قبل کار می‌کند.
+
 ## چک‌لیستِ کل
 
 - [x] ۱.۱ — کد پستیِ اختیاری (مشتری و تامین‌کننده)
@@ -2044,3 +2120,4 @@ git مانده، لو رفته حساب کنید.
 - [ ] ۲۴ — تغییرِ اقلام در `CheckSaleWarehouse` (`adjustments` + `note`، اتمیک، با `SaleWarehouseCheck`)؛ `updatedAt` در `SaleDto` (۲۴.۲)؛ تاریخِ فاکتور هنگامِ صدور (۲۴.۳، اولویتِ بالا)؛ `paymentType` هنگامِ صدور (۲۴.۴)؛ پرچمِ حضوری (۲۴.۵)؛ آزادکردنِ دستیِ رزرو (۲۴.۶)
 - [ ] ۲۵ — اقساط: فیلترِ چندوضعیتیِ `GetSaleInstallmentList` (۲۵.۱)، جریمه روی ردیفِ فهرست (۲۵.۲)، پیش‌نمایشِ مبلغِ تسویه (۲۵.۳)
 - [ ] ۲۶ — صندوق و بانک: حساب روی پولِ مرجوعی‌ها (۲۶.۱)، `voidedAt` روی `ChequeDto` (۲۶.۲)
+- [ ] ۲۷ — داده‌ی سندهای چاپی به‌صورت JSON: `GetSaleInvoiceDocument`، `GetSaleReturnCreditNoteDocument`، `GetPurchaseReturnDocument` (۲۷.۱، ۲۷.۲)
