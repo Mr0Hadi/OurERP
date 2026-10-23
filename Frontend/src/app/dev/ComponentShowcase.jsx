@@ -38,6 +38,7 @@ import {
   SidebarMenuItem, SidebarProvider,
 } from "@/shared/components/ui/sidebar";
 import DataTablePagination from "@/shared/components/table/DataTablePagination";
+import PriceListPrint from "@/features/sales/orders/components/proforma/PriceListPrint";
 
 const FRUITS = ["لنت ترمز", "روغن موتور", "فیلتر هوا", "شمع", "تسمه تایم"];
 // ردیف‌های ثابتِ نمایشیِ صفحه‌ی راهنما؛ به API وصل نیستند.
@@ -46,6 +47,17 @@ const ROWS = [
   ["۱۰۲۵", "روغن موتور ۴ لیتری", "۴۰", "۲٬۱۰۰٬۰۰۰"],
   ["۱۰۲۶", "فیلتر هوا", "۷", "۸۵۰٬۰۰۰"],
 ];
+
+// اقلامِ ثابتِ نمایشی برای پوسته‌ی چاپ (به API وصل نیستند)؛ ۳۰ قلم تا صفحه‌بندی دیده شود.
+const PRINT_DEMO_ITEMS = Array.from({ length: 30 }, (_, index) => ({
+  productId: index + 1,
+  productName: `${FRUITS[index % FRUITS.length]} — مدلِ ${index + 1}`,
+  productCode: `P-${String(1000 + index)}`,
+  quantity: (index % 5) + 1,
+  unitPrice: 250000 * ((index % 7) + 1),
+  discount: index % 4 === 0 ? 5 : 0,
+  taxPercent: 10,
+}));
 
 function Section({ title, children }) {
   return (
@@ -62,6 +74,7 @@ function Section({ title, children }) {
 export default function ComponentShowcase() {
   const [page, setPage] = useState({ pageIndex: 1, pageSize: 10 });
   const [date, setDate] = useState(null);
+  const [isPrintOpen, setIsPrintOpen] = useState(false);
 
   return (
     <>
@@ -187,6 +200,11 @@ export default function ComponentShowcase() {
         </Sheet>
         <Button variant="outline" onClick={() => toast.success("ذخیره شد")}>Toast موفق</Button>
         <Button variant="outline" onClick={() => toast.error("خطا رخ داد")}>Toast خطا</Button>
+      </Section>
+
+      <Section title="PrintStudio (پوسته‌ی چاپ)">
+        <Button variant="outline" onClick={() => setIsPrintOpen(true)}>باز کردنِ لیست قیمت‌ها</Button>
+        {isPrintOpen && <PriceListPrint items={PRINT_DEMO_ITEMS} customerName="مشتریِ نمونه" onClose={() => setIsPrintOpen(false)} />}
       </Section>
 
       <Section title="Tabs">

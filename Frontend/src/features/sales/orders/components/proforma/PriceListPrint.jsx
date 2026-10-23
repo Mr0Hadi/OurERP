@@ -1,115 +1,212 @@
-import { Printer, X } from "lucide-react";
 import { useState } from "react";
-import { createPortal } from "react-dom";
+import { LayoutList, RotateCcw, Type } from "lucide-react";
 
+import FlowSheet from "@/shared/components/print/FlowSheet";
+import {
+  DEFAULT_PAPER_SETTINGS,
+  PAPER_KEYS,
+  flowPageCount,
+  flowPrintOptions,
+  pageGeometryOf,
+} from "@/shared/components/print/paper";
+import PaperSettings from "@/shared/components/print/studio/PaperSettings";
+import PrintSettingsSection, { PrintSettingLabel } from "@/shared/components/print/studio/PrintSettingsSection";
+import PrintStudio from "@/shared/components/print/studio/PrintStudio";
+import SegmentedControl from "@/shared/components/print/studio/SegmentedControl";
+import { optionsFromLabels } from "@/shared/components/print/studio/options";
+import { TEXT_SCALES, TEXT_SCALE_LABELS } from "@/shared/components/print/typography";
 import { usePrint } from "@/shared/components/print/usePrint";
-import "@/shared/components/print/print.css";
 import { Button } from "@/shared/components/ui/button";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
-import { invoiceLineAmounts, invoiceTotals } from "@/shared/domain/invoice/lineMath";
-import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
+import { Switch } from "@/shared/components/ui/switch";
+import { Textarea } from "@/shared/components/ui/textarea";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { usePrintSettings } from "@/shared/store/printSettingsStore";
+import PriceListDocument from "./PriceListDocument";
+
+const PRINT_KIND = "price-list";
+
+const PAPER_KEYS_ALLOWED = [PAPER_KEYS.A4, PAPER_KEYS.A5, PAPER_KEYS.LETTER, PAPER_KEYS.ROLL_80, PAPER_KEYS.ROLL_58];
+
+const PRICE_LIST_DEFAULTS = Object.freeze({
+  ...DEFAULT_PAPER_SETTINGS,
+  title: "لیست قیمت‌ها",
+  businessName: "",
+  textScale: TEXT_SCALES.MEDIUM,
+  columns: { code: true, quantity: true, unitPrice: true, discount: true, lineTotal: true },
+  showTotals: true,
+  showDisclaimer: true,
+  footerNote: "",
+});
+
+const COLUMN_OPTIONS = [
+  { key: "code", label: "کدِ کالا" },
+  { key: "quantity", label: "تعداد" },
+  { key: "unitPrice", label: "قیمتِ واحد" },
+  { key: "discount", label: "تخفیف" },
+  { key: "lineTotal", label: "مبلغِ هر قلم" },
+];
+
+const TEXT_SCALE_OPTIONS = optionsFromLabels(TEXT_SCALE_LABELS);
+
+function SwitchRow({ id, label, checked, onChange }) {
+  return (
+    <label htmlFor={id} className="flex min-h-9 cursor-pointer items-center justify-between gap-2 text-sm">
+      {label}
+      <Switch id={id} checked={checked} onCheckedChange={onChange} />
+    </label>
+  );
+}
+
+function Settings({ settings, geometry, update, reset, customerName, onCustomerNameChange }) {
+  const setColumn = (key, value) => update({ columns: { ...settings.columns, [key]: value } });
+
+  return (
+    <>
+      <PrintSettingsSection title="محتوا" icon={LayoutList}>
+        <div className="space-y-1">
+          <PrintSettingLabel htmlFor="price-list-customer">نامِ مشتری (فقط روی همین برگه)</PrintSettingLabel>
+          <Input
+            id="price-list-customer"
+            value={customerName}
+            onChange={(event) => onCustomerNameChange(event.target.value)}
+            placeholder="اختیاری"
+            className="h-10 sm:h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <PrintSettingLabel htmlFor="price-list-title">عنوانِ برگه</PrintSettingLabel>
+          <Input
+            id="price-list-title"
+            value={settings.title}
+            onChange={(event) => update({ title: event.target.value })}
+            className="h-10 sm:h-9"
+          />
+        </div>
+        <div className="space-y-1">
+          <PrintSettingLabel htmlFor="price-list-business">سربرگ (نامِ فروشگاه)</PrintSettingLabel>
+          <Input
+            id="price-list-business"
+            value={settings.businessName}
+            onChange={(event) => update({ businessName: event.target.value })}
+            placeholder="خالی = بدونِ سربرگ"
+            className="h-10 sm:h-9"
+          />
+        </div>
+
+        <fieldset className="space-y-1">
+          <legend className="mb-1 text-xs text-muted-foreground">ستون‌ها</legend>
+          <div className="grid grid-cols-2 gap-1">
+            {COLUMN_OPTIONS.map((column) => (
+              <label
+                key={column.key}
+                className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md px-1 text-sm hover:bg-accent/40"
+              >
+                <Checkbox
+                  checked={Boolean(settings.columns[column.key])}
+                  onCheckedChange={(checked) => setColumn(column.key, checked === true)}
+                />
+                {column.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div>
+          <SwitchRow
+            id="price-list-totals"
+            label="جمع و مبلغِ قابلِ پرداخت"
+            checked={settings.showTotals}
+            onChange={(showTotals) => update({ showTotals })}
+          />
+          <SwitchRow
+            id="price-list-disclaimer"
+            label="یادداشتِ «قیمت‌ها قطعی نیست»"
+            checked={settings.showDisclaimer}
+            onChange={(showDisclaimer) => update({ showDisclaimer })}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <PrintSettingLabel htmlFor="price-list-note">متنِ پایینِ برگه</PrintSettingLabel>
+          <Textarea
+            id="price-list-note"
+            rows={2}
+            value={settings.footerNote}
+            onChange={(event) => update({ footerNote: event.target.value })}
+            placeholder="مثلاً شرایطِ پرداخت یا اعتبارِ قیمت‌ها"
+          />
+        </div>
+      </PrintSettingsSection>
+
+      <PaperSettings settings={settings} geometry={geometry} onChange={update} paperKeys={PAPER_KEYS_ALLOWED} />
+
+      <PrintSettingsSection title="اندازه‌ی متن" icon={Type}>
+        <SegmentedControl
+          ariaLabel="اندازه‌ی متن"
+          value={settings.textScale}
+          options={TEXT_SCALE_OPTIONS}
+          onChange={(textScale) => update({ textScale })}
+        />
+      </PrintSettingsSection>
+
+      <Button type="button" variant="ghost" size="sm" className="w-full gap-1.5 text-muted-foreground" onClick={reset}>
+        <RotateCcw className="size-3.5" />
+        بازگشت به تنظیماتِ پیش‌فرض
+      </Button>
+    </>
+  );
+}
 
 /**
  * چاپِ «لیست قیمت‌ها» برای مشتری از اقلامِ فرم، **بدونِ ذخیره** — همان لحظه که اقلام وارد شده‌اند. نامِ
  * مشتری اختیاری است و فقط روی برگه می‌آید (سرور فروشِ بی‌مشتری را ثبت نمی‌کند؛ اگر مشتری تأیید کرد،
- * فرم کامل و ثبت می‌شود). چاپ از مسیرِ مشترکِ `usePrint`: پورتالِ زیرِ `body` و پنهان‌شدنِ بقیه‌ی برنامه.
+ * فرم کامل و ثبت می‌شود). پوسته `PrintStudio`ِ مشترک است؛ کاغذ، ستون‌ها، سربرگ و اندازه‌ی متن برای
+ * چاپِ بعدی روی همین دستگاه می‌مانند (`usePrintSettings("price-list")`).
  *
  * @param items     اقلامِ فرم (`productName`، `productCode`، `quantity`، `unitPrice`، `discount`، نرخِ مالیات)
  * @param customerName پیش‌فرضِ نامِ مشتری (اگر در فرم انتخاب شده)
  */
 export default function PriceListPrint({ items, customerName = "", onClose }) {
   const print = usePrint();
+  const { settings, update, reset } = usePrintSettings(PRINT_KIND, PRICE_LIST_DEFAULTS);
   const [name, setName] = useState(customerName);
-  const totals = invoiceTotals(items);
+  const [contentHeightMm, setContentHeightMm] = useState(0);
 
-  return createPortal(
-    <div dir="rtl" className="print-portal fixed inset-0 z-50 flex flex-col bg-background">
-      <div className="print-portal__chrome flex flex-wrap items-end gap-3 border-b bg-card p-3">
-        <div className="min-w-48 flex-1 space-y-1.5">
-          <Label htmlFor="draft-customer" className="text-xs">
-            نامِ مشتری (اختیاری، فقط روی برگه)
-          </Label>
-          <Input id="draft-customer" value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" className="gap-1.5" onClick={() => print({ pageSize: "A4", pageMarginMm: 12 })}>
-            <Printer className="size-4" />
-            چاپ
-          </Button>
-          <Button type="button" variant="outline" className="gap-1.5" onClick={onClose}>
-            <X className="size-4" />
-            بستن
-          </Button>
-        </div>
-      </div>
+  const geometry = pageGeometryOf(settings);
+  const pageCount = flowPageCount(geometry, contentHeightMm);
 
-      <div className="print-portal__sheet flex-1 bg-muted/60 p-4">
-        <div className="mx-auto max-w-[210mm] space-y-5 bg-white p-8 text-sm text-black shadow">
-          <header className="flex items-start justify-between gap-4 border-b border-black/20 pb-4">
-            <div>
-              <h1 className="text-lg font-bold">لیست قیمت‌ها</h1>
-              <p className="mt-1 text-xs text-black/60">
-                قیمت‌ها و موجودی تا تأییدِ نهایی و بررسیِ انبار قطعی نیست.
-              </p>
-            </div>
-            <div className="space-y-1 text-xs">
-              <p>تاریخ: {gregorianToPersian(todayIso())}</p>
-              {name.trim() && <p>مشتری: {name.trim()}</p>}
-            </div>
-          </header>
-
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-black/30 text-right">
-                <th className="py-1.5 pe-2 font-semibold">#</th>
-                <th className="py-1.5 pe-2 font-semibold">کالا</th>
-                <th className="py-1.5 pe-2 text-center font-semibold">تعداد</th>
-                <th className="py-1.5 pe-2 text-left font-semibold">قیمتِ واحد</th>
-                <th className="py-1.5 pe-2 text-center font-semibold">تخفیف</th>
-                <th className="py-1.5 text-left font-semibold">مبلغ (ریال)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => {
-                const line = invoiceLineAmounts(item);
-                return (
-                  <tr key={`${item.productId}-${index}`} className="border-b border-black/10 align-top">
-                    <td className="py-1.5 pe-2 tabular-nums">{formatNumber(index + 1)}</td>
-                    <td className="py-1.5 pe-2">
-                      {item.productName}
-                      {item.productCode && <span className="block font-mono text-[10px] text-black/50">{item.productCode}</span>}
-                    </td>
-                    <td className="py-1.5 pe-2 text-center tabular-nums">{formatNumber(item.quantity)}</td>
-                    <td className="py-1.5 pe-2 text-left tabular-nums">{formatNumber(item.unitPrice)}</td>
-                    <td className="py-1.5 pe-2 text-center tabular-nums">
-                      {Number(item.discount) ? `${formatNumber(item.discount)}٪` : "—"}
-                    </td>
-                    <td className="py-1.5 text-left tabular-nums">{formatNumber(line.netAmount)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-
-          <dl className="ms-auto w-64 space-y-1 text-xs">
-            <div className="flex justify-between">
-              <dt>جمعِ پس از تخفیف</dt>
-              <dd className="tabular-nums">{formatNumber(totals.netAmount)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt>مالیات بر ارزش افزوده{totals.taxUnknown && " (تقریبی)"}</dt>
-              <dd className="tabular-nums">{formatNumber(totals.taxAmount)}</dd>
-            </div>
-            <div className="flex justify-between border-t border-black/30 pt-1 text-sm font-bold">
-              <dt>مبلغِ قابلِ پرداخت</dt>
-              <dd className="tabular-nums">{formatNumber(totals.totalAmount)} ریال</dd>
-            </div>
-          </dl>
-        </div>
-      </div>
-    </div>,
-    document.body,
+  return (
+    <PrintStudio
+      title="چاپِ لیست قیمت‌ها"
+      summary={`${formatNumber(items.length)} قلم، ${
+        geometry.isRoll ? "رولِ پیوسته" : `${formatNumber(pageCount)} صفحه`
+      }`}
+      settings={
+        <Settings
+          settings={settings}
+          geometry={geometry}
+          update={update}
+          reset={reset}
+          customerName={name}
+          onCustomerNameChange={setName}
+        />
+      }
+      previewWidthMm={geometry.widthMm}
+      maxFitScale={geometry.isRoll ? 1.5 : 1}
+      preview={
+        <FlowSheet geometry={geometry} pageCount={pageCount} onMeasure={setContentHeightMm}>
+          <PriceListDocument
+            items={items}
+            settings={settings}
+            customerName={name}
+            contentWidthMm={geometry.contentWidthMm}
+          />
+        </FlowSheet>
+      }
+      onPrint={() => print(flowPrintOptions(geometry, contentHeightMm))}
+      onClose={onClose}
+    />
   );
 }

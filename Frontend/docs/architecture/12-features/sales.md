@@ -42,7 +42,7 @@
 
 **ثبتِ فروشِ تازه**
 1. `SaleNewPage` → `SaleForm` با `useSaleFormStore` و `useDocumentFormDraft` ([08](../08-client-state-zustand.md)).
-2. پیش از تأییدِ مشتری چیزی ذخیره نمی‌شود: «لیست قیمت‌ها» در کارتِ سند (`PriceListPrint`، بی‌مشتری، با `usePrint`؛ دکمه از `localPrints`ِ `InvoiceDocumentSection`).
+2. پیش از تأییدِ مشتری چیزی ذخیره نمی‌شود: «لیست قیمت‌ها» در کارتِ سند (`PriceListPrint` + `PriceListDocument`، بی‌مشتری؛ پوسته‌ی `PrintStudio` با کاغذ (A4/A5/Letter/رولِ حرارتی)، ستون‌ها، سربرگ، متنِ پایین و اندازه‌ی متن که با `usePrintSettings("price-list")` می‌مانند؛ روی رول هر قلم دوسطری؛ دکمه از `localPrints`ِ `InvoiceDocumentSection`).
 3. پس از تأیید: `saleFormProblem` ← `useCreateSaleMutation` (`createProforma`): `CreateSale` ← (با `SaleUpdate`) `ApproveSaleProforma` — به صفِ انبار. شکستِ پس از ثبت `partiallySaved` و صفحه پیش‌فاکتور را باز می‌کند.
 4. فروشِ حضوری = دانه‌ی اسکن‌شده در فروشِ تازه (`SaleItemsSection` با `trackUnits`): همان زنجیره ← `CheckSaleWarehouse` با همان دانه‌ها و `IN_PERSON_CHECK_NOTE` (بی صفِ انبار).
 
