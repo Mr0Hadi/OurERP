@@ -12,6 +12,7 @@ import {
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import ObservationEditor from "@/shared/components/returns/ObservationEditor";
+import { ACTION_BUTTON_CLASS } from "@/shared/components/returns/actionButtonClass";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { NO_QUANTITY_CAP } from "../../hooks/useReceivingForm";
 import QuickCreateProductDialog from "./QuickCreateProductDialog";
@@ -104,7 +105,7 @@ export default function ReceivingUnlistedItemsSection({
             type="button"
             size="sm"
             variant="outline"
-            className="flex-1 h-8 text-xs gap-1.5"
+            className={`flex-1 ${ACTION_BUTTON_CLASS}`}
             onClick={() => setIsPickerOpen((open) => !open)}
           >
             <ChevronDown
@@ -116,7 +117,7 @@ export default function ReceivingUnlistedItemsSection({
             type="button"
             size="sm"
             variant="outline"
-            className="flex-1 h-8 text-xs gap-1.5"
+            className={`flex-1 ${ACTION_BUTTON_CLASS}`}
             onClick={() => setIsCreateOpen(true)}
           >
             <PackagePlus className="h-3.5 w-3.5" />
