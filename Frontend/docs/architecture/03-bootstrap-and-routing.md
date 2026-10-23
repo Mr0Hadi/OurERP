@@ -153,7 +153,7 @@ flowchart LR
 | صفحه‌ی ۴۰۴ | `src/app/layouts/NotFoundPage.jsx` |
 | صفحه‌ی خطای رندر/loader | `src/app/layouts/RouteErrorPage.jsx` |
 | صفحه‌ی «دسترسی ندارید» | `src/app/layouts/ForbiddenPage.jsx` |
-| هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx`؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`)؛ دکمه‌های صفحه در هدر با `PageHeaderActions` (`src/shared/components/layout/PageHeaderActions.jsx`، پورتال به `actionsSlot`) |
+| هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx` (هدرِ جمع‌شونده با `useHideOnScroll`، [09](09-ui-system-theming-rtl.md))؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`)؛ دکمه‌های صفحه در هدر با `PageHeaderActions` (`src/shared/components/layout/PageHeaderActions.jsx`، پورتال به `actionsSlot`) |
 | رفتارِ اسپینرِ جابه‌جایی | `src/shared/components/layout/RouteLoadingOverlay.jsx` |
 | مقصدِ پیش‌فرض بعد از ورود | `from` در `src/features/auth/pages/LoginPage.jsx` (پیش‌فرض `ROUTES.DASHBOARD`) |
 | splash یا رنگِ پیش از React | `index.html` |

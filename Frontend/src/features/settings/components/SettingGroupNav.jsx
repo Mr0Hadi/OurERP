@@ -33,7 +33,7 @@ export default function SettingGroupNav({ groups, dirtyCountByGroup, activeAncho
     <nav
       ref={navRef}
       aria-label="گروه‌های تنظیمات"
-      className="sticky top-0 z-10 flex min-w-0 gap-2 overflow-x-auto bg-background py-2 scrollbar-hide md:top-4 md:flex-col md:gap-1 md:overflow-visible md:rounded-xl md:border md:bg-card md:p-2"
+      className="sticky top-(--app-header-offset) z-10 flex min-w-0 gap-2 overflow-x-auto bg-background py-2 transition-[top] duration-200 scrollbar-hide md:top-[calc(var(--app-header-offset)+1rem)] md:flex-col md:gap-1 md:overflow-visible md:rounded-xl md:border md:bg-card md:p-2"
     >
       {groups.map((group) => {
         const Icon = groupIcon(group.group);

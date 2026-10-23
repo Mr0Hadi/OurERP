@@ -16,6 +16,7 @@ import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay"
 import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
+import { useHideOnScroll } from "@/shared/hooks/useHideOnScroll";
 import { ROUTES } from "@/shared/constants/routes";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import PermissionGate from "../routes/PermissionGate";
@@ -34,6 +35,7 @@ export default function AppLayout() {
   // پیش‌فرضِ دکمه‌ی برگشت، صفحه‌ی قبلی است. صفحه‌ها فقط وقتی onBack
   // می‌دهند که پیش از رفتن کاری داشته باشند (مثلاً پاک‌کردن فرم).
   const goBack = useGoBack();
+  const isHeaderHidden = useHideOnScroll();
 
   const location = useLocation();
 
@@ -50,8 +52,14 @@ export default function AppLayout() {
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar side="right" />
-        <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-4 border-b px-4">
+        {/* `--app-header-offset` ارتفاعِ پیدای هدر است تا چیزهای sticky زیرش بچسبند، نه پشتش. */}
+        <SidebarInset style={{ "--app-header-offset": isHeaderHidden ? "0px" : "4rem" }}>
+          {/* هدر مثلِ نوارِ کروم: با اسکرول به پایین کنار می‌رود و با اسکرول به بالا برمی‌گردد. */}
+          <header
+            className={`sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4 transition-transform duration-200 ${
+              isHeaderHidden ? "-translate-y-full" : ""
+            }`}
+          >
             <div className=" ml-auto flex items-center gap-2 ">
               <SidebarTrigger className="-mr-1 ml-auto " />
               <ThemeToggle />

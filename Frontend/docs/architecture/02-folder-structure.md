@@ -56,7 +56,7 @@ flowchart LR
 | `src/shared/components/<group>/` | کامپوننت‌های ترکیبیِ پروژه | `table/`، `filters/`، `status/`، `payments/`، `print/` |
 | `src/shared/domain/` | منطقِ خالصِ مشترک (enum، محاسبه) | `enums/saleStatus.js`، `returns/`، `payments/paymentSplit.js` |
 | `src/shared/services/` | API مشترک و زیرساختِ شبکه | `api/axios.js`، `files/`، `dataTransfer/`، `pos/`، `invoice/`، `returns/`، `bankAccounts/` |
-| `src/shared/hooks/` | هوک‌های عمومی | `usePageHeader.js`، `useDebouncedFilters.js`، `useUrlPreset.js` |
+| `src/shared/hooks/` | هوک‌های عمومی | `usePageHeader.js`، `useDebouncedFilters.js`، `useUrlPreset.js`، `useHideOnScroll.js` |
 | `src/shared/lib/` | تابع‌های کمکیِ بی‌ربط به دامنه | `dateUtils.js`، `persianDigits.js`، `utils.js` (`cn`) |
 | `src/shared/store/` | storeهای سراسری و factoryها | `headerStore.js`، `createFilterStore.js` |
 | `src/shared/constants/` | `routes.js`، `navigationData.js` | — |
