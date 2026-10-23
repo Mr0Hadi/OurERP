@@ -150,7 +150,7 @@
 3. **هندسه:** `pageGeometryOf(settings)`؛ پنلِ کاغذ با `<PaperSettings paperKeys={[…]} />`، بقیه‌ی گزینه‌ها در `PrintSettingsSection` با `SegmentedControl`/`Switch`/`Checkbox`.
 4. **پوسته:** `<PrintStudio settings={…} preview={<FlowSheet geometry pageCount onMeasure>…</FlowSheet>} previewWidthMm={geometry.widthMm} onPrint={() => print(flowPrintOptions(geometry, heightMm))} />` با `usePrint` (`src/shared/components/print/usePrint.js`). صفحه‌هایی که خودتان می‌سازید (شبکه‌ی ثابت، مثلِ برچسب و تصویر) کلاسِ `print-page` و `fixedPagePrintOptions(geometry)` می‌خواهند.
 5. نمایش در صفحه‌ی مصرف‌کننده: `{open && <XPrint … onClose />}` — پوسته خودش پورتال است. اگر چاپ کنارِ سندهای یک سفارش است، از `localPrints`ِ `InvoiceDocumentSection` باز شود.
-6. سندی که **سرور** می‌سازد (PDFِ فاکتور) را در مرورگر بازسازی نکنید؛ با `printPdfDocuments`/`printPdfBlob` (`src/shared/services/invoice/documentOutput.js`) چاپ می‌شود.
+6. سندی که **سرور** می‌سازد (فاکتور، برگه‌های مرجوعی) را از داده‌ی فرم بازسازی نکنید. PDFِ رسمی با `printPdfDocuments`/`printPdfBlob` (`src/shared/services/invoice/documentOutput.js`)؛ چاپ با کاغذ و چیدمانِ دلخواه با `InvoicePrintStudio` (`src/shared/components/invoice/print/InvoicePrintStudio.jsx`) که داده‌ی خودِ سرور را می‌خواند (`getInvoiceDocument`). نوعِ سندِ تازه‌ی سرور = یک ردیف در `DOCUMENT_ENDPOINTS`ِ `src/shared/services/invoice/api-v1.js`.
 
 ## قبل از commit
 

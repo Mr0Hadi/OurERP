@@ -107,7 +107,7 @@ onError: (error) => toast.error(getErrorMessage(error, "خطا در ثبت دس�
 ## قراردادها و نکته‌ها
 
 - **هرگز axiosِ خام import نکنید**؛ همیشه `import axiosInstance from "@/shared/services/api/axios"` (تنها استثنا درخواستِ refresh در خودِ `axios.js`).
-- timeoutِ اختصاصی برای درخواست‌های کند در خودِ تابع: `login` ۴۵ ثانیه، `src/shared/services/invoice/api-v1.js` ۶۰ ثانیه، `src/shared/services/files/api-v1.js` ۱۲۰ ثانیه، `FILE_TIMEOUT` در `src/shared/services/dataTransfer/api-v1.js`.
+- timeoutِ اختصاصی برای درخواست‌های کند در خودِ تابع: `login` ۴۵ ثانیه، `src/shared/services/invoice/api-v1.js` ۶۰ ثانیه (فقط PDFها؛ داده‌ی JSONِ سند با timeoutِ پیش‌فرض)، `src/shared/services/files/api-v1.js` ۱۲۰ ثانیه، `FILE_TIMEOUT` در `src/shared/services/dataTransfer/api-v1.js`.
 - `ResponseMessageType` در پوشش خوانده نمی‌شود؛ موفقیت/شکست فقط از کدِ HTTP است.
 - کامپوننت‌ها `api-v1` را مستقیم صدا نمی‌زنند؛ از هوک‌های `queries.js`/`mutations.js` استفاده می‌کنند (فایل ۰۷).
 

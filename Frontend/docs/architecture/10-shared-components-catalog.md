@@ -126,7 +126,7 @@ flowchart LR
 
 ### `print/` (چاپ با مرورگر)
 
-هر برگه‌ای که در مرورگر ساخته و چاپ می‌شود از یک پوسته و یک مدلِ کاغذ استفاده می‌کند. سندی که سرور می‌سازد (PDFِ فاکتور با قالبِ رسمی) اینجا بازچینی نمی‌شود؛ با اندازه‌ی خودش چاپ می‌شود (`src/shared/services/invoice/documentOutput.js`).
+هر برگه‌ای که در مرورگر ساخته و چاپ می‌شود از یک پوسته و یک مدلِ کاغذ استفاده می‌کند. سندی که سرور می‌سازد (فاکتور/پیش‌فاکتور فروش، برگه‌ی طلبکاری، برگه‌ی مرجوعی خرید) دو راه دارد: PDFِ رسمی با قالبِ ثابت (`src/shared/services/invoice/documentOutput.js`) و چاپ در همین پوسته از *داده‌ی همان سند* (`invoice/print/`، پایین).
 
 | فایل | کار | مصرف‌کننده |
 | --- | --- | --- |
@@ -150,7 +150,7 @@ flowchart LR
 | `charts/` | `ChartCard` (۱۲)، `GroupedBarChart`، `TrendChart`، `DonutChart`، `Sparkline`، `chartUtils.js` (۹)؛ داخلی: `ChartLegend`، `ChartTooltip`، `useChartSize` | نمودارهای SVGِ دست‌ساز (کتابخانه‌ی نمودار نیست)؛ داشبورد و حسابداری |
 | `dataTransfer/` | `DataTransferActions` (۹)؛ داخلی: `ImportDialog`، `ImportResultView` | دکمه‌ی ورود/خروجیِ CSV/Excel در سرتیترِ لیست؛ مجاز بودن از سرور (`GetResources`) |
 | `files/` | `RemoteImage` (۵)، `ImageUploadField` (۳)، `FileUploadList`، `ImageLightbox` | تصویر از سرور، آپلودِ تصویر/پیوست |
-| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton`؛ داخلی: `DocumentPrintStudio` | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها. چاپِ انتخابی که تصویر دارد در `DocumentPrintStudio` (کاغذ، چیدمان) باز می‌شود؛ PDFِ تنها مستقیم (`printPdfDocuments`) |
+| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton`؛ داخلی: `DocumentPrintStudio`، `print/InvoicePrintStudio` (+ `InvoiceDocumentSheet`، `InvoicePrintSettingsPanel`، `invoicePrintSettings.js`) | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها. چاپِ انتخابی که تصویر دارد در `DocumentPrintStudio` (کاغذ، چیدمان) باز می‌شود؛ PDFِ تنها مستقیم (`printPdfDocuments`). سندِ ساختِ سرور دکمه‌ی «چاپ با کاغذ و چیدمانِ دلخواه» هم دارد: `InvoicePrintStudio` داده‌ی سند را با `useInvoiceDocumentQuery` (`src/shared/services/invoice/queries.js`) می‌گیرد و هم‌شکلِ قالبِ رسمی در `PrintStudio` می‌چیند (بخش‌ها، ستون‌ها، شکلِ جدول، کاغذ، متن؛ تنظیم برای هر نوعِ سند جدا). منتظرِ بندِ ۲۷ِ frontend-requests؛ تا آن وقت ۴۰۴ |
 | `barcode/` | `CameraScanButton` (۳)، `UnitBarcodeScanList` (۲)؛ داخلی: `CameraScanner`، `BarcodeScanField` | اسکنِ بارکد با دوربین |
 | `map/` | `LocationPickerMap` (۱)؛ داخلی: `MapCanvas`، `MapSearchBar`، `nominatim.js` | انتخابِ مکان روی نقشه (Leaflet + Nominatim) |
 | `products/` | `ProductPicker`، `DocumentItemsSection`، `useReturnedNewProduct` | انتخابِ کالا و برگشت از «کالای جدید» |

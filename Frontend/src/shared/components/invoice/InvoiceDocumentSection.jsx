@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Printer, Download, FileText, Info } from "lucide-react";
+import { Printer, Download, FileText, Info, SlidersHorizontal } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -11,6 +11,7 @@ import {
   getPurchaseReturnPdf,
   getSaleInvoicePdf,
   getSaleReturnCreditNotePdf,
+  hasPrintableDocument,
 } from "@/shared/services/invoice/api-v1";
 import {
   attachmentDocuments,
@@ -20,6 +21,7 @@ import {
 } from "@/shared/services/invoice/documentOutput";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 import DocumentPrintStudio from "./DocumentPrintStudio";
+import InvoicePrintStudio from "./print/InvoicePrintStudio";
 
 /**
  * سند فاکتور/پیش‌فاکتورِ یک سفارش: چاپ و دانلود، و ضمیمه‌کردنِ برگه‌ی
@@ -39,7 +41,9 @@ import DocumentPrintStudio from "./DocumentPrintStudio";
  * انتخاب‌شده است (فقط کنارگذاشته‌ها نگه داشته می‌شوند). اگر میانِ انتخاب‌ها
  * تصویری باشد، چاپ در `DocumentPrintStudio` (پوسته‌ی مشترکِ چاپ، با کاغذ و
  * چیدمان) باز می‌شود؛ PDFِ تنها مستقیم چاپ می‌شود.
-
+ *
+ * سندی که سرور می‌سازد علاوه بر PDFِ رسمی، «چاپ با کاغذ و چیدمانِ دلخواه» هم دارد (`InvoicePrintStudio`):
+ * همان داده‌ی سند در پوسته‌ی مشترکِ چاپ، برای وقتی که کاغذ یا ستون‌های قالبِ ثابتِ PDF به کار نمی‌آید.
  *
  * وقتی هیچ سندی وجود ندارد دکمه‌ها غیرفعال‌اند — و نباید به‌جایش یک
  * جدولِ HTML از روی داده‌ی فرم ساخته شود: آن برگه فاکتور نیست و
@@ -80,6 +84,7 @@ export default function InvoiceDocumentSection({
   const [excluded, setExcluded] = useState(() => new Set());
   // سندهایی که در پوسته‌ی چاپ باز شده‌اند؛ تصویرِ ثابت از همان لحظه تا فایل‌ها یک بار گرفته شوند.
   const [studioDocuments, setStudioDocuments] = useState(null);
+  const [isDesignerOpen, setIsDesignerOpen] = useState(false);
 
   /** سندی که سرور می‌سازد — فقط وقتی سند ذخیره شده باشد. */
   const serverPdfFetcher = documentId
@@ -129,6 +134,10 @@ export default function InvoiceDocumentSection({
   const hasDocuments = documents.length > 0;
   // بدون سندِ انتخاب‌شده، دکمه‌ها کاری ندارند که انجام دهند.
   const canRun = !isBusy && selected.length > 0;
+
+  const serverDoc = documents.find((document_) => document_.id === "server-pdf");
+  // فقط سندی که سرور می‌سازد داده‌ی چاپی دارد؛ ضمیمه همان فایلی است که هست.
+  const canDesign = Boolean(serverDoc) && hasPrintableDocument(documentKind);
 
   const handlePrint = () => {
     if (selected.some((document_) => !document_.isPdf)) setStudioDocuments(selected);
@@ -223,6 +232,19 @@ export default function InvoiceDocumentSection({
           </p>
         )}
 
+        {canDesign && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="w-full gap-1.5"
+            onClick={() => setIsDesignerOpen(true)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            چاپِ {title} با کاغذ و چیدمانِ دلخواه
+          </Button>
+        )}
+
         {localPrints.length > 0 && (
           <div className="space-y-1 border-t border-border pt-3">
             {localPrints.map((item) => (
@@ -251,6 +273,16 @@ export default function InvoiceDocumentSection({
           </div>
         )}
       </CardContent>
+
+      {isDesignerOpen && (
+        <InvoicePrintStudio
+          documentKind={documentKind}
+          documentId={documentId}
+          title={title}
+          onDownloadOfficial={() => run(() => downloadDocuments([serverDoc]))}
+          onClose={() => setIsDesignerOpen(false)}
+        />
+      )}
 
       {studioDocuments && (
         <DocumentPrintStudio

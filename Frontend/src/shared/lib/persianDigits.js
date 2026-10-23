@@ -25,3 +25,14 @@ const persianAndArabicDigits = {
 export function normalizePersianDigits(value) {
   return value.replace(/[۰-۹٠-٩]/g, (char) => persianAndArabicDigits[char] ?? char);
 }
+
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+
+/**
+ * ارقامِ لاتینِ یک متن → فارسی، بی‌آنکه متن عدد فرض شود: صفرِ اولِ شناسه‌ی ملی و کدِ پستی، خط‌تیره‌ی
+ * شماره‌ی سند (`INV-1405-0012`) و حروف دست‌نخورده می‌مانند. برای عددِ مقداری `formatNumber` را بخواهید.
+ */
+export function toPersianDigits(value) {
+  if (value == null) return "";
+  return String(value).replace(/[0-9]/g, (digit) => PERSIAN_DIGITS[digit]);
+}
