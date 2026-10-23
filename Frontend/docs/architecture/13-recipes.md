@@ -141,6 +141,17 @@
 
 فرانت کدِ `Backend-Net/` را تغییر نمی‌دهد. بخشِ شماره‌دارِ تازه در `Backend-Net/docs/frontend-requests.fa.md` بنویسید و در کد با `TODO` به همان شماره ارجاع دهید (قالبِ موجود: `TODO(بکند): ... (بندِ ۱۳.۵ frontend-requests.fa.md)` در `src/features/warehouse/products/services/queries.js`).
 
+## ۱۴. برگه‌ی چاپیِ تازه (گزارش، رسید، …)
+
+**الگو:** `src/features/sales/orders/components/proforma/PriceListPrint.jsx` (+ `PriceListDocument.jsx`).
+
+1. **متنِ برگه** را جدا بنویسید (`XDocument.jsx`): فقط نمایش، رنگِ سیاه/سفید (`text-black`، `border-black/…`)، اندازه‌ی پایه با `baseFontPt(settings.textScale)` (`src/shared/components/print/typography.js`) و بقیه با `em`. برای کاغذِ باریک (`geometry.contentWidthMm` کم) چیدمانِ فشرده بدهید.
+2. **پیش‌فرض‌ها** شیءِ ثابتِ ماژول: `{ ...DEFAULT_PAPER_SETTINGS, ...گزینه‌های برگه }` (`src/shared/components/print/paper.js`)؛ تنظیمات با `usePrintSettings("<kind>", DEFAULTS)` (`src/shared/store/printSettingsStore.js`). `kind` پایدار است؛ عوضش کنید، ذخیره‌ی کاربران دور ریخته می‌شود.
+3. **هندسه:** `pageGeometryOf(settings)`؛ پنلِ کاغذ با `<PaperSettings paperKeys={[…]} />`، بقیه‌ی گزینه‌ها در `PrintSettingsSection` با `SegmentedControl`/`Switch`/`Checkbox`.
+4. **پوسته:** `<PrintStudio settings={…} preview={<FlowSheet geometry pageCount onMeasure>…</FlowSheet>} previewWidthMm={geometry.widthMm} onPrint={() => print(flowPrintOptions(geometry, heightMm))} />` با `usePrint` (`src/shared/components/print/usePrint.js`). صفحه‌هایی که خودتان می‌سازید (شبکه‌ی ثابت، مثلِ برچسب و تصویر) کلاسِ `print-page` و `fixedPagePrintOptions(geometry)` می‌خواهند.
+5. نمایش در صفحه‌ی مصرف‌کننده: `{open && <XPrint … onClose />}` — پوسته خودش پورتال است. اگر چاپ کنارِ سندهای یک سفارش است، از `localPrints`ِ `InvoiceDocumentSection` باز شود.
+6. سندی که **سرور** می‌سازد (PDFِ فاکتور) را در مرورگر بازسازی نکنید؛ با `printPdfDocuments`/`printPdfBlob` (`src/shared/services/invoice/documentOutput.js`) چاپ می‌شود.
+
 ## قبل از commit
 
 ```bash

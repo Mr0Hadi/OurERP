@@ -117,7 +117,7 @@ const { isSuccess, isError, error } = useQuery({
 - پاسخِ refresh هم ممکن است پوشش داشته باشد؛ با `isEnvelope`/`unwrapEnvelope` باز می‌شود.
 - `LOGIN_TIMEOUT_MS = 45_000` در `api-v1.js` — اولین درخواست بعد از خوابِ IIS کند است.
 - بعد از هر تغییرِ جایگاهِ کارمند یا مجوزهای خودِ کاربر، `authKeys.session()` یا `authKeys.myPermissions()` باید invalidate شود — الان این کار را `useUpdateUserMutation` و `useChangeUserTeamMutation` (`src/features/employees/services/mutations.js`)، `useUpdateUserPermissionsMutation` (`src/features/permissions/services/mutations.js`)، و mutationهای `src/features/organization/teams/services/mutations.js` و `src/features/organization/departments/services/mutations.js` انجام می‌دهند. mutationِ تازه‌ای که روی کاربرِ جاری اثر دارد باید همین کار را بکند.
-- **خروج همه‌ی localStorage را پاک نمی‌کند.** این‌ها می‌مانند: `dashboard-layout` (`src/features/dashboard/store/dashboardLayoutStore.js`، عمداً — ترجیحِ دستگاه)، `unit-label-template` (`src/features/warehouse/units/store/unitFilterStore.js`)، `TERMINAL_KEY` در `src/shared/components/payments/pos/PosReadyForm.jsx`، و `vite-ui-theme`.
+- **خروج همه‌ی localStorage را پاک نمی‌کند.** این‌ها می‌مانند: `dashboard-layout` (`src/features/dashboard/store/dashboardLayoutStore.js`، عمداً — ترجیحِ دستگاه)، `unit-label-template` (`src/features/warehouse/units/store/unitFilterStore.js`)، `print-settings` (`src/shared/store/printSettingsStore.js`)، `TERMINAL_KEY` در `src/shared/components/payments/pos/PosReadyForm.jsx`، و `vite-ui-theme`.
 
 ## برای تغییرِ X، به Y بروید
 

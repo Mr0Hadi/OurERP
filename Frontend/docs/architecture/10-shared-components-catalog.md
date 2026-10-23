@@ -124,6 +124,25 @@ flowchart LR
 
 قطعاتِ صفحه‌ی مرجوعی که هر دو فیچر استفاده می‌کنند (اغلب ۲ مصرف‌کننده = خرید + فروش): `ReturnSourcePicker`، `ReturnInfoSection`، `ReturnItemsSection`، `ReturnResolutionSection`، `ReturnDocumentSection`، `ReturnStatusBar`، `ReturnSubmitBar`، `ReturnTable`، `ReturnFilters`، `ReturnStatusBadge`، `RelatedReturnsCard`، `OrderInvoiceCard`، `ReceivingReportCard`/`ReceivingReportLines`، `GoodsRoundItemsSection`، `GoodsRoundPartySection`، `GoodsRoundSummaryCard`، `ObservationEditor`، `DeleteReturnAction`، `PreviousReturnBadge`/`FollowUpReturnAction` (`ReturnChain.jsx`)، `ReturnPageSkeleton`، `ReturnSourceError`. داخلی: `ClaimRow`، `ClaimResolutionCard`، `EffectBadge`، `GoodsItemsPicker`، `ResolutionComposer`، `ResolutionLineRow`، `ResolutionMoneySection`، `ReturnStatusReasonDialog`.
 
+### `print/` (چاپ با مرورگر)
+
+هر برگه‌ای که در مرورگر ساخته و چاپ می‌شود از یک پوسته و یک مدلِ کاغذ استفاده می‌کند. سندی که سرور می‌سازد (PDFِ فاکتور با قالبِ رسمی) اینجا بازچینی نمی‌شود؛ با اندازه‌ی خودش چاپ می‌شود (`src/shared/services/invoice/documentOutput.js`).
+
+| فایل | کار | مصرف‌کننده |
+| --- | --- | --- |
+| `studio/PrintStudio.jsx` | پوسته‌ی تمام‌صفحه: پنلِ تنظیمات + پیش‌نمایشِ بزرگ‌نمایی‌پذیر + نوارِ چاپ؛ دسکتاپ دو ستون، موبایل سوییچِ «پیش‌نمایش/تنظیمات» (پیش‌نمایش همیشه رندر و اندازه‌گیری می‌شود). پورتالِ زیرِ body، نه Dialog | برچسب، لیست قیمت‌ها، تصویرِ سندها |
+| `studio/PaperSettings.jsx` | بخشِ «کاغذ»: اندازه (A3/A4/A5/Letter/رولِ ۸۰ و ۵۸/دلخواه)، جهت، حاشیه؛ `paperKeys` کاغذهای مجاز را محدود می‌کند | لیست قیمت‌ها، تصویرِ سندها |
+| `studio/PrintSettingsSection.jsx`، `studio/SegmentedControl.jsx`، `studio/options.js` | بخشِ پنل با عنوان/آیکون، انتخابِ چندگزینه‌ایِ کوتاه، `optionsFromLabels` | همه‌ی پنل‌ها |
+| `paper.js` | `pageGeometryOf(settings)` (اندازه، جهت، حاشیه، عرض/ارتفاعِ مفید؛ رول ارتفاعِ پیوسته دارد)، `flowPageCount`، `flowPrintOptions` (رول: ارتفاعِ صفحه = طولِ محتوا)، `fixedPagePrintOptions`، `formatPaperSize` | — |
+| `FlowSheet.jsx` | برگه‌ی جاری روی کاغذ؛ مرورگر صفحه‌ها را می‌شکند و خطِ‌چینِ «صفحه‌ی n» فقط روی صفحه‌نمایش است؛ `onMeasure(heightMm)` برای شمارِ صفحه و طولِ رول | لیست قیمت‌ها |
+| `LabelSheet.jsx`، `sheetPresets.js` | صفحه‌های صریحِ برچسب (شبکه‌ی ثابت در هر صفحه) | برچسبِ دانه |
+| `typography.js` | `TEXT_SCALES` و `baseFontPt`: اندازه‌ی پایه‌ی متنِ برگه (pt)؛ بقیه‌ی متن‌ها `em` | لیست قیمت‌ها |
+| `usePrint.js` | `window.print()` با `@page` و `body.printing`؛ حالتِ چاپ تا unmountِ پورتال می‌ماند، نه تا `afterprint` (کرومِ اندروید `afterprint` را فوراً می‌دهد) | همه |
+| `print.css` | در چاپ فقط پورتال می‌ماند؛ کروم (`print-portal__chrome`)، قاب و مقیاسِ پیش‌نمایش و حاشیه‌ی `FlowSheet` کنار می‌روند | — |
+| `BarcodeGraphic`، `QrCodeGraphic` | نمادِ بارکد/QR | برچسب |
+
+تنظیماتِ هر نوع برگه با `usePrintSettings(kind, defaults)` (`src/shared/store/printSettingsStore.js`) روی همان دستگاه می‌ماند؛ فقط تغییرها ذخیره می‌شوند. برچسبِ دانه store و هندسه‌ی خودش را دارد (`labelTemplate.js`). برگه‌ی تازه: [13 §۱۴](13-recipes.md).
+
 ### بقیه
 
 | پوشه | کامپوننت‌ها | کِی |
@@ -131,8 +150,7 @@ flowchart LR
 | `charts/` | `ChartCard` (۱۲)، `GroupedBarChart`، `TrendChart`، `DonutChart`، `Sparkline`، `chartUtils.js` (۹)؛ داخلی: `ChartLegend`، `ChartTooltip`، `useChartSize` | نمودارهای SVGِ دست‌ساز (کتابخانه‌ی نمودار نیست)؛ داشبورد و حسابداری |
 | `dataTransfer/` | `DataTransferActions` (۹)؛ داخلی: `ImportDialog`، `ImportResultView` | دکمه‌ی ورود/خروجیِ CSV/Excel در سرتیترِ لیست؛ مجاز بودن از سرور (`GetResources`) |
 | `files/` | `RemoteImage` (۵)، `ImageUploadField` (۳)، `FileUploadList`، `ImageLightbox` | تصویر از سرور، آپلودِ تصویر/پیوست |
-| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton` | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها |
-| `print/` | `BarcodeGraphic`، `QrCodeGraphic`، `LabelSheet`، `sheetPresets.js`، `usePrint` | چاپ برچسب و صفحه با مرورگر (`[data-print-root]`)؛ حالتِ چاپ (`body.printing` و `@page`) تا unmountِ پورتال می‌ماند، نه تا `afterprint` — در کرومِ اندروید `afterprint` فوراً می‌آید و پیش‌نمایش بعد از پاک‌سازی ساخته می‌شد |
+| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton`؛ داخلی: `DocumentPrintStudio` | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها. چاپِ انتخابی که تصویر دارد در `DocumentPrintStudio` (کاغذ، چیدمان) باز می‌شود؛ PDFِ تنها مستقیم (`printPdfDocuments`) |
 | `barcode/` | `CameraScanButton` (۳)، `UnitBarcodeScanList` (۲)؛ داخلی: `CameraScanner`، `BarcodeScanField` | اسکنِ بارکد با دوربین |
 | `map/` | `LocationPickerMap` (۱)؛ داخلی: `MapCanvas`، `MapSearchBar`، `nominatim.js` | انتخابِ مکان روی نقشه (Leaflet + Nominatim) |
 | `products/` | `ProductPicker`، `DocumentItemsSection`، `useReturnedNewProduct` | انتخابِ کالا و برگشت از «کالای جدید» |
@@ -159,6 +177,8 @@ flowchart LR
 | ورود/خروجی برای یک لیست | `<DataTransferActions resource="…" filters={filters} invalidateKey={…Keys.all} />` در `actions`ِ `ListPageLayout` |
 | دکمه در هدرِ صفحه‌ی جزئیات | `<PageHeaderActions>` (`src/shared/components/layout/PageHeaderActions.jsx`) |
 | تاریخچه‌ی تغییراتِ یک سند/رکورد | `AuditHistoryButton` از `src/features/audit/components/AuditHistoryButton.jsx` ([12-features/audit](12-features/audit.md)) |
+| برگه‌ی چاپیِ تازه (گزارش، رسید، …) | `PrintStudio` + `PaperSettings` + `FlowSheet` و `usePrintSettings` ([13 §۱۴](13-recipes.md))؛ الگو: `src/features/sales/orders/components/proforma/PriceListPrint.jsx` |
+| کاغذِ تازه یا رفتارِ حاشیه | `src/shared/components/print/paper.js` |
 | کامپوننتِ پایه‌ی shadcn | CLIِ shadcn → `src/shared/components/ui/` |
 
 ## سؤال‌های باز / بدهی

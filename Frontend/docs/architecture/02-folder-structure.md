@@ -58,7 +58,7 @@ flowchart LR
 | `src/shared/services/` | API مشترک و زیرساختِ شبکه | `api/axios.js`، `files/`، `dataTransfer/`، `pos/`، `invoice/`، `returns/`، `bankAccounts/` |
 | `src/shared/hooks/` | هوک‌های عمومی | `usePageHeader.js`، `useDebouncedFilters.js`، `useUrlPreset.js`، `useHideOnScroll.js` |
 | `src/shared/lib/` | تابع‌های کمکیِ بی‌ربط به دامنه | `dateUtils.js`، `persianDigits.js`، `utils.js` (`cn`) |
-| `src/shared/store/` | storeهای سراسری و factoryها | `headerStore.js`، `createFilterStore.js` |
+| `src/shared/store/` | storeهای سراسری و factoryها | `headerStore.js`، `createFilterStore.js`، `printSettingsStore.js` |
 | `src/shared/constants/` | `routes.js`، `navigationData.js` | — |
 | `src/shared/styles/themes/` | CSSِ تمِ Material | `material.css` |
 

@@ -25,12 +25,12 @@
 
 | نوع | فایل‌ها |
 | --- | --- |
-| سراسری | `src/features/auth/store/authStore.js` (persist، [04](04-auth-and-session.md))، `src/shared/store/headerStore.js`، `src/shared/store/formDraftStore.js` |
+| سراسری | `src/features/auth/store/authStore.js` (persist، [04](04-auth-and-session.md))، `src/shared/store/headerStore.js`، `src/shared/store/formDraftStore.js`، `src/shared/store/printSettingsStore.js` (persist) |
 | فیلترِ لیست (`createFilterStore`) | `*FilterStore.js` در `customers`، `suppliers`، `employees`، `organization/departments`، `organization/teams`، `purchases/orders`، `purchases/returns`، `sales/orders`، `sales/returns`، `sales/installments`، `warehouse/products`، `warehouse/receiving`، `warehouse/shipping`، `warehouse/units`، `accounting/activity`؛ و بخشی از `src/features/accounting/store/accountingFilterStores.js` |
 | فیلترِ بدونِ factory (`create` + `devtools`) | `src/features/dashboard/store/dashboardFilterStore.js` (طبقِ کامنتش چون صفحه‌بندی ندارد) و یک store در انتهای `accountingFilterStores.js` |
 | فرمِ سند (`createDocumentFormStore`) | `src/features/purchases/orders/store/purchaseFormStore.js`، `src/features/sales/orders/store/saleFormStore.js` |
 | فرمِ دستی (`create` مستقیم) | `src/features/purchases/returns/store/purchaseReturnFormStore.js`، `src/features/sales/returns/store/salesReturnFormStore.js`، `src/features/warehouse/receiving/store/receivingFormStore.js`، `src/features/warehouse/shipping/store/shippingFormStore.js` |
-| persist در localStorage | `authStore` (`auth-storage`)، `src/features/dashboard/store/dashboardLayoutStore.js` (`dashboard-layout`)، `src/features/warehouse/units/store/unitFilterStore.js` (`unit-label-template`) |
+| persist در localStorage | `authStore` (`auth-storage`)، `src/features/dashboard/store/dashboardLayoutStore.js` (`dashboard-layout`)، `src/features/warehouse/units/store/unitFilterStore.js` (`unit-label-template`)، `src/shared/store/printSettingsStore.js` (`print-settings`؛ تنظیماتِ چاپِ هر نوع برگه، فقط تغییرها) |
 
 ## چطور کار می‌کند
 
