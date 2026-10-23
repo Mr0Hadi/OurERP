@@ -50,7 +50,7 @@
 
 **اقدام روی دانه** — `UnitActionDialog.jsx` (دلیل‌ها از `REASONS_BY_ACTION`) → `useApplyUnitActionMutation` (`mutationKey: productUnitKeys.unitWrites()`) → `applyProductUnitAction(variables, { idempotencyKey: idempotencyKeyFor(variables) })` → invalidate `productUnitKeys.all`، `productKeys.all`، `purchaseKeys.all`، `supplierKeys.all`. حالتِ «در حال ذخیره» با `useIsMutating({ mutationKey: unitWrites() })`.
 
-**چاپِ برچسب** — `UnitBulkBar` یا `UnitDetailSheet` → `UnitsPage.openPrint` → `LabelPrintDesigner` (lazy) با قالبِ `useLabelTemplateStore` و `sheetGeometryOf` → `UnitLabel` در `LabelSheet` (`src/shared/components/print/`) → `usePrint()` → پرسشِ «چاپ شد؟» (دیالوگِ پرسش در چاپ پنهان است؛ `print.css` همه‌ی فرزندانِ body جز پورتال را کنار می‌گذارد) → فقط با «بله» `useMarkUnitsPrintedMutation` (`POST /Product/MarkProductUnitsPrinted`).
+**چاپِ برچسب** — `UnitBulkBar` یا `UnitDetailSheet` → `UnitsPage.openPrint` → `LabelPrintDesigner` (lazy؛ پوسته‌ی مشترکِ `PrintStudio` از `src/shared/components/print/studio/`) با قالبِ `useLabelTemplateStore` و `sheetGeometryOf` → `UnitLabel` در `LabelSheet` (`src/shared/components/print/`) → `usePrint()` → پرسشِ «چاپ شد؟» (دیالوگِ پرسش در چاپ پنهان است؛ `print.css` همه‌ی فرزندانِ body جز پورتال را کنار می‌گذارد) → فقط با «بله» `useMarkUnitsPrintedMutation` (`POST /Product/MarkProductUnitsPrinted`).
 
 ### دریافت و ارسال
 

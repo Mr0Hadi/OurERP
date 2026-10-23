@@ -1,6 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Printer, RotateCcw, X } from "lucide-react";
+import { useState } from "react";
+import { Barcode, RotateCcw, Ruler, Type } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -26,7 +25,10 @@ import {
 import LabelSheet from "@/shared/components/print/LabelSheet";
 import { usePrint } from "@/shared/components/print/usePrint";
 import { paginateItems } from "@/shared/components/print/sheetPresets";
-import "@/shared/components/print/print.css";
+import PrintStudio from "@/shared/components/print/studio/PrintStudio";
+import PrintSettingsSection from "@/shared/components/print/studio/PrintSettingsSection";
+import SegmentedControl from "@/shared/components/print/studio/SegmentedControl";
+import { optionsFromLabels } from "@/shared/components/print/studio/options";
 
 import {
   CUSTOM_SIZE_KEY,
@@ -51,33 +53,6 @@ import { useMarkUnitsPrintedMutation } from "../services/mutations";
 import UnitLabel from "./UnitLabel";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
-/** دکمه‌های کنارِ هم برای انتخابِ یکی از چند گزینه‌ی کوتاه. */
-function Segmented({ value, options, onChange, ariaLabel }) {
-  return (
-    <div role="radiogroup" aria-label={ariaLabel} className="grid auto-cols-fr grid-flow-col gap-1 rounded-lg bg-muted p-1">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          role="radio"
-          aria-checked={value === option.value}
-          onClick={() => onChange(option.value)}
-          className={`rounded-md px-2 py-1.5 text-xs transition-colors ${
-            value === option.value
-              ? "bg-background font-medium text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const toOptions = (labels) =>
-  Object.entries(labels).map(([value, label]) => ({ value, label }));
-
 /** چند دانه از این دسته این متن را واقعاً دارند — برای راهنماییِ کنارِ گزینه. */
 function fieldAvailability(units, key) {
   if (key === "supplier") return units.filter((unit) => unit.supplierName).length;
@@ -95,9 +70,8 @@ function Settings({ units, template, geometry }) {
     updateTemplate({ custom: { ...template.custom, ...patch } });
 
   return (
-    <div className="space-y-5">
-      <section className="space-y-2">
-        <Label className="text-sm font-medium">اندازه‌ی برچسب</Label>
+    <>
+      <PrintSettingsSection title="اندازه‌ی برچسب" icon={Ruler}>
         <Select
           value={template.sizeKey}
           onValueChange={(sizeKey) => updateTemplate({ sizeKey })}
@@ -117,10 +91,10 @@ function Settings({ units, template, geometry }) {
 
         {isCustom && (
           <div className="space-y-2 rounded-lg border border-border p-3">
-            <Segmented
+            <SegmentedControl
               ariaLabel="چیدمان"
               value={template.custom.layout}
-              options={toOptions(LABEL_LAYOUT_LABELS)}
+              options={optionsFromLabels(LABEL_LAYOUT_LABELS)}
               onChange={(layout) => setCustom({ layout })}
             />
             <div className="grid grid-cols-2 gap-2">
@@ -236,27 +210,25 @@ function Settings({ units, template, geometry }) {
           </div>
         )}
 
-      </section>
+      </PrintSettingsSection>
 
-      <section className="space-y-2">
-        <Label className="text-sm font-medium">نوع کد</Label>
-        <Segmented
+      <PrintSettingsSection title="نوع کد" icon={Barcode}>
+        <SegmentedControl
           ariaLabel="نوع کد"
           value={template.codeType}
-          options={toOptions(LABEL_CODE_TYPE_LABELS)}
+          options={optionsFromLabels(LABEL_CODE_TYPE_LABELS)}
           onChange={(codeType) => updateTemplate({ codeType })}
         />
         <Label className="block pt-1 text-xs text-muted-foreground">اندازه‌ی کد</Label>
-        <Segmented
+        <SegmentedControl
           ariaLabel="اندازه‌ی کد"
           value={template.codeScale}
-          options={toOptions(LABEL_SCALE_LABELS)}
+          options={optionsFromLabels(LABEL_SCALE_LABELS)}
           onChange={(codeScale) => updateTemplate({ codeScale })}
         />
-      </section>
+      </PrintSettingsSection>
 
-      <section className="space-y-2">
-        <Label className="text-sm font-medium">روی برچسب چاپ شود</Label>
+      <PrintSettingsSection title="روی برچسب چاپ شود" icon={Type}>
         <div className="space-y-1.5">
           {LABEL_FIELDS.map((field) => {
             const available = fieldAvailability(units, field.key);
@@ -283,10 +255,10 @@ function Settings({ units, template, geometry }) {
           })}
         </div>
         <Label className="block pt-1 text-xs text-muted-foreground">اندازه‌ی متن</Label>
-        <Segmented
+        <SegmentedControl
           ariaLabel="اندازه‌ی متن"
           value={isValidFontSizePt(template.fontSizePt) ? null : template.fontScale}
-          options={toOptions(LABEL_SCALE_LABELS)}
+          options={optionsFromLabels(LABEL_SCALE_LABELS)}
           onChange={(fontScale) => updateTemplate({ fontScale, fontSizePt: null })}
         />
         <div className="flex items-center gap-2 pt-1">
@@ -319,7 +291,7 @@ function Settings({ units, template, geometry }) {
             تا اصلاح، اندازه‌ی پیش‌تنظیم استفاده می‌شود.
           </p>
         )}
-      </section>
+      </PrintSettingsSection>
 
       <Button
         type="button"
@@ -331,7 +303,7 @@ function Settings({ units, template, geometry }) {
         <RotateCcw className="h-3.5 w-3.5" />
         بازگشت به تنظیمات پیش‌فرض
       </Button>
-    </div>
+    </>
   );
 }
 
@@ -346,8 +318,9 @@ function Settings({ units, template, geometry }) {
  * اشتباه بدتر از ثبت‌نکردن است: دانه از صفِ چاپ بیرون می‌رود و برچسبش هرگز
  * زده نمی‌شود.
  *
- * پورتالِ مستقیمِ زیرِ body است، نه Dialog: چاپِ چندصفحه‌ای فقط در جریانِ
- * عادیِ صفحه درست تکه می‌شود (`print.css`).
+ * پوسته (تنظیمات/پیش‌نمایش، موبایل و دسکتاپ) همان `PrintStudio`ِ مشترک است؛
+ * قالبِ برچسب store و هندسه‌ی خودش را دارد (`labelTemplate.js`)، چون رول و ورقِ
+ * برچسب با کاغذِ برگه‌های دیگر فرق دارد.
  */
 export default function LabelPrintDesigner({ units, onClose }) {
   const open = Boolean(units?.length);
@@ -357,36 +330,11 @@ export default function LabelPrintDesigner({ units, onClose }) {
   const print = usePrint();
 
   const [askConfirm, setAskConfirm] = useState(false);
-  const [scale, setScale] = useState(1);
-  const scrollRef = useRef(null);
-
-  const count = units?.length ?? 0;
-  const pageCount = open ? paginateItems(units, geometry).length : 0;
-
-  // پیش‌نمایش در عرضِ موجود جا می‌شود؛ در چاپ این مقیاس بی‌اثر است.
-  useLayoutEffect(() => {
-    const node = scrollRef.current;
-    if (!open || !node) return undefined;
-    const fit = () => {
-      const sheetWidthPx = (geometry.pageWidthMm / 25.4) * 96;
-      setScale(Math.min(geometry.pageWidthMm < 120 ? 2 : 1, (node.clientWidth - 32) / sheetWidthPx));
-    };
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [open, geometry.pageWidthMm]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape" && !askConfirm) onClose(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, askConfirm, onClose]);
 
   if (!open) return null;
+
+  const count = units.length;
+  const pageCount = paginateItems(units, geometry).length;
 
   const handlePrint = () => {
     if (geometry.error) return;
@@ -408,72 +356,36 @@ export default function LabelPrintDesigner({ units, onClose }) {
       },
     });
 
-  return createPortal(
-    <div dir="rtl" className="print-portal fixed inset-0 z-50 flex flex-col bg-background lg:flex-row">
-      <aside className="print-portal__chrome flex max-h-[55vh] shrink-0 flex-col border-b border-border bg-card lg:max-h-none lg:w-100 lg:border-b-0 lg:border-l">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <div>
-            <h2 className="text-base font-semibold">چاپ برچسب</h2>
-            <p className="text-xs text-muted-foreground">
-              {formatNumber(count)} برچسب، {formatNumber(pageCount)} صفحه
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="بستن"
-            onClick={() => onClose(false)}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <Settings units={units} template={template} geometry={geometry} />
-        </div>
-
-        <div className="border-t border-border p-3">
-          <Button
-            type="button"
-            size="lg"
-            className="w-full gap-2"
-            onClick={handlePrint}
-            disabled={Boolean(geometry.error)}
-          >
-            <Printer className="h-4 w-4" />
-            چاپ {formatNumber(count)} برچسب
-          </Button>
-        </div>
-      </aside>
-
-      <div ref={scrollRef} className="print-portal__sheet flex-1 bg-muted/60 p-4">
-        <div
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: "top center",
-            // عرضِ خودِ ورق، نه کلِ پنل: وگرنه scale(2) یک ورقِ ریز را به
-            // دو برابرِ پنل می‌رساند و اسکرولِ افقی می‌سازد.
-            width: "fit-content",
-            marginInline: "auto",
-          }}
-        >
-          <LabelSheet
-            items={units}
-            preset={geometry}
-            getItemKey={(unit) => unit.id}
-            renderItem={(unit) => (
-              <UnitLabel
-                unit={unit}
-                template={template}
-                widthMm={geometry.labelWidthMm}
-                heightMm={geometry.labelHeightMm}
-              />
-            )}
-          />
-        </div>
-      </div>
-
+  return (
+    <PrintStudio
+      title="چاپ برچسب"
+      summary={`${formatNumber(count)} برچسب، ${formatNumber(pageCount)} صفحه`}
+      settings={<Settings units={units} template={template} geometry={geometry} />}
+      previewWidthMm={geometry.pageWidthMm}
+      // برچسبِ ریز در پیش‌نمایش تا دو برابر بزرگ می‌شود تا متنش خوانا باشد.
+      maxFitScale={geometry.pageWidthMm < 120 ? 2 : 1}
+      preview={
+        <LabelSheet
+          items={units}
+          preset={geometry}
+          getItemKey={(unit) => unit.id}
+          renderItem={(unit) => (
+            <UnitLabel
+              unit={unit}
+              template={template}
+              widthMm={geometry.labelWidthMm}
+              heightMm={geometry.labelHeightMm}
+            />
+          )}
+        />
+      }
+      onPrint={handlePrint}
+      printLabel={`چاپ ${formatNumber(count)} برچسب`}
+      printDisabled={Boolean(geometry.error)}
+      printDisabledReason="برچسب‌ها در عرضِ رسانه جا نمی‌شوند؛ تنظیمِ اندازه را اصلاح کنید."
+      onClose={() => onClose(false)}
+      closeLocked={askConfirm}
+    >
       <AlertDialog open={askConfirm}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
@@ -500,7 +412,6 @@ export default function LabelPrintDesigner({ units, onClose }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>,
-    document.body,
+    </PrintStudio>
   );
 }
