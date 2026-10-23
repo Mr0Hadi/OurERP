@@ -199,7 +199,11 @@ export default function PartyPaymentDetailPage() {
         confirmLabel="برداشتن"
         pendingLabel="در حال انجام..."
         isPending={removeAllocation.isPending}
-        onConfirm={() => removeAllocation.mutate(removeTarget.id, { onSuccess: () => setRemoveTarget(null) })}
+        onConfirm={() => {
+          // نگهبانِ `null` لازم است: React Compiler `removeTarget.id` را برای memo در خودِ رندر می‌خواند.
+          if (!removeTarget) return;
+          removeAllocation.mutate(removeTarget.id, { onSuccess: () => setRemoveTarget(null) });
+        }}
       />
       <ConfirmDialog
         open={confirmVoid}

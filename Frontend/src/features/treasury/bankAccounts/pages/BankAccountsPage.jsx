@@ -209,14 +209,17 @@ export default function BankAccountsPage() {
         confirmLabel="غیرفعال‌کردن"
         pendingLabel="در حال انجام..."
         isPending={deactivate.isPending}
-        onConfirm={() =>
+        onConfirm={() => {
+          // بی این نگهبان، React Compiler `deactivateTarget.id` را برای memo در خودِ رندر می‌خواند و با
+          // `null` (هیچ حسابی انتخاب نشده) کلِ صفحه می‌شکند.
+          if (!deactivateTarget) return;
           deactivate.mutate(deactivateTarget.id, {
             onSuccess: () => {
               setDeactivateTarget(null);
               if (!includeInactive) navigate(ROUTES.TREASURY_ACCOUNTS, { replace: true });
             },
-          })
-        }
+          });
+        }}
       />
     </div>
   );
