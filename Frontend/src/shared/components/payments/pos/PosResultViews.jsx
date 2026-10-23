@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { useState } from "react";
 import { CircleAlert, CircleCheck, CircleX, RotateCcw, ScanLine, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -7,16 +7,9 @@ import { Label } from "@/shared/components/ui/label";
 import { Spinner } from "@/shared/components/ui/spinner";
 import Notice from "@/shared/components/feedback/Notice";
 import { PosStatus, normalizeRrn } from "@/shared/domain/pos/posSession";
+import LazyBankLogo from "@/shared/components/payments/LazyBankLogo";
 import { getIranianBankByCardNumber } from "@/shared/lib/iranian-bank";
 import { formatRial } from "@/shared/lib/numberFormat";
-
-/**
- * لوگوی بانک فقط وقتی رسیدی با کارتِ ماسک‌شده هست بار می‌شود: `bank-input` همه‌ی
- * آیکن‌های بانک (~۴۳۰KB) را دارد و بدونِ lazy در باندلِ هر فرمِ خرید و فروش می‌نشست.
- */
-const BankLogo = lazy(() =>
-  import("@/shared/components/ui/bank-input").then((module) => ({ default: module.BankLogo })),
-);
 
 /**
  * نمای نتیجه‌های پنلِ کارتخوان: تلاشِ ناموفق (رد/لغو/خطا)، ثبت‌شده، ثبت‌نشده با پولِ
@@ -185,9 +178,7 @@ function ReceiptDetails({ result }) {
       label: "کارت",
       value: (
         <span className="inline-flex items-center gap-1.5" dir="ltr">
-          <Suspense fallback={null}>
-            <BankLogo bank={bank} />
-          </Suspense>
+          <LazyBankLogo bank={bank} />
           {result.maskedCardNumber}
         </span>
       ),

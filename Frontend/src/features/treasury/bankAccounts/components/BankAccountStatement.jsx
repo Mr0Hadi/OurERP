@@ -18,7 +18,8 @@ import {
 } from "@/shared/domain/enums/bankAccount";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
-import { formatShaba } from "@/shared/lib/iranian-bank";
+import LazyBankLogo from "@/shared/components/payments/LazyBankLogo";
+import { formatCardNumber, formatShaba, getIranianBank, getIranianBankByCardNumber, getIranianBankByShaba } from "@/shared/lib/iranian-bank";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
@@ -83,12 +84,39 @@ function MovementText({ row }) {
   );
 }
 
+/** شبا و کارتِ حساب، هر کدام با لوگوی بانکِ خودش (شبا و کارت ممکن است مالِ دو بانک باشند). */
+function AccountNumbers({ account }) {
+  const numbers = [
+    account.iban && { key: "iban", label: "شبا", value: `IR ${formatShaba(account.iban)}`, bank: getIranianBankByShaba(account.iban) },
+    account.cardNumber && {
+      key: "card",
+      label: "کارت",
+      value: formatCardNumber(account.cardNumber),
+      bank: getIranianBankByCardNumber(account.cardNumber),
+    },
+    account.accountNumber && { key: "account", label: "حساب", value: account.accountNumber },
+  ].filter(Boolean);
+  if (!numbers.length) return null;
+
+  return (
+    <dl className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {numbers.map((number) => (
+        <div key={number.key} className="flex items-center gap-1">
+          <dt>{number.label}:</dt>
+          <dd className="flex items-center gap-1 font-mono text-foreground" dir="ltr">
+            <LazyBankLogo bank={number.bank} className="size-4" />
+            {number.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function AccountHeader({ account, balance, canManage, onEdit, onDeactivate, onTransfer }) {
   const isBank = account.kind === BankAccountKindEnum.BANK;
   const Icon = isBank ? Landmark : Wallet;
-  const details = isBank
-    ? [account.bankName, account.iban && formatShaba(account.iban), account.cardNumber, account.accountNumber].filter(Boolean)
-    : [];
+  const bank = isBank ? getIranianBank(account) : null;
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3 sm:px-4">
@@ -98,7 +126,7 @@ function AccountHeader({ account, balance, canManage, onEdit, onDeactivate, onTr
         </Link>
       </Button>
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Icon className="size-5" />
+        <LazyBankLogo bank={bank} className="size-6" fallback={<Icon className="size-5" />} />
       </span>
       <div className="min-w-0 flex-1">
         <h2 className="flex flex-wrap items-center gap-2 font-bold">
@@ -106,8 +134,9 @@ function AccountHeader({ account, balance, canManage, onEdit, onDeactivate, onTr
           {!account.isActive && <StatusBadge tone="neutral" size="sm">غیرفعال</StatusBadge>}
         </h2>
         <p className="truncate text-xs text-muted-foreground" dir="auto">
-          {[BANK_ACCOUNT_KIND_LABELS[account.kind], ...details].join(" · ")}
+          {[BANK_ACCOUNT_KIND_LABELS[account.kind], isBank && account.bankName].filter(Boolean).join(" · ")}
         </p>
+        {isBank && <AccountNumbers account={account} />}
       </div>
       <div className="text-end">
         <p className="text-[11px] text-muted-foreground">مانده</p>

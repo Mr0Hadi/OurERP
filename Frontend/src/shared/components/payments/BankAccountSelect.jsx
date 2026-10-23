@@ -2,7 +2,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BANK_ACCOUNT_KIND_LABELS, BankAccountKindEnum } from "@/shared/domain/enums/bankAccount";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { useBankAccountOptionsQuery } from "@/shared/services/bankAccounts/queries";
+import { getIranianBank } from "@/shared/lib/iranian-bank";
 import { cn } from "@/shared/lib/utils";
+import LazyBankLogo from "./LazyBankLogo";
 
 /** Radix مقدارِ خالی را «بدون انتخاب» می‌فهمد؛ «بدون حساب» مقدارِ صریحِ خودش را دارد. */
 const NONE = "none";
@@ -44,6 +46,9 @@ export default function BankAccountSelect({ id, value, onChange, paymentType, cl
         </SelectItem>
         {sorted.map((account) => (
           <SelectItem key={account.id} value={String(account.id)}>
+            {account.kind === BankAccountKindEnum.BANK && (
+              <LazyBankLogo bank={getIranianBank(account)} className="size-4" />
+            )}
             {account.title}
             <span className="text-xs text-muted-foreground">
               {" · "}

@@ -15,6 +15,8 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 import { usePermission } from "@/features/auth/hooks/usePermission";
+import LazyBankLogo from "@/shared/components/payments/LazyBankLogo";
+import { getIranianBank } from "@/shared/lib/iranian-bank";
 import { useBankAccountsQuery } from "../services/queries";
 import { useDeactivateBankAccountMutation } from "../services/mutations";
 import BankAccountFormDialog from "../components/BankAccountFormDialog";
@@ -129,7 +131,12 @@ export default function BankAccountsPage() {
           id: a.id,
           title: a.title,
           subtitle: [BANK_ACCOUNT_KIND_LABELS[a.kind], a.bankName, !a.isActive && "غیرفعال"].filter(Boolean).join(" · "),
-          icon: a.kind === BankAccountKindEnum.BANK ? <Landmark className="size-4" /> : <Wallet className="size-4" />,
+          icon:
+            a.kind === BankAccountKindEnum.BANK ? (
+              <LazyBankLogo bank={getIranianBank(a)} className="size-5" fallback={<Landmark className="size-4" />} />
+            ) : (
+              <Wallet className="size-4" />
+            ),
           trailing: <span className={cn(Number(a.balance) < 0 && toneText("danger"))}>{signed(a.balance)}</span>,
           to: detailPath(a.id),
           menu: accountMenu(a),

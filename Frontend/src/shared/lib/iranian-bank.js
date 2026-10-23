@@ -252,3 +252,37 @@ export function validateIranianShaba(value) {
   }
   return Number(remainder) === 1
 }
+
+/** نامِ بانک بی پیشوند و فاصله: «بانک ملی ایران» → «ملی»، «پست بانک ایران» → «پست». */
+function compactBankName(value) {
+  return normalizePersianDigits(String(value ?? ""))
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/بانک|موسسه\s*اعتباری|قرض\s*الحسنه/g, " ")
+    .replace(/\s+ایران(یان)?\s*$/, "")
+    .replace(/[\s‌\-_.]/g, "")
+}
+
+/**
+ * بانک از روی نامِ آزادی که کاربر نوشته (`bankName`ِ حساب، مثلاً «بانک ملت - جاری»). وقتی چند بانک در متن
+ * پیدا شود بلندترین نام برنده است تا «توسعه صادرات» با «صادرات» اشتباه نشود.
+ */
+export function getIranianBankByName(value) {
+  const text = compactBankName(value)
+  if (!text) return undefined
+  let best
+  for (const bank of iranianBanks) {
+    const core = compactBankName(bank.name)
+    if (core && text.includes(core) && (!best || core.length > best.core.length)) best = { bank, core }
+  }
+  return best?.bank
+}
+
+/** بانکِ یک حساب: اول از کارت، بعد از شبا و در آخر از نامی که نوشته شده. */
+export function getIranianBank({ cardNumber, iban, bankName } = {}) {
+  return (
+    (cardNumber && getIranianBankByCardNumber(cardNumber)) ||
+    (iban && getIranianBankByShaba(iban)) ||
+    getIranianBankByName(bankName)
+  )
+}
