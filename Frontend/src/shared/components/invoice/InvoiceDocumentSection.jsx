@@ -15,10 +15,11 @@ import {
 import {
   attachmentDocuments,
   downloadDocuments,
-  printDocuments,
+  printPdfDocuments,
   serverDocument,
 } from "@/shared/services/invoice/documentOutput";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import DocumentPrintStudio from "./DocumentPrintStudio";
 
 /**
  * سند فاکتور/پیش‌فاکتورِ یک سفارش: چاپ و دانلود، و ضمیمه‌کردنِ برگه‌ی
@@ -35,7 +36,10 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  * - **مرجوعی خرید:** «برگه‌ی مرجوعی به تامین‌کننده» را بکند می‌سازد.
  *
  * کاربر انتخاب می‌کند کدام سندها چاپ/دانلود شوند؛ سندِ تازه پیش‌فرض
- * انتخاب‌شده است (فقط کنارگذاشته‌ها نگه داشته می‌شوند).
+ * انتخاب‌شده است (فقط کنارگذاشته‌ها نگه داشته می‌شوند). اگر میانِ انتخاب‌ها
+ * تصویری باشد، چاپ در `DocumentPrintStudio` (پوسته‌ی مشترکِ چاپ، با کاغذ و
+ * چیدمان) باز می‌شود؛ PDFِ تنها مستقیم چاپ می‌شود.
+
  *
  * وقتی هیچ سندی وجود ندارد دکمه‌ها غیرفعال‌اند — و نباید به‌جایش یک
  * جدولِ HTML از روی داده‌ی فرم ساخته شود: آن برگه فاکتور نیست و
@@ -74,6 +78,8 @@ export default function InvoiceDocumentSection({
 }) {
   const [isBusy, setIsBusy] = useState(false);
   const [excluded, setExcluded] = useState(() => new Set());
+  // سندهایی که در پوسته‌ی چاپ باز شده‌اند؛ تصویرِ ثابت از همان لحظه تا فایل‌ها یک بار گرفته شوند.
+  const [studioDocuments, setStudioDocuments] = useState(null);
 
   /** سندی که سرور می‌سازد — فقط وقتی سند ذخیره شده باشد. */
   const serverPdfFetcher = documentId
@@ -123,6 +129,11 @@ export default function InvoiceDocumentSection({
   const hasDocuments = documents.length > 0;
   // بدون سندِ انتخاب‌شده، دکمه‌ها کاری ندارند که انجام دهند.
   const canRun = !isBusy && selected.length > 0;
+
+  const handlePrint = () => {
+    if (selected.some((document_) => !document_.isPdf)) setStudioDocuments(selected);
+    else run(printPdfDocuments);
+  };
 
   const toggle = (id, include) =>
     setExcluded((previous) => {
@@ -187,7 +198,7 @@ export default function InvoiceDocumentSection({
                 variant="outline"
                 size="sm"
                 className="flex-1 gap-1.5"
-                onClick={() => run(printDocuments)}
+                onClick={handlePrint}
                 disabled={!canRun}
               >
                 {isBusy ? <Spinner /> : <Printer className="h-4 w-4" />}
@@ -240,6 +251,14 @@ export default function InvoiceDocumentSection({
           </div>
         )}
       </CardContent>
+
+      {studioDocuments && (
+        <DocumentPrintStudio
+          title={title}
+          documents={studioDocuments}
+          onClose={() => setStudioDocuments(null)}
+        />
+      )}
     </Card>
   );
 }
