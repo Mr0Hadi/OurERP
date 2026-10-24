@@ -4,8 +4,6 @@ import { Button } from "@/shared/components/ui/button";
 import { cn } from "@/shared/lib/utils";
 
 /**
- * دکمه‌ی «تازه‌سازی»ِ یک فهرست (کنارِ عنوانِ `ListPageLayout`، در `actions`) — برای صف‌هایی که زنده‌اند و کاربر
- * می‌خواهد بی‌انتظارِ تازه‌سازیِ خودکار ببیند. در حینِ خواندن می‌چرخد و بسته است.
  *
  * @param query خروجیِ `useQuery`ِ همان فهرست
  */

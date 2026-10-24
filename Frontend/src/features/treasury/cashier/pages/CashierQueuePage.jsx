@@ -13,7 +13,6 @@ import {
 import { createProformaQueueFilterStore } from "@/features/sales/orders/store/proformaQueueFilterStore";
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import DataTable from "@/shared/components/table/DataTable";
-import RefreshButton from "@/shared/components/table/RefreshButton";
 import ServerTable from "@/shared/components/table/ServerTable";
 import { Button } from "@/shared/components/ui/button";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
@@ -72,7 +71,6 @@ export default function CashierQueuePage() {
       title="صندوق"
       icon={Wallet}
       description="پیش‌فاکتورهای آماده‌ی پرداخت، با مهلتِ رزروِ کالا. با اولین دریافت فاکتور صادر می‌شود."
-      actions={<RefreshButton query={query} />}
     >
       <ProformaQueueFilters useStore={useCashierFilterStore} />
       <ServerTable query={query} listState={listState} table={CashierTable} />
