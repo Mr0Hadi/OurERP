@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeftRight, ArrowRight, Ban, Landmark, Pencil, Undo2, Wallet } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Ban, Check, Copy, Landmark, Pencil, Undo2, Wallet } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -19,7 +19,14 @@ import {
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import LazyBankLogo from "@/shared/components/payments/LazyBankLogo";
-import { formatCardNumber, formatShaba, getIranianBank, getIranianBankByCardNumber, getIranianBankByShaba } from "@/shared/lib/iranian-bank";
+import {
+  formatCardNumber,
+  formatShaba,
+  getIranianBank,
+  getIranianBankByCardNumber,
+  getIranianBankByShaba,
+  normalizeShaba,
+} from "@/shared/lib/iranian-bank";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
@@ -84,29 +91,69 @@ function MovementText({ row }) {
   );
 }
 
-/** شبا و کارتِ حساب، هر کدام با لوگوی بانکِ خودش (شبا و کارت ممکن است مالِ دو بانک باشند). */
-function AccountNumbers({ account }) {
+/** دکمه‌ی کپی کنارِ یک شماره؛ چند لحظه تیک نشان می‌دهد تا کاربر بداند کپی شد. */
+function CopyButton({ value, label }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // دسترسیِ کلیپ‌بورد نیست (http یا مرورگرِ قدیمی)؛ شماره هنوز قابلِ انتخاب است.
+    }
+  };
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="size-7 shrink-0 text-muted-foreground hover:text-foreground"
+      onClick={copy}
+      aria-label={copied ? `${label} کپی شد` : `کپیِ ${label}`}
+      title={copied ? "کپی شد" : "کپی"}
+    >
+      {copied ? <Check className={cn("size-3.5", toneText("success"))} /> : <Copy className="size-3.5" />}
+    </Button>
+  );
+}
+
+/**
+ * شبا، کارت و شماره‌ی حساب، هر کدام در یک ردیف با دکمه‌ی کپی. لوگوی بانک فقط وقتی کنارِ شماره می‌آید که با
+ * بانکِ خودِ حساب فرق کند (شبا و کارت ممکن است مالِ دو بانک باشند).
+ */
+function AccountNumbers({ account, accountBank }) {
   const numbers = [
-    account.iban && { key: "iban", label: "شبا", value: `IR ${formatShaba(account.iban)}`, bank: getIranianBankByShaba(account.iban) },
+    account.iban && {
+      key: "iban",
+      label: "شبا",
+      value: `IR${normalizeShaba(account.iban)}`,
+      display: `IR ${formatShaba(account.iban)}`,
+      bank: getIranianBankByShaba(account.iban),
+    },
     account.cardNumber && {
       key: "card",
       label: "کارت",
-      value: formatCardNumber(account.cardNumber),
+      value: account.cardNumber,
+      display: formatCardNumber(account.cardNumber),
       bank: getIranianBankByCardNumber(account.cardNumber),
     },
-    account.accountNumber && { key: "account", label: "حساب", value: account.accountNumber },
+    account.accountNumber && { key: "account", label: "حساب", value: account.accountNumber, display: account.accountNumber },
   ].filter(Boolean);
   if (!numbers.length) return null;
 
   return (
-    <dl className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+    <dl className="divide-y divide-border rounded-xl border border-border">
       {numbers.map((number) => (
-        <div key={number.key} className="flex items-center gap-1">
-          <dt>{number.label}:</dt>
-          <dd className="flex items-center gap-1 font-mono text-foreground" dir="ltr">
-            <LazyBankLogo bank={number.bank} className="size-4" />
-            {number.value}
+        <div key={number.key} className="flex items-center gap-2 py-1 ps-3 pe-1">
+          <dt className="w-10 shrink-0 text-xs text-muted-foreground">{number.label}</dt>
+          <dd className="flex min-w-0 flex-1 items-center justify-end gap-1.5" dir="ltr">
+            {number.bank && number.bank.id !== accountBank?.id && (
+              <LazyBankLogo bank={number.bank} className="size-4 shrink-0" />
+            )}
+            <span className="font-mono text-xs tracking-wide break-all text-foreground sm:text-sm">{number.display}</span>
           </dd>
+          <CopyButton value={number.value} label={number.label} />
         </div>
       ))}
     </dl>
@@ -117,33 +164,47 @@ function AccountHeader({ account, balance, canManage, onEdit, onDeactivate, onTr
   const isBank = account.kind === BankAccountKindEnum.BANK;
   const Icon = isBank ? Landmark : Wallet;
   const bank = isBank ? getIranianBank(account) : null;
+  const showActions = canManage && account.isActive;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3 sm:px-4">
-      <Button asChild variant="ghost" size="icon" className="lg:hidden">
-        <Link to={ROUTES.TREASURY_ACCOUNTS} aria-label="بازگشت به فهرست حساب‌ها">
-          <ArrowRight className="size-4" />
-        </Link>
-      </Button>
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <LazyBankLogo bank={bank} className="size-6" fallback={<Icon className="size-5" />} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h2 className="flex flex-wrap items-center gap-2 font-bold">
-          <span className="truncate">{account.title}</span>
-          {!account.isActive && <StatusBadge tone="neutral" size="sm">غیرفعال</StatusBadge>}
-        </h2>
-        <p className="truncate text-xs text-muted-foreground" dir="auto">
-          {[BANK_ACCOUNT_KIND_LABELS[account.kind], isBank && account.bankName].filter(Boolean).join(" · ")}
-        </p>
-        {isBank && <AccountNumbers account={account} />}
+    <section className="@container/account overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="flex flex-col gap-3 p-3 sm:p-4">
+        <div className="flex flex-col gap-3 @md/account:flex-row @md/account:items-center">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Button asChild variant="ghost" size="icon" className="-ms-1 shrink-0 lg:hidden">
+              <Link to={ROUTES.TREASURY_ACCOUNTS} aria-label="بازگشت به فهرست حساب‌ها">
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <LazyBankLogo bank={bank} className="size-7" fallback={<Icon className="size-5" />} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="flex items-center gap-2 font-bold">
+                <span className="truncate">{account.title}</span>
+                {!account.isActive && (
+                  <StatusBadge tone="neutral" size="sm">
+                    غیرفعال
+                  </StatusBadge>
+                )}
+              </h2>
+              <p className="truncate text-xs text-muted-foreground" dir="auto">
+                {[BANK_ACCOUNT_KIND_LABELS[account.kind], isBank && account.bankName].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 rounded-xl bg-muted/60 px-3 py-2 @md/account:flex-col @md/account:items-end @md/account:gap-0.5 @md/account:bg-transparent @md/account:p-0">
+            <span className="text-xs text-muted-foreground">مانده‌ی حساب</span>
+            <span className="flex items-baseline gap-1">
+              <Balance value={balance} className="text-xl font-bold" />
+              <span className="text-xs text-muted-foreground">ریال</span>
+            </span>
+          </div>
+        </div>
+        {isBank && <AccountNumbers account={account} accountBank={bank} />}
       </div>
-      <div className="text-end">
-        <p className="text-[11px] text-muted-foreground">مانده</p>
-        <Balance value={balance} className="text-lg font-bold" />
-      </div>
-      {canManage && account.isActive && (
-        <div className="flex w-full flex-wrap gap-2 border-t border-border pt-3 sm:w-auto sm:border-0 sm:pt-0">
+      {showActions && (
+        <div className="flex items-center gap-2 border-t border-border bg-muted/30 px-3 py-2 sm:px-4">
           <Button size="sm" className="gap-1.5" onClick={onTransfer}>
             <ArrowLeftRight className="size-3.5" />
             انتقال
@@ -152,13 +213,18 @@ function AccountHeader({ account, balance, canManage, onEdit, onDeactivate, onTr
             <Pencil className="size-3.5" />
             ویرایش
           </Button>
-          <Button size="sm" variant="ghost" className="gap-1.5 text-destructive hover:text-destructive" onClick={onDeactivate}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ms-auto gap-1.5 text-muted-foreground hover:text-destructive"
+            onClick={onDeactivate}
+          >
             <Ban className="size-3.5" />
-            غیرفعال
+            غیرفعال‌کردن
           </Button>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -329,7 +395,7 @@ export default function BankAccountStatement({ account, canManage, onEdit, onDea
         confirmLabel="ابطالِ انتقال"
         pendingLabel="در حال ابطال..."
         isPending={voidMutation.isPending}
-        onConfirm={() => voidMutation.mutate(voidTarget.transferId, { onSuccess: () => setVoidTarget(null) })}
+        onConfirm={() => voidMutation.mutate(voidTarget?.transferId, { onSuccess: () => setVoidTarget(null) })}
       />
     </div>
   );
