@@ -19,6 +19,7 @@ export default function EmployeeTable({
   currentPage,
   pageSize,
   onPaginationChange,
+  refresh,
 }) {
 
   const columns = useMemo(
@@ -104,6 +105,7 @@ export default function EmployeeTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
+      refresh={refresh}
       // `GetUserList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
       sortable={false}
       rowClassName={rowClassName}

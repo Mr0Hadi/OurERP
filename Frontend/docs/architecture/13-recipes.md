@@ -14,7 +14,7 @@
 4. `src/features/<f>/services/queries.js` — `use<X>ListFilters` با `useDebouncedFilters(store, { text, instant })` و `use<X>sQuery` با `listQuery` + `keepPreviousData`؛ کپی از `useCustomerListFilters` / `useCustomersQuery`. **هر کلیدِ فیلتر را در `text` یا `instant` بیاورید، وگرنه فرستاده نمی‌شود** (باگِ رفع‌شده‌ی B1 در [14](14-dependency-graph-and-health.md): `vehicleId` جا مانده بود).
 5. `src/features/<f>/components/<X>Table.jsx` — `COLUMNS` بیرون از کامپوننت (با `meta.mobile`) + `detailsColumn(...)` + `<DataTable columns={COLUMNS} {...props} />`؛ کپی از `src/features/customers/components/CustomerTable.jsx`.
 6. `src/features/<f>/components/<X>Filters.jsx` — `ResponsiveFilters` از `src/shared/components/filters/FilterPanel.jsx` با `FilterSearchInput`/`FilterSelect`/`EntitySelect`؛ الگو: `src/features/partyAccount/components/PartyListFilters.jsx`.
-7. `src/features/<f>/pages/<X>sPage.jsx` — `ListPageLayout` + فیلترها + `ServerTable query={query} listState={listState} table={<X>Table}`؛ کپی از `src/features/customers/pages/CustomersPage.jsx`.
+7. `src/features/<f>/pages/<X>sPage.jsx` — `ListPageLayout` + فیلترها + `ServerTable query={query} listState={listState} table={<X>Table}` (دکمه‌ی تازه‌سازی خودکار می‌آید؛ `<X>Table` باید `{...props}` را به `DataTable` برساند)؛ کپی از `src/features/customers/pages/CustomersPage.jsx`.
 8. مسیر، منو، breadcrumb — دستورالعملِ ۸ (گام‌های ۱ و ۴ تا ۷).
 
 ## ۲. صفحه‌ی جزئیات/ویرایش

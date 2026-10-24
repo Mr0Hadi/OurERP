@@ -13,7 +13,6 @@ import {
 import { createProformaQueueFilterStore } from "@/features/sales/orders/store/proformaQueueFilterStore";
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import DataTable from "@/shared/components/table/DataTable";
-import RefreshButton from "@/shared/components/table/RefreshButton";
 import ServerTable from "@/shared/components/table/ServerTable";
 import { Button } from "@/shared/components/ui/button";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
@@ -72,7 +71,6 @@ export default function SaleCheckListPage() {
       title="بررسی انبارِ پیش‌فاکتورها"
       icon={PackageSearch}
       description="پیش‌فاکتورهایی که مشتری تأیید کرده. کالا را بردارید و اسکن کنید تا برای مشتری رزرو شود."
-      actions={<RefreshButton query={query} />}
     >
       <ProformaQueueFilters useStore={useSaleCheckFilterStore} />
       <ServerTable query={query} listState={listState} table={SaleCheckTable} />

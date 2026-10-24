@@ -9,6 +9,7 @@ import {
   SelectTrigger,
 } from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
+import RefreshButton from "./RefreshButton";
 
 /** ستون‌هایی که برچسبِ متنی ندارند (جزئیات، دکمه‌ها) در پایینِ کارت می‌نشینند. */
 const isActionColumn = (column) =>
@@ -47,7 +48,7 @@ function MobileSortSelect({ table, sorting }) {
     <Select value={value} onValueChange={handleChange}>
       <SelectTrigger
         size="sm"
-        className="h-8 w-auto max-w-[65%] gap-1.5 rounded-full bg-muted/40 px-3 text-xs"
+        className="h-8 w-auto min-w-0 max-w-full gap-1.5 rounded-full bg-muted/40 px-3 text-xs"
         aria-label="مرتب‌سازی"
       >
         <ArrowDownUp className="size-3.5 text-muted-foreground" />
@@ -170,7 +171,7 @@ function RowCard({ row, rowClassName }) {
  * بقیه‌ی ستون‌ها شبکه‌ی دوستونه‌ی «برچسب/مقدار» می‌شوند؛ `detailsColumn` کلِ کارت را لینک
  * می‌کند و ستون‌های بی‌برچسبِ دیگر (دکمه‌ها) فوترِ کارت‌اند.
  */
-export default function MobileRowCards({ table, sorting, rows, emptyMessage, rowClassName, getRowKey, totalCount }) {
+export default function MobileRowCards({ table, sorting, rows, emptyMessage, rowClassName, getRowKey, totalCount, refresh }) {
   return (
     <div className="space-y-2">
       <div className="flex min-h-8 items-center justify-between gap-2">
@@ -184,7 +185,10 @@ export default function MobileRowCards({ table, sorting, rows, emptyMessage, row
         ) : (
           <span />
         )}
-        <MobileSortSelect table={table} sorting={sorting} />
+        <div className="flex min-w-0 max-w-[75%] items-center justify-end gap-1.5">
+          <MobileSortSelect table={table} sorting={sorting} />
+          {refresh && <RefreshButton query={refresh} variant="pill" />}
+        </div>
       </div>
 
       {rows.length === 0 ? (

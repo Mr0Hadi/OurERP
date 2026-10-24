@@ -31,9 +31,13 @@ flowchart LR
   T --> DT["DataTable<br/>columns, sorting, pagination"]
   DT -->|موبایل| MR[MobileRowCards]
   DT --> DP[DataTablePagination]
+  DT -->|refresh| RB[RefreshButton]
+  MR -->|refresh| RB
 ```
 
 `ServerTable` (`src/shared/components/table/ServerTable.jsx`) کارِ تکراری را می‌کند: خطا → `QueryErrorState`، واکشیِ دوباره → `FetchingOverlay`، و تبدیلِ `{ items, total, page, totalPages }` و `listState` (از `createFilterStore`) به propsِ جدول. جدولِ هر فیچر فقط `DataTable` را با `columns` می‌پیچد (`src/features/customers/components/CustomerTable.jsx`).
+
+**تازه‌سازی:** هر جدول و فهرست دکمه‌ی «تازه‌سازی» دارد. `ServerTable` همان کوئری را به‌صورتِ `refresh` به جدول می‌دهد و `DataTable` دکمه را خودش می‌گذارد، بی‌ردیفِ اضافه: دسکتاپ در گوشه‌ی سرتیترِ چسبانِ جدول (یک ستونِ باریکِ اول، راست در RTL؛ با اسکرولِ جدول هم در دید)، موبایل در نوارِ موجودِ بالای کارت‌ها کنارِ شمار و مرتب‌سازی، و با `emptyState` بالای همان بلوک. جدولِ فیچر باید propsِ ناشناخته (`refresh`) را به `DataTable` برساند (`{...props}`)؛ جدولی که props را تک‌تک می‌گیرد `refresh` را هم بگیرد. فهرستِ بی‌`ServerTable` `refresh={query}` را دستی می‌دهد؛ `MasterListPane` پراپِ `refresh` دارد (کنارِ جست‌وجو)؛ فهرست/گزارشِ بی‌جدول `RefreshButton` را مستقیم در نوارِ خودش یا `actions`ِ `ListPageLayout` می‌گذارد.
 
 **`table` و React Compiler:** نمونه‌ی `useReactTable` در همه‌ی رندرها همان شیء است. Compiler خودِ `DataTable` را memo نمی‌کند (هشدارِ `react-hooks/incompatible-library`)، ولی فرزندی که فقط `table` را prop می‌گیرد با همان `table` دوباره رندر نمی‌شود و `table.getState()` در آن کهنه می‌ماند. هر state‌ی که فرزند لازم دارد (مثلِ `sorting` برای `MobileRowCards`) را جدا prop بدهید.
 
@@ -48,7 +52,7 @@ flowchart LR
 | `detailsColumn(getPath)` (`columns.jsx`) | ستونِ استانداردِ «جزئیات»؛ در موبایل کلِ کارت لینک می‌شود | ۹ |
 | `DataTablePagination` | صفحه‌بندی بیرون از `DataTable` | ۴ |
 | `PaymentProgress` | نوارِ «پرداخت‌شده از کل» در ردیف | ۲ |
-| `RefreshButton` | «تازه‌سازی»ِ فهرستِ زنده در `actions`ِ `ListPageLayout` (صف‌های انبار و صندوق) | ۲ |
+| `RefreshButton` | «تازه‌سازی»ِ یک کوئری: کمینه‌ی چرخش، زمانِ آخرین به‌روزرسانی در راهنما؛ `variant="pill"` برای موبایل. خودکار در `DataTable`/`MasterListPane`؛ مستقیم در دانه‌ها و مالیات | ۵ |
 | `TableLoadingSkeleton` | اسکلتونِ جدول | ۲ |
 | `MobileRowCards`، `SortIcon`، `DetailsLink` | داخلی | — |
 
@@ -57,7 +61,7 @@ flowchart LR
 | کامپوننت | کِی | # |
 | --- | --- | --- |
 | `ListPageLayout` | پوسته‌ی هر صفحه‌ی لیست: `title`، `icon`، `description`، `create`، `actions` | ۱۱ |
-| `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها) | ۴ |
+| `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها)؛ `refresh` = کوئریِ فهرست | ۴ |
 | `RedirectKeepingSearch` | در `routes.jsx`: نشانیِ قدیمی → تازه با همان query (صفحه‌ی جابه‌جاشده) | ۲ |
 | `PageHeaderActions` | دکمه‌ی صفحه در هدرِ اپ کنارِ عنوان (پورتال به `headerStore.actionsSlot`)؛ مثلاً «تاریخچه» در صفحه‌های جزئیات ([08](08-client-state-zustand.md)) | ۲ |
 | `AppSidebar`، `NavMain`، `NavSecondary`، `NavTools`، `NavUser`، `NavWorkspace`، `AppBreadcrumb`، `RouteLoadingOverlay` | فقط پوسته‌ی برنامه ([03](03-bootstrap-and-routing.md)) | ۱–۲ |

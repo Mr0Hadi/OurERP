@@ -38,17 +38,19 @@ function EmployeeList({ selectedId, className }) {
   const fullName = useDebouncedValue(search);
 
   const { departments } = useDepartmentOptionsQuery();
-  const { data, isLoading } = useAllUsersQuery({
+  const usersQuery = useAllUsersQuery({
     take: 200,
     fullName,
     departmentId,
     isActive: true,
   });
+  const { data, isLoading } = usersQuery;
   const users = data?.userList ?? [];
 
   return (
     <MasterListPane
       className={className}
+      refresh={usersQuery}
       search={search}
       onSearchChange={setSearch}
       searchPlaceholder="جست‌وجوی نام کارمند..."

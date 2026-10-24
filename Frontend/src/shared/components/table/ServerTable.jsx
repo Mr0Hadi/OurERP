@@ -27,6 +27,7 @@ function pageStateOf(data, pagination) {
  * @param {(items: object[]) => object[]} [props.transform] تبدیلِ ردیف‌ها قبل از نمایش
  *   (مثلاً افزودنِ ردیف‌های مرجوعی به صفِ انبار)
  * @param {boolean} [props.singlePage] نتیجه صفحه‌بندیِ سرور ندارد؛ همیشه «صفحه ۱ از ۱»
+ * دکمه‌ی «تازه‌سازی» همیشه هست: همین کوئری به‌صورتِ `refresh` به جدول می‌رسد.
  * بقیه‌ی props مستقیم به جدول می‌رسد.
  */
 export default function ServerTable({
@@ -56,6 +57,7 @@ export default function ServerTable({
         onPaginationChange={setPagination}
         sorting={sorting}
         onSortingChange={setSorting}
+        refresh={query}
         {...tableProps}
       />
     </FetchingOverlay>

@@ -123,6 +123,7 @@ const SaleTable = ({
   onPaginationChange,
   sorting,
   onSortingChange,
+  refresh,
 }) => {
 
 
@@ -137,6 +138,7 @@ const SaleTable = ({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
+      refresh={refresh}
       emptyMessage="فروشی یافت نشد."
     />
   );

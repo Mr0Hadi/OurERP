@@ -7,6 +7,7 @@ import { ListChecks, Printer } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
+import RefreshButton from "@/shared/components/table/RefreshButton";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
@@ -350,6 +351,7 @@ export default function UnitsPage() {
                     .join("، ")}
                 </p>
               </div>
+              <RefreshButton query={unitsQuery} className="size-8" />
               {totalResults > 0 && selectedUnits.length === 0 && (
                 <Button
                   type="button"

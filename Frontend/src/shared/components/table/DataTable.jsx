@@ -17,6 +17,7 @@ import SortIcon from "./SortIcon";
 import TableLoadingSkeleton from "./TableLoadingSkeleton";
 import DataTablePagination from "./DataTablePagination";
 import MobileRowCards from "./MobileRowCards";
+import RefreshButton from "./RefreshButton";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
 
 /**
@@ -31,6 +32,10 @@ import { useIsMobile } from "@/shared/hooks/useIsMobile";
  * @param rowClassName `(row) => string` برای رنگ‌آمیزی شرطی ردیف.
  * @param getRowKey    `(row) => key`، وقتی کلیدِ ترکیبی لازم است.
  * @param totalCount   تعدادِ کلِ نتایج (کنارِ صفحه‌بندی نشان داده می‌شود).
+ * @param refresh      کوئریِ فهرست (`{ refetch, isFetching }`)؛ اگر باشد دکمه‌ی «تازه‌سازی»
+ *                     می‌آید: دسکتاپ در گوشه‌ی سرتیترِ چسبانِ جدول (ستونِ باریکِ اول، راست در RTL؛ با
+ *                     اسکرولِ جدول هم در دید)، موبایل در نوارِ بالای کارت‌ها کنارِ مرتب‌سازی.
+ *                     `ServerTable` خودش آن را می‌دهد.
  */
 export default function DataTable({
   data,
@@ -48,6 +53,7 @@ export default function DataTable({
   rowClassName,
   getRowKey,
   totalCount,
+  refresh,
 }) {
   const isMobile = useIsMobile();
   const sortingState = useMemo(() => (sorting ? [sorting] : []), [sorting]);
@@ -87,7 +93,17 @@ export default function DataTable({
   const rows = table.getRowModel().rows;
 
   // بعضی صفحه‌ها به‌جای ردیف خالی، یک بلوک کامل جایگزین جدول نشان می‌دهند.
-  if (rows.length === 0 && emptyState) return emptyState;
+  if (rows.length === 0 && emptyState) {
+    if (!refresh) return emptyState;
+    return (
+      <div className="space-y-2">
+        <div className="flex justify-end">
+          <RefreshButton query={refresh} variant={isMobile ? "pill" : "icon"} />
+        </div>
+        {emptyState}
+      </div>
+    );
+  }
 
   if (isMobile) {
     return (
@@ -100,6 +116,7 @@ export default function DataTable({
           rowClassName={rowClassName}
           getRowKey={getRowKey}
           totalCount={totalCount}
+          refresh={refresh}
         />
         <DataTablePagination
           totalPages={totalPages}
@@ -119,8 +136,16 @@ export default function DataTable({
       <div className="max-h-[calc(100dvh-300px)] min-h-64 overflow-auto rounded-lg border custom-scroll [&>[data-slot=table-container]]:overflow-visible">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur supports-backdrop-filter:bg-muted/60">
-              {table.getHeaderGroups().map((headerGroup) => (
+              {table.getHeaderGroups().map((headerGroup, groupIndex, groups) => (
                 <TableRow key={headerGroup.id}>
+                  {/* گوشه‌ی سرتیتر (راست در RTL): تازه‌سازی، بی‌ردیفِ اضافه. */}
+                  {refresh && (
+                    <TableHead className="h-11 w-11 px-1.5 text-center">
+                      {groupIndex === groups.length - 1 && (
+                        <RefreshButton query={refresh} variant="header" />
+                      )}
+                    </TableHead>
+                  )}
                   {headerGroup.headers.map((header) => {
                     const isSortable = header.column.getCanSort();
                     const sortDir = header.column.getIsSorted();
@@ -172,6 +197,7 @@ export default function DataTable({
                       rowClassName?.(row) ?? ""
                     }`}
                   >
+                    {refresh && <TableCell />}
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-2.5 text-center">
                         {flexRender(
@@ -185,7 +211,7 @@ export default function DataTable({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={columns.length}
+                    colSpan={columns.length + (refresh ? 1 : 0)}
                     className="h-24 text-center text-muted-foreground"
                   >
                     {emptyMessage}

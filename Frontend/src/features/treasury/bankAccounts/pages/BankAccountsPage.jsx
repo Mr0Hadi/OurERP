@@ -108,6 +108,7 @@ export default function BankAccountsPage() {
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:h-[calc(100svh-6.5rem)] lg:grid-cols-[20rem_minmax(0,1fr)]">
       <MasterListPane
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
+        refresh={query}
         header={
           canManage && (
             <Button

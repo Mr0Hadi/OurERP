@@ -17,6 +17,7 @@ export default function DepartmentTable({
   currentPage,
   pageSize,
   onPaginationChange,
+  refresh,
 }) {
 
   const columns = useMemo(
@@ -71,6 +72,7 @@ export default function DepartmentTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
+      refresh={refresh}
       // `GetDepartmentList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
       sortable={false}
       emptyMessage="واحدی یافت نشد."

@@ -75,6 +75,7 @@ const PurchaseTable = ({
   onPaginationChange,
   sorting,
   onSortingChange,
+  refresh,
 }) => {
 
 
@@ -89,6 +90,7 @@ const PurchaseTable = ({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
+      refresh={refresh}
       emptyMessage="خریدی یافت نشد."
     />
   );

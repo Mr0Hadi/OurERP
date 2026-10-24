@@ -47,7 +47,7 @@ const ALL_ID = "all";
 const PAGE_SIZE = 20;
 const detailPath = (id) => routeWithId(ROUTES.WAREHOUSE_VEHICLES_DETAIL, id);
 
-function VehicleList({ selectedId, className, canManage, onCreate, onRename, onDelete, data, isLoading, isError }) {
+function VehicleList({ refresh, selectedId, className, canManage, onCreate, onRename, onDelete, data, isLoading, isError }) {
   const [search, setSearch] = useState("");
   const term = search.trim().toLowerCase();
   // خودروها یک‌جا گرفته شده‌اند؛ جست‌وجو همین‌جا فیلتر می‌کند.
@@ -56,6 +56,7 @@ function VehicleList({ selectedId, className, canManage, onCreate, onRename, onD
   return (
     <MasterListPane
       className={className}
+      refresh={refresh}
       header={
         canManage && (
           <Button onClick={onCreate} size="icon" className="size-9 shrink-0" aria-label="خودروی جدید" title="خودروی جدید">
@@ -369,6 +370,7 @@ export default function VehiclesPage() {
   return (
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:h-[calc(100svh-6.5rem)] lg:grid-cols-[19rem_minmax(0,1fr)]">
       <VehicleList
+        refresh={vehiclesQuery}
         selectedId={id}
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
         canManage={canManage}

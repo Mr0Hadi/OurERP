@@ -40,7 +40,7 @@ import CategoryFormDialog from "../components/CategoryFormDialog";
 const PAGE_SIZE = 20;
 const detailPath = (id) => routeWithId(ROUTES.WAREHOUSE_CATEGORIES_DETAIL, id);
 
-function CategoryList({ selectedId, className, canManage, onCreate, onRename, onDelete, categories, isLoading, isError }) {
+function CategoryList({ refresh, selectedId, className, canManage, onCreate, onRename, onDelete, categories, isLoading, isError }) {
   const [search, setSearch] = useState("");
   const term = search.trim().toLowerCase();
   // دسته‌ها یک‌جا گرفته شده‌اند؛ جست‌وجو همین‌جا فیلتر می‌کند.
@@ -49,6 +49,7 @@ function CategoryList({ selectedId, className, canManage, onCreate, onRename, on
   return (
     <MasterListPane
       className={className}
+      refresh={refresh}
       header={
         canManage && (
           <Button onClick={onCreate} size="icon" className="size-9 shrink-0" aria-label="دسته‌بندی جدید" title="دسته‌بندی جدید">
@@ -289,6 +290,7 @@ export default function CategoriesPage() {
   return (
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:h-[calc(100svh-6.5rem)] lg:grid-cols-[19rem_minmax(0,1fr)]">
       <CategoryList
+        refresh={categoriesQuery}
         selectedId={id}
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
         canManage={canManage}
