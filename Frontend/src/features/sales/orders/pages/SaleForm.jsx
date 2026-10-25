@@ -231,7 +231,7 @@ export default function SaleForm({ sale }) {
 
   const ACTION_BUTTONS = {
     [ProformaAction.CREATE]: {
-      label: allows("SaleUpdate") ? "مشتری تأیید کرد؛ ثبت و ارسال به انبار" : "ثبت پیش‌فاکتور",
+      label: allows("SaleUpdate") ? "ثبت و ارسال به انبار" : "ثبت پیش‌فاکتور",
       allowed: true,
     },
     [ProformaAction.RESERVE_IN_PERSON]: {
