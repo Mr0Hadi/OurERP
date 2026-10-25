@@ -39,6 +39,7 @@ import {
   Car,
   History,
   HandCoins,
+  Banknote,
   FileCheck2,
 } from "lucide-react";
 
@@ -319,14 +320,14 @@ export const navigationData = {
       ],
     },
     {
-      // خزانه‌داری: صندوق و اقساط، و جای حساب‌های بانک/صندوق، دریافت/پرداختِ مستقل، انتقال‌ها و چک‌ها.
-      title: "خزانه‌داری",
+      // صندوق و مدیریت پرداخت‌ها: صندوق فروش و اقساط، و جای حساب‌های بانک/صندوق، دریافت/پرداختِ مستقل، انتقال‌ها و چک‌ها.
+      title: "صندوق و مدیریت پرداخت‌ها",
       url: ROUTES.TREASURY,
-      icon: Landmark,
+      icon: Banknote,
       isActive: false,
       items: [
         {
-          title: "صندوق",
+          title: "صندوق فروش",
           url: ROUTES.TREASURY_CASHIER,
           permission: "SalePayment",
           icon: Wallet,
@@ -340,7 +341,7 @@ export const navigationData = {
           description: "اقساطِ فروش‌های اقساطی، سررسیدها و دریافت",
         },
         {
-          title: "صندوق و بانک",
+          title: "حساب‌های نقدی و بانکی",
           url: ROUTES.TREASURY_ACCOUNTS,
           permission: ["BankAccountView", "BankAccountManage"],
           icon: Landmark,

@@ -68,7 +68,7 @@ export default function CashierQueuePage() {
 
   return (
     <ListPageLayout
-      title="صندوق"
+      title="صندوق فروش"
       icon={Wallet}
       description="پیش‌فاکتورهای آماده‌ی پرداخت، با مهلتِ رزروِ کالا. با اولین دریافت فاکتور صادر می‌شود."
     >

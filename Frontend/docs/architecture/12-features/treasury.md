@@ -1,4 +1,4 @@
-# treasury — خزانه‌داری
+# treasury — صندوق و مدیریت پرداخت‌ها
 
 یک جا برای هرچه پول جابه‌جا می‌کند: صفِ صندوق، اقساط، صندوق‌ها و حساب‌های بانکی، دریافت/پرداختِ علی‌الحساب و چک‌ها (GAP-03). `src/features/treasury/` با `routes.jsx` و زیرماژول‌های `cashier/`، `bankAccounts/`، `partyPayments/` و `cheques/`. صفحه‌ی اقساط کدش در `src/features/sales/installments/` می‌ماند (منطقِ فروش است) و فقط مسیرش این‌جاست.
 
@@ -20,7 +20,7 @@
 - فهرست: `useProformaQueueQuery(WAREHOUSE_CHECKED)`، فیلترهای مشترکِ `ProformaQueueFilters`/`createProformaQueueFilterStore` و ستون‌های `proformaQueueColumns` از `sales/orders`؛ تازه‌سازی هر ۳۰ ثانیه و دکمه‌ی تازه‌سازیِ خودِ جدول.
 - دریافت: `cashier/pages/CashierPaymentPage.jsx` (`DocumentFormLayout`) — ستونِ پهن `ProformaPaymentSection` با `useProformaPayment` (همان منطقِ فرمِ فروش: شیوه‌ی پرداخت، قرارداد، کارتخوان، تحویلِ حضوری)؛ ستونِ کناری `CashierCustomerCard` (تماس، مانده، سقف و اعتبارِ مانده پس از این فروش؛ با `CustomerView`) و جمع؛ زیرِ هر دو و تمام‌عرض (`below`) `CashierCustomerTabs` — اقلام، گردشِ حساب (`PartyStatementCard`، با `PartyStatementView`) و قراردادهای اقساطِ مشتری (`CustomerInstallmentsCard`)، که فقط با بازشدنِ تب خوانده می‌شوند. پیش‌فاکتوری که دیگر آماده‌ی پرداخت نیست: `ProformaUnavailable`.
 
-## صندوق و بانک (`bankAccounts/`)
+## حساب‌های نقدی و بانکی (`bankAccounts/`)
 
 - صفحه‌ی فهرست/جزئیات با `MasterListPane` (مثلِ خودروها): ستونِ کنار حساب‌ها با مانده و جمع‌ها (`Totals`: صندوق‌ها، بانک‌ها، کل، و `unassignedNet` = پولِ بی‌حساب)؛ کنارش `BankAccountStatement` — سرصفحه با مانده و کارها، گردشِ `GetBankAccountStatement` در بازه (پیش‌فرض ۳۰ روزِ اخیر، `defaultStatementRange`) و ابطالِ انتقال روی ردیف‌های انتقال.
 - دیالوگ‌ها: `BankAccountFormDialog` (صندوق/حساب؛ شبا و کارت با `ShabaInput`/`CardNumberInput` و رقمِ کنترلی، نامِ بانک از روی آن‌ها پیشنهاد می‌شود)، `BankTransferDialog` (انتقال بین دو حسابِ فعال، ایدمپوتنت).

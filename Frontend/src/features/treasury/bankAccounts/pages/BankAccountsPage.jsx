@@ -68,7 +68,7 @@ function Totals({ data, includeInactive, onIncludeInactiveChange }) {
 }
 
 /**
- * «صندوق و بانک»: فهرستِ صندوق‌ها و حساب‌های بانکی با مانده در ستونِ کنار، و گردشِ حسابِ انتخاب‌شده در کنارش
+ * «حساب‌های نقدی و بانکی»: فهرستِ صندوق‌ها و حساب‌های بانکی با مانده در ستونِ کنار، و گردشِ حسابِ انتخاب‌شده در کنارش
  * (`GetBankAccountList`، `GetBankAccountStatement`). افزودن، ویرایش، غیرفعال‌کردن و انتقال با `BankAccountManage`.
  * در موبایل فهرست و جزئیات جدا نمایش داده می‌شوند.
  */
@@ -78,7 +78,7 @@ export default function BankAccountsPage() {
   const { can } = usePermission();
   const canManage = can("BankAccountManage");
 
-  usePageHeader({ title: "صندوق و بانک" });
+  usePageHeader({ title: "حساب‌های نقدی و بانکی" });
 
   const [includeInactive, setIncludeInactive] = useState(false);
   const [search, setSearch] = useState("");

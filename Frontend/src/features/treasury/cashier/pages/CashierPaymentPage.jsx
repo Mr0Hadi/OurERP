@@ -38,7 +38,7 @@ function CashierPaymentForm({ sale }) {
   const expired = secondsLeft === 0;
   const [done, setDone] = useState(false);
 
-  const payment = useProformaPayment({ sale, payments, onDone: () => setDone(true), doneLabel: "بازگشت به صندوق" });
+  const payment = useProformaPayment({ sale, payments, onDone: () => setDone(true), doneLabel: "بازگشت به صندوق فروش" });
   const blocker = useUnsavedChangesGuard(payments.hasChanges && !done);
   // رفتن پس از commitِ `done`: اگر همان لحظه‌ی ثبت برود، blocker هنوز دریافتِ «ثبت‌نشده» را می‌بیند و جلویش را می‌گیرد.
   useEffect(() => {
@@ -85,7 +85,7 @@ function CashierPaymentForm({ sale }) {
               submitDisabled={!payment.canSubmit}
               isBusy={payment.isPending || payment.posLocked}
               onCancel={() => navigate(ROUTES.TREASURY_CASHIER)}
-              cancelLabel="بازگشت به صندوق"
+              cancelLabel="بازگشت به صندوق فروش"
               footer={
                 <Button asChild variant="ghost" size="sm" className="w-full gap-1.5">
                   <Link to={routeWithId(ROUTES.SALES_DETAIL, sale.id)}>
@@ -109,7 +109,7 @@ export default function CashierPaymentPage() {
   const navigate = useNavigate();
   const { data: sale, isLoading, isError, error, refetch } = useSaleQuery(id);
 
-  usePageHeader({ title: sale ? `صندوق — ${sale.customerName || ""}` : "صندوق", showBack: true });
+  usePageHeader({ title: sale ? `صندوق فروش — ${sale.customerName || ""}` : "صندوق فروش", showBack: true });
 
   if (isLoading) return <OrderFormSkeleton />;
   if (isError || !sale) {
@@ -128,7 +128,7 @@ export default function CashierPaymentPage() {
         sale={sale}
         purpose="آماده‌ی پرداخت"
         backTo={ROUTES.TREASURY_CASHIER}
-        backLabel="بازگشت به صندوق"
+        backLabel="بازگشت به صندوق فروش"
       />
     );
   }
