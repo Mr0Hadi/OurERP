@@ -10,8 +10,8 @@ import {
 } from "@/shared/components/ui/sidebar";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
-import { AppSidebar } from "@/shared/components/layout/AppSidebar";
-import { AppBreadcrumb } from "@/shared/components/layout/AppBreadcrumb";
+import { AppSidebar } from "./AppSidebar";
+import { AppBreadcrumb } from "./AppBreadcrumb";
 import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
 import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 import { useHeaderStore } from "@/shared/store/headerStore";

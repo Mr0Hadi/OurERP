@@ -8,8 +8,6 @@
  * این منطق در اسکریپتِ inlineِ `index.html` هم تکرار شده؛ هر تغییری باید
  * در هر دو جا اعمال شود.
  */
-export const MATERIAL_THEMES = ["material-light", "material-dark"]
-
 export const THEME_CLASSES = [
   "light",
   "dark",

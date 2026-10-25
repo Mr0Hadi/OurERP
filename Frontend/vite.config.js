@@ -60,7 +60,7 @@ export default defineConfig({
     VitePWA({
       // PWA غیرفعال: `sw.js`ِ خودنابودشونده — کارگرِ قدیمیِ نصب‌شده را برمی‌دارد، کش‌ها را پاک
       // می‌کند و دیگر چیزی کش/precache نمی‌شود؛ هر بازشدن آخرین نسخه‌ی سرور را می‌گیرد.
-      // برای برگرداندنِ PWA: `selfDestroying` را بردارید و `initAppUpdates` را در main.jsx برگردانید.
+      // برای برگرداندنِ PWA: `selfDestroying` را بردارید و ثبتِ service worker و اعلانِ نسخه‌ی تازه را بسازید.
       selfDestroying: true,
       registerType: "prompt", // آپدیت خودکار نمی‌کنه، به کاربر اطلاع می‌ده
       includeAssets: [

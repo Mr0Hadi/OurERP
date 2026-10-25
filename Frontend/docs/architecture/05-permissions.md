@@ -10,10 +10,10 @@
 
 | فایل | نقش |
 | --- | --- |
-| `src/features/auth/hooks/usePermission.js` | `satisfies(names, required)` و `usePermission()` → `{ isPending, isError, names, can, canAny, allows }` |
+| `src/features/auth/hooks/usePermission.js` | `satisfies(names, required)` و `usePermission()` → `{ isPending, isError, names, can, allows }` |
 | `src/features/auth/services/queries.js` | `useMyPermissionsQuery` — `GET /Permission/GetMyPermissions`، `staleTime` ۵ دقیقه |
 | `src/app/routes/PermissionGate.jsx` | گاردِ مسیر بر اساسِ `handle.permission` |
-| `src/shared/components/layout/AppSidebar.jsx` | `filterNav` — فیلترِ منو |
+| `src/app/layouts/AppSidebar.jsx` | `filterNav` — فیلترِ منو |
 | `src/shared/constants/navigationData.js` | `permission` روی هر زیرآیتمِ منو |
 | `src/features/*/routes.jsx` | `handle: { permission }` روی هر مسیر |
 | `src/features/permissions/` | صفحه‌های مدیریتِ دسترسی |
@@ -103,7 +103,6 @@ endpointها (`src/features/permissions/services/api-v1.js`): `getUserPermission
 - نام‌ها باید دقیقاً اعضای `PermissionEnum` در `../Backend-Net/Domain/Enums/PermissionEnum.cs` باشند. همه‌ی ۴۹ نامِ متمایزی که الان در `src/` به شکلِ `permission: …`، `can(…)` یا `allows(…)` آمده‌اند (`routes.jsx`ها، `navigationData.js`، صفحه‌ها) در آن enum وجود دارند (بررسی‌شده با grep). فهرستِ ثابتی از نام‌ها در فرانت نیست؛ غلطِ تایپی فقط با این بررسی پیدا می‌شود.
 - `permission`ِ منو و `handle.permission`ِ مسیر را یکسان بگذارید؛ هیچ چیزی این را اجباری نمی‌کند.
 - برای دکمه‌ها `allows` را ترجیح دهید (در خطا دکمه پنهان نمی‌شود). `can` در `isPending` و `isError` false می‌دهد.
-- `canAny(...)` تعریف شده ولی هیچ‌جا استفاده نمی‌شود (۰ فراخوانی)؛ `can([...])` همان کار را می‌کند.
 - `src/features/accounting/routes.jsx` یک `reportHandle = { permission: "ReportView" }` مشترک برای چند مسیر دارد — الگوی خوب برای گروهِ مسیرهای هم‌مجوز.
 
 ## برای تغییرِ X، به Y بروید
@@ -121,6 +120,5 @@ endpointها (`src/features/permissions/services/api-v1.js`): `getUserPermission
 
 ## سؤال‌های باز / بدهی
 
-- مسیرهای `settings`، `invoice`، `transactions` و `dashboard` هیچ `handle.permission` ندارند (فایل ۰۳).
-- `canAny` بی‌استفاده است.
+- مسیرِ `dashboard` هیچ `handle.permission` ندارد (فایل ۰۳).
 - هیچ اعتبارسنجیِ خودکاری بینِ نام‌های فرانت و `PermissionEnum.cs` نیست؛ پیشنهاد در فایل ۱۴.

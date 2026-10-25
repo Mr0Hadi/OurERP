@@ -68,17 +68,6 @@ const ROUTE_TITLES = {
   [ROUTES.WAREHOUSE_RECEIVING]: "دریافت کالا",
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال کالا",
   [ROUTES.WAREHOUSE_SALE_CHECK]: "بررسی انبارِ پیش‌فاکتور",
-  [ROUTES.WAREHOUSE_STOCK]: "موجودی انبار",
-  [ROUTES.WAREHOUSE_TRANSACTIONS]: "تراکنش‌های انبار",
-
-  [ROUTES.INVOICE]: "فاکتورها",
-  [ROUTES.INVOICE_LIST]: "لیست فاکتورها",
-  [ROUTES.INVOICE_NEW]: "فاکتور جدید",
-
-  [ROUTES.TRANSACTIONS]: "تراکنش‌ها",
-  [ROUTES.TRANSACTIONS_BUY_SELL]: "خرید و فروش",
-  [ROUTES.TRANSACTIONS_PAYMENTS]: "پرداخت‌ها",
-  [ROUTES.TRANSACTIONS_RETURNS]: "مرجوعی‌ها",
 
   [ROUTES.ACCOUNTING]: "دفتر حساب‌ها",
   [ROUTES.ACCOUNTING_PARTIES]: "حساب اشخاص",
@@ -96,19 +85,7 @@ const ROUTE_TITLES = {
   [ROUTES.ACCOUNTING_SUPPLIERS]: "آمار خرید از تامین‌کنندگان",
 
   [ROUTES.SETTINGS]: "تنظیمات",
-  [ROUTES.SETTINGS_GENERAL]: "تنظیمات عمومی",
-  [ROUTES.SETTINGS_COMPANY]: "اطلاعات شرکت",
-  [ROUTES.SETTINGS_INVOICE]: "تنظیمات فاکتور",
-  [ROUTES.SETTINGS_TAX]: "تنظیمات مالیات",
-  [ROUTES.SETTINGS_USERS]: "مدیریت کاربران",
-  [ROUTES.SETTINGS_ROLES]: "نقش‌ها",
-  [ROUTES.SETTINGS_NOTIFICATIONS]: "اعلان‌ها",
-  [ROUTES.SETTINGS_BACKUP]: "پشتیبان‌گیری",
 
-  [ROUTES.TOOLS_NUMBER_TO_WORDS]: "تبدیل عدد به حروف",
-  [ROUTES.TOOLS_CALENDAR]: "تقویم",
-
-  [ROUTES.FEEDBACK]: "بازخورد",
   [ROUTES.AUTH]: "احراز هویت",
   [ROUTES.LOGIN]: "ورود",
 };
@@ -146,8 +123,6 @@ const DETAIL_TITLES = {
   "/warehouse/receiving/returns": "دریافت کالای مرجوعی",
   // عودت، آزادسازی و اسقاطِ قرنطینه — نه فقط عودت.
   "/warehouse/shipping/returns": "کار انبار روی مرجوعی خرید",
-
-  [ROUTES.INVOICE]: "جزئیات فاکتور",
 };
 
 /**

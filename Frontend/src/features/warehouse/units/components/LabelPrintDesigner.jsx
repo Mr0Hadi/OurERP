@@ -48,7 +48,7 @@ import {
   sheetGeometryOf,
 } from "../domain/labelTemplate";
 
-import { useLabelTemplateStore } from "../store/unitFilterStore";
+import { useLabelTemplateStore } from "../store/labelTemplateStore";
 import { useMarkUnitsPrintedMutation } from "../services/mutations";
 import UnitLabel from "./UnitLabel";
 import { formatNumber } from "@/shared/lib/numberFormat";

@@ -135,5 +135,4 @@ export const SALE_STATUS_TONES = Object.freeze({
 - `--font-mono: "Fira Code"` تعریف شده ولی فونت import یا بارگذاری نمی‌شود (جست‌وجوی `Fira` فقط همین خط را پیدا کرد).
 - ۱۰۱ استفاده از کلاس‌های فیزیکیِ جهت (`ml-*`، `mr-*`، `pl-*`، `pr-*`، `left-*`، `right-*`) بیرون از `src/shared/components/ui/` در برابرِ ۱۶ استفاده از کلاس‌های منطقی (`ms-*`، `me-*`، …) در همان محدوده (grep). یعنی در عمل کلاس‌های فیزیکی رایج‌ترند. در RTLِ ثابت درست کار می‌کنند ولی قراردادِ واحدی نیست.
 - `ActivityRankList.jsx` و `plate-input.jsx` رنگِ پالت دارند (فهرستِ بالا).
-- `MATERIAL_THEMES` در `themeClasses.js` export شده ولی طبقِ knip بی‌استفاده است.
 - منطقِ تم دو نسخه است (`index.html` و `themeClasses.js`).

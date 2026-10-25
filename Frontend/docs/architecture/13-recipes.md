@@ -28,7 +28,7 @@
    - بیرونی: `useParams` → `use<X>Query(id)`؛ `usePageHeader`؛ `isLoading` → اسکلتون؛ `isError || !data` → `DetailErrorState` با `notFoundMessage`، `onRetry`، `onBack`؛ وگرنه `<X>DetailForm key={data.id} ...>` (`key` فرم را با عوض‌شدنِ رکورد از نو می‌سازد).
    - فرم: `use<X>Form(data)`؛ `onSubmit` → `updateMutation.mutate({ id, data: build<X>Payload(values) }, { onSuccess: () => { imageUpload.commit(); navigate(...) } })`.
 5. حذف — `ConfirmDialog` (`src/shared/components/feedback/ConfirmDialog.jsx`)؛ در `onSuccess`ِ mutation ببندید یا ناوبری کنید.
-6. مسیر با `:id` + کلیدِ والد در `DETAIL_TITLES`ِ `src/shared/components/layout/AppBreadcrumb.jsx`.
+6. مسیر با `:id` + کلیدِ والد در `DETAIL_TITLES`ِ `src/app/layouts/AppBreadcrumb.jsx`.
 
 ## ۳. فرمِ ثبتِ موجودیتِ ساده
 
@@ -100,7 +100,7 @@
 5. `src/features/<f>/routes.jsx` — `lazy(() => import("./pages/..."))` و `handle: { permission: "<PermissionEnum member>" }` برای **هر** مسیر.
 6. `src/app/routes/routers.jsx` — import و `...<f>Routes` در `children`ِ `AppLayout`.
 7. `src/shared/constants/navigationData.js` — زیرآیتم با همان `permission`.
-8. `src/shared/components/layout/AppBreadcrumb.jsx` — `ROUTE_TITLES` و `DETAIL_TITLES`.
+8. `src/app/layouts/AppBreadcrumb.jsx` — `ROUTE_TITLES` و `DETAIL_TITLES`.
 9. نامِ مجوز را در `../Backend-Net/Domain/Enums/PermissionEnum.cs` چک کنید ([05](05-permissions.md)).
 10. سند: فایلِ تازه در `docs/architecture/12-features/` و ردیف در `12-features/README.md`.
 

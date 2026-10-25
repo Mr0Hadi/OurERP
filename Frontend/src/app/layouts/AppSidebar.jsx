@@ -1,11 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 
-import { NavMain } from "@/shared/components/layout/NavMain";
-import { NavTools } from "@/shared/components/layout/NavTools";
-import { NavSecondary } from "@/shared/components/layout/NavSecondary";
-import { NavUser } from "@/shared/components/layout/NavUser";
-import { NavWorkspace } from "@/shared/components/layout/NavWorkspace";
+import { NavMain } from "./NavMain";
+import { NavUser } from "./NavUser";
+import { NavWorkspace } from "./NavWorkspace";
 import {
   Sidebar,
   SidebarContent,
@@ -65,8 +63,6 @@ export function AppSidebar({ ...props }) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
-        <NavTools tools={data.tools} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

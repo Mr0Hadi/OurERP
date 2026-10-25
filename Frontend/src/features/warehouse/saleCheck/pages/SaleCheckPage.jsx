@@ -37,9 +37,7 @@ function SaleCheckForm({ sale, mutation }) {
   const form = useSaleCheckForm(sale, { canEdit });
   const [issueOpen, setIssueOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const blocker = useUnsavedChangesGuard(form.dirty, {
-    reason: "بررسیِ انبارِ پیش‌فاکتور ثبت نشده",
-  });
+  const blocker = useUnsavedChangesGuard(form.dirty);
 
   const submit = () =>
     mutation.mutate(

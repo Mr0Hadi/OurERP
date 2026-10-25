@@ -17,7 +17,7 @@
 | [accounting](accounting.md) | `/accounting` (+ ریدایرکتِ `/reports/*`) | `AccountingDashboardPage`، `PartyBalancesPage`، `PartyLedgerPage`، `InvoiceJournalPage`، … ، `*ActivityPage` | `src/features/accounting/services/`، `src/features/accounting/activity/services/` | `accountingFilterStores.js`، `activityFilterStore.js` | `/Accounting/*`، `/Report/*` |
 | [audit](audit.md) | `/audit` | `AuditEventsPage`، `AuditEventDetailPage` + `AuditHistoryButton` در صفحه‌های جزئیات | `src/features/audit/services/` | `useAuditEventFilterStore` | `/Audit/*` |
 | [auth](auth.md) | `/auth` | `LoginPage` | `src/features/auth/services/` | `useAuthStore` (persist) | `/Account/Login`، `Logout`، `RefreshToken`؛ `/User/GetUserInfo`؛ `/Permission/GetMyPermissions`؛ `/Setting/GetFeatureFlags` |
-| [placeholders](placeholders.md) (invoice، transactions، settings، reports) | `/invoice`، `/transactions`، `/settings` | placeholderهای ۶خطی | — | — | — |
+| [settings](settings.md) | `/settings` | `SystemSettingsPage` | `src/features/settings/` | — | — |
 
 پیشوندِ `/access` از `ROUTES.ACCESS` در `src/shared/constants/routes.js` است.
 

@@ -54,7 +54,7 @@ export default function SystemSettingsPage() {
     groups.map((g) => [g.group, g.settings.filter((s) => changedKeys.has(s.key)).length]),
   );
 
-  const blocker = useUnsavedChangesGuard(changes.length > 0, { reason: "تغییرهای ذخیره‌نشده در تنظیمات سامانه" });
+  const blocker = useUnsavedChangesGuard(changes.length > 0);
   const activeAnchor = useActiveSection(groups.map((g) => groupAnchor(g.group)));
 
   const valueOf = (setting) => (setting.key in draft ? draft[setting.key] : serverValue(setting));

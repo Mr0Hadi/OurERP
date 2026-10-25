@@ -82,7 +82,7 @@ pnpm st         # node structure.js — درختِ پوشه‌ها را چاپ �
 - **ESLint** (`eslint.config.js`): `js.configs.recommended` + `react-hooks` + `react-refresh`. `no-unused-vars` فقط هشدار است. `react-refresh/only-export-components` برای `**/routes.jsx` و چند فایلِ shadcn (`badge`، `button`، `direction`، `sidebar`، `tabs` در `src/shared/components/ui/`) خاموش است.
 - **knip** (`knip.json`) پوشه‌ی `src/shared/components/ui/**` را نادیده می‌گیرد چون تولیدِ shadcn است.
 - **shadcn:** `components.json` با `rtl: true` و aliasهای `@/shared/components/ui`، `@/shared/lib/utils`، `@/shared/hooks`. کامپوننتِ جدید با CLIِ shadcn به `src/shared/components/ui/` اضافه می‌شود؛ ویرایشِ دستیِ این فایل‌ها با `shadcn add` بعدی بازنویسی می‌شود.
-- **`tailwind.config.js` خالی است (۰ بایت).** Tailwind 4 تنظیماتش را از `@theme`/`@import` در `src/index.css` می‌گیرد؛ `components.json` هنوز به این فایل اشاره می‌کند.
+- **فایلِ پیکربندیِ Tailwind وجود ندارد.** Tailwind 4 تنظیماتش را از `@theme`/`@import` در `src/index.css` می‌گیرد؛ `tailwind.config` در `components.json` خالی است.
 
 ## برای تغییرِ X، به Y بروید
 
@@ -90,17 +90,15 @@ pnpm st         # node structure.js — درختِ پوشه‌ها را چاپ �
 | --- | --- |
 | آدرسِ API یا timeout را عوض کنم | `.env` (الگو: `.env.example`) — خوانده‌شده در `src/shared/services/api/axios.js` |
 | کتابخانه‌ی سنگینی را در chunkِ جدا بگذارم | `advancedChunks.groups` در `vite.config.js` |
-| PWA را برگردانم | `selfDestroying` را در `vite.config.js` بردارید؛ کامنتِ همان‌جا در `vite.config.js` می‌گوید `initAppUpdates` باید در `src/main.jsx` برگردد (از `src/shared/services/appUpdate.js`) (فایل ۱۴) |
+| PWA را برگردانم | `selfDestroying` را در `vite.config.js` بردارید و ثبتِ service worker و اعلانِ نسخه‌ی تازه را بسازید (سیستمِ قبلی در ۲۰۲۶-۱۰-۲۵ حذف شد؛ در تاریخچه‌ی git هست) |
 | قاعده‌ی lint اضافه/استثنا کنم | `eslint.config.js` |
 | پورتِ dev را عوض کنم | متغیرِ `PORT` یا `server.port` در `vite.config.js` |
 | کامپوننتِ shadcn اضافه کنم | CLIِ shadcn (تنظیم: `components.json`) |
 
 ## سؤال‌های باز / بدهی
 
-- `.env.example` هفت متغیر دارد که هیچ‌جای `src/` خوانده نمی‌شوند (جست‌وجوی `import.meta.env`): `VITE_APP_NAME` (خطِ ۱۲)، `VITE_APP_VERSION` (۱۳)، `VITE_APP_ENV` (۱۴)، `VITE_ACCESS_TOKEN_KEY` (۱۹)، `VITE_REFRESH_TOKEN_KEY` (۲۰)، `VITE_TOKEN_REFRESH_ENDPOINT` (۲۱)، `VITE_ENABLE_DEBUG_LOGS` (۲۶). مسیرِ refresh در `src/shared/services/api/axios.js` ثابت است (`/Account/RefreshToken`) و توکن‌ها با persistِ `authStore` ذخیره می‌شوند، نه با این کلیدها. یا خطوط را حذف کنید یا واقعاً به کار ببرید.
-- `.env.example` خطِ ۶ `VITE_API_BASE_URL=https://localhost:5083/api` (https) است ولی پیش‌فرضِ کد `http://localhost:5083/api` است.
+- `.env.example` `VITE_API_BASE_URL=https://localhost:5083/api` (https) است ولی پیش‌فرضِ کد `http://localhost:5083/api` است.
 - `public/favicon.svg` وجود ندارد ولی دو جا به آن ارجاع شده: `index.html` خطِ ۵ (`<link rel="icon" type="image/svg+xml" href="/favicon.svg" />`) و `vite.config.js` خطِ ۶۷ (آرایه‌ی `includeAssets` در `VitePWA`). یا فایل را اضافه کنید یا هر دو ارجاع را بردارید.
-- `tailwind.config.js` خالی ولی در `components.json` ارجاع‌شده.
 - `version` در `package.json` همیشه `0.0.0` است؛ پس `__APP_BUILD__.version` اطلاعاتی نمی‌دهد و فقط `commit`/`builtAt` معنا دارند.
 - هیچ تست و هیچ type-checkی وجود ندارد؛ تنها دروازه‌ی کیفیت `pnpm lint` و `pnpm build` است.
 

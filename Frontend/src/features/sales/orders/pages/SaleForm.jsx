@@ -18,8 +18,6 @@ import { invoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { useDocumentFormDraft } from "@/shared/hooks/useDocumentFormDraft";
 import { usePaymentDraft } from "@/shared/hooks/usePaymentDraft";
 import { reportFormProblem } from "@/shared/lib/scrollToSection";
-import { useUpdateGuard } from "@/shared/services/updateSafety";
-import { isDocumentFormChanged } from "@/shared/store/createDocumentFormStore";
 import SaleCustomerSection from "../components/forms/SaleCustomerSection";
 import SaleItemsSection from "../components/forms/SaleItemsSection";
 import PriceListPrint from "../components/proforma/PriceListPrint";
@@ -92,7 +90,6 @@ export default function SaleForm({ sale }) {
   const coreChanged = useSaleFormStore(isSaleCoreChanged);
   const dueDateChanged = useSaleFormStore(isSaleDueDateChanged);
   const infoChanged = useSaleFormStore(isSaleInfoChanged);
-  const anythingChanged = useSaleFormStore(isDocumentFormChanged);
   const secondsLeft = useReservationCountdown(sale);
   const stage = Number(sale?.proformaStage ?? SaleProformaStageEnum.DRAFT);
 
@@ -170,12 +167,6 @@ export default function SaleForm({ sale }) {
     payment.isPending ||
     payment.posLocked ||
     attachments.isUploading;
-  // نسخه‌ی تازه‌ی برنامه نباید فاکتورِ نیمه‌کاره یا ثبتِ در جریان را از بین ببرد. پیش‌فاکتور فقط با تغییرهای
-  // واقعی (نه فیلدهای نمایشی که انتخابگرها می‌نشانند) «ذخیره‌نشده» است.
-  const dirty = isNew
-    ? anythingChanged
-    : coreChanged || dueDateChanged || infoChanged || attachmentsDirty || payments.hasChanges;
-  useUpdateGuard({ dirty, busy: isBusy, reason: "فاکتورِ فروش در حال ثبت یا ذخیره‌نشده است" });
 
   if (!ready) return null;
 

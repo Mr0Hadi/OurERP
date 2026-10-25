@@ -45,7 +45,7 @@ node scripts/check-docs-paths.mjs
 - `src/app/` — فقط سیم‌کشی: providerها، پوسته‌ها (`AppLayout`، `AuthLayout`)، روتر، `protectedLoader`، `PermissionGate`.
 - `src/features/<f>/` — یک حوزه‌ی کسب‌وکار: `routes.jsx`، `pages/`، `components/`، `hooks/`، `services/` (`api-v1.js`، `queryKeys.js`، `queries.js`، `mutations.js`)، `store/`، `domain/`. فیچرهای بزرگ زیرماژول دارند (`sales/orders`، `warehouse/receiving`، …).
 - `src/shared/` — بی‌مالک و چندبارمصرف: `components/`، `domain/` (enum و منطقِ خالص)، `services/`، `hooks/`، `lib/`، `store/`، `constants/` (`routes.js`، `navigationData.js`).
-- import با aliasِ `@/` (= `src/`). `shared/` نباید از `features/` import کند (۹ استثنای فعلی در `docs/architecture/14-dependency-graph-and-health.md`).
+- import با aliasِ `@/` (= `src/`). `shared/` نباید از `features/` import کند (۶ استثنای فعلی در `docs/architecture/14-dependency-graph-and-health.md`).
 
 جای کدِ تازه: `docs/architecture/02-folder-structure.md`. فهرستِ فیچرها: `docs/architecture/12-features/README.md`.
 
@@ -62,7 +62,7 @@ node scripts/check-docs-paths.mjs
 - پیامِ خطا همیشه با `getErrorMessage(error, "متنِ فارسیِ عملیات")` (`src/shared/lib/errorMessage.js`).
 
 **مسیر و مجوز**
-- مسیرِ تازه: `ROUTES` در `src/shared/constants/routes.js` → `routes.jsx`ِ فیچر با `lazy()` و `handle: { permission }` → (فیچرِ تازه) `src/app/routes/routers.jsx` → منو در `navigationData.js` → breadcrumb در `src/shared/components/layout/AppBreadcrumb.jsx`.
+- مسیرِ تازه: `ROUTES` در `src/shared/constants/routes.js` → `routes.jsx`ِ فیچر با `lazy()` و `handle: { permission }` → (فیچرِ تازه) `src/app/routes/routers.jsx` → منو در `navigationData.js` → breadcrumb در `src/app/layouts/AppBreadcrumb.jsx`.
 - نامِ مجوز عضوِ `PermissionEnum` در `../Backend-Net/Domain/Enums/PermissionEnum.cs` است؛ آرایه یعنی «هر کدام کافی است».
 - دکمه‌ها: `const { allows } = usePermission()` از `@/features/auth/hooks/usePermission`. همه‌ی بررسی‌های فرانت فقط UX است.
 - هویتِ کاربر در store نیست؛ `useCurrentUser()` / `useUserInfoQuery()`.

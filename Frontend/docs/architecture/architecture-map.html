@@ -449,7 +449,7 @@ const LAYERS=[
  {id:"shared",nm:"src/shared/",ds:"بی‌مالک و چندبارمصرف",
   what:"کامپوننت‌های مشترک، enum و منطقِ خالص، زیرساختِ شبکه، هوک، کمک‌تابع، storeهای سراسری، ثابتِ ROUTES و منو.",
   files:["components/ui/ — تولیدِ shadcn","components/table · filters · status · payments · print …","domain/enums · returns · payments · invoice","services/api/axios.js · contract.js","lib/ · hooks/ · store/ · constants/routes.js"],
-  yes:"import فقط از shared.",no:"کامپوننتی که فقط یک فیچر مصرف می‌کند. الان ۹ فایل خلافِ قاعده از features import می‌کنند (مثلاً <code>axios.js</code> → <code>authStore</code>)."}
+  yes:"import فقط از shared.",no:"کامپوننتی که فقط یک فیچر مصرف می‌کند. الان ۶ فایل خلافِ قاعده از features import می‌کنند (مثلاً <code>axios.js</code> → <code>authStore</code>)."}
 ];
 function renderLayer(id){const L=LAYERS.find(x=>x.id===id);
  document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("on",b.dataset.id===id));
@@ -529,7 +529,7 @@ const ROUTES_P=[
  ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/treasury/cashier","SalePayment","صندوق"],["/treasury/installments","SaleInstallmentView","اقساط"],["/treasury/accounts",["BankAccountView","BankAccountManage"],"صندوق و بانک"],["/treasury/party-payments",["PartyStatementView","PartyPaymentCreate"],"علی‌الحساب"],["/treasury/cheques",["CheckView","CheckManage"],"چک‌ها"],
  ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
  ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],["/warehouse/sale-check","SaleWarehouseCheck","بررسیِ انبارِ پیش‌فاکتور"],["/accounting/warehouse-issues",["AccountingView","SaleWarehouseIssueResolve"],"گزارش‌های انبار"],["/settings",["SettingView","SettingManage"],"تنظیماتِ سامانه"],
- ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]
+ ["/dashboard",null,"داشبورد"]
 ];
 const ALL=[...new Set(ROUTES_P.flatMap(r=>r[1]==null?[]:[].concat(r[1])))];
 let have=new Set(["CustomerView","SaleCreate"]);
@@ -561,7 +561,7 @@ const F={
  purchases:{p:"/purchases",pages:"PurchasesPage، PurchasesNewPage، PurchaseDetailPage، PurchaseReturn*Page",stores:"usePurchaseFormStore، usePurchaseFilterStore، usePurchaseReturnFormStore",api:"/Purchase/*، /PurchaseReturn/*",sub:"orders · returns",note:"قرنطینه فقط در مرجوعیِ خرید؛ invalidatePurchaseEcosystem."},
  warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page، SaleCheck*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping · saleCheck",note:"فیلترِ خودرو (vehicleId) در instantِ useProductListFilters."},
  customers:{p:"/customers",pages:"CustomersPage، CustomerNewPage، CustomerDetailPage",stores:"useCustomerFilterStore",api:"/Customer/*",note:"صورت‌حساب زیرِ customerKeys.all است."},
- suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:"SupplierEditPage placeholderِ مسیردار است."},
+ suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:""},
  partyAccount:{p:"— (بدونِ مسیر)",pages:"—",stores:"createPartyFilterStore",api:"/PartyAccount/GetPartyStatement",note:"کتابخانه‌ی مشترکِ مشتری و تامین‌کننده."},
  employees:{p:"/employees",pages:"EmployeesPage، EmployeeNewPage، EmployeeDetailPage",stores:"useEmployeeFilterStore",api:"/User/*",note:"جزئیات مجوزِ UserUpdate می‌خواهد."},
  organization:{p:"/organization",pages:"DepartmentsPage، TeamsPage و جزئیات",stores:"useDepartmentFilterStore، useTeamFilterStore",api:"/Department/*، /Team/*",sub:"departments · teams",note:"تغییرِ تیم authKeys.session() را باطل می‌کند."},
@@ -695,17 +695,14 @@ REC.forEach(r=>$("#recipeGrid").append(el("div","recipe",`<h3>${r.t}</h3><div cl
 
 /* debt */
 const D=[
- ["R1","risk","settings، invoice و transactions بدونِ lazy() و مجوز","تا وقتی placeholderاند از routers.jsx بردارید."],
  ["R4","risk","دو مسیرِ خروجِ ناهم‌سان","در شکستِ refresh هم leaveSession."],
  ["R6","risk","نامِ مجوزها با PermissionEnum.cs خودکار سنجیده نمی‌شود","اسکریپتی مثلِ check-docs-paths.mjs."],
  ["R7","risk","lineMath.js قاعده‌ی سرور را بی‌تست تکرار می‌کند","تستِ واحد با اعدادِ نمونه."],
- ["R11","risk","useUpdateGuard در ۹ جا صدا زده می‌شود ولی خواننده ندارد","با تصمیمِ PWA برگردانید یا حذف کنید."],
  ["L1","layer","axios.js از authStoreِ فیچرِ auth import می‌کند","authStore را به src/shared/store/ ببرید."],
- ["L2","layer","AppSidebar و Nav* از auth import می‌کنند","به src/app/layouts/ منتقل شوند."],
  ["L3","layer","ProductSearchPanel، ProductPicker و useReturnedNewProduct از warehouse","داده را با props بگیرند یا به فیچر منتقل شوند."],
  ["L4","layer","useClaimsInOtherReturns از هر دو returns","تابع‌ها را به‌عنوانِ پارامتر بگیرد."],
  ["C1","clean","کلاس‌های جهتِ فیزیکی رایج‌ترند (۱۰۱ در برابرِ ۱۶)","کلاسِ منطقی برای کدِ تازه."],
- ["C2","clean","invalidateOrgChart و formatNumber هر کدام دو نسخه دارند","یکی کنید."],
+ ["C2","clean","formatNumber دو نسخه دارد","یکی کنید."],
  ["C3","clean","نامِ صفحه‌های مرجوعیِ انبار گمراه‌کننده است","SaleReturnReceivingPage / PurchaseReturnShippingPage."]
 ];
 const CAT={all:"همه",bug:"باگ",risk:"ریسک",layer:"مرزِ لایه",clean:"تمیزی"},PC={bug:"p-bad",risk:"p-warn",layer:"p-info",clean:"p-acc"};

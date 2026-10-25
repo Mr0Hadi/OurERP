@@ -18,7 +18,7 @@
 
 **اینجا:** providerهای سراسری (`src/app/providers/AppProviders.jsx`، `QueryProvider.jsx`، `ToastProvider.jsx`)، پوسته‌ها (`src/app/layouts/AppLayout.jsx`، `AuthLayout.jsx`، `ForbiddenPage.jsx`، `NotFoundPage.jsx`، `RouteErrorPage.jsx`)، روتر و گاردها (`src/app/routes/routers.jsx`، `protectedLoader.jsx`، `PermissionGate.jsx`)، و صفحه‌های فقط-dev (`src/app/dev/StyleGuidePage.jsx`، `ComponentShowcase.jsx`).
 
-**اینجا نه:** هیچ منطقِ کسب‌وکار یا فراخوانیِ API. مثالِ مرز: سایدبار جزئی از پوسته است ولی در `src/shared/components/layout/AppSidebar.jsx` است، نه در `app/` — `app/layouts` فقط آن را می‌چیند.
+**اینجا نه:** هیچ منطقِ کسب‌وکار یا فراخوانیِ API. سایدبار (`AppSidebar`، `NavMain`، `NavUser`، `NavWorkspace`) و `AppBreadcrumb` جزئی از پوسته‌اند و در `src/app/layouts/` هستند؛ چون `app/` مجاز است از فیچرها (مثلاً `usePermission`) import کند.
 
 **جهتِ import:** `app/` از هر دو لایه import می‌کند؛ هیچ فایلی در `features/` یا `shared/` از `@/app/` import نمی‌کند (بررسی‌شده با grep).
 
@@ -108,8 +108,8 @@ flowchart TD
 
   **جهتِ عادی:** هر فیچر → `auth` (هوکِ مجوز)؛ اسناد → داده‌ی پایه (`sales`/`purchases` → `warehouse`، `customers`، `suppliers`)؛ `customers`/`suppliers` → `partyAccount`؛ گزارش‌ها (`dashboard`، `accounting`) → هر فیچری که می‌خوانند؛ صفحه‌های جزئیات → `audit` (فقط `AuditHistoryButton`/`UserActivityButton`).
   **جهتِ غیرمنتظره — اضافه نکنید:** داده‌ی پایه → اسناد یا گزارش. نمونه‌های موجود: `warehouse` → `purchases`/`sales` (کلید و `sharedInvalidation` و mutationهای مرجوعی، برای صفِ دریافت/ارسال)، `sales/installments/services/mutations.js` → `dashboardKeys` از `@/features/dashboard/services/queryKeys`، `partyAccount/services/queries.js` → `customerKeys`/`supplierKeys` (چرخه‌ی دوطرفه با `customers`/`suppliers` در سطحِ فیچر)، `customers`/`suppliers` → `treasury` (فقط `PartyOnAccountBar`) در برابرِ `treasury` → `customers`/`suppliers`، و `employees` ↔ `organization` دوطرفه. هیچ‌کدام در سطحِ فایل حلقه نمی‌سازند (madge).
-- **`shared/` در ۹ فایل از `features/` import می‌کند** (خلافِ قاعده‌ی لایه‌ها؛ پیشنهادِ رفع هر کدام در [14](14-dependency-graph-and-health.md)):
-  - `src/shared/services/api/axios.js` و `src/shared/components/layout/AppSidebar.jsx`، `NavUser.jsx`، `NavWorkspace.jsx` → `@/features/auth/...`
+- **`shared/` در ۶ فایل از `features/` import می‌کند** (خلافِ قاعده‌ی لایه‌ها؛ پیشنهادِ رفع هر کدام در [14](14-dependency-graph-and-health.md)):
+  - `src/shared/services/api/axios.js` → `@/features/auth/...`
   - `src/shared/components/forms/PartyPickerCard.jsx` → `@/features/partyAccount/...`
   - `src/shared/components/forms/ProductSearchPanel.jsx`، `src/shared/components/products/ProductPicker.jsx`، `src/shared/components/products/useReturnedNewProduct.js` → `@/features/warehouse/...`
   - `src/shared/hooks/useClaimsInOtherReturns.js` → `@/features/purchases/returns/...` و `@/features/sales/returns/...`
@@ -125,11 +125,8 @@ flowchart TD
 
 | فیچر | وضعیت |
 | --- | --- |
-| `src/features/reports/` | پوشه‌ی کاملاً خالی؛ `routes.jsx` ندارد و در `routers.jsx` ثبت نشده. |
-| `src/features/invoice/` | فقط `routes.jsx` (مسیرِ `"invoice"`) و `pages/InvoicePage.jsx` که placeholderِ ۶خطی است (`<div>`). در منو نیست. |
-| `src/features/transactions/` | همان وضعیت: مسیرِ `"transactions"` و `pages/TransactionsPage.jsx` placeholder. |
-| `src/features/settings/` | ۹ صفحه‌ی placeholderِ ۶خطی در `pages/`؛ `routes.jsx` آن‌ها را **بدونِ `lazy()` و بدونِ `handle.permission`** ثبت می‌کند. در `navigationData.js` نیست. |
-| `src/features/partyAccount/` | `routes.jsx` ندارد و `pages/` خالی است؛ کتابخانه‌ی مشترکِ مشتری/تامین‌کننده است (`components/`، `domain/`، `services/`، `store/createPartyFilterStore.js`). |
+| `src/features/settings/` | فقط یک صفحه: `pages/SystemSettingsPage.jsx` (`ROUTES.SETTINGS`، `lazy` + `SettingView`/`SettingManage`). |
+| `src/features/partyAccount/` | `routes.jsx` و `pages/` ندارد؛ کتابخانه‌ی مشترکِ مشتری/تامین‌کننده است (`components/`، `domain/`، `services/`، `store/createPartyFilterStore.js`). |
 | `src/features/auth/` | `pages/LoginPage.jsx`؛ مسیرش زیرِ `AuthLayout` است و در `routes.jsx` خودش `Suspense` دارد. |
 
 ## برای تغییرِ X، به Y بروید
@@ -139,9 +136,8 @@ flowchart TD
 | فیچرِ جدید اضافه کنم | `src/features/<name>/routes.jsx` + ثبت در `src/app/routes/routers.jsx` + `ROUTES` + منو (دستورالعمل: [13-recipes.md](13-recipes.md)) |
 | زیرماژول به فیچرِ موجود اضافه کنم | پوشه‌ی `src/features/<f>/<sub>/` با چیدمانِ استاندارد؛ مسیرها را در `src/features/<f>/routes.jsx` اضافه کنید |
 | کامپوننتی را مشترک کنم | انتقال به `src/shared/components/<group>/`؛ importهای `@/features/...` آن را حذف کنید تا قاعده‌ی لایه نشکند |
-| پوسته/منوی برنامه را عوض کنم | `src/app/layouts/AppLayout.jsx` و `src/shared/components/layout/` |
+| پوسته/منوی برنامه را عوض کنم | `src/app/layouts/` (`AppLayout`، `AppSidebar`، `Nav*`، `AppBreadcrumb`) و منو در `src/shared/constants/navigationData.js` |
 
 ## سؤال‌های باز / بدهی
 
-- `reports/` خالی و `invoice`/`transactions`/`settings` placeholder هستند ولی مسیر دارند و در باندل‌اند. فقط `settings` در `FEATURE-GAPS.fa.md` برنامه دارد ([12-features/placeholders.md](12-features/placeholders.md)).
 - importهای `shared → features` بالا مرزِ لایه را می‌شکنند؛ پیشنهاد در فایل ۱۴.

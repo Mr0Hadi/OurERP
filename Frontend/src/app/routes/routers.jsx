@@ -12,11 +12,9 @@ import { authRoutes } from "@/features/auth/routes";
 import { dashboardRoutes } from "@/features/dashboard/routes";
 import { customersRoutes } from "@/features/customers/routes";
 import { warehouseRoutes } from "@/features/warehouse/routes";
-import { invoiceRoutes } from "@/features/invoice/routes";
 import { suppliersRoutes } from "@/features/suppliers/routes";
 import { accountingRoutes } from "@/features/accounting/routes";
 import { settingsRoutes } from "@/features/settings/routes";
-import { transactionsRoutes } from "@/features/transactions/routes";
 import { purchasesRoutes } from "@/features/purchases/routes";
 import { salesRoutes } from "@/features/sales/routes";
 import { treasuryRoutes } from "@/features/treasury/routes";
@@ -57,13 +55,11 @@ export const router = createBrowserRouter([
           ...auditRoutes,
           ...purchasesRoutes,
           ...warehouseRoutes,
-          ...invoiceRoutes,
           ...salesRoutes,
           ...treasuryRoutes,
           ...suppliersRoutes,
           ...accountingRoutes,
           ...settingsRoutes,
-          ...transactionsRoutes,
         ],
       },
     ],

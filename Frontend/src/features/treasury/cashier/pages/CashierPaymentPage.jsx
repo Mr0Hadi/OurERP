@@ -39,7 +39,7 @@ function CashierPaymentForm({ sale }) {
   const [done, setDone] = useState(false);
 
   const payment = useProformaPayment({ sale, payments, onDone: () => setDone(true), doneLabel: "بازگشت به صندوق" });
-  const blocker = useUnsavedChangesGuard(payments.hasChanges && !done, { reason: "دریافتِ صندوق ثبت نشده است" });
+  const blocker = useUnsavedChangesGuard(payments.hasChanges && !done);
   // رفتن پس از commitِ `done`: اگر همان لحظه‌ی ثبت برود، blocker هنوز دریافتِ «ثبت‌نشده» را می‌بیند و جلویش را می‌گیرد.
   useEffect(() => {
     if (done) navigate(ROUTES.TREASURY_CASHIER, { replace: true });

@@ -9,7 +9,6 @@ export const ROUTES = {
   SUPPLIERS: "/suppliers",
   SUPPLIERS_LIST: "/suppliers",
   SUPPLIERS_NEW: "/suppliers/new",
-  SUPPLIERS_EDIT: "/suppliers/edit/:id",
   SUPPLIERS_DETAIL: "/suppliers/:id",
 
   // مشتریان
@@ -81,8 +80,6 @@ export const ROUTES = {
   WAREHOUSE_CATEGORIES_DETAIL: "/warehouse/categories/:id",
   WAREHOUSE_VEHICLES: "/warehouse/vehicles",
   WAREHOUSE_VEHICLES_DETAIL: "/warehouse/vehicles/:id",
-  WAREHOUSE_STOCK: "/warehouse/stock",
-  WAREHOUSE_TRANSACTIONS: "/warehouse/transactions",
   WAREHOUSE_RECEIVING: "/warehouse/receiving",
   WAREHOUSE_RECEIVING_DETAIL: "/warehouse/receiving/:id",
   WAREHOUSE_SHIPPING: "/warehouse/shipping",
@@ -92,18 +89,6 @@ export const ROUTES = {
   WAREHOUSE_SHIPPING_DETAIL: "/warehouse/shipping/:id",
   WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",
   WAREHOUSE_SHIPPING_RETURN_DETAIL: "/warehouse/shipping/returns/:id",
-
-
-  // فاکتورها
-  INVOICE: "/invoice",
-  INVOICE_LIST: "/invoice/list",
-  INVOICE_NEW: "/invoice/new",
-
-  // تراکنش‌ها
-  TRANSACTIONS: "/transactions",
-  TRANSACTIONS_BUY_SELL: "/transactions/buy-sell",
-  TRANSACTIONS_PAYMENTS: "/transactions/payments",
-  TRANSACTIONS_RETURNS: "/transactions/returns",
 
   // حسابداری — داشبورد و دفترهای `api/Accounting` (بخش ۲۰ سند)، همه فقط‌خواندنی.
   ACCOUNTING: "/accounting",
@@ -132,21 +117,6 @@ export const ROUTES = {
 
   // تنظیمات
   SETTINGS: "/settings",
-  SETTINGS_GENERAL: "/settings/general",
-  SETTINGS_COMPANY: "/settings/company",
-  SETTINGS_INVOICE: "/settings/invoice",
-  SETTINGS_TAX: "/settings/tax",
-  SETTINGS_USERS: "/settings/users",
-  SETTINGS_ROLES: "/settings/roles",
-  SETTINGS_NOTIFICATIONS: "/settings/notifications",
-  SETTINGS_BACKUP: "/settings/backup",
-
-  // ابزارها
-  TOOLS_NUMBER_TO_WORDS: "/tools/number-to-words",
-  TOOLS_CALENDAR: "/tools/calendar",
-
-  // پشتیبانی
-  FEEDBACK: "/feedback",
 
   // احراز هویت
   AUTH: "/auth",

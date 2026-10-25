@@ -2,23 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 import { createDepartment, updateDepartment, deleteDepartment } from "./api-v1";
-import { departmentKeys } from "./queryKeys";
-import { teamKeys } from "../../teams/services/queryKeys";
-import { userKeys } from "@/features/employees/services/queryKeys";
-import { authKeys } from "@/features/auth/services/queryKeys";
+import { invalidateOrgChart } from "../../services/invalidation";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-
-/**
- * تعیینِ مسئول/جانشینِ واحد کارمند را جابه‌جا می‌کند: واحدش عوض می‌شود،
- * از تیمش خارج می‌شود و نقشِ قبلی‌اش آزاد می‌شود. پس فهرستِ کارمندان،
- * تیم‌ها (مسئول و تعدادِ اعضا) و نشستِ کاربرِ جاری همه باید تازه شوند.
- */
-function invalidateOrgChart(queryClient) {
-  queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-  queryClient.invalidateQueries({ queryKey: teamKeys.all });
-  queryClient.invalidateQueries({ queryKey: userKeys.all });
-  queryClient.invalidateQueries({ queryKey: authKeys.session() });
-}
 
 export function useCreateDepartmentMutation() {
   const queryClient = useQueryClient();
@@ -51,10 +36,9 @@ export function useDeleteDepartmentMutation() {
 
   return useMutation({
     mutationFn: deleteDepartment,
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       toast.success("واحد با موفقیت حذف شد.");
-      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      queryClient.invalidateQueries({ queryKey: departmentKeys.detail(id) });
+      invalidateOrgChart(queryClient);
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف واحد")),
   });

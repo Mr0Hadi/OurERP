@@ -65,7 +65,7 @@ flowchart LR
 | `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها)؛ `refresh` = کوئریِ فهرست | ۴ |
 | `RedirectKeepingSearch` | در `routes.jsx`: نشانیِ قدیمی → تازه با همان query (صفحه‌ی جابه‌جاشده) | ۲ |
 | `PageHeaderActions` | دکمه‌ی صفحه در هدرِ اپ کنارِ عنوان (پورتال به `headerStore.actionsSlot`)؛ مثلاً «تاریخچه» در صفحه‌های جزئیات ([08](08-client-state-zustand.md)) | ۲ |
-| `AppSidebar`، `NavMain`، `NavSecondary`، `NavTools`، `NavUser`، `NavWorkspace`، `AppBreadcrumb`، `RouteLoadingOverlay` | فقط پوسته‌ی برنامه ([03](03-bootstrap-and-routing.md)) | ۱–۲ |
+| `RouteLoadingOverlay` | فقط پوسته‌ها (`AppLayout`، `AuthLayout`)؛ سایدبار و breadcrumb در `src/app/layouts/` هستند ([03](03-bootstrap-and-routing.md)) | ۲ |
 
 ### `filters/`
 
@@ -168,7 +168,7 @@ flowchart LR
 - **صفحه‌ی جزئیات:** در خطا/۴۰۴ `DetailErrorState` با `onRetry={refetch}`.
 - **حذف/لغو:** `ConfirmDialog`؛ در `onSuccess`ِ mutation ببندید، نه در `onConfirm`.
 - **وضعیت:** `StatusBadge` با tone از enum؛ رنگِ پالت ننویسید.
-- چند کامپوننت در `shared/components` از `@/features/...` import می‌کنند (`PartyPickerCard`، `ProductSearchPanel`، `ProductPicker`، `useReturnedNewProduct`، `layout/AppSidebar`، `NavUser`، `NavWorkspace`) — فایل ۰۲ و ۱۴.
+- چند کامپوننت در `shared/components` از `@/features/...` import می‌کنند (`PartyPickerCard`، `ProductSearchPanel`، `ProductPicker`، `useReturnedNewProduct`) — فایل ۰۲ و ۱۴.
 - کامپوننتی که فقط یک فیچر مصرف می‌کند در همان فیچر بماند ([02](02-folder-structure.md)).
 
 ## برای تغییرِ X، به Y بروید
@@ -188,6 +188,5 @@ flowchart LR
 
 ## سؤال‌های باز / بدهی
 
-- `src/shared/components/app-update/AppUpdateDialog.jsx` و `UpdateAvailableToast.jsx` بی‌استفاده‌اند (knip؛ PWA غیرفعال).
 - `charts/chartUtils.js` یک `formatNumber` جدا از `src/shared/lib/numberFormat.js` export می‌کند؛ دو تابع با یک نام و رفتارِ کمی متفاوت (`maximumFractionDigits: 0` در نسخه‌ی نمودار؛ `Number(value) || 0` در نسخه‌ی lib).
 - `DataTable` (۱۹) بیشتر از `ServerTable` (۱۷) مستقیم import می‌شود، چون جدول‌های فیچر آن را می‌پیچند؛ این عمدی است، نه تکرار.

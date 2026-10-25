@@ -16,7 +16,7 @@
 | `src/features/auth/pages/LoginPage.jsx` | فرم (react-hook-form) + سنجشِ خودکارِ نشست |
 | `src/shared/services/api/axios.js` | افزودنِ Bearer، صفِ refresh، logout در شکست |
 | `src/shared/services/sessionCleanup.js` | `leaveSession()`، `purgeLegacyApiCache()` |
-| `src/shared/components/layout/NavUser.jsx` | دکمه‌ی خروج |
+| `src/app/layouts/NavUser.jsx` | دکمه‌ی خروج |
 | `src/app/routes/protectedLoader.jsx`، `src/app/layouts/AppLayout.jsx` | گاردهای مسیر (فایل [03](03-bootstrap-and-routing.md)) |
 
 ## چطور کار می‌کند
@@ -117,7 +117,7 @@ const { isSuccess, isError, error } = useQuery({
 - پاسخِ refresh هم ممکن است پوشش داشته باشد؛ با `isEnvelope`/`unwrapEnvelope` باز می‌شود.
 - `LOGIN_TIMEOUT_MS = 45_000` در `api-v1.js` — اولین درخواست بعد از خوابِ IIS کند است.
 - بعد از هر تغییرِ جایگاهِ کارمند یا مجوزهای خودِ کاربر، `authKeys.session()` یا `authKeys.myPermissions()` باید invalidate شود — الان این کار را `useUpdateUserMutation` و `useChangeUserTeamMutation` (`src/features/employees/services/mutations.js`)، `useUpdateUserPermissionsMutation` (`src/features/permissions/services/mutations.js`)، و mutationهای `src/features/organization/teams/services/mutations.js` و `src/features/organization/departments/services/mutations.js` انجام می‌دهند. mutationِ تازه‌ای که روی کاربرِ جاری اثر دارد باید همین کار را بکند.
-- **خروج همه‌ی localStorage را پاک نمی‌کند.** این‌ها می‌مانند: `dashboard-layout` (`src/features/dashboard/store/dashboardLayoutStore.js`، عمداً — ترجیحِ دستگاه)، `unit-label-template` (`src/features/warehouse/units/store/unitFilterStore.js`)، `print-settings` (`src/shared/store/printSettingsStore.js`)، `TERMINAL_KEY` در `src/shared/components/payments/pos/PosReadyForm.jsx`، و `vite-ui-theme`.
+- **خروج همه‌ی localStorage را پاک نمی‌کند.** این‌ها می‌مانند: `dashboard-layout` (`src/features/dashboard/store/dashboardLayoutStore.js`، عمداً — ترجیحِ دستگاه)، `unit-label-template` (`src/features/warehouse/units/store/labelTemplateStore.js`)، `print-settings` (`src/shared/store/printSettingsStore.js`)، `TERMINAL_KEY` در `src/shared/components/payments/pos/PosReadyForm.jsx`، و `vite-ui-theme`.
 
 ## برای تغییرِ X، به Y بروید
 
@@ -135,5 +135,5 @@ const { isSuccess, isError, error } = useQuery({
 - در شاخه‌ی ۲ِ شکستِ refresh، `window.location.href` (نه `leaveSession`) استفاده می‌شود و `queryClient.clear()` صدا زده نمی‌شود؛ بارگذاریِ کامل حافظه را پاک می‌کند، پس اثرِ عملی ندارد، ولی دو مسیرِ خروج یکسان نیستند.
 - `src/shared/services/api/axios.js` (لایه‌ی shared) مستقیم از `@/features/auth/store/authStore` import می‌کند — مرزِ لایه (فایل ۰۲ و ۱۴).
 - کلیدهای `VITE_ACCESS_TOKEN_KEY`، `VITE_REFRESH_TOKEN_KEY`، `VITE_TOKEN_REFRESH_ENDPOINT` در `.env.example` استفاده نمی‌شوند (فایل ۰۱).
-- `unit-label-template` بعد از خروج می‌ماند. UNCLEAR: عمدی است یا نه؛ کامنتی در `unitFilterStore.js` درباره‌ی خروج پیدا نشد.
+- `unit-label-template` بعد از خروج می‌ماند. UNCLEAR: عمدی است یا نه؛ کامنتی در `labelTemplateStore.js` درباره‌ی خروج پیدا نشد.
 - توکن‌ها در `localStorage` هستند (در دسترسِ هر اسکریپتِ هم‌دامنه)؛ این تصمیمِ موجود است، نه پیشنهاد.

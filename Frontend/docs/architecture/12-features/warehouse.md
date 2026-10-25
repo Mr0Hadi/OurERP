@@ -39,7 +39,7 @@
 ## state و دامنه
 
 - `useProductFilterStore` (`src/features/warehouse/products/store/productFilterStore.js`، با اکشنِ `setPriceRange`).
-- `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`، و **`useLabelTemplateStore`** (persist `unit-label-template`).
+- `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`؛ `src/features/warehouse/units/store/labelTemplateStore.js`: `useLabelTemplateStore` (persist `unit-label-template`).
 - `useReceivingFormStore`، `useShippingFormStore`، `useReceivingFilterStore`، `useShippingFilterStore`؛ hookها `useReceivingForm`، `useShippingForm`.
 - دامنه: `src/features/warehouse/units/domain/unitVocabulary.js` (`UNIT_SEGMENTS`، `UnitActionEnum`، `REASONS_BY_ACTION`، `allowedActionsOf`، `canApply`، …؛ `DocumentKindEnum`/`documentRouteOf` از `src/shared/domain/enums/documentKind.js`)، `labelTemplate.js` (هندسه‌ی برگه و قالب)، `receivingVocabulary.js`، `shippingVocabulary.js`.
 - `src/features/warehouse/shared/`: `useQueueRows.js`، `queueFilters.js`، `shipmentCache.js` (`applyShipmentResult`)، `productInfo.js`، `QueueTable.jsx`، `QueueFilters.jsx`، `NothingPending.jsx`، `WarehouseSubmitBar.jsx`، `returnRowCells.jsx`.
@@ -66,10 +66,8 @@
 ## نکته‌ها و بدهی
 
 - نام‌گذاریِ صفحه‌های مرجوعی در انبار گمراه‌کننده است: `ReceivingReturnDetailPage` مرجوعیِ **فروش** است و `SupplierReturnDetailPage` زیرِ `/shipping/` مرجوعیِ **خرید**.
-- `useLabelTemplateStore` در فایلی به نامِ `unitFilterStore.js` است.
 - `fetchCategoryProducts` پارامترها را دستی PascalCase می‌سازد (`ProductCategoryId`، `Page`، `Take`) به جای `listQuery`.
 - mutationهای دسته فقط `productCategoryKeys.lists()` را باطل می‌کنند.
 - `createProductCategory` وقتی سرور شناسه نمی‌دهد، فهرست را با نام می‌گردد (TODO به بکند).
 - `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند (TODOِ خودش: جست‌وجوی سمتِ سرور).
-- `ROUTES.WAREHOUSE_STOCK` و `WAREHOUSE_TRANSACTIONS` فقط در breadcrumb هستند.
 - `useQueueRows.js` اثرهای معلقِ مرجوعیِ خرید را بدونِ `purchaseId` می‌گیرد (همه‌ی خریدها؛ ظاهراً عمدی).

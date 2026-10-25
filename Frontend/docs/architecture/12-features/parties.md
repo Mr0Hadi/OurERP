@@ -12,7 +12,6 @@
 | `SUPPLIERS_LIST` | `/suppliers` | `SupplierView` | `src/features/suppliers/pages/SuppliersPage.jsx` |
 | `SUPPLIERS_NEW` | `/suppliers/new` | `SupplierCreate` | `src/features/suppliers/pages/SupplierNewPage.jsx` |
 | `SUPPLIERS_DETAIL` | `/suppliers/:id` | `SupplierView` | `src/features/suppliers/pages/SupplierDetailPage.jsx` |
-| `SUPPLIERS_EDIT` | `/suppliers/edit/:id` | `SupplierUpdate` | `src/features/suppliers/pages/SupplierEditPage.jsx` (**placeholder**) |
 
 ## سرویس‌ها
 
@@ -40,7 +39,6 @@
 ## نکته‌ها و بدهی
 
 - `partyAccount` ↔ `customers`/`suppliers` دوطرفه وابسته‌اند (`partyAccount/services/queries.js` کلیدهای آن دو را import می‌کند).
-- `SupplierEditPage.jsx` placeholderِ مسیردار است و هیچ‌جا به آن لینک نشده.
 - `useCreateCustomerMutation` فقط `customerKeys.lists()` را باطل می‌کند؛ چون `customerKeys.options()` = `[...lists(), "options"]` است، گزینه‌های انتخابگر هم با همین prefix تازه می‌شوند (کشِ صورت‌حساب و جزئیات نه).
 - TODO در `CustomerNewPage.jsx`: endpointِ ساخت هنوز شناسه‌ی رکوردِ تازه را برنمی‌گرداند.
 - نامِ فیلدِ بکند `refferalCode` (غلطِ املایی) است.
