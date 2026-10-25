@@ -16,7 +16,7 @@
 
 ## سرویس‌ها
 
-- employees (`src/features/employees/services/api-v1.js`): `getUserList` GET `/User/GetUserList`، `getUserUpdate` GET `/User/GetUserUpdate`، `createUser` POST، `updateUser` PUT، `changeUserTeam` PUT `/User/ChangeUserTeam`، `resetUserPassword` PUT، `logoutUserById` POST `/Account/LogoutUserById`. هوک‌ها: `useUserListQuery`، `useAllUsersQuery`، `useUserUpdateQuery`، `useDepartmentUserCountQuery`، `useTeamMembersQuery`، `useTeamCandidatesQuery`؛ `useCreateUserMutation`، `useUpdateUserMutation`، `useChangeUserTeamMutation`، `useLogoutUserByIdMutation`، `useResetUserPasswordMutation`. کلید `userKeys` (`["users"]`).
+- employees (`src/features/employees/services/api-v1.js`): `getUserList` GET `/User/GetUserList` (مرتب‌سازی با `sorting` → `UserListSortEnum`)، `getUserUpdate` GET `/User/GetUserUpdate`، `createUser` POST، `updateUser` PUT، `changeUserTeam` PUT `/User/ChangeUserTeam`، `resetUserPassword` PUT، `logoutUserById` POST `/Account/LogoutUserById`. هوک‌ها: `useUserListQuery`، `useAllUsersQuery`، `useUserUpdateQuery`، `useDepartmentUserCountQuery`، `useTeamMembersQuery`، `useTeamCandidatesQuery`؛ `useCreateUserMutation`، `useUpdateUserMutation`، `useChangeUserTeamMutation`، `useLogoutUserByIdMutation`، `useResetUserPasswordMutation`. کلید `userKeys` (`["users"]`).
 - departments: `/Department/*` (`getDepartmentList`، `getDepartmentDetail`، `createDepartment`، `updateDepartment`، `deleteDepartment`)؛ `departmentKeys` (`["departments"]`).
 - teams: `/Team/*`؛ `useTeamOptionsQuery(departmentId)`؛ `teamKeys` (`["teams"]`).
 - مشترکِ دو زیرماژولِ سازمان: `src/features/organization/components/OrgLeadershipForm.jsx`، `OrgDetailLoading.jsx`، `src/features/organization/hooks/useEmployeeOptions.js`، `useSyncLeadershipValues.js`.

@@ -12,7 +12,7 @@ import EmployeeFilters from "../components/table/EmployeeFilters";
 import EmployeeTable from "../components/table/EmployeeTable";
 
 const EmployeesPage = () => {
-  const { pagination, setPagination } = useEmployeeFilterStore();
+  const { pagination, setPagination, sorting, setSorting } = useEmployeeFilterStore();
 
   const filters = useDebouncedEmployeeFilters();
 
@@ -21,6 +21,7 @@ const EmployeesPage = () => {
     page: pagination.pageIndex + 1,
     take: pagination.pageSize,
     ...filters,
+    sorting,
   });
   const { data, isLoading, isFetching, isError, error, refetch } = query;
 
@@ -47,6 +48,9 @@ const EmployeesPage = () => {
             currentPage={currentPage}
             pageSize={pagination.pageSize}
             onPaginationChange={setPagination}
+            sorting={sorting}
+            onSortingChange={setSorting}
+            totalCount={data?.page?.total}
             refresh={query}
           />
         </FetchingOverlay>

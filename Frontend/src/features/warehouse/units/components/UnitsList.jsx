@@ -4,6 +4,8 @@ import { ChevronLeft, PackageOpen, Tags } from "lucide-react";
 
 import DataTable from "@/shared/components/table/DataTable";
 import DataTablePagination from "@/shared/components/table/DataTablePagination";
+import RefreshButton from "@/shared/components/table/RefreshButton";
+import SortSelect from "@/shared/components/table/SortSelect";
 import TableLoadingSkeleton from "@/shared/components/table/TableLoadingSkeleton";
 import { Button } from "@/shared/components/ui/button";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
@@ -170,13 +172,11 @@ export default function UnitsList({
   onPaginationChange,
   sorting,
   onSortingChange,
+  refresh,
   selectedIds,
   onToggleSelect,
-  onToggleSelectAll,
   onOpenUnit,
 }) {
-  const allOnPageSelected = units.length > 0 && units.every((unit) => selectedIds.has(unit.id));
-  const someOnPageSelected = !allOnPageSelected && units.some((unit) => selectedIds.has(unit.id));
   const isQuarantine = segment === UNIT_SEGMENTS.QUARANTINE;
 
   const columns = useMemo(
@@ -184,14 +184,8 @@ export default function UnitsList({
       {
         id: "select",
         enableSorting: false,
-        header: () => (
-          <UnitSelectCheckbox
-            checked={allOnPageSelected}
-            indeterminate={someOnPageSelected}
-            onChange={() => onToggleSelectAll(units, !allOnPageSelected)}
-            label="انتخاب همه‌ی این صفحه"
-          />
-        ),
+        // گوشه‌ی سرتیتر جای «تازه‌سازی» است؛ انتخابِ گروهی با «انتخاب همه‌ی دانه‌ها»ی بالای فهرست.
+        header: () => <RefreshButton query={refresh} variant="header" />,
         cell: ({ row }) => (
           <UnitSelectCheckbox
             checked={selectedIds.has(row.original.id)}
@@ -243,17 +237,13 @@ export default function UnitsList({
         ),
       },
     ],
-    [
-      units,
-      selectedIds,
-      allOnPageSelected,
-      someOnPageSelected,
-      isQuarantine,
-      onToggleSelect,
-      onToggleSelectAll,
-      onOpenUnit,
-    ],
+    [refresh, selectedIds, isQuarantine, onToggleSelect, onOpenUnit],
   );
+
+  // همان ستون‌هایی که سرتیترشان در دسکتاپ کلیک‌خور است.
+  const sortOptions = columns
+    .filter((column) => column.enableSorting !== false && typeof column.header === "string")
+    .map((column) => ({ id: column.accessorKey ?? column.id, label: column.header }));
 
   const empty = (
     <EmptyState
@@ -262,6 +252,16 @@ export default function UnitsList({
       hasFilters={hasFilters}
       onClearFilters={onClearFilters}
     />
+  );
+
+  // بی‌ردیف سرتیتری نیست که دکمه را نگه دارد.
+  const emptyWithRefresh = (
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <RefreshButton query={refresh} />
+      </div>
+      {empty}
+    </div>
   );
 
   return (
@@ -279,45 +279,45 @@ export default function UnitsList({
           onSortingChange={onSortingChange}
           getRowKey={(row) => row.original.id}
           rowClassName={(row) => (selectedIds.has(row.original.id) ? "bg-primary/5" : "")}
-          emptyState={empty}
+          emptyState={emptyWithRefresh}
         />
       </div>
 
       <div className="space-y-3 @3xl/units:hidden">
         {isLoading ? (
           <TableLoadingSkeleton cards />
-        ) : units.length === 0 ? (
-          empty
         ) : (
           <>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <UnitSelectCheckbox
-                checked={allOnPageSelected}
-                indeterminate={someOnPageSelected}
-                onChange={() => onToggleSelectAll(units, !allOnPageSelected)}
-                label="انتخاب همه‌ی این صفحه"
-              />
-              انتخاب همه‌ی این صفحه
+            {/* همان نوارِ بالای کارت‌های `MobileRowCards`. */}
+            <div className="flex min-h-8 items-center justify-end gap-1.5">
+              <SortSelect options={sortOptions} sorting={sorting} onChange={onSortingChange} />
+              <RefreshButton query={refresh} variant="pill" />
             </div>
-            <ul className="space-y-2">
-              {units.map((unit) => (
-                <UnitCard
-                  key={unit.id}
-                  unit={unit}
-                  isQuarantine={isQuarantine}
-                  selected={selectedIds.has(unit.id)}
-                  onToggleSelect={onToggleSelect}
-                  onOpen={onOpenUnit}
+            {units.length === 0 ? (
+              empty
+            ) : (
+              <>
+                <ul className="space-y-2">
+                  {units.map((unit) => (
+                    <UnitCard
+                      key={unit.id}
+                      unit={unit}
+                      isQuarantine={isQuarantine}
+                      selected={selectedIds.has(unit.id)}
+                      onToggleSelect={onToggleSelect}
+                      onOpen={onOpenUnit}
+                    />
+                  ))}
+                </ul>
+                <DataTablePagination
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onPaginationChange={onPaginationChange}
+                  compact
                 />
-              ))}
-            </ul>
-            <DataTablePagination
-              totalPages={totalPages}
-              currentPage={currentPage}
-              pageSize={pageSize}
-              onPaginationChange={onPaginationChange}
-              compact
-            />
+              </>
+            )}
           </>
         )}
       </div>

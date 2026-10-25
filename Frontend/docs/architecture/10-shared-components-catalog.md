@@ -52,8 +52,9 @@ flowchart LR
 | `detailsColumn(getPath)` (`columns.jsx`) | ستونِ استانداردِ «جزئیات»؛ در موبایل کلِ کارت لینک می‌شود | ۹ |
 | `DataTablePagination` | صفحه‌بندی بیرون از `DataTable` | ۴ |
 | `PaymentProgress` | نوارِ «پرداخت‌شده از کل» در ردیف | ۲ |
-| `RefreshButton` | «تازه‌سازی»ِ یک کوئری: کمینه‌ی چرخش، زمانِ آخرین به‌روزرسانی در راهنما؛ `variant="pill"` برای موبایل. خودکار در `DataTable`/`MasterListPane`؛ مستقیم در دانه‌ها و مالیات | ۵ |
+| `RefreshButton` | «تازه‌سازی»ِ یک کوئری: کمینه‌ی چرخش، زمانِ آخرین به‌روزرسانی در راهنما؛ `variant="pill"` برای موبایل. خودکار در `DataTable`/`MasterListPane`؛ مستقیم در دانه‌ها (گوشه‌ی سرتیتر به‌جای چک‌باکسِ انتخابِ صفحه) و مالیات | ۵ |
 | `TableLoadingSkeleton` | اسکلتونِ جدول | ۲ |
+| `SortSelect` | انتخابِ مرتب‌سازیِ موبایل (`options`، `sorting`، `onChange`)؛ خودکار در `MobileRowCards`، مستقیم در کارت‌های دانه‌ها | ۲ |
 | `MobileRowCards`، `SortIcon`، `DetailsLink` | داخلی | — |
 
 ### `layout/`

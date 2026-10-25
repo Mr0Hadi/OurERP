@@ -1,15 +1,10 @@
 import { flexRender } from "@tanstack/react-table";
-import { ArrowDownUp, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
 import RefreshButton from "./RefreshButton";
+import SortSelect from "./SortSelect";
 
 /** ستون‌هایی که برچسبِ متنی ندارند (جزئیات، دکمه‌ها) در پایینِ کارت می‌نشینند. */
 const isActionColumn = (column) =>
@@ -18,55 +13,25 @@ const isActionColumn = (column) =>
 const slotOf = (column) => column.columnDef.meta?.mobile;
 const render = (cell) => flexRender(cell.column.columnDef.cell, cell.getContext());
 
-const NO_SORT = "__none__";
-
 /**
- * انتخابِ مرتب‌سازی به‌جای سرتیترهای کلیک‌خورِ جدول.
+ * مرتب‌سازیِ موبایل از روی ستون‌های جدول.
  *
  * `sorting` جدا از `table` می‌آید: نمونه‌ی `useReactTable` در همه‌ی رندرها همان شیء
  * است و React Compiler این کامپوننت را با همان `table` دوباره رندر نمی‌کرد؛ خواندنِ
  * `table.getState().sorting` همیشه مقدارِ اولیه را نشان می‌داد و انتخاب «پیش‌فرض» می‌ماند.
  */
 function MobileSortSelect({ table, sorting }) {
-  const sortable = table.getAllLeafColumns().filter((c) => c.getCanSort() && !isActionColumn(c));
-  if (sortable.length === 0) return null;
-
-  const current = sorting[0];
-  const value = current ? `${current.id}:${current.desc ? "desc" : "asc"}` : NO_SORT;
-
-  const handleChange = (next) => {
-    if (next === NO_SORT) return table.setSorting([]);
-    const [id, dir] = next.split(":");
-    table.setSorting([{ id, desc: dir === "desc" }]);
-  };
-
-  const currentLabel = current
-    ? `${sortable.find((c) => c.id === current.id)?.columnDef.header ?? ""} ${current.desc ? "↓" : "↑"}`
-    : "پیش‌فرض";
+  const options = table
+    .getAllLeafColumns()
+    .filter((c) => c.getCanSort() && !isActionColumn(c))
+    .map((c) => ({ id: c.id, label: c.columnDef.header }));
 
   return (
-    <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger
-        size="sm"
-        className="h-8 w-auto min-w-0 max-w-full gap-1.5 rounded-full bg-muted/40 px-3 text-xs"
-        aria-label="مرتب‌سازی"
-      >
-        <ArrowDownUp className="size-3.5 text-muted-foreground" />
-        <span className="text-muted-foreground">مرتب‌سازی:</span>
-        <span className="truncate font-medium">{currentLabel}</span>
-      </SelectTrigger>
-      <SelectContent position="popper" align="end">
-        <SelectItem value={NO_SORT}>پیش‌فرض</SelectItem>
-        {sortable.flatMap((column) => [
-          <SelectItem key={`${column.id}:desc`} value={`${column.id}:desc`}>
-            {column.columnDef.header} — نزولی
-          </SelectItem>,
-          <SelectItem key={`${column.id}:asc`} value={`${column.id}:asc`}>
-            {column.columnDef.header} — صعودی
-          </SelectItem>,
-        ])}
-      </SelectContent>
-    </Select>
+    <SortSelect
+      options={options}
+      sorting={sorting[0] ?? null}
+      onChange={(next) => table.setSorting(next ? [next] : [])}
+    />
   );
 }
 

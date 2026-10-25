@@ -7,7 +7,6 @@ import { ListChecks, Printer } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
-import RefreshButton from "@/shared/components/table/RefreshButton";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
@@ -181,16 +180,6 @@ export default function UnitsPage() {
     [],
   );
 
-  const toggleSelectAll = useCallback(
-    (rows, shouldSelect) =>
-      setSelectedById((prev) => {
-        const next = new Map(prev);
-        rows.forEach((row) => (shouldSelect ? next.set(row.id, row) : next.delete(row.id)));
-        return next;
-      }),
-    [],
-  );
-
   const selectAllResults = async () => {
     setIsFetchingAll(true);
     try {
@@ -351,7 +340,6 @@ export default function UnitsPage() {
                     .join("، ")}
                 </p>
               </div>
-              <RefreshButton query={unitsQuery} className="size-8" />
               {totalResults > 0 && selectedUnits.length === 0 && (
                 <Button
                   type="button"
@@ -396,9 +384,9 @@ export default function UnitsPage() {
                   onPaginationChange={store.setPagination}
                   sorting={sorting}
                   onSortingChange={store.setSorting}
+                  refresh={unitsQuery}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
-                  onToggleSelectAll={toggleSelectAll}
                   onOpenUnit={setActiveUnit}
                 />
               </FetchingOverlay>

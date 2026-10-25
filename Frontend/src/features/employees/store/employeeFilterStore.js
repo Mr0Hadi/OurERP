@@ -12,7 +12,7 @@ import { createFilterStore } from "@/shared/store/createFilterStore";
  * `departmentId` و `teamId` به هم وابسته‌اند: با عوض‌شدن واحد، تیمِ
  * انتخاب‌شده دیگر معنا ندارد و در `EmployeeFilters` پاک می‌شود.
  *
- * مرتب‌سازی ندارد: `GetUserList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد.
+ * مرتب‌سازی پیش‌فرض ندارد (`null`): ترتیبِ پیش‌فرضِ سرور جدیدترین‌ها اول است.
  */
 export const useEmployeeFilterStore = createFilterStore({
   filters: {

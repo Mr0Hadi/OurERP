@@ -19,6 +19,9 @@ export default function EmployeeTable({
   currentPage,
   pageSize,
   onPaginationChange,
+  sorting,
+  onSortingChange,
+  totalCount,
   refresh,
 }) {
 
@@ -74,6 +77,8 @@ export default function EmployeeTable({
         // مسئول‌ها و جانشین‌ها در فهرست دیده شوند.
         accessorKey: "roleTitle",
         header: "نقش",
+        // نقش از جایگاه‌های تیم/واحد مشتق می‌شود و سرور رویش مرتب نمی‌کند.
+        enableSorting: false,
         cell: ({ row }) =>
           row.original.role === OrgRoleEnum.MEMBER ? (
             <span className="text-sm text-muted-foreground">
@@ -89,6 +94,7 @@ export default function EmployeeTable({
         accessorKey: "isActive",
         meta: { mobile: "badge" },
         header: "وضعیت",
+        enableSorting: false,
         cell: (info) => <EmployeeStatusBadge isActive={info.getValue()} />,
       },
       detailsColumn((row) => routeWithId(ROUTES.EMPLOYEES_DETAIL, row.id)),
@@ -105,9 +111,10 @@ export default function EmployeeTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
+      sorting={sorting}
+      onSortingChange={onSortingChange}
+      totalCount={totalCount}
       refresh={refresh}
-      // `GetUserList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
-      sortable={false}
       rowClassName={rowClassName}
       emptyMessage="کارمندی یافت نشد."
     />
