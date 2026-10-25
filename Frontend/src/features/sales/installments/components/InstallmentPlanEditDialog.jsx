@@ -79,7 +79,7 @@ export default function InstallmentPlanEditDialog({ plan, open, onOpenChange }) 
         onOpenChange(next);
       }}
     >
-      <DialogContent dir="rtl" className="sm:max-w-lg" showCloseButton={!mutation.isPending}>
+      <DialogContent dir="rtl" className="max-h-[90svh] overflow-y-auto sm:max-w-lg" showCloseButton={!mutation.isPending}>
         {open && <EditBody plan={plan} mutation={mutation} onClose={() => onOpenChange(false)} />}
       </DialogContent>
     </Dialog>

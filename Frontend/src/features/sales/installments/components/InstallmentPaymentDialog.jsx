@@ -176,7 +176,7 @@ export default function InstallmentPaymentDialog({ target, onOpenChange, onDone 
         onOpenChange(next);
       }}
     >
-      <DialogContent dir="rtl" className="sm:max-w-md" showCloseButton={!busy}>
+      <DialogContent dir="rtl" className="max-h-[90svh] overflow-y-auto sm:max-w-md" showCloseButton={!busy}>
         {target && (
           <PaymentBody
             pay={pay}

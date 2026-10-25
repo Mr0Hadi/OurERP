@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { usePermission } from "@/features/auth/hooks/usePermission";
@@ -30,28 +30,21 @@ import { useSaleCheckForm } from "../hooks/useSaleCheckForm";
  * «آماده‌ی پرداخت» می‌شود). اگر کالا کم است، تعدادِ ردیف را کم (یا ردیف را حذف) می‌کند، دلیلش را می‌نویسد و
  * همان را تأیید می‌کند — یک دکمه. دانه‌ی معیوب/مفقود جدا گزارش می‌شود.
  */
-function SaleCheckForm({ sale }) {
+function SaleCheckForm({ sale, mutation }) {
   const navigate = useNavigate();
   const { allows } = usePermission();
   const canEdit = allows("SaleUpdate");
-  const mutation = useWarehouseApproveMutation();
   const form = useSaleCheckForm(sale, { canEdit });
   const [issueOpen, setIssueOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const blocker = useUnsavedChangesGuard(form.dirty && !mutation.isSuccess, {
+  const blocker = useUnsavedChangesGuard(form.dirty, {
     reason: "بررسیِ انبارِ پیش‌فاکتور ثبت نشده",
   });
 
   const submit = () =>
     mutation.mutate(
       { sale, quantities: form.quantities, scans: form.scans, issues: form.issues, reason: form.reason.trim() },
-      {
-        onSuccess: () => {
-          setConfirmOpen(false);
-          navigate(ROUTES.WAREHOUSE_SALE_CHECK);
-        },
-        onError: () => setConfirmOpen(false),
-      },
+      { onError: () => setConfirmOpen(false) },
     );
 
   const changedCount = form.changed.length;
@@ -135,10 +128,19 @@ export default function SaleCheckPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: sale, isLoading, isError, error, refetch } = useSaleQuery(id);
+  // mutation در صفحه است نه در فرم: پاسخِ موفق سند را در کش «آماده‌ی پرداخت» می‌کند و فرم پیش از اجرای
+  // `onSuccess`ِ خودش (رفتن به صف) unmount می‌شد — کاربر پیامِ «شاید کس دیگری کارش را کرده» را می‌دید.
+  // پس از موفقیت فرم (و blockerِ تغییرهای ذخیره‌نشده‌اش) کنار می‌رود و رفتن به صف بعد از همان commit است.
+  const mutation = useWarehouseApproveMutation();
+  useEffect(() => {
+    if (mutation.isSuccess) navigate(ROUTES.WAREHOUSE_SALE_CHECK);
+  }, [mutation.isSuccess, navigate]);
 
   usePageHeader({ title: sale ? `بررسی انبار — ${sale.customerName || ""}` : "بررسی انبار", showBack: true });
 
-  if (isLoading) return <WarehouseFormSkeleton itemActionSlot={false} summaryRows={2} hasSecondaryAction={false} />;
+  if (isLoading || mutation.isSuccess) {
+    return <WarehouseFormSkeleton itemActionSlot={false} summaryRows={2} hasSecondaryAction={false} />;
+  }
   if (isError || !sale) {
     return (
       <DetailErrorState
@@ -161,5 +163,5 @@ export default function SaleCheckPage() {
   }
 
   // نسخه‌ی تازه (ویرایشِ هم‌زمانِ فروش) فرم را از نو می‌سازد؛ بررسی روی همان نسخه ثبت می‌شود.
-  return <SaleCheckForm key={`${sale.id}:${sale.revision}`} sale={sale} />;
+  return <SaleCheckForm key={`${sale.id}:${sale.revision}`} sale={sale} mutation={mutation} />;
 }

@@ -1,6 +1,5 @@
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
-import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
@@ -9,6 +8,7 @@ import StatusBadge from "@/shared/components/status/StatusBadge";
 import { SALE_PROFORMA_STAGE_TONES } from "@/shared/domain/enums/saleProforma";
 import { detailsColumn } from "@/shared/components/table/columns";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import SalePaymentTypeBadge from "./SalePaymentTypeBadge";
 
 /** ستون‌های فهرستِ فروش — ثابتِ ماژول؛ به props وابسته نیستند. */
 const COLUMNS = [
@@ -87,7 +87,7 @@ const COLUMNS = [
         String(plan.nextDueDate).slice(0, 10) < todayIso();
       return (
         <div className="flex flex-wrap items-center justify-center gap-1">
-          <PaymentTypeBadge type={info.getValue()} />
+          <SalePaymentTypeBadge type={info.getValue()} />
           {late && (
             <StatusBadge size="sm" tone="danger" title={`سررسید: ${gregorianToPersian(plan.nextDueDate)}`}>
               قسط معوق

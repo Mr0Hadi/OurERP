@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 
-import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { ReservationTimer } from "../proforma/ReservationBadge";
+import SalePaymentTypeBadge from "./SalePaymentTypeBadge";
 
 /**
  * ستون‌های مشترکِ صف‌های پیش‌فاکتور (`SaleListDto`) — صفِ انبار و صندوق هر کدام آن‌هایی را که لازم دارند
@@ -32,7 +32,7 @@ export const PROFORMA_QUEUE_COLUMNS = Object.freeze({
   paymentType: {
     accessorKey: "paymentType",
     header: "شیوه‌ی پرداخت",
-    cell: (info) => <PaymentTypeBadge type={info.getValue()} />,
+    cell: (info) => <SalePaymentTypeBadge type={info.getValue()} />,
   },
   dueDate: {
     accessorKey: "paymentDate",

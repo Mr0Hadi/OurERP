@@ -47,6 +47,9 @@ export function proformaAction({ isNew, isInPerson, stage, secondsLeft, changes 
  * شرایط می‌داند و تأییدها را برمی‌گرداند، پس از دریافت‌ها ساخته نمی‌شود: اقساطی یا همان مقدارِ
  * ذخیره‌شده؛ پیش‌فاکتورِ تازه «نسیه». نوعِ واقعیِ هر پرداخت روی ردیفِ خودش است.
  */
+/** برچسبِ فروشِ غیراقساطی؛ همان گزینه‌ی گامِ دریافت (`ProformaPaymentSection`). */
+export const SALE_TERMS_LABEL = "نقد / نسیه";
+
 export function proformaPaymentType(isInstallment, sale) {
   if (isInstallment) return PaymentTypeEnum.INSTALLMENT;
   const stored = sale?.paymentType;

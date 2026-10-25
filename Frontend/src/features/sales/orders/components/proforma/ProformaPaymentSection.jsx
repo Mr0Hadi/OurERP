@@ -5,11 +5,12 @@ import { FormSection } from "@/shared/components/forms/DocumentFormLayout";
 import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import PaymentsCard from "@/shared/components/payments/PaymentsCard";
+import { SALE_TERMS_LABEL } from "../../domain/proformaFlow";
 import { SALE_PAYMENT_SIDE } from "../../domain/salePayments";
 
 /** «شیوه‌ی پرداخت» هنگامِ دریافت: یکجا (نقد/نسیه) یا اقساطی (قرارداد با پیش‌پرداخت). */
 const PAYMENT_TERMS_OPTIONS = [
-  { value: false, label: "نقد / نسیه" },
+  { value: false, label: SALE_TERMS_LABEL },
   { value: true, label: "اقساطی", hint: "پیش‌پرداخت و قرارداد اقساط همین‌جا ثبت و فاکتور صادر می‌شود." },
 ];
 

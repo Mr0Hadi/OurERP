@@ -129,7 +129,7 @@ export default function InstallmentPenaltyWaiveDialog({ installment, onOpenChang
         onOpenChange(next);
       }}
     >
-      <DialogContent dir="rtl" className="sm:max-w-md" showCloseButton={!mutation.isPending}>
+      <DialogContent dir="rtl" className="max-h-[90svh] overflow-y-auto sm:max-w-md" showCloseButton={!mutation.isPending}>
         {installment && (
           <WaiveBody key={installment.id} installment={installment} mutation={mutation} onClose={() => onOpenChange(false)} />
         )}
