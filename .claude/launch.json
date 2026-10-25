@@ -9,7 +9,7 @@
       ],
       "cwd": "Frontend",
       "port": 5173,
-      "autoPort": true
+      "autoPort": false
     },
     {
       "name": "ourerp-offline",
