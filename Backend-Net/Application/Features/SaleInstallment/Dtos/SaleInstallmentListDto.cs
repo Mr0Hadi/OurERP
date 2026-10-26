@@ -21,5 +21,16 @@ namespace Application.Features.SaleInstallment.Dtos
         public string InvoiceNumber { get; set; } = string.Empty;
         public int CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
+
+        /// <summary>The plan's monthly late-penalty rate (null = no penalty).</summary>
+        public decimal? LatePenaltyPercentage { get; set; }
+
+        /// <summary>Paid rows: the penalty charged with the payment. Unpaid rows: 0.</summary>
+        public UInt64 PenaltyAmount { get; set; }
+
+        /// <summary>Unpaid rows: days late today (after the grace days) and the penalty paying today would charge, waiver included. Same as SaleInstallmentDto.</summary>
+        public int DaysLate { get; set; }
+        public UInt64 PenaltyDue { get; set; }
+        public UInt64 PenaltyWaivedAmount { get; set; }
     }
 }

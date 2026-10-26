@@ -32,6 +32,12 @@ namespace Application.Features.Sale.Dtos
         /// <summary>Send it back with ApproveSaleProforma / CheckSaleWarehouse: an approval is for the revision the screen showed.</summary>
         public int Revision { get; set; }
 
+        /// <summary>When anything on the sale last changed (edit, approval, payment, shipping); a stamp for "has the server copy moved?".</summary>
+        public DateTime UpdatedAt { get; set; }
+
+        /// <summary>Created at the counter with CreateInPersonProforma: scanned and reserved in front of the customer, no warehouse queue.</summary>
+        public bool IsInPerson { get; set; }
+
         /// <summary>Approvals, warehouse shortages and edits that sent it back - oldest first.</summary>
         public List<SaleProformaEventDto> ProformaEvents { get; set; } = new();
 

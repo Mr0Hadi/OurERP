@@ -1429,6 +1429,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("AppliedQuantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1470,6 +1473,8 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BankAccountId");
+
                     b.HasIndex("ProductId");
 
                     b.HasIndex("PurchaseReturnResolutionId");
@@ -1488,6 +1493,9 @@ namespace Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(20,0)");
 
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CheckNumber")
                         .HasColumnType("nvarchar(max)");
 
@@ -1501,6 +1509,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BankAccountId");
 
                     b.HasIndex("PurchaseReturnEffectId");
 
@@ -1631,6 +1641,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsInPerson")
                         .HasColumnType("bit");
 
                     b.Property<decimal>("PaidAmount")
@@ -2093,6 +2106,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("AppliedQuantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -2131,6 +2147,8 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BankAccountId");
+
                     b.HasIndex("ProductId");
 
                     b.HasIndex("SaleReturnResolutionId");
@@ -2149,6 +2167,9 @@ namespace Infrastructure.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(20,0)");
 
+                    b.Property<int?>("BankAccountId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CheckNumber")
                         .HasColumnType("nvarchar(max)");
 
@@ -2162,6 +2183,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BankAccountId");
 
                     b.HasIndex("SaleReturnEffectId");
 
@@ -3358,6 +3381,10 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturnEffect", b =>
                 {
+                    b.HasOne("Domain.Entities.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId");
+
                     b.HasOne("Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
@@ -3369,6 +3396,8 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("BankAccount");
+
                     b.Navigation("Product");
 
                     b.Navigation("PurchaseReturnResolution");
@@ -3376,11 +3405,17 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.PurchaseReturnEffectMoneyPart", b =>
                 {
+                    b.HasOne("Domain.Entities.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId");
+
                     b.HasOne("Domain.Entities.PurchaseReturnEffect", "PurchaseReturnEffect")
                         .WithMany("MoneyParts")
                         .HasForeignKey("PurchaseReturnEffectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("BankAccount");
 
                     b.Navigation("PurchaseReturnEffect");
                 });
@@ -3563,6 +3598,10 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.SaleReturnEffect", b =>
                 {
+                    b.HasOne("Domain.Entities.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId");
+
                     b.HasOne("Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
@@ -3574,6 +3613,8 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("BankAccount");
+
                     b.Navigation("Product");
 
                     b.Navigation("SaleReturnResolution");
@@ -3581,11 +3622,17 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.SaleReturnEffectMoneyPart", b =>
                 {
+                    b.HasOne("Domain.Entities.BankAccount", "BankAccount")
+                        .WithMany()
+                        .HasForeignKey("BankAccountId");
+
                     b.HasOne("Domain.Entities.SaleReturnEffect", "SaleReturnEffect")
                         .WithMany("MoneyParts")
                         .HasForeignKey("SaleReturnEffectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("BankAccount");
 
                     b.Navigation("SaleReturnEffect");
                 });

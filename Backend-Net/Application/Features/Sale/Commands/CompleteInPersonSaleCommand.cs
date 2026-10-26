@@ -37,6 +37,9 @@ namespace Application.Features.Sale.Commands
         public CreateSaleInstallmentPlanCommand? InstallmentPlan { get; set; }
 
         public string? ShippingNote { get; set; }
+
+        /// <summary>The official invoice date, not after today; omitted = the date on the proforma, else now.</summary>
+        public DateTime? InvoiceDate { get; set; }
     }
 
     public class InPersonPaymentDto : PaymentInput
@@ -49,6 +52,7 @@ namespace Application.Features.Sale.Commands
         {
             RuleFor(x => x.SaleId).GreaterThan(0).WithMessage("فروش نامعتبر است.");
             RuleForEach(x => x.Payments).SetValidator(new PaymentInputValidator());
+            RuleFor(x => x.InvoiceDate).Must(SaleInvoiceFinalizer.IsValidInvoiceDate).WithMessage(SaleInvoiceFinalizer.InvoiceDateMessage);
             RuleFor(x => x.InstallmentPlan!.DownPaymentAmount).GreaterThan(0UL)
                 .When(x => x.InstallmentPlan != null)
                 .WithMessage("در تحویل حضوری اقساطی، پیش‌پرداخت باید همان‌جا دریافت شود.");
@@ -97,6 +101,7 @@ namespace Application.Features.Sale.Commands
                 if (installment)
                 {
                     request.InstallmentPlan!.SaleId = sale.Id;
+                    request.InstallmentPlan.InvoiceDate ??= request.InvoiceDate;
                     await _mediator.Send(request.InstallmentPlan, ct);
                 }
                 else
@@ -107,6 +112,8 @@ namespace Application.Features.Sale.Commands
                         {
                             SaleId = sale.Id,
                             Direction = DocumentPayments.SaleDirection,
+                            // Read by the first payment only - the one that issues the invoice.
+                            InvoiceDate = request.InvoiceDate,
                             Type = payment.Type,
                             Amount = payment.Amount,
                             PaidAt = payment.PaidAt,
@@ -132,7 +139,12 @@ namespace Application.Features.Sale.Commands
                         .ToList(),
                 }, ct);
 
-                var shipped = await _context.Sales.FirstAsync(x => x.Id == sale.Id, ct);
+                var shipped = await _context.Sales
+                    .Include(x => x.PaymentDetails)
+                    .Include(x => x.PaymentAllocations).ThenInclude(a => a.PaymentDetail)
+                    .FirstAsync(x => x.Id == sale.Id, ct);
+                // The invoice was issued by the first payment, before the others existed: name the methods of all of them.
+                SaleInvoiceFinalizer.ApplyPaymentType(shipped);
                 shipped.Status = SalesStatusEnum.DELIVERED;
                 shipped.UpdatedAt = DateTime.Now;
                 await _unitOfWork.SaveChangesAsync(ct);

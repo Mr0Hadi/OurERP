@@ -48,6 +48,9 @@ namespace Application.Features.SaleInstallment.Commands
         /// <summary>The cash box or bank account the money went into (see PaymentInput.BankAccountId).</summary>
         public int? BankAccountId { get; set; }
         public DateTime? PaidAt { get; set; }
+
+        /// <summary>Only read when the down payment issues the invoice: the official invoice date (see AddSalePaymentCommand.InvoiceDate).</summary>
+        public DateTime? InvoiceDate { get; set; }
     }
 
     public class CreateSaleInstallmentPlanCommandValidator : AbstractValidator<CreateSaleInstallmentPlanCommand>
@@ -59,6 +62,7 @@ namespace Application.Features.SaleInstallment.Commands
             // تعداد اقساط سمت سرور به مجموعه‌ی خاصی محدود نیست - فرانت چند گزینه‌ی از پیش
             // تعیین‌شده نشان می‌دهد. اگر روزی خواستیم این محدودیت را سمت سرور هم اعمال کنیم،
             // جایش دقیقاً همین‌جاست.
+            RuleFor(x => x.InvoiceDate).Must(SaleInvoiceFinalizer.IsValidInvoiceDate).WithMessage(SaleInvoiceFinalizer.InvoiceDateMessage);
             RuleFor(x => x.InstallmentCount).GreaterThan(0).WithMessage("تعداد اقساط باید از صفر بیشتر باشد.");
             RuleFor(x => x.FirstDueDate).Must(d => d != default).WithMessage(Validation.RequiredMessage("سررسید اولین قسط"));
             RuleFor(x => x.LatePenaltyPercentage).GreaterThanOrEqualTo(0)
@@ -162,7 +166,7 @@ namespace Application.Features.SaleInstallment.Commands
             // نهایی‌سازی خروج از پیش‌فاکتور: در فروش اقساطی، وجود پلن فعال + ثبت پیش‌پرداخت
             // جای شرط «پرداخت کامل» را می‌گیرد.
             if (sale.Status == SalesStatusEnum.PROFORMA && plan.DownPaymentAmount > 0)
-                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, request.InvoiceDate, cancellationToken);
 
             // The charge goes on the customer's account together with the invoice; a proforma has neither yet.
             await PartyLedger.InstallmentChargeChangedAsync(_context, sale, plan.InstallmentChargeAmount, paidAt, cancellationToken);

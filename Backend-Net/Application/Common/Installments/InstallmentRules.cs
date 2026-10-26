@@ -47,5 +47,33 @@ namespace Application.Common.Installments
 
         /// <summary>A row not yet due on <paramref name="on"/> - the ones an early settlement discounts.</summary>
         public static bool IsNotYetDue(SaleInstallment row, DateTime on) => row.DueDate.Date > on.Date;
+
+        /// <summary>
+        /// What settling every unpaid row of <paramref name="plan"/> on <paramref name="on"/> would charge: late rows add their
+        /// penalty, rows not yet due lose their share of the installment charge times <paramref name="discountPercentage"/>
+        /// (capped at the charge). The one definition behind SettleSaleInstallmentPlan and the plan detail's preview, so the
+        /// cashier's number and the recorded payment cannot disagree. Shares are taken from the plan as it stands.
+        /// </summary>
+        public static SettlementQuote QuoteSettlement(SaleInstallmentPlan plan, IReadOnlyCollection<SaleInstallment> unpaid, DateTime on, long graceDays, long discountPercentage)
+        {
+            var penalties = unpaid.ToDictionary(i => i.Id, i => PenaltyDue(plan, i, on, graceDays));
+            var discounts = unpaid.ToDictionary(i => i.Id, i => IsNotYetDue(i, on)
+                ? (ulong)Math.Round((decimal)ChargeShare(plan, i) * discountPercentage / 100m, MidpointRounding.AwayFromZero)
+                : 0UL);
+            var totalDiscount = Math.Min(discounts.Values.Aggregate(0UL, (sum, d) => sum + d), plan.InstallmentChargeAmount);
+            var totalPenalty = penalties.Values.Aggregate(0UL, (sum, p) => sum + p);
+            var remaining = plan.RemainingAmount;
+            var amount = (remaining > totalDiscount ? remaining - totalDiscount : 0UL) + totalPenalty;
+
+            return new SettlementQuote(penalties, discounts, totalDiscount, totalPenalty, amount);
+        }
     }
+
+    /// <param name="Amount">What the settlement payment is: the remaining after the discount, plus the penalties.</param>
+    public record SettlementQuote(
+        IReadOnlyDictionary<int, ulong> Penalties,
+        IReadOnlyDictionary<int, ulong> Discounts,
+        ulong TotalDiscount,
+        ulong TotalPenalty,
+        ulong Amount);
 }

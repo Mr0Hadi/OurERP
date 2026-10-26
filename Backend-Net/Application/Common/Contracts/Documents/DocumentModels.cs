@@ -36,8 +36,16 @@ namespace Application.Common.Contracts.Documents
         public string ProductCode { get; set; } = string.Empty;
         public string ProductName { get; set; } = string.Empty;
         public int Quantity { get; set; }
+
+        /// <summary>The product unit's Persian label (عدد، جفت، ...).</summary>
+        public string Unit { get; set; } = "عدد";
         public ulong UnitPrice { get; set; }
+
+        /// <summary>The stored line amounts (InvoiceLineMath); on the two return sheets gross = net = LineTotal and tax 0.</summary>
+        public ulong GrossAmount { get; set; }
         public ulong DiscountAmount { get; set; }
+        public ulong NetAmount { get; set; }
+        public int TaxPercent { get; set; }
         public ulong TaxAmount { get; set; }
         public ulong LineTotal { get; set; }
     }
@@ -45,13 +53,25 @@ namespace Application.Common.Contracts.Documents
     public class InvoiceDocumentModel
     {
         public string Title { get; set; } = string.Empty;
+
+        /// <summary>A sale still in PROFORMA (always false on the return sheets).</summary>
+        public bool IsProforma { get; set; }
         public string DocumentNumber { get; set; } = string.Empty;
         public DateTime DocumentDate { get; set; }
 
         /// <summary>مهلت پرداخت - اختیاری؛ فقط وقتی چاپ می‌شود که سند مهلت تسویه داشته باشد.</summary>
         public DateTime? PaymentDueDate { get; set; }
         public string StatusText { get; set; } = string.Empty;
+
+        /// <summary>The document's own description, as typed on it.</summary>
         public string? Description { get; set; }
+
+        /// <summary>
+        /// Notes this kind of document adds on its own (a return's decision summary, the invoice it refers to), one per line.
+        /// The notes derived from the totals and terms (installment charge, due date) are not here: InvoiceDocumentNotes.For
+        /// gives the full list, which is what the official template prints in its notes cell and the JSON document returns.
+        /// </summary>
+        public List<string> Notes { get; set; } = new();
 
         public CompanyInfo Company { get; set; } = new();
 

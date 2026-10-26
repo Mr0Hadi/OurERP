@@ -1,4 +1,5 @@
-﻿using Application.Features.Invoice.Queries;
+﻿using Application.Common.Dtos;
+using Application.Features.Invoice.Queries;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -42,6 +43,28 @@ namespace WMS.Controllers
         {
             var file = await _mediator.Send(request);
             return File(file.Content, file.ContentType, file.FileName);
+        }
+
+        // ── Print data of the same three documents, as JSON in the usual envelope (for the browser print studio). ──
+        [HasPermission(PermissionEnum.InvoicePrint)]
+        [HttpGet("GetSaleInvoiceDocument")]
+        public async Task<ActionResult<ResponseDto>> GetSaleInvoiceDocument([FromQuery] GetSaleInvoiceDocumentQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.InvoicePrint)]
+        [HttpGet("GetSaleReturnCreditNoteDocument")]
+        public async Task<ActionResult<ResponseDto>> GetSaleReturnCreditNoteDocument([FromQuery] GetSaleReturnCreditNoteDocumentQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.InvoicePrint)]
+        [HttpGet("GetPurchaseReturnDocument")]
+        public async Task<ActionResult<ResponseDto>> GetPurchaseReturnDocument([FromQuery] GetPurchaseReturnDocumentQuery request)
+        {
+            return await _mediator.Send(request);
         }
     }
 }

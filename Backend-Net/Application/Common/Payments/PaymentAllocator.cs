@@ -118,7 +118,7 @@ namespace Application.Common.Payments
 
             // Paying a proforma issues its invoice - the same rule as AddSalePayment.
             if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount > 0)
-                await SaleInvoiceFinalizer.FinalizeAsync(context, sale, cancellationToken);
+                await SaleInvoiceFinalizer.FinalizeAsync(context, sale, null, cancellationToken);
         }
 
         private static async Task ToPurchaseAsync(IWMSDbContext context, PaymentDetail payment, PaymentAllocationInput input, PaymentAllocation allocation, CancellationToken cancellationToken)

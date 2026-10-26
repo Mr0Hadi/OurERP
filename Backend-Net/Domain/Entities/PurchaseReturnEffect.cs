@@ -49,6 +49,13 @@ namespace Domain.Entities
         public ReturnPaymentMethodEnum? Method { get; set; }
         public string? Reference { get; set; }
 
+        /// <summary>
+        /// CASH/TRANSFER money only: the cash box or bank account it went through; counted in that account once APPLIED, on
+        /// AppliedAt. A MIXED effect names its accounts on its parts instead.
+        /// </summary>
+        public int? BankAccountId { get; set; }
+        public BankAccount? BankAccount { get; set; }
+
         public string? Note { get; set; }
         public ReturnEffectStatusEnum Status { get; set; }
         public DateTime CreatedAt { get; set; }

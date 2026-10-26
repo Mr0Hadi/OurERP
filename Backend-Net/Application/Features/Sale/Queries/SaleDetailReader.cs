@@ -34,6 +34,8 @@ namespace Application.Features.Sale.Queries
                     ProformaStage = x.ProformaStage,
                     ReservationExpiresAt = x.ReservationExpiresAt,
                     Revision = x.Revision,
+                    UpdatedAt = x.UpdatedAt,
+                    IsInPerson = x.IsInPerson,
                     ProformaEvents = x.ProformaEvents.OrderBy(e => e.OccurredAt).ThenBy(e => e.Id).Select(e => new SaleProformaEventDto
                     {
                         Id = e.Id,

@@ -1,6 +1,8 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
+using Application.Common.Installments;
+using Application.Common.Settings;
 using Application.Common.Queries;
 using Application.Features.SaleInstallment.Dtos;
 using Common.Extensions;
@@ -34,6 +36,12 @@ namespace Application.Features.SaleInstallment.Queries
         public int? SaleId { get; set; }
         public int? PlanId { get; set; }
         public SaleInstallmentStatusEnum? Status { get; set; }
+
+        /// <summary>Several statuses at once (<c>?statuses=0&amp;statuses=2</c>), ANDed with <see cref="Status"/> when both are sent.</summary>
+        public List<SaleInstallmentStatusEnum>? Statuses { get; set; }
+
+        /// <summary>true = every unpaid row (PENDING or OVERDUE).</summary>
+        public bool? UnpaidOnly { get; set; }
         public DateTime? FromDueDate { get; set; }
         public DateTime? ToDueDate { get; set; }
         public DateTime? FromPaidAt { get; set; }
@@ -74,6 +82,17 @@ namespace Application.Features.SaleInstallment.Queries
             if (request.Status.HasValue)
             {
                 query = query.Where(x => x.Status == request.Status.Value);
+            }
+
+            if (request.Statuses is { Count: > 0 })
+            {
+                var statuses = request.Statuses;
+                query = query.Where(x => statuses.Contains(x.Status));
+            }
+
+            if (request.UnpaidOnly == true)
+            {
+                query = query.Where(x => x.Status == SaleInstallmentStatusEnum.PENDING || x.Status == SaleInstallmentStatusEnum.OVERDUE);
             }
 
             if (request.FromDueDate.HasValue)
@@ -124,12 +143,25 @@ namespace Application.Features.SaleInstallment.Queries
                 InvoiceNumber = x.Plan.Sale.InvoiceNumber,
                 CustomerId = x.Plan.Sale.CustomerId,
                 CustomerName = x.Plan.Sale.Customer.FirstName + " " + x.Plan.Sale.Customer.LastName,
+                LatePenaltyPercentage = x.Plan.LatePenaltyPercentage,
+                PenaltyAmount = x.PenaltyAmount,
+                PenaltyWaivedAmount = x.PenaltyWaivedAmount,
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             // GetDescription یک فراخوانی محلی است و به SQL ترجمه نمی‌شود، پس بعد از
-            // materialize شدن صفحه پر می‌شود.
+            // materialize شدن صفحه پر می‌شود. Penalties likewise: InstallmentRules is in-memory math.
+            var graceDays = await SystemSettingValues.GetIntegerAsync(_context, SystemSettingCatalog.InstallmentOverdueGraceDays, cancellationToken);
+            var today = DateTime.Now;
             foreach (var item in paged.Items)
+            {
                 item.StatusTitle = item.Status.GetDescription();
+                if (item.Status is SaleInstallmentStatusEnum.PENDING or SaleInstallmentStatusEnum.OVERDUE)
+                {
+                    item.DaysLate = InstallmentRules.DaysLate(item.DueDate, today, graceDays);
+                    var accrued = InstallmentRules.AccruedPenalty(item.LatePenaltyPercentage, item.Amount, item.DueDate, today, graceDays);
+                    item.PenaltyDue = accrued > item.PenaltyWaivedAmount ? accrued - item.PenaltyWaivedAmount : 0;
+                }
+            }
 
             res.Data = new
             {

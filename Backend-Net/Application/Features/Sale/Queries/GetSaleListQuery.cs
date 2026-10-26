@@ -150,6 +150,8 @@ namespace Application.Features.Sale.Queries
                 PaymentDate = x.PaymentDate,
                 Status = x.Status,
                 ProformaStage = x.ProformaStage,
+                IsInPerson = x.IsInPerson,
+                UpdatedAt = x.UpdatedAt,
                 ReservationExpiresAt = x.ReservationExpiresAt,
                 OpenWarehouseIssueCount = _context.SaleWarehouseIssues.Count(i => i.SaleId == x.Id && i.ResolvedAt == null),
                 PaymentType = x.PaymentType,

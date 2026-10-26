@@ -251,6 +251,12 @@ namespace Domain.Enums
         [Description("پایان مهلت رزرو پیش‌فاکتور")]
         ReleaseExpiredSaleReservation = 414,
 
+        [Description("ثبت پیش‌فاکتور حضوری و رزرو کالا")]
+        CreateInPersonProforma = 415,
+
+        [Description("آزادسازی دستی رزرو پیش‌فاکتور")]
+        ReleaseSaleReservation = 416,
+
         // --- اقساط ---
         [Description("ایجاد طرح اقساط")]
         CreateSaleInstallmentPlan = 500,

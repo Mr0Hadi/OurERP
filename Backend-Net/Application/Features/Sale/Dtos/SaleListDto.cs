@@ -17,6 +17,10 @@ namespace Application.Features.Sale.Dtos
         public SaleProformaStageEnum ProformaStage { get; set; }
         public string? ProformaStageTitle { get; set; }
 
+        /// <summary>See SaleDto.IsInPerson.</summary>
+        public bool IsInPerson { get; set; }
+        public DateTime UpdatedAt { get; set; }
+
         /// <summary>
         /// While a proforma's units are reserved: when the reservation runs out (payment is refused from then on and the units
         /// go back on the shelf about a minute later). Null when nothing is reserved, after the invoice is issued, or when the
