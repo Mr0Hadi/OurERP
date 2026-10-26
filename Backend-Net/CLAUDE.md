@@ -2244,6 +2244,40 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
 - Tests: `Integration/WarehouseStocktakeReorderTests.cs` (9), two `ListSortingTests` cases. `ProformaFlow` registers
   `scope.PurchaseRepository`. **Verified:** suite 1013/1016 - the 3 documented environmental failures.
 
+**Frontend requests 24-27 (2026-10-24).** `docs/frontend-requests.fa.md` sections 24-27, each answered under its section. API:
+`docs/api-guide.fa.md` sections 10, 11, 11b, 13, 24 and the four 2026-10-24 tables in section 16.
+
+- **24 - proforma follow-ups.** `CheckSaleWarehouse.Adjustments` (+ required `Note`): the warehouse lowers or removes lines and approves
+  the rest in one step - reservations of the changed lines released, `InvoiceLineMath.Recompute` (the line keeps its tax snapshot),
+  revision bumped, one `WAREHOUSE_ADJUSTED = 6` event; with adjustments every remaining line must be fully scanned (no shortage path).
+  Issues are resolved before adjusting. `SaleInvoiceFinalizer.FinalizeAsync` now takes `DateTime? invoiceDate` (from `AddSalePayment`,
+  `CreateSaleInstallmentPlan`, `CompleteInPersonSale`; not after today) and otherwise **keeps a non-future date already on the proforma**
+  (it used to overwrite it with now); it also calls `ApplyPaymentType` (full payment -> the rows' one method, or MIXED; installment and
+  partial payment untouched). No "edit an issued invoice's date": the ledger and tax period are dated by it. `Sale.IsInPerson` +
+  `CreateInPersonProformaCommand` (CreateSale + Approve + Check via IMediator in one transaction, `SaleInPerson`);
+  `ReleaseSaleReservationCommand` (manual release, `RESERVATION_RELEASED = 7`); `updatedAt`/`isInPerson` on the sale DTOs. Audit 415/416.
+  Migration `sale-in-person-flag`.
+- **25 - installments.** `GetSaleInstallmentList.Statuses`/`UnpaidOnly`; penalty fields on the list row (computed after paging);
+  `InstallmentRules.QuoteSettlement` is now the one settlement calculation - `SettleSaleInstallmentPlan` and the plan detail's
+  `earlySettlementDiscountPreview`/`settlementAmountToday` both call it.
+- **26 - treasury.** `BankAccountId` on `{Purchase,Sale}ReturnEffect` and both `...EffectMoneyPart`s, sent as `bankAccountId` on money
+  effects/parts and on `ExecuteMoneyEffect`. `Application/Common/Returns/ReturnMoneyAccounts` is the rule (static, reads settings through
+  `SystemSettingValues`, so no handler constructor changed): CASH/TRANSFER only, active account, `Payment.RequireBankAccount` for applied
+  money. `BankAccountLedger` counts applied return money (four small queries read separately - a union then group does not translate)
+  and lists it as `RETURN_MONEY = 4`. Return cheques have no clearing lifecycle and take no account. `ChequeDto.VoidedAt`.
+  Migration `return-money-bank-account`.
+- **27 - print data.** `Application/Features/Invoice/Documents/InvoiceDocumentBuilder` builds all three official documents; the PDF
+  queries render it and `GetSaleInvoiceDocument`/`GetSaleReturnCreditNoteDocument`/`GetPurchaseReturnDocument` return it as
+  `InvoiceDocumentDto` (nulls, never empty strings). `InvoiceDocumentModel` gained `IsProforma`, `Notes` and per-line
+  `Unit`/`GrossAmount`/`NetAmount`/`TaxPercent`; `Application/Common/Documents/InvoiceDocumentNotes.For` is the one notes list (the Excel
+  renderer writes it into AE29; QuestPDF prints only `model.Notes`, since it shows the charge and due date in their own places). PDF
+  fixes on the way: proforma title, Persian status, real unit label, and the return sheets print the return's own description with the
+  summary as notes.
+- **Not verified against SQL Server**: the local instance hung during this pass (an orphaned `CREATE DATABASE` stuck in
+  `PARALLEL_REDO_WORKER_SYNC`, its KILL rollback stuck too) and needs a service restart. Before the hang: build clean, 24's 6 tests pass,
+  full suite 1016/1022 (3 environmental + 3 SQL timeouts). After: 27's SQL-free unit tests pass; 25's 2, 26's 5 and 27's 4 integration
+  tests are written and not yet run. Neither migration is applied.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

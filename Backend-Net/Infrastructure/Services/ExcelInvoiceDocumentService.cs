@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using Application.Common.Contracts.Documents;
+using Application.Common.Documents;
 using ClosedXML.Excel;
 using Common.Exceptions;
 using Common.Extensions;
@@ -195,11 +196,12 @@ namespace Infrastructure.Services
                 ws.Cell($"D{row}").Value = line.ProductCode;
                 ws.Cell($"G{row}").Value = line.ProductName;
                 ws.Cell($"T{row}").Value = line.Quantity.ToString().ToPersianDigits();
-                ws.Cell($"W{row}").Value = "عدد";
+                ws.Cell($"W{row}").Value = line.Unit;
                 ws.Cell($"Z{row}").Value = Money(line.UnitPrice);
-                ws.Cell($"AE{row}").Value = Money((ulong)line.Quantity * line.UnitPrice);
+                // The stored amounts (InvoiceLineMath), the same numbers the print-data endpoints return.
+                ws.Cell($"AE{row}").Value = Money(line.GrossAmount);
                 ws.Cell($"AL{row}").Value = Money(line.DiscountAmount);
-                ws.Cell($"AQ{row}").Value = Money((ulong)line.Quantity * line.UnitPrice - line.DiscountAmount);
+                ws.Cell($"AQ{row}").Value = Money(line.NetAmount);
                 ws.Cell($"AX{row}").Value = Money(line.TaxAmount);
                 ws.Cell($"BC{row}").Value = Money(line.LineTotal);
             }
@@ -215,16 +217,12 @@ namespace Infrastructure.Services
 
             SetValue(ws, "G28", Money(model.GrandTotal) + " " + model.Company.Currency);
 
-            // The official template has no installment rows: the charge and what the customer pays in total ride along in
-            // the free-form notes cell, like the due date below. G28 stays the invoice total, lines and tax only.
-            if (model.PayableAmount.HasValue)
-                AppendValue(ws, "AE29", "سود اقساط: " + Money(model.InstallmentChargeAmount ?? 0UL) + " " + model.Company.Currency
-                    + " - جمع قابل پرداخت: " + Money(model.PayableAmount.Value) + " " + model.Company.Currency);
-
-            // The official template has no dedicated due-date cell, so the payment deadline rides
-            // along in the free-form notes cell, ahead of the description.
-            if (model.PaymentDueDate.HasValue)
-                AppendValue(ws, "AE29", "مهلت پرداخت: " + PersianDate.ToDisplayString(model.PaymentDueDate.Value).ToPersianDigits());
+            // The official template has no installment rows, due-date cell or decision table: the installment charge with what
+            // is payable in total, the payment deadline and the document's own notes all ride along in the free-form notes cell,
+            // ahead of the description. G28 stays the invoice total, lines and tax only. InvoiceDocumentNotes is the same list
+            // the print-data endpoints return.
+            foreach (var note in InvoiceDocumentNotes.For(model))
+                AppendValue(ws, "AE29", note);
 
             if (!string.IsNullOrWhiteSpace(model.Description))
                 AppendValue(ws, "AE29", model.Description);

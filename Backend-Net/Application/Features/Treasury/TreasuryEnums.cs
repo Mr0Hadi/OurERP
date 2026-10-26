@@ -13,5 +13,8 @@ namespace Application.Features.Treasury
 
         [Description("انتقال از این حساب")]
         TRANSFER_OUT = 3,
+
+        [Description("پول مرجوعی")]
+        RETURN_MONEY = 4,
     }
 }

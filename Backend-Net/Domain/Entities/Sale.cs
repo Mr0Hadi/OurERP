@@ -19,6 +19,12 @@ namespace Domain.Entities
         public int Revision { get; set; }
 
         /// <summary>
+        /// Created at the counter (CreateInPersonProformaCommand): the units were scanned and reserved in front of the customer
+        /// instead of going through the warehouse queue. A label only - every rule of the pipeline applies as to any proforma.
+        /// </summary>
+        public bool IsInPerson { get; set; }
+
+        /// <summary>
         /// When the units the warehouse reserved for this proforma stop being held for it: set by a successful warehouse check
         /// (now + the Sale.ReservationMinutes setting; null when that setting is 0), cleared when the invoice is issued or the
         /// reservation expires. Past it no payment is accepted, and the background sweep puts the units back on the shelf.

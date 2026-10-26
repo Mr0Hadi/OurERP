@@ -46,6 +46,13 @@ namespace Application.Features.SaleInstallment.Dtos
         /// <summary>Installment charge forgiven by an early settlement (already taken off InstallmentChargeAmount/TotalAmount).</summary>
         public UInt64 EarlySettlementDiscountAmount { get; set; }
 
+        /// <summary>
+        /// Live plans with unpaid rows only (null otherwise): what SettleSaleInstallmentPlan would charge if paid today - the
+        /// discount it would forgive, and the payment amount (remaining - that discount + penalties due). Nothing is saved.
+        /// </summary>
+        public UInt64? EarlySettlementDiscountPreview { get; set; }
+        public UInt64? SettlementAmountToday { get; set; }
+
         /// <summary>Return refunds left on account that paid the plan down (part of PaidAmount).</summary>
         public UInt64 ReturnCreditAmount { get; set; }
         public DateTime? LastPaymentDate { get; set; }

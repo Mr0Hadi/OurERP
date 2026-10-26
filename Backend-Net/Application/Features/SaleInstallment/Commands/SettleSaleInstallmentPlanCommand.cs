@@ -100,12 +100,11 @@ namespace Application.Features.SaleInstallment.Commands
 
             // Late rows pay their penalty; rows not yet due are discounted by their share of the installment charge. Shares
             // are taken before any row changes, from the plan as it stood.
-            var penalties = unpaid.ToDictionary(i => i.Id, i => InstallmentRules.PenaltyDue(plan, i, paidAt, graceDays));
-            var discounts = unpaid.ToDictionary(i => i.Id, i => InstallmentRules.IsNotYetDue(i, paidAt)
-                ? (ulong)Math.Round((decimal)InstallmentRules.ChargeShare(plan, i) * discountPercentage / 100m, MidpointRounding.AwayFromZero)
-                : 0UL);
-            var totalDiscount = Math.Min(discounts.Values.Aggregate(0UL, (sum, d) => sum + d), plan.InstallmentChargeAmount);
-            var totalPenalty = penalties.Values.Aggregate(0UL, (sum, p) => sum + p);
+            var quote = InstallmentRules.QuoteSettlement(plan, unpaid, paidAt, graceDays, discountPercentage);
+            var penalties = quote.Penalties;
+            var discounts = quote.Discounts;
+            var totalDiscount = quote.TotalDiscount;
+            var totalPenalty = quote.TotalPenalty;
 
             if (totalDiscount > 0)
             {
@@ -132,7 +131,7 @@ namespace Application.Features.SaleInstallment.Commands
                 Purpose = PaymentPurposeEnum.INSTALLMENT,
                 Direction = PaymentDirectionEnum.IN,
                 // The remaining after the early-settlement discount, plus the late rows' penalties.
-                Amount = plan.RemainingAmount + totalPenalty,
+                Amount = quote.Amount,
                 PaidAt = paidAt,
                 CheckNumber = request.CheckNumber,
                 CheckDueDate = request.CheckDueDate,

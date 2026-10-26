@@ -8,6 +8,7 @@ using Application.Common.Contracts.Settings;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Contracts.UserContextService;
+using Application.Common.Documents;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Sales;
@@ -39,6 +40,13 @@ namespace Application.Features.Sale.Commands
     ///
     /// A successful check sets Sale.ReservationExpiresAt from the Sale.ReservationMinutes setting (default 10, 0 = never):
     /// past it payment is refused and the background sweep (ReleaseExpiredSaleReservationCommand) puts the units back.
+    ///
+    /// <see cref="Adjustments"/> lets the warehouse lower a line's quantity (0 removes the line) when fewer goods exist, and
+    /// approve what is left in the same call instead of sending the proforma back. A note is then required; prices and discounts
+    /// stay, the totals are recomputed, the revision goes up, the changed lines lose their earlier reservations and are checked
+    /// at their new quantity. Every remaining line must then be fully scanned - an adjusted check never records a shortage. One
+    /// WAREHOUSE_ADJUSTED event names the quantities before and after. A proforma carrying an installment plan refuses any change
+    /// to its total, as UpdateSale does.
     /// </summary>
     [AuditAction(AuditActionEnum.CheckSaleWarehouse)]
     public class CheckSaleWarehouseCommand : IRequest<ResponseDto>
@@ -54,7 +62,18 @@ namespace Application.Features.Sale.Commands
         /// <summary>Units found unfit to sell. Rare; each one strictly named.</summary>
         public List<SaleWarehouseIssueInputDto> Issues { get; set; } = new();
 
+        /// <summary>Lines the warehouse lowers before approving. Only ever down; 0 removes the line. Requires <see cref="Note"/>.</summary>
+        public List<SaleWarehouseAdjustmentDto> Adjustments { get; set; } = new();
+
         public string? Note { get; set; }
+    }
+
+    public class SaleWarehouseAdjustmentDto
+    {
+        public int SaleItemId { get; set; }
+
+        /// <summary>The line's new quantity: below its current one, 0 = remove the line.</summary>
+        public int Quantity { get; set; }
     }
 
     public class CheckSaleWarehouseLineDto
@@ -79,6 +98,15 @@ namespace Application.Features.Sale.Commands
             RuleFor(x => x.Lines).Must(l => l.Select(i => i.SaleItemId).Distinct().Count() == l.Count)
                 .WithMessage("هر قلم فروش فقط یک‌بار می‌آید.");
             RuleFor(x => x.Note).MaximumLength(1000).WithMessage("یادداشت حداکثر ۱۰۰۰ نویسه است.");
+            RuleFor(x => x.Note).Must(n => !string.IsNullOrWhiteSpace(n))
+                .When(x => x.Adjustments.Count > 0)
+                .WithMessage("برای تغییر تعداد اقلام، دلیل را در یادداشت بنویسید.");
+            RuleFor(x => x.Adjustments).Must(a => a.Select(i => i.SaleItemId).Distinct().Count() == a.Count)
+                .WithMessage("هر قلم فروش فقط یک‌بار تغییر می‌کند.");
+            RuleForEach(x => x.Adjustments).ChildRules(a =>
+            {
+                a.RuleFor(x => x.Quantity).GreaterThanOrEqualTo(0).WithMessage("تعداد تازه نمی‌تواند منفی باشد.");
+            });
             RuleForEach(x => x.Issues).ChildRules(i =>
             {
                 i.RuleFor(x => x.ProductUnitBarcode).NotEmpty().WithMessage(Validation.RequiredMessage("بارکد دانه"));
@@ -134,14 +162,18 @@ namespace Application.Features.Sale.Commands
             SaleProformaPipeline.EnsureRevision(sale, request.Revision);
 
             var lines = sale.Items.ToDictionary(x => x.Id);
-            if (request.Lines.Any(l => !lines.ContainsKey(l.SaleItemId)))
+            if (request.Lines.Any(l => !lines.ContainsKey(l.SaleItemId)) || request.Adjustments.Any(a => !lines.ContainsKey(a.SaleItemId)))
                 throw new NotFoundCustomException("قلم فروش مورد نظر در این پیش‌فاکتور یافت نشد.");
 
             var userId = int.TryParse(_userContextService.GetUserId(), out var id) ? id : (int?)null;
             var now = DateTime.Now;
 
             // ── Checks first. ──────────────────────────────────────────────────────────────────────────────────────
+            // Issues are resolved against the proforma as it came in: a damaged unit is often why a line is lowered or removed.
             var issueUnits = await ResolveIssueUnitsAsync(request.Issues, sale, cancellationToken);
+
+            var adjustedNote = await ApplyAdjustmentsAsync(request, sale, lines, cancellationToken);
+            var adjusted = adjustedNote != null;
 
             var scanned = request.Lines.ToDictionary(l => l.SaleItemId, l => l.ProductUnitBarcodes ?? new());
             var reportedPayloads = issueUnits.Select(u => u.Unit.BarcodePayload).ToHashSet();
@@ -190,6 +222,9 @@ namespace Application.Features.Sale.Commands
                 }, cancellationToken);
             }
 
+            if (shortages.Count > 0 && adjusted)
+                throw new ValidationCustomException("پس از تغییر تعداد، همه‌ی اقلام باقی‌مانده باید کامل اسکن شوند: " + string.Join("، ", shortages));
+
             if (shortages.Count > 0)
             {
                 var note = "کسری انبار - " + string.Join("، ", shortages)
@@ -207,13 +242,17 @@ namespace Application.Features.Sale.Commands
                     line.Product.Stock -= units.Count;
                 }
 
-                await SaleProformaPipeline.RecordAsync(_context, sale, SaleProformaEventEnum.WAREHOUSE_CHECKED, SaleProformaStageEnum.WAREHOUSE_CHECKED, userId,
-                    string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(), cancellationToken);
+                if (adjusted)
+                    await SaleProformaPipeline.RecordAsync(_context, sale, SaleProformaEventEnum.WAREHOUSE_ADJUSTED, SaleProformaStageEnum.WAREHOUSE_CHECKED, userId,
+                        adjustedNote, cancellationToken);
+                else
+                    await SaleProformaPipeline.RecordAsync(_context, sale, SaleProformaEventEnum.WAREHOUSE_CHECKED, SaleProformaStageEnum.WAREHOUSE_CHECKED, userId,
+                        string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(), cancellationToken);
 
                 // Every successful check starts the clock afresh - lines kept from an earlier check included.
                 var minutes = await _systemSettingService.GetIntegerAsync(SystemSettingCatalog.SaleReservationMinutes, cancellationToken);
                 sale.ReservationExpiresAt = SaleProformaPipeline.ReservationDeadline(now, minutes);
-                res.Message = "انبار کالا را تأیید و رزرو کرد؛ پیش‌فاکتور آماده‌ی پرداخت است."
+                res.Message = (adjusted ? "انبار تعداد اقلام را اصلاح کرد و " : "انبار ") + "کالا را تأیید و رزرو کرد؛ پیش‌فاکتور آماده‌ی پرداخت است."
                     + (minutes > 0 ? $" رزرو {minutes} دقیقه معتبر است." : string.Empty);
             }
 
@@ -226,6 +265,60 @@ namespace Application.Features.Sale.Commands
             res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, sale.Id, cancellationToken);
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>
+        /// Lowers the requested lines before the check: their earlier reservations go back on the shelf (they are checked again at
+        /// the new quantity), a 0 removes the line, amounts and the total are recomputed and the revision goes up. Returns the
+        /// WAREHOUSE_ADJUSTED event note (quantities before and after, then the employee's reason), or null when nothing changed.
+        /// </summary>
+        private async Task<string?> ApplyAdjustmentsAsync(CheckSaleWarehouseCommand request, Domain.Entities.Sale sale, Dictionary<int, SaleItem> lines, CancellationToken cancellationToken)
+        {
+            if (request.Adjustments.Count == 0)
+                return null;
+
+            foreach (var adjustment in request.Adjustments)
+            {
+                var line = lines[adjustment.SaleItemId];
+                if (adjustment.Quantity >= line.Quantity)
+                    throw new ValidationCustomException($"انبار فقط می‌تواند تعداد «{line.Product.Name}» را کم کند؛ تعداد فعلی {line.Quantity} است.");
+            }
+
+            var removed = request.Adjustments.Where(a => a.Quantity == 0).Select(a => a.SaleItemId).ToHashSet();
+            if (sale.Items.All(l => removed.Contains(l.Id)))
+                throw new ValidationCustomException("دست‌کم یک قلم باید در پیش‌فاکتور بماند؛ برای کنار گذاشتن کل پیش‌فاکتور آن را حذف کنید.");
+
+            var removedScanned = request.Lines.FirstOrDefault(l => removed.Contains(l.SaleItemId) && (l.ProductUnitBarcodes?.Count ?? 0) > 0);
+            if (removedScanned != null)
+                throw new ValidationCustomException($"قلم «{lines[removedScanned.SaleItemId].Product.Name}» حذف می‌شود و اسکن لازم ندارد.");
+
+            await SaleProformaPipeline.ReleaseAsync(_context, _productUnitService, sale, request.Adjustments.Select(a => a.SaleItemId), cancellationToken);
+
+            var changes = new List<string>();
+            foreach (var adjustment in request.Adjustments)
+            {
+                var line = lines[adjustment.SaleItemId];
+                changes.Add($"«{line.Product.Name}»: {line.Quantity} به {adjustment.Quantity}");
+                if (adjustment.Quantity == 0)
+                {
+                    sale.Items.Remove(line);
+                    continue;
+                }
+
+                line.Quantity = adjustment.Quantity;
+                // The line keeps its own price, discount and tax snapshot; only the quantity changed.
+                InvoiceLineMath.Recompute(line);
+            }
+
+            var total = InvoiceLineMath.DocumentTotal(sale.Items);
+            if (total != sale.TotalAmount && await _context.SaleInstallmentPlans.AnyAsync(
+                    p => p.SaleId == sale.Id && p.IsActive && p.Status == SaleInstallmentPlanStatusEnum.ACTIVE, cancellationToken))
+                throw new ValidationCustomException("این پیش‌فاکتور قرارداد اقساطی دارد و جمع آن نمی‌تواند عوض شود؛ ابتدا قرارداد را حذف کنید.");
+
+            sale.TotalAmount = total;
+            sale.Revision++;
+
+            return "تغییر انبار - " + string.Join("، ", changes) + ". " + request.Note!.Trim();
         }
 
         /// <summary>

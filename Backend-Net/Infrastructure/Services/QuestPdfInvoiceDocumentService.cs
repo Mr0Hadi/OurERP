@@ -217,17 +217,15 @@ namespace Infrastructure.Services
 
                 foreach (var line in lines)
                 {
-                    var gross = (ulong)line.Quantity * line.UnitPrice;
-
                     table.Cell().Element(BodyCell).Text(line.RowNumber.ToString().ToPersianDigits());
                     table.Cell().Element(BodyCell).Text(line.ProductCode.ToPersianDigits());
                     table.Cell().Element(BodyCell).AlignRight().Text(line.ProductName);
                     table.Cell().Element(BodyCell).Text(line.Quantity.ToString().ToPersianDigits());
-                    table.Cell().Element(BodyCell).Text("عدد");
+                    table.Cell().Element(BodyCell).Text(line.Unit);
                     table.Cell().Element(BodyCell).Text(Money(line.UnitPrice));
-                    table.Cell().Element(BodyCell).Text(Money(gross));
+                    table.Cell().Element(BodyCell).Text(Money(line.GrossAmount));
                     table.Cell().Element(BodyCell).Text(Money(line.DiscountAmount));
-                    table.Cell().Element(BodyCell).Text(Money(gross - line.DiscountAmount));
+                    table.Cell().Element(BodyCell).Text(Money(line.NetAmount));
                     table.Cell().Element(BodyCell).Text(Money(line.TaxAmount));
                     table.Cell().Element(BodyCell).Text(Money(line.LineTotal));
                 }
@@ -297,6 +295,11 @@ namespace Infrastructure.Services
                         text.Span($"{model.Balance:N0} {model.Company.Currency}".ToPersianDigits()).FontSize(8);
                     });
                 });
+
+                // The installment charge and the due date are printed in their own places above; the document's own notes
+                // (a return's decision summary, the invoice it refers to) get a box of their own.
+                foreach (var note in model.Notes.Where(n => !string.IsNullOrWhiteSpace(n)))
+                    col.Item().Border(1).BorderColor(BorderColor).Padding(4).Text(note).FontSize(8);
 
                 if (!string.IsNullOrWhiteSpace(model.Description))
                 {

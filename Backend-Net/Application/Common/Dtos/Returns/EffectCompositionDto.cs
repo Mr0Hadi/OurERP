@@ -128,6 +128,13 @@ namespace Application.Common.Dtos.Returns
         /// </summary>
         public DateTime? PaidAt { get; set; }
 
+        /// <summary>
+        /// CASH/TRANSFER only (refused on ON_ACCOUNT, CHECK and MIXED - a MIXED effect names accounts on its parts): the cash
+        /// box or bank account the money goes through. Counted in that account's balance and statement once the effect is
+        /// APPLIED. Required for applied cash/transfer money while the Payment.RequireBankAccount setting is on.
+        /// </summary>
+        public int? BankAccountId { get; set; }
+
         /// <summary>Required, and must sum to Amount, when Method == MIXED.</summary>
         public List<MoneyPartDto>? Parts { get; set; }
     }
@@ -138,5 +145,8 @@ namespace Application.Common.Dtos.Returns
         public ulong Amount { get; set; }
         public string? CheckNumber { get; set; }
         public string? TransferRef { get; set; }
+
+        /// <summary>CASH/TRANSFER parts only - see MoneyEffectDto.BankAccountId.</summary>
+        public int? BankAccountId { get; set; }
     }
 }

@@ -222,6 +222,7 @@ namespace Infrastructure.Services
                     Amount = money.Amount,
                     Method = money.Method,
                     Reference = money.Reference,
+                    BankAccountId = money.BankAccountId,
                     Status = money.PaidAt.HasValue ? ReturnEffectStatusEnum.APPLIED : ReturnEffectStatusEnum.PENDING,
                     CreatedAt = now,
                     AppliedAt = money.PaidAt,
@@ -235,6 +236,7 @@ namespace Infrastructure.Services
                         Amount = p.Amount,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef,
+                        BankAccountId = p.BankAccountId,
                     }).ToList();
                 }
 
