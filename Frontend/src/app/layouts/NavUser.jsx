@@ -17,30 +17,12 @@ import {
   useSidebar,
 } from "@/shared/components/ui/sidebar";
 import { Skeleton } from "@/shared/components/ui/skeleton";
-import { leaveSession } from "@/shared/services/sessionCleanup";
-import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { ROUTES } from "@/shared/constants/routes";
+import { fullNameOf, initialsOf } from "@/features/auth/domain/userDisplay";
 import {
   useUserInfoQuery,
   useLogoutMutation,
 } from "@/features/auth/services/queries";
-
-/**
- * حرفِ اولِ نام و نام خانوادگی.
- *
- * `slice(0, 2)` قبلی روی فارسی غلط بود: دو حرفِ اولِ *یک* کلمه را
- * برمی‌داشت («ام» از «امیر») که نه سرنامِ کسی است و نه خوانا.
- */
-function initialsOf(user) {
-  const first = user.firstName?.trim()?.[0];
-  const last = user.lastName?.trim()?.[0];
-  const initials = [first, last].filter(Boolean).join("");
-
-  return initials || user.username?.slice(0, 2) || "؟";
-}
-
-/** `UserInfoDto` نامِ کامل ندارد؛ از `firstName`/`lastName` ساخته می‌شود. */
-const fullNameOf = (user) =>
-  `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username;
 
 export function NavUser() {
   const { isMobile } = useSidebar();
@@ -48,7 +30,7 @@ export function NavUser() {
 
   // `isLoading` و نه `isPending` — کوئریِ غیرفعال (کاربرِ خارج‌شده) برای
   // همیشه `isPending` می‌ماند و اسکلتون هرگز تمام نمی‌شد.
-  const { data: user, isLoading, isError } = useUserInfoQuery();
+  const { data: user, isLoading } = useUserInfoQuery();
   const logoutMutation = useLogoutMutation();
 
   if (isLoading) {
@@ -67,17 +49,18 @@ export function NavUser() {
     );
   }
 
-  if (isError || !user) return null;
+  // فقط وقتی داده‌ای نیست؛ خطای تازه‌سازیِ پس‌زمینه نباید منوی کاربر را پنهان کند.
+  if (!user) return null;
 
-  // بارگذاریِ کاملِ صفحه‌ی ورود (`leaveSession`)، نه `navigate`: پیش‌نویس‌های
+  // بارگذاریِ کاملِ صفحه‌ی ورود (`leaveSession` در خودِ `useLogoutMutation`)، نه `navigate`: پیش‌نویس‌های
   // درونِ حافظه (فاکتورِ نیمه‌کاره، پرداخت‌های ثبت‌نشده) نباید به کاربرِ بعدیِ
   // همین دستگاه برسند.
   const handleLogout = () => {
-    logoutMutation.mutate(undefined, { onSettled: leaveSession });
+    logoutMutation.mutate();
   };
 
-  const openAccount = () =>
-    navigate(routeWithId(ROUTES.EMPLOYEES_DETAIL, user.id));
+  // صفحه‌ی حسابِ خودِ کاربر؛ جزئیاتِ کارمند `UserUpdate` می‌خواهد و برای همه باز نیست.
+  const openAccount = () => navigate(ROUTES.ACCOUNT);
 
   return (
     <SidebarMenu>

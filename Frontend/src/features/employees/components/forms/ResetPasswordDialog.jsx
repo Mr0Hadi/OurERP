@@ -99,7 +99,7 @@ export default function ResetPasswordDialog({
                   size="sm"
                   onClick={() => setVisible((prev) => !prev)}
                   aria-label={visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
-                  className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                  className="absolute inset-y-0 left-1 my-auto h-8 w-8 p-0"
                 >
                   {visible ? (
                     <EyeOff className="h-4 w-4" />

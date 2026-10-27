@@ -85,6 +85,7 @@ const ROUTE_TITLES = {
   [ROUTES.ACCOUNTING_SUPPLIERS]: "آمار خرید از تامین‌کنندگان",
 
   [ROUTES.SETTINGS]: "تنظیمات",
+  [ROUTES.ACCOUNT]: "حساب کاربری",
 
   [ROUTES.AUTH]: "احراز هویت",
   [ROUTES.LOGIN]: "ورود",

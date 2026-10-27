@@ -109,6 +109,7 @@ flowchart LR
 | --- | --- | --- |
 | `FormField`، `FormSelectField` | فیلدِ react-hook-form با label و خطا | ۶، ۳ |
 | `FormSectionCard` | کارتِ بخشِ فرم با هدرِ آیکون‌دار (مشتری، تامین‌کننده، …) | ۱۱ |
+| `PasswordInput` | ورودیِ رمز (ltr) با دکمه‌ی نمایش/پنهان؛ `register` مستقیم رویش | ۱ |
 | `SectionCard` | کارتِ بخشِ صفحه‌ی سند (هدرِ ساده + `action`) | ۸ |
 | `DocumentFormLayout` (`main`/`payments`/`aside`، و `below` تمام‌عرض) + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
 | `StatusChoice` | انتخابِ وضعیت به‌صورتِ دکمه | ۷ |

@@ -1,4 +1,5 @@
 import axiosInstance from "@/shared/services/api/axios";
+import { useAuthStore } from "../store/authStore";
 
 /**
  * اولین درخواستِ بعد از بیکاریِ سرور (راه‌اندازیِ دوباره‌ی application pool روی IIS،
@@ -17,12 +18,27 @@ export async function login({ username, password }) {
 }
 
 /**
- * سرور کاربر را از روی هدرِ `Authorization` پیدا می‌کند
- * (`LogoutUserCommand` هیچ پارامتری نمی‌گیرد)، پس بدنه‌ای لازم نیست.
+ * سرور کاربر را از روی هدرِ `Authorization` پیدا می‌کند (`LogoutUserCommand` هیچ
+ * پارامتری نمی‌گیرد)، ولی اکشن `[FromBody]` است: بدنه‌ی خالی ۴۰۰ می‌گرفت و نشستِ
+ * سرور هیچ‌وقت بسته نمی‌شد؛ برای همین `{}` فرستاده می‌شود.
+ *
+ * منتظرِ پاسخ نمی‌ماند: سرورِ کند خروج را ۱۵–۲۰ ثانیه معطل می‌کرد، در حالی که
+ * خروجِ محلی (پاک‌کردنِ توکن و بارگذاریِ دوباره) به سرور نیازی ندارد. آداپترِ `fetch`ِ
+ * axios با `keepalive`: درخواستِ معمولی (XHR) با بارگذاریِ دوباره‌ی صفحه (`leaveSession`)
+ * لغو می‌شد و به سرور نمی‌رسید؛ `keepalive` بعد از ترکِ صفحه هم ارسال می‌شود.
+ * توکن همین‌جا گرفته و صریح فرستاده می‌شود، چون store بلافاصله بعد از این پاک می‌شود
+ * و interceptorِ درخواست شاید دیرتر اجرا شود.
  */
-export async function logout() {
-  const { data } = await axiosInstance.post("/Account/Logout");
-  return data;
+export function logout() {
+  const token = useAuthStore.getState().accessToken;
+  if (!token) return;
+  axiosInstance
+    .post("/Account/Logout", {}, {
+      adapter: "fetch",
+      fetchOptions: { keepalive: true },
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .catch(() => {});
 }
 
 /**
@@ -59,4 +75,24 @@ export async function getMyPermissions() {
 export async function getFeatureFlags() {
   const { data } = await axiosInstance.get("/Setting/GetFeatureFlags");
   return data ?? {};
+}
+
+/**
+ * `PUT api/User/ChangePassword` — رمزِ *کاربرِ جاری* (از روی توکن)، با رمزِ فعلی.
+ * همه‌ی نشست‌ها، حتی همین توکن، بسته می‌شوند و `data` جفتِ توکنِ تازه است (شکلِ `Login`).
+ * در حالتِ «تغییرِ رمزِ اجباری» هم مجاز است.
+ */
+export async function changePassword({ oldPassword, password, rePassword }) {
+  const { data } = await axiosInstance.put("/User/ChangePassword", {
+    oldPassword,
+    password,
+    rePassword,
+  });
+  return data;
+}
+
+/** `PUT api/User/UpdateUserInfo` — نام و نام خانوادگیِ کاربرِ جاری؛ بی‌دسترسیِ خاص. */
+export async function updateUserInfo({ firstName, lastName }) {
+  const { data } = await axiosInstance.put("/User/UpdateUserInfo", { firstName, lastName });
+  return data;
 }

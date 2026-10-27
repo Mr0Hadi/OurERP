@@ -97,7 +97,7 @@ flowchart LR
 
 | پوسته | مسیر | مسیرهای فرزند | گارد |
 | --- | --- | --- | --- |
-| `AuthLayout` (`src/app/layouts/AuthLayout.jsx`) | `ROUTES.AUTH` = `/auth` | `authRoutes` (`login`) | ندارد؛ `LoginPage` خودش نشست را می‌سنجد |
+| `AuthLayout` (`src/app/layouts/AuthLayout.jsx`) | `ROUTES.AUTH` = `/auth` | `authRoutes` (`login`، `change-password`) | ندارد؛ `LoginPage` خودش نشست را می‌سنجد |
 | `AppLayout` (`src/app/layouts/AppLayout.jsx`) | `ROUTES.ROOT` = `/` | `dashboardRoutes`، `customersRoutes`، `employeesRoutes`، `organizationRoutes`، `permissionsRoutes`، `auditRoutes`، `purchasesRoutes`، `warehouseRoutes`، `salesRoutes`، `suppliersRoutes`، `accountingRoutes`، `treasuryRoutes`، `settingsRoutes` | `protectedLoader` + `isAuthenticated` در خودِ layout + `PermissionGate` |
 | بدونِ پوسته | `/dev/ui` (فقط `import.meta.env.DEV`) | `StyleGuidePage` | ندارد |
 | بدونِ پوسته | `*` | `NotFoundPage` | — |

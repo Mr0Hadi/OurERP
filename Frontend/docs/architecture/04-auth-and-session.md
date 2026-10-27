@@ -27,6 +27,7 @@
 | --- | --- | --- |
 | `accessToken`، `refreshToken` | بله | توکن‌ها |
 | `isAuthenticated` | بله | «توکنی در localStorage هست» — نه بیشتر |
+| `mustChangePassword` | بله | مدیر رمز را بازنشانی کرده؛ تا تغییرِ رمز فقط `ROUTES.CHANGE_PASSWORD` |
 | `sessionVerified` | **نه** | سرور در *همین بارگذاری* توکن را پذیرفته |
 | `hasHydrated` | نه | rehydrateِ persist تمام شده (`onRehydrateStorage` → `setHasHydrated(true)`) |
 
@@ -98,17 +99,23 @@ const { isSuccess, isError, error } = useQuery({
 
 موفقیت → `LoginPage` به `from` برمی‌گردد. نتیجه در همان کلیدِ `authKeys.session()` می‌ماند، پس `useUserInfoQuery` در سایدبار درخواستِ دوم نمی‌زند. اگر کاربر حین سنجش فرم را بفرستد، `cancel()` آن query را لغو می‌کند.
 
+### تغییرِ رمز و «تغییرِ رمزِ اجباری»
+
+- **صفحه‌ی حساب** (`ROUTES.ACCOUNT` = `/account`، `src/features/auth/pages/AccountPage.jsx`، بی‌مجوز): مشخصاتِ سازمانی فقط‌خواندنی، ویرایشِ نام (`PUT /User/UpdateUserInfo`، `ProfileForm`) و تغییرِ رمز (`PUT /User/ChangePassword`، `ChangePasswordForm`). «حساب کاربری» در `NavUser.jsx` به همین صفحه می‌رود (جزئیاتِ کارمند `UserUpdate` می‌خواهد).
+- `ChangePassword` همه‌ی نشست‌ها، حتی همین توکن را، می‌بندد و جفتِ توکنِ تازه برمی‌گرداند؛ `useChangePasswordMutation` (`src/features/auth/services/mutations.js`) آن را با `passwordChanged()` در store می‌نشاند. بدونِ این، درخواستِ بعدی ۴۰۱ و خروج است.
+- **اجباری:** بعد از `ResetUserPassword`ِ مدیر، `Login` پرچمِ `mustChangePassword` می‌دهد و سرور تا تغییرِ رمز هر درخواستی جز `ChangePassword`، `GetUserInfo`، `GetMyPermissions` و `Logout` را ۴۰۳ با `data.mustChangePassword` جواب می‌دهد. پرچم در `useAuthStore.mustChangePassword` (persist، چون `GetUserInfo` آن را ندارد) از دو راه می‌نشیند: `loginSuccess` و interceptorِ ۴۰۳ در `axios.js`. `protectedLoader`، `AppLayout` و `LoginPage` با این پرچم به `ROUTES.CHANGE_PASSWORD` (`/auth/change-password`، `ChangePasswordPage` زیرِ `AuthLayout`، با `from`) می‌برند؛ بعد از تغییر، صفحه به `from` برمی‌گردد.
+
 ### همگام‌سازیِ چند تب
 
 `authStore.js` به رویدادِ `storage` گوش می‌دهد: اگر `event.key === "auth-storage"` در تبِ دیگری عوض شد، `useAuthStore.persist.rehydrate()`. پس refresh یا خروج در یک تب به بقیه می‌رسد؛ خروج در تبِ دیگر `isAuthenticated` را false می‌کند و `AppLayout` با `<Navigate>` به ورود می‌برد.
 
 ### خروج
 
-`NavUser.jsx` → `logoutMutation.mutate(undefined, { onSettled: leaveSession })`:
+`NavUser.jsx` (و `ChangePasswordPage`) → `logoutMutation.mutate()`:
 
-1. `useLogoutMutation` → `POST /Account/Logout` (بدون بدنه؛ سرور از هدر کاربر را می‌شناسد).
-2. `onSettled` (موفق یا ناموفق): `logout()` در store و `queryClient.clear()`.
-3. `leaveSession()` (`src/shared/services/sessionCleanup.js`): `purgeLegacyApiCache()` و `window.location.replace(ROUTES.LOGIN)` — بارگذاریِ کامل تا همه‌ی stateِ درونِ حافظه (پیش‌نویس‌ها، فرم‌ها، فیلترها) پاک شود.
+1. `useLogoutMutation` → `logout()`: `POST /Account/Logout` با `axiosInstance` روی آداپترِ `fetch` و `fetchOptions: { keepalive: true }` (بدنه‌ی `{}` چون اکشن `[FromBody]` است و بدنه‌ی خالی را ۴۰۰ می‌دهد؛ سرور کاربر را از هدر می‌شناسد)، **بی‌انتظار برای پاسخ** — خروجِ محلی فوری است و درخواست بعد از بارگذاریِ دوباره‌ی صفحه هم به سرور می‌رسد.
+2. `onSettled`ِ خودِ هوک (موفق یا ناموفق): `logout()` در store و `queryClient.clear()`.
+3. در همان `onSettled`، `leaveSession()` — نه در `mutate(…, { onSettled })`: `logout()` دکمه‌ی خروج را unmount می‌کند و React Query callbackِ `mutate`ِ کامپوننتِ unmountشده را صدا نمی‌زند (کاربر با `?from=<صفحه‌ی فعلی>` می‌ماند). `leaveSession()` (`src/shared/services/sessionCleanup.js`): `purgeLegacyApiCache()` و `window.location.replace(ROUTES.LOGIN)` — بارگذاریِ کامل تا همه‌ی stateِ درونِ حافظه (پیش‌نویس‌ها، فرم‌ها، فیلترها) پاک شود.
 
 ## قراردادها و نکته‌ها
 
@@ -128,6 +135,7 @@ const { isSuccess, isError, error } = useQuery({
 | رفتار در ۴۰۱/شکستِ refresh | interceptorِ پاسخ در `src/shared/services/api/axios.js` |
 | چیزی هنگامِ خروج پاک شود | `useLogoutMutation` (`onSettled`) در `src/features/auth/services/queries.js` یا `leaveSession` در `src/shared/services/sessionCleanup.js` |
 | ظاهرِ صفحه‌ی ورود | `src/features/auth/pages/LoginPage.jsx` |
+| صفحه‌ی حسابِ کاربر یا فرمِ تغییرِ رمز | `src/features/auth/pages/AccountPage.jsx`، `src/features/auth/components/ChangePasswordForm.jsx` |
 | بعد از ورود به کجا برود | `from` در `LoginPage.jsx` (پیش‌فرض `ROUTES.DASHBOARD`) |
 
 ## سؤال‌های باز / بدهی

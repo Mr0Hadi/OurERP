@@ -8,7 +8,7 @@ import { protectedLoader } from "./protectedLoader";
 import NotFoundPage from "../layouts/NotFoundPage";
 import RouteErrorPage from "../layouts/RouteErrorPage";
 
-import { authRoutes } from "@/features/auth/routes";
+import { accountRoutes, authRoutes } from "@/features/auth/routes";
 import { dashboardRoutes } from "@/features/dashboard/routes";
 import { customersRoutes } from "@/features/customers/routes";
 import { warehouseRoutes } from "@/features/warehouse/routes";
@@ -60,6 +60,7 @@ export const router = createBrowserRouter([
           ...suppliersRoutes,
           ...accountingRoutes,
           ...settingsRoutes,
+          ...accountRoutes,
         ],
       },
     ],

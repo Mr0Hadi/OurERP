@@ -118,9 +118,14 @@ export const ROUTES = {
   // تنظیمات
   SETTINGS: "/settings",
 
+  // حسابِ کاربرِ واردشده (نام و تغییرِ رمز؛ `User/UpdateUserInfo`، `User/ChangePassword`)
+  ACCOUNT: "/account",
+
   // احراز هویت
   AUTH: "/auth",
   LOGIN: "/auth/login",
+  // تغییرِ رمزِ اجباری بعد از بازنشانی توسطِ مدیر (`mustChangePassword`)
+  CHANGE_PASSWORD: "/auth/change-password",
 };
 
 /**

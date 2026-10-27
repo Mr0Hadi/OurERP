@@ -21,6 +21,7 @@ import { Label } from "@/shared/components/ui/label";
 import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
 
 import { useLoginMutation, useSessionCheck } from "../services/queries";
+import { useAuthStore } from "../store/authStore";
 import { ROUTES } from "@/shared/constants/routes";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
 
@@ -60,16 +61,26 @@ export default function LoginPage() {
   const { verified, cancel: cancelSessionCheck } = useSessionCheck();
   const from = searchParams.get("from") || ROUTES.DASHBOARD;
 
-  // توکنِ ذخیره‌شده هنوز معتبر است (یا همین الان وارد شد): به مقصد.
+  const mustChangePassword = useAuthStore((s) => s.mustChangePassword);
+
+  // توکنِ ذخیره‌شده هنوز معتبر است (یا همین الان وارد شد): به مقصد — یا اگر مدیر رمز
+  // را بازنشانی کرده، اول به تغییرِ رمز (مقصد در `from` می‌ماند).
   useEffect(() => {
-    if (verified) navigate(from, { replace: true });
-  }, [verified, from, navigate]);
+    if (!verified) return;
+    if (mustChangePassword) {
+      const params = new URLSearchParams({ from });
+      navigate(`${ROUTES.CHANGE_PASSWORD}?${params.toString()}`, { replace: true });
+    } else {
+      navigate(from, { replace: true });
+    }
+  }, [verified, mustChangePassword, from, navigate]);
 
   const onSubmit = (values) => {
     // ورودِ دستی بر سنجشِ خودکار مقدم است؛ پاسخِ دیرِ آن نباید نشستِ تازه را خراب کند.
     cancelSessionCheck();
     login(values, {
-      onSuccess: () => toast.success("خوش آمدید 👋"),
+      // در تغییرِ رمزِ اجباری خوش‌آمد نه؛ صفحه‌ی بعد خودش توضیح می‌دهد.
+      onSuccess: (data) => !data?.mustChangePassword && toast.success("خوش آمدید 👋"),
       onError: (error) => {
         // پیامِ سرور (مثلاً «کاربر با این اطلاعات یافت نشد») مقدم است؛ در قطعیِ
         // شبکه هم به‌جای «رمز اشتباه است» علتِ واقعی نشان داده می‌شود.

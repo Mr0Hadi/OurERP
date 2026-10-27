@@ -42,10 +42,13 @@ export default function AppLayout() {
   // ورود به این layout فقط با نشستِ تأییدشده ممکن است (`protectedLoader`).
   // اگر بعداً خارج شد (خروج در تبِ دیگر، رفرشِ ناموفق در interceptor)، به ورود.
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  // ۴۰۳ِ «تغییرِ رمزِ اجباری» وسطِ کار (interceptorِ axios پرچم را می‌گذارد).
+  const mustChangePassword = useAuthStore((s) => s.mustChangePassword);
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || mustChangePassword) {
     const from = encodeURIComponent(location.pathname + location.search);
-    return <Navigate to={`${ROUTES.LOGIN}?from=${from}`} replace />;
+    const target = isAuthenticated ? ROUTES.CHANGE_PASSWORD : ROUTES.LOGIN;
+    return <Navigate to={`${target}?from=${from}`} replace />;
   }
 
   return (

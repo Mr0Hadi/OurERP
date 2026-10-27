@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { login, logout, getUserInfo, getMyPermissions, getFeatureFlags } from "./api-v1";
 import { authKeys } from "./queryKeys";
 import { useAuthStore } from "../store/authStore";
+import { leaveSession } from "@/shared/services/sessionCleanup";
 
 export function useLoginMutation() {
   const loginSuccess = useAuthStore((s) => s.loginSuccess);
@@ -12,8 +13,8 @@ export function useLoginMutation() {
     // فقط توکن‌ها: پاسخِ `Account/Login` هیچ اطلاعاتی از کاربر ندارد و
     // نباید هم داشته باشد — هویت از `GetUserInfo` می‌آید
     // (`useUserInfoQuery`)، که همیشه تازه است.
-    onSuccess: ({ accessToken, refreshToken }) =>
-      loginSuccess({ accessToken, refreshToken }),
+    onSuccess: ({ accessToken, refreshToken, mustChangePassword }) =>
+      loginSuccess({ accessToken, refreshToken, mustChangePassword }),
   });
 }
 
@@ -60,13 +61,18 @@ export function useLogoutMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: logout,
-    // `onSettled` و نه `onSuccess`: اگر درخواستِ خروج شکست بخورد (سرور
-    // خواب است، توکن منقضی شده) کاربر باید باز هم از این دستگاه خارج
-    // شود. نگه‌داشتنِ نشستِ محلی بعد از «خروج» بدترین حالتِ ممکن است.
+    // `logout` درخواستِ سرور را می‌فرستد و منتظرِ پاسخ نمی‌ماند؛ خروجِ محلی فوری است
+    // و شکستِ سرور (خواب، توکنِ منقضی) کاربر را در این دستگاه واردشده نگه نمی‌دارد.
+    mutationFn: async () => logout(),
+    //
+    // بارگذاریِ کاملِ صفحه‌ی ورود (`leaveSession`) هم همین‌جاست، نه در `mutate(…, { onSettled })`:
+    // `clearAuth` پوسته (`AppLayout`) و دکمه‌ی خروج را فوراً unmount می‌کند و React Query
+    // callbackهای `mutate`ِ کامپوننتِ unmountشده را صدا نمی‌زند؛ کاربر با
+    // `/auth/login?from=<صفحه‌ی فعلی>` می‌ماند و ورودِ بعدی به همان صفحه برمی‌گشت، نه داشبورد.
     onSettled: () => {
       clearAuth();
       queryClient.clear();
+      leaveSession();
     },
   });
 }
