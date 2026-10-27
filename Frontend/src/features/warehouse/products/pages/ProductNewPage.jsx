@@ -7,6 +7,7 @@ import { useCreateProductMutation } from "../services/mutations";
 import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
+import ProductReorderForm from "../components/forms/ProductReorderForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
@@ -72,6 +73,7 @@ export default function ProductNewPage() {
               isNew
               requirePrices
             />
+            <ProductReorderForm register={register} control={control} errors={errors} />
           </div>
           <div className="flex flex-col gap-4 md:gap-3">
             <ProductImageUpload imageUpload={imageUpload} />

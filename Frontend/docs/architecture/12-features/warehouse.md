@@ -34,6 +34,8 @@
 | saleCheck | `useProformaQueueQuery(CUSTOMER_APPROVED)` و فیلترهای `ProformaQueueFilters` از `sales/orders`، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useWarehouseApproveMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
 | shipping | `fetchShippableSales` GET `/Sale/GetSaleList`، `fetchSaleForShipping` GET `/Sale/GetSaleDetail`، `fetchSaleReturnPendingEffects`، `dispatchShipment` POST `/Shipment/DispatchShipment` | `shippingKeys` (`['shipping']`) |
 
+فرمِ کالا کارتِ `ProductReorderForm` (نقطه‌ی سفارش، `targetStock`، `minOrderQuantity`، `leadTimeDays`، `preferredSupplierId`) دارد؛ `buildProductPayload` در `src/features/warehouse/products/hooks/useProductForm.js` این‌ها را همیشه می‌فرستد، چون `UpdateProduct` نفرستاده را پاک می‌کند.
+
 هوک‌های پرکاربرد برای بقیه‌ی برنامه: `useDocumentProducts`، `useProductSearchQuery`، `useProductsOptionsQuery` (`src/features/warehouse/products/services/queries.js`)؛ `UnitsPageLink` (`src/features/warehouse/units/components/UnitsPageLink.jsx`).
 
 ## state و دامنه

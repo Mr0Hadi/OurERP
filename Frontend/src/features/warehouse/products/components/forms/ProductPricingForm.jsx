@@ -89,17 +89,6 @@ export default function ProductPricingForm({
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="lowStockThreshold">آستانه هشدار کمبود موجودی</Label>
-          <Input
-            type="number"
-            id="lowStockThreshold"
-            {...register("lowStockThreshold")}
-            min="0"
-            placeholder="مثال: 10"
-          />
-        </div>
-
         {/* سرور مالیاتِ هر قلمِ فاکتور را از همین دو فیلد حساب می‌کند؛ کالای
             معاف صفر مالیات می‌گیرد. فاکتورهای صادرشده نرخِ خودشان را نگه
             می‌دارند و با تغییرِ این‌جا عوض نمی‌شوند. */}

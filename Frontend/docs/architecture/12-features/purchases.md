@@ -1,6 +1,6 @@
 # purchases — خرید و مرجوعیِ خرید
 
-دو زیرماژول در `src/features/purchases/`: `orders/`، `returns/`. ساختار آینه‌ی [sales.md](sales.md) است؛ اینجا فقط تفاوت‌ها و endpointها.
+سه زیرماژول در `src/features/purchases/`: `orders/`، `returns/`، `reorder/` (پیشنهادِ خرید). ساختار آینه‌ی [sales.md](sales.md) است؛ اینجا فقط تفاوت‌ها و endpointها.
 
 ## مسیرها
 
@@ -8,6 +8,7 @@
 | --- | --- | --- | --- |
 | `PURCHASES` | `/purchases` | `PurchaseView` | `src/features/purchases/orders/pages/PurchasesPage.jsx` |
 | `PURCHASES_NEW` | `/purchases/new` | `PurchaseCreate` | `src/features/purchases/orders/pages/PurchasesNewPage.jsx` |
+| `PURCHASES_REORDER` | `/purchases/reorder` | `ReorderSuggestionView` (ساخت: `PurchaseCreate`) | `src/features/purchases/reorder/pages/ReorderPage.jsx` |
 | `PURCHASES_DETAIL` | `/purchases/:id` | `PurchaseView` | `src/features/purchases/orders/pages/PurchaseDetailPage.jsx` |
 | `PURCHASES_RETURNS_LIST` | `/purchases/returns` | `PurchaseReturnView` | `src/features/purchases/returns/pages/PurchaseReturnsListPage.jsx` |
 | `PURCHASES_RETURNS_NEW` | `/purchases/returns/new` | `PurchaseReturnCreate` | `src/features/purchases/returns/pages/PurchaseReturnNewPage.jsx` |
@@ -21,6 +22,13 @@
 - `src/features/purchases/returns/services/api-v1.js` روی `/PurchaseReturn/*` (همان فعل‌های مرجوعیِ فروش)؛ `fetchPurchaseForReturn` → `GET /PurchaseReturn/GetPurchaseReceivingInfo`، `fetchReturnablePurchases` → `GET /Purchase/GetPurchaseList`.
 - mutationها: `useCreatePurchaseMutation`، `useChangePurchaseStatusMutation`، `useRemovePurchaseMutation`، `useClosePurchaseItemMutation`، `useReopenPurchaseItemMutation`، `useAcceptPurchaseExcessMutation`، `usePurchaseChangesSaver`؛ مرجوعی: `useCreatePurchaseReturnMutation`، `useExecuteGoodsRoundMutation`، `useUpdatePurchaseReturnAttachmentsMutation`، `usePurchaseReturnActions` (از `createReturnMutations`).
 - کلیدها: `purchaseKeys` (`['purchases']`)، `purchaseReturnKeys` (`['purchaseReturns']`). invalidation: `invalidatePurchaseEcosystem` در `src/features/purchases/orders/services/sharedInvalidation.js` (جزئیات/لیستِ خرید، `receivingKeys`، مرجوعی‌ها، `productKeys.all`، `productUnitKeys.all`).
+
+## پیشنهادِ خرید (`reorder/`)
+
+- `src/features/purchases/reorder/services/api-v1.js`: `fetchReorderSuggestions` (`GET /Reorder/GetReorderSuggestionList`، فیلترِ صفحه: `search` و `supplierId`؛ بی‌صفحه‌بندی) و `createPurchaseDraftsFromReorder` (`POST /Reorder/CreatePurchaseDraftsFromReorder`، ایدمپوتنت، برای هر تامین‌کننده یک پیش‌فاکتور، همه یا هیچ). کلید: `reorderKeys` (`['reorder']`)؛ بعد از ساخت `invalidatePurchaseEcosystem` و `reorderKeys.all`.
+- جدول مثلِ بقیه‌ی فهرست‌هاست (`ServerTable` + `ReorderTable` روی `DataTable`: مرتب‌سازی، صفحه‌بندی، تازه‌سازی، کارتِ موبایل)؛ چون سرور فهرست را یک‌جا می‌دهد، `reorderPage` در `src/features/purchases/reorder/domain/reorderList.js` در `select`ِ کوئری فیلتر (`needsOrder`)، مرتب و صفحه‌بندی می‌کند و همان شکلِ `{ items, total, page, totalPages }` (به‌علاوه‌ی `all`) را می‌دهد.
+- الگوی ساخت «انتخابِ ردیف + نوارِ اقدامِ پایین» است، نه دکمه در هر ردیف (هر ردیف یک سندِ خریدِ جدا می‌ساخت؛ سرور برای هر تامین‌کننده یک پیش‌فاکتور از هر زیرمجموعه می‌سازد). `src/features/purchases/reorder/hooks/useReorderDraft.js` فقط ویرایش‌های خریدار (انتخاب، تعداد با `QuantityStepper`، تامین‌کننده) را بر اساسِ `productId` نگه می‌دارد، پس با صفحه و مرتب‌سازی نمی‌پرند؛ هیچ ردیفی پیش‌فرض انتخاب نیست؛ قیمت همان آخرین قیمتِ خرید است و در خودِ پیش‌فاکتور ویرایش می‌شود. نوارِ پایین `ReorderActionBar` روی `StickyActionBar` است (با «لغو انتخاب»)، فهرستِ خالی `EmptyState`، و انتخابگرِ تامین‌کننده `SupplierSelect`؛ نامِ تامین‌کننده‌ی پنجره‌ی نتیجه از `supplierNameOf` (`src/features/purchases/reorder/domain/reorderList.js`).
+- ورودی‌اش روی کالاست: `ProductReorderForm` (`src/features/warehouse/products/components/forms/ProductReorderForm.jsx`) — نقطه‌ی سفارش، موجودی هدف و تامین‌کننده‌ی ترجیحی؛ حداقل سفارش و زمان تحویل زیرِ «بیشتر».
 
 ## state و دامنه
 

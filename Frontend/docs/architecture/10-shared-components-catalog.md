@@ -48,7 +48,7 @@ flowchart LR
 | کامپوننت | کِی | # |
 | --- | --- | --- |
 | `ServerTable` | لیستِ صفحه‌بندی‌شده‌ی سرور در صفحه‌ی لیست؛ `transform`، `singlePage` | ۱۷ |
-| `DataTable` | پوسته‌ی جدول (مرتب‌سازیِ تک‌ستونی، `sortable`، `emptyState`، `rowClassName`، `getRowKey`)؛ در موبایل `MobileRowCards` | ۱۹ |
+| `DataTable` | پوسته‌ی جدول (مرتب‌سازیِ تک‌ستونی، `sortable`، `emptyState`، `rowClassName`، `getRowKey`)؛ در موبایل `MobileRowCards` (جای هر ستون با `meta.mobile`: `title`، `subtitle`، `badge`، `highlight`، `leading` کنارِ عنوان مثلِ چک‌باکسِ انتخاب، `hidden`)؛ `meta.corner` ستون را در ستونِ گوشه‌ی دکمه‌ی تازه‌سازی می‌نشاند (چک‌باکس زیرِ دکمه، بی‌ستونِ خالی)؛ متنِ سلول‌ها می‌شکند (`whitespace-normal`)، و جدولی که باز هم در عرضِ قاب جا نشود (تبلت، سایدبارِ باز) کارت می‌شود (`useTableFit`)، چون قابِ `custom-scroll` به چپ اسکرول نمی‌شود | ۱۹ |
 | `detailsColumn(getPath)` (`columns.jsx`) | ستونِ استانداردِ «جزئیات»؛ در موبایل کلِ کارت لینک می‌شود | ۹ |
 | `DataTablePagination` | صفحه‌بندی بیرون از `DataTable` | ۴ |
 | `PaymentProgress` | نوارِ «پرداخت‌شده از کل» در ردیف | ۲ |
@@ -64,6 +64,7 @@ flowchart LR
 | `ListPageLayout` | پوسته‌ی هر صفحه‌ی لیست: `title`، `icon`، `description`، `create`، `actions` | ۱۱ |
 | `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها)؛ `refresh` = کوئریِ فهرست | ۴ |
 | `RedirectKeepingSearch` | در `routes.jsx`: نشانیِ قدیمی → تازه با همان query (صفحه‌ی جابه‌جاشده) | ۲ |
+| `StickyActionBar` | نوارِ چسبانِ پایینِ صفحه: خلاصه + دکمه‌ها (ثبتِ مرجوعی، ذخیره‌ی تنظیمات، پیشنهادِ خرید)؛ داخلِ کارتِ `overflow-hidden` نگذارید | ۳ |
 | `PageHeaderActions` | دکمه‌ی صفحه در هدرِ اپ کنارِ عنوان (پورتال به `headerStore.actionsSlot`)؛ مثلاً «تاریخچه» در صفحه‌های جزئیات ([08](08-client-state-zustand.md)) | ۲ |
 | `RouteLoadingOverlay` | فقط پوسته‌ها (`AppLayout`، `AuthLayout`)؛ سایدبار و breadcrumb در `src/app/layouts/` هستند ([03](03-bootstrap-and-routing.md)) | ۲ |
 
@@ -86,6 +87,7 @@ flowchart LR
 | --- | --- | --- |
 | `ConfirmDialog` | تأییدِ کارِ برگشت‌ناپذیر؛ تا پایانِ درخواست باز می‌ماند — فراخوان در `onSuccess` می‌بندد | ۱۶ |
 | `QueryErrorState` | خطای لیست با «تلاش دوباره» (جای جدول) | ۱۵ |
+| `EmptyState` | فهرستِ خالی: آیکن، عنوان، راهنما و اقدامِ اختیاری (پاک کردنِ فیلترها)؛ برای `emptyState`ِ جدول‌ها | ۲ |
 | `DetailErrorState` | صفحه‌ی جزئیات: «پیدا نشد» (۴۰۴) را از «واکشی شکست خورد» جدا می‌کند | ۱۴ |
 | `Notice` | باکسِ توضیح/هشدار با tone | ۱۴ |
 | `UnsavedChangesDialog` | «تغییرات ذخیره نشده» با `blocker`ِ `useUnsavedChangesGuard` (یا کنترل‌شده با `open`) | ۶ |
@@ -113,7 +115,8 @@ flowchart LR
 | `SectionCard` | کارتِ بخشِ صفحه‌ی سند (هدرِ ساده + `action`) | ۸ |
 | `DocumentFormLayout` (`main`/`payments`/`aside`، و `below` تمام‌عرض) + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
 | `StatusChoice` | انتخابِ وضعیت به‌صورتِ دکمه | ۷ |
-| `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد، مبلغ به حروف | ۵–۶ |
+| `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد (`min` اختیاری)، مبلغ به حروف | ۵–۷ |
+| `SelectCheckbox` | چک‌باکسِ انتخابِ ردیف با ناحیه‌ی لمسِ بزرگ (`indeterminate`)؛ دانه‌ها و پیشنهادِ خرید | ۲ |
 | `OrderInfoCard`، `OrderItemsReadOnly`، `OrderLogisticsSection`، `TransporterSection`، `PartySection` | بخش‌های سندِ خرید/فروش (`OrderInfoCard`: `showInvoiceDate`/`showDueDate` برای فروش، که تاریخِ فاکتور را سرور می‌گذارد و سررسید جزوِ پیش‌فاکتور است) | ۲–۴ |
 | `ProductSearchPanel`، `PartyPickerCard`، `SelectedItemsCards`، `SelectedItemsTable`، `MixedPaymentList` | انتخابِ کالا/طرف‌حساب در فرمِ سند | ۱–۳ |
 | `ScannedUnitCodes` | داخلی | — |

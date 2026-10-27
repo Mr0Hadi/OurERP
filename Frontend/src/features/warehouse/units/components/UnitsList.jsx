@@ -17,7 +17,8 @@ import {
 import { DocumentKindEnum, documentRouteOf } from "@/shared/domain/enums/documentKind";
 import { formatDigits } from "@/shared/lib/numberFormat";
 import UnitStatusBadge from "./UnitStatusBadge";
-import UnitSelectCheckbox from "./UnitSelectCheckbox";
+import SelectCheckbox from "@/shared/components/forms/SelectCheckbox";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 import { UnitLabelStateBadge, UnitQuarantineAge, UnitWhereabouts } from "./UnitCells";
 
 /** کالا و بارکد در یک خانه؛ کلیک جزئیات و مسیرِ دانه را باز می‌کند. */
@@ -94,7 +95,7 @@ function UnitCard({ unit, isQuarantine, selected, onToggleSelect, onOpen }) {
     >
       <div className="flex items-start gap-1">
         <div className="-ms-2 -mt-1.5">
-          <UnitSelectCheckbox
+          <SelectCheckbox
             checked={selected}
             onChange={() => onToggleSelect(unit)}
             label={`انتخاب ${unit.barcode}`}
@@ -119,7 +120,7 @@ function UnitCard({ unit, isQuarantine, selected, onToggleSelect, onOpen }) {
   );
 }
 
-function EmptyState({ segment, labelFilter, hasFilters, onClearFilters }) {
+function UnitsEmptyState({ segment, labelFilter, hasFilters, onClearFilters }) {
   const allLabeled = labelFilter === LABEL_FILTERS.UNPRINTED;
   const Icon = allLabeled ? Tags : PackageOpen;
   const title = allLabeled
@@ -136,18 +137,18 @@ function EmptyState({ segment, labelFilter, hasFilters, onClearFilters }) {
       : null;
 
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border py-14 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <Icon className="h-6 w-6 text-muted-foreground" />
-      </span>
-      <p className="font-medium">{title}</p>
-      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
-      {hasFilters && (
-        <Button type="button" variant="outline" size="sm" className="mt-1" onClick={onClearFilters}>
-          پاک کردن فیلترها
-        </Button>
-      )}
-    </div>
+    <EmptyState
+      icon={Icon}
+      title={title}
+      description={hint}
+      action={
+        hasFilters && (
+          <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
+            پاک کردن فیلترها
+          </Button>
+        )
+      }
+    />
   );
 }
 
@@ -187,7 +188,7 @@ export default function UnitsList({
         // گوشه‌ی سرتیتر جای «تازه‌سازی» است؛ انتخابِ گروهی با «انتخاب همه‌ی دانه‌ها»ی بالای فهرست.
         header: () => <RefreshButton query={refresh} variant="header" />,
         cell: ({ row }) => (
-          <UnitSelectCheckbox
+          <SelectCheckbox
             checked={selectedIds.has(row.original.id)}
             onChange={() => onToggleSelect(row.original)}
             label={`انتخاب ${row.original.barcode}`}
@@ -246,7 +247,7 @@ export default function UnitsList({
     .map((column) => ({ id: column.accessorKey ?? column.id, label: column.header }));
 
   const empty = (
-    <EmptyState
+    <UnitsEmptyState
       segment={segment}
       labelFilter={labelFilter}
       hasFilters={hasFilters}

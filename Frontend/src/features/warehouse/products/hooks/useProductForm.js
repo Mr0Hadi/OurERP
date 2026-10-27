@@ -21,6 +21,11 @@ const EMPTY_PRODUCT = {
   unit: "",
   stock: "",
   lowStockThreshold: 10,
+  // نقطه‌ی سفارش (بخش ۲۷ سند)؛ خالی یعنی `null`.
+  targetStock: "",
+  minOrderQuantity: "",
+  leadTimeDays: "",
+  preferredSupplierId: "",
   purchasePrice: 0,
   retailPrice: 0,
   wholeSalePrice: 0,
@@ -30,6 +35,8 @@ const EMPTY_PRODUCT = {
   // خالی یعنی «همه‌ی خودروها».
   vehicleIds: [],
 };
+
+const optionalNumber = (value) => (value === "" || value == null ? null : Number(value));
 
 function buildDefaultValues(product) {
   if (!product) return EMPTY_PRODUCT;
@@ -83,6 +90,11 @@ export function useProductForm(initialData = null) {
     productCategoryId: Number(formData.productCategoryId) || 0,
     stock: Number(formData.stock) || 0,
     lowStockThreshold: Number(formData.lowStockThreshold) || 0,
+    // همیشه فرستاده می‌شوند: `UpdateProduct` همین مقدارها را می‌نویسد و نفرستادن یعنی پاک‌شدن.
+    targetStock: optionalNumber(formData.targetStock),
+    minOrderQuantity: optionalNumber(formData.minOrderQuantity),
+    leadTimeDays: optionalNumber(formData.leadTimeDays),
+    preferredSupplierId: optionalNumber(formData.preferredSupplierId),
     purchasePrice: Number(formData.purchasePrice) || 0,
     retailPrice: Number(formData.retailPrice) || 0,
     wholeSalePrice: Number(formData.wholeSalePrice) || 0,

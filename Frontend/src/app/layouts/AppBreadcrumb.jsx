@@ -44,6 +44,7 @@ const ROUTE_TITLES = {
 
   [ROUTES.PURCHASES]: "خرید",
   [ROUTES.PURCHASES_NEW]: "ثبت خرید جدید",
+  [ROUTES.PURCHASES_REORDER]: "پیشنهاد خرید",
   [ROUTES.PURCHASES_RETURNS_LIST]: "مرجوعی‌های خرید",
   "/purchases/returns/new": "ثبت مرجوعی خرید",
 

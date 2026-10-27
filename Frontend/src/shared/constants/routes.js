@@ -43,6 +43,8 @@ export const ROUTES = {
   PURCHASES: "/purchases",
   PURCHASES_DETAIL: "/purchases/:id",
   PURCHASES_NEW: "/purchases/new",
+  // پیشنهادِ خرید از نقطه‌ی سفارش (`api/Reorder`، بخش ۲۷ سند)
+  PURCHASES_REORDER: "/purchases/reorder",
   PURCHASES_RETURNS_DETAIL: "/purchases/returns/:id",
   PURCHASES_RETURNS_NEW: "/purchases/returns/new",
   PURCHASES_RETURNS_LIST: "/purchases/returns",

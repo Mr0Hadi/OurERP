@@ -11,6 +11,7 @@ import {
   Receipt,
   Landmark,
   PackageSearch,
+  ListRestart,
   Wallet,
   PackageX,
   Rows3,
@@ -266,6 +267,13 @@ export const navigationData = {
           permission: "PurchaseCreate",
           icon: FilePlus,
           description: "ثبت فاکتور خرید جدید",
+        },
+        {
+          title: "پیشنهاد خرید",
+          url: ROUTES.PURCHASES_REORDER,
+          permission: "ReorderSuggestionView",
+          icon: ListRestart,
+          description: "کالاهای رسیده به نقطه‌ی سفارش و ساختِ پیش‌فاکتورِ خرید",
         },
         {
           title: "ثبت مرجوعی به تامین‌کننده",

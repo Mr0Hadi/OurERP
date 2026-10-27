@@ -25,6 +25,7 @@
 | --- | --- |
 | `src/features/partyAccount/store/createPartyFilterStore.js` | `createPartyFilterStore(searchKey)` + `BALANCE_QUICK_FILTERS`؛ مشتری `"fullName"`، تامین‌کننده `"companyNameOrContactName"` |
 | `src/features/partyAccount/components/PartyListFilters.jsx` | فیلترِ لیست با `ResponsiveFilters` |
+| `src/features/suppliers/components/SupplierSelect.jsx` | انتخابگرِ تامین‌کننده (`EntitySelect` + `useSuppliersOptionsQuery`) برای فیلتر و فرمِ فیچرهای دیگر (پیشنهادِ خرید، فرمِ کالا) |
 | `PartyStatementCard.jsx`، `LedgerBalanceBadge.jsx`، `PartyAddressForm.jsx`، `PartyDetailLoading.jsx` | صورت‌حساب، نشانِ مانده، فرمِ نشانی، اسکلتون |
 | `src/features/partyAccount/domain/partyBalance.js`، `partyName.js` | `partyBalanceOf`، `openingBalanceOf`، `partyDisplayName` |
 

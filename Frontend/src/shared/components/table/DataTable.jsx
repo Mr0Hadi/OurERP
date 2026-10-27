@@ -19,6 +19,7 @@ import DataTablePagination from "./DataTablePagination";
 import MobileRowCards from "./MobileRowCards";
 import RefreshButton from "./RefreshButton";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
+import { useTableFit } from "./useTableFit";
 
 /**
  * پوسته‌ی مشترک جدول‌های سرور-ساید (صفحه‌بندی و مرتب‌سازی دستی).
@@ -35,7 +36,8 @@ import { useIsMobile } from "@/shared/hooks/useIsMobile";
  * @param refresh      کوئریِ فهرست (`{ refetch, isFetching }`)؛ اگر باشد دکمه‌ی «تازه‌سازی»
  *                     می‌آید: دسکتاپ در گوشه‌ی سرتیترِ چسبانِ جدول (ستونِ باریکِ اول، راست در RTL؛ با
  *                     اسکرولِ جدول هم در دید)، موبایل در نوارِ بالای کارت‌ها کنارِ مرتب‌سازی.
- *                     `ServerTable` خودش آن را می‌دهد.
+ *                     `ServerTable` خودش آن را می‌دهد. ستونی با `meta.corner` (مثلاً چک‌باکسِ انتخاب) در همین
+ *                     ستونِ گوشه می‌نشیند — زیرِ دکمه، مثلِ صفحه‌ی دانه‌ها — نه یک ستونِ جدا و خالیِ دیگر.
  */
 export default function DataTable({
   data,
@@ -88,25 +90,38 @@ export default function DataTable({
     pageCount: totalPages,
   });
 
-  if (isLoading) return <TableLoadingSkeleton cards={isMobile} />;
+  // ستونِ گوشه فقط وقتی دکمه‌ی تازه‌سازی هست؛ وگرنه ستونی معمولی است.
+  const cornerId = refresh ? columns.find((column) => column.meta?.corner)?.id : undefined;
+
+  // جدولی که در عرضِ قاب جا نمی‌شود (تبلت، سایدبارِ باز) کارت می‌شود، نه اینکه از قاب بیرون بزند.
+  const fit = useTableFit(`${currentPage}|${pageSize}|${data.length}|${columns.length}`);
+  const showCards = isMobile || fit.tooNarrow;
+  // قابِ همیشگی: ResizeObserverِ `useTableFit` عرض را از همین می‌خواند، در هر حالت.
+  const frame = (node) => (
+    <div ref={fit.wrapRef} className="min-w-0">
+      {node}
+    </div>
+  );
+
+  if (isLoading) return frame(<TableLoadingSkeleton cards={showCards} />);
 
   const rows = table.getRowModel().rows;
 
   // بعضی صفحه‌ها به‌جای ردیف خالی، یک بلوک کامل جایگزین جدول نشان می‌دهند.
   if (rows.length === 0 && emptyState) {
-    if (!refresh) return emptyState;
-    return (
+    if (!refresh) return frame(emptyState);
+    return frame(
       <div className="space-y-2">
         <div className="flex justify-end">
-          <RefreshButton query={refresh} variant={isMobile ? "pill" : "icon"} />
+          <RefreshButton query={refresh} variant={showCards ? "pill" : "icon"} />
         </div>
         {emptyState}
-      </div>
+      </div>,
     );
   }
 
-  if (isMobile) {
-    return (
+  if (showCards) {
+    return frame(
       <div className="space-y-3">
         <MobileRowCards
           table={table}
@@ -126,16 +141,24 @@ export default function DataTable({
           totalCount={totalCount}
           compact
         />
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return frame(
     <div className="space-y-3">
-      {/* سرتیتر هنگامِ اسکرولِ داخلیِ جدول ثابت می‌ماند. */}
-      <div className="max-h-[calc(100dvh-300px)] min-h-64 overflow-auto rounded-lg border custom-scroll [&>[data-slot=table-container]]:overflow-visible">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur supports-backdrop-filter:bg-muted/60">
+      {/* سرتیتر هنگامِ اسکرولِ داخلیِ جدول ثابت می‌ماند. بی‌کمینه‌ی ارتفاع: جدولِ یکی‌دو ردیفه زیرش فضای خالی داشت.
+          `scrollbarGutter: auto`: `custom-scroll` جای اسکرول‌بار را همیشه نگه می‌دارد (`stable`) و سمتِ راستِ هر
+          جدول، حتی بی‌اسکرول، حدودِ ۱۰px خالی می‌ماند. */}
+      <div
+        ref={fit.scrollerRef}
+        className="max-h-[calc(100dvh-300px)] overflow-auto rounded-lg border custom-scroll [&>[data-slot=table-container]]:overflow-visible"
+        style={{ scrollbarGutter: "auto" }}
+      >
+          <Table ref={fit.tableRef}>
+            {/* پس‌زمینه‌ی کدر، نه `backdrop-blur`: کروم عنصرِ دارای backdrop-filter را با گوشه‌ی گردِ قاب نمی‌بُرد و
+                گوشه‌ی چپِ سرتیتر از قاب بیرون می‌زد. */}
+            <TableHeader className="sticky top-0 z-10 bg-muted">
               {table.getHeaderGroups().map((headerGroup, groupIndex, groups) => (
                 <TableRow key={headerGroup.id}>
                   {/* گوشه‌ی سرتیتر (راست در RTL): تازه‌سازی، بی‌ردیفِ اضافه. */}
@@ -146,7 +169,7 @@ export default function DataTable({
                       )}
                     </TableHead>
                   )}
-                  {headerGroup.headers.map((header) => {
+                  {headerGroup.headers.filter((header) => header.column.id !== cornerId).map((header) => {
                     const isSortable = header.column.getCanSort();
                     const sortDir = header.column.getIsSorted();
 
@@ -197,9 +220,23 @@ export default function DataTable({
                       rowClassName?.(row) ?? ""
                     }`}
                   >
-                    {refresh && <TableCell />}
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-2.5 text-center">
+                    {refresh && (
+                      <TableCell className="px-1.5 py-2.5 text-center">
+                        {cornerId &&
+                          row.getVisibleCells()
+                            .filter((cell) => cell.column.id === cornerId)
+                            .map((cell) => (
+                              <div key={cell.id} className="flex justify-center">
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
+                            ))}
+                      </TableCell>
+                    )}
+                    {row.getVisibleCells().filter((cell) => cell.column.id !== cornerId).map((cell) => (
+                      // `whitespace-normal`: `TableCell`ِ shadcn یک‌خطی است و جدولی که ستون‌هایش جا نمی‌شد از قاب
+                      // بیرون می‌زد (قابِ `custom-scroll` به سمتِ چپ اسکرول نمی‌شود)؛ حالا متن دو خط می‌شود. عدد
+                      // (بی‌فاصله) و نشان‌ها (`Badge` خودش nowrap است) نمی‌شکنند.
+                      <TableCell key={cell.id} className="py-2.5 text-center whitespace-normal">
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -211,7 +248,7 @@ export default function DataTable({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={columns.length + (refresh ? 1 : 0)}
+                    colSpan={columns.length + (refresh && !cornerId ? 1 : 0)}
                     className="h-24 text-center text-muted-foreground"
                   >
                     {emptyMessage}

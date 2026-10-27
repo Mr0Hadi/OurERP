@@ -42,8 +42,12 @@ function RowCard({ row, rowClassName }) {
   const linkCell = cells.find((cell) => cell.column.columnDef.meta?.rowLink);
   const to = linkCell?.column.columnDef.meta.rowLink(row.original);
 
-  const actions = cells.filter((cell) => isActionColumn(cell.column) && cell !== linkCell);
-  const fields = cells.filter((cell) => !isActionColumn(cell.column));
+  // «leading» (مثلاً چک‌باکسِ انتخاب) کنارِ عنوان می‌نشیند، مثلِ کارتِ دانه‌ها؛ نه در فوتر.
+  const leading = cells.filter((cell) => slotOf(cell.column) === "leading");
+  const actions = cells.filter(
+    (cell) => isActionColumn(cell.column) && cell !== linkCell && !leading.includes(cell),
+  );
+  const fields = cells.filter((cell) => !isActionColumn(cell.column) && !leading.includes(cell));
 
   const bySlot = (slot) => fields.filter((cell) => slotOf(cell.column) === slot);
   let [title] = bySlot("title");
@@ -57,6 +61,11 @@ function RowCard({ row, rowClassName }) {
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
+        {leading.map((cell) => (
+          <div key={cell.id} className="-ms-1 -mt-1 shrink-0">
+            {render(cell)}
+          </div>
+        ))}
         <div className="min-w-0 flex-1 space-y-0.5 [&_*]:justify-start [&_*]:text-start">
           {title && <div className="truncate text-sm font-semibold">{render(title)}</div>}
           {subtitles.length > 0 && (
@@ -132,6 +141,7 @@ function RowCard({ row, rowClassName }) {
  *   "subtitle"  خطِ کم‌رنگِ زیرِ عنوان، بدونِ برچسب (کد، شماره، تاریخ)
  *   "badge"     گوشه‌ی کارت (وضعیت، موجودی)
  *   "highlight" عددِ اصلی در نوارِ پایینِ کارت (مبلغ، مانده)
+ *   "leading"   کنارِ عنوان، پیش از آن (چک‌باکسِ انتخاب)
  *   "hidden"    در کارت نمی‌آید
  * بقیه‌ی ستون‌ها شبکه‌ی دوستونه‌ی «برچسب/مقدار» می‌شوند؛ `detailsColumn` کلِ کارت را لینک
  * می‌کند و ستون‌های بی‌برچسبِ دیگر (دکمه‌ها) فوترِ کارت‌اند.
