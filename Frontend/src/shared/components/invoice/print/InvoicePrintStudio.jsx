@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { AlertCircle, Download, Printer, RefreshCw } from "lucide-react";
 
-import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import FlowSheet from "@/shared/components/print/FlowSheet";
 import { flowPageCount, flowPrintOptions, pageGeometryOf } from "@/shared/components/print/paper";
 import PrintStudio from "@/shared/components/print/studio/PrintStudio";
 import { usePrint } from "@/shared/components/print/usePrint";
 import { Button } from "@/shared/components/ui/button";
 import { Spinner } from "@/shared/components/ui/spinner";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { toPersianDigits } from "@/shared/lib/persianDigits";
 import { useInvoiceDocumentQuery } from "@/shared/services/invoice/queries";
@@ -16,11 +16,43 @@ import InvoiceDocumentSheet from "./InvoiceDocumentSheet";
 import InvoicePrintSettingsPanel from "./InvoicePrintSettingsPanel";
 import { INVOICE_PRINT_DEFAULTS, printKindOf } from "./invoicePrintSettings";
 
-/** جای پیش‌نمایش تا داده برسد یا وقتی نرسید — به عرضِ کاغذ تا پوسته جابه‌جا نشود. */
-function PreviewPlaceholder({ widthMm, children }) {
+/**
+ * داده‌ی چاپی نرسید. ۴۰۴ یعنی endpoint روی این سرور نیست (بکندِ قدیمی‌تر)، نه اینکه سند نباشد — PDFِ رسمی
+ * همان سند را دارد، پس راهِ چاپ همین‌جا می‌ماند و کاربر بی‌دکمه رها نمی‌شود.
+ */
+function DocumentUnavailable({ error, onRetry, onPrintOfficial, onDownloadOfficial }) {
+  const isMissingEndpoint = error?.response?.status === 404;
+  const hasOfficial = Boolean(onPrintOfficial || onDownloadOfficial);
+
   return (
-    <div className="flex min-h-60 items-center justify-center bg-white p-6 text-black shadow-sm" style={{ width: `${widthMm}mm` }}>
-      {children}
+    <div className="flex w-full max-w-sm flex-col items-center gap-3 rounded-xl border border-border bg-card p-5 text-center">
+      <AlertCircle className="size-8 text-destructive" />
+      <p className="text-sm leading-6">
+        {isMissingEndpoint
+          ? "چاپ با کاغذ و چیدمانِ دلخواه هنوز روی این سرور فعال نیست."
+          : getErrorMessage(error, "داده‌ی سند دریافت نشد.")}
+      </p>
+      {hasOfficial && <p className="text-xs leading-5 text-muted-foreground">PDFِ رسمیِ همین سند در دسترس است.</p>}
+      <div className="flex w-full flex-col gap-2">
+        {onPrintOfficial && (
+          <Button type="button" className="h-10 gap-1.5" onClick={onPrintOfficial}>
+            <Printer />
+            چاپِ PDFِ رسمی
+          </Button>
+        )}
+        {onDownloadOfficial && (
+          <Button type="button" variant="outline" className="h-10 gap-1.5" onClick={onDownloadOfficial}>
+            <Download />
+            دانلودِ PDFِ رسمی
+          </Button>
+        )}
+        {!isMissingEndpoint && (
+          <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={onRetry}>
+            <RefreshCw />
+            تلاش دوباره
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -36,8 +68,16 @@ function PreviewPlaceholder({ widthMm, children }) {
  * @param documentId         شناسه‌ی سندِ ذخیره‌شده
  * @param title              عنوانِ پوسته تا داده برسد (مثلاً «پیش‌فاکتور»)
  * @param onDownloadOfficial دانلودِ PDFِ رسمیِ همین سند؛ نبودنش یعنی دکمه نمایش داده نمی‌شود
+ * @param onPrintOfficial    چاپِ مستقیمِ PDFِ رسمی، وقتی داده‌ی چاپی نرسید
  */
-export default function InvoicePrintStudio({ documentKind, documentId, title, onDownloadOfficial, onClose }) {
+export default function InvoicePrintStudio({
+  documentKind,
+  documentId,
+  title,
+  onDownloadOfficial,
+  onPrintOfficial,
+  onClose,
+}) {
   const print = usePrint();
   const { settings, update, reset } = usePrintSettings(printKindOf(documentKind), INVOICE_PRINT_DEFAULTS);
   const query = useInvoiceDocumentQuery(documentKind, documentId);
@@ -59,7 +99,7 @@ export default function InvoicePrintStudio({ documentKind, documentId, title, on
       ? "داده‌ی سند دریافت نشد"
       : "در حالِ دریافتِ سند…";
 
-  const preview = document_ ? (
+  const preview = document_ && (
     <FlowSheet geometry={geometry} pageCount={pageCount} onMeasure={setContentHeightMm}>
       <InvoiceDocumentSheet
         document={document_}
@@ -68,14 +108,17 @@ export default function InvoicePrintStudio({ documentKind, documentId, title, on
         contentWidthMm={geometry.contentWidthMm}
       />
     </FlowSheet>
+  );
+
+  const previewNotice = document_ ? null : query.isError ? (
+    <DocumentUnavailable
+      error={query.error}
+      onRetry={() => query.refetch()}
+      onPrintOfficial={onPrintOfficial}
+      onDownloadOfficial={onDownloadOfficial}
+    />
   ) : (
-    <PreviewPlaceholder widthMm={geometry.widthMm}>
-      {query.isError ? (
-        <QueryErrorState error={query.error} onRetry={() => query.refetch()} />
-      ) : (
-        <Spinner className="size-8 text-primary" />
-      )}
-    </PreviewPlaceholder>
+    <Spinner className="size-8 text-primary" />
   );
 
   return (
@@ -85,13 +128,16 @@ export default function InvoicePrintStudio({ documentKind, documentId, title, on
       settings={<InvoicePrintSettingsPanel settings={settings} geometry={geometry} update={update} reset={reset} />}
       previewWidthMm={geometry.widthMm}
       preview={preview}
+      previewNotice={previewNotice}
       onPrint={() => print(flowPrintOptions(geometry, contentHeightMm))}
       printDisabled={!document_}
+      // بی داده، همین دکمه‌ها داخلِ پیامِ پیش‌نمایش‌اند.
       actions={
+        document_ &&
         onDownloadOfficial && (
           <Button type="button" variant="outline" className="h-10 gap-1.5" onClick={onDownloadOfficial}>
             <Download />
-            <span className="hidden sm:inline">PDFِ رسمی</span>
+            PDFِ رسمی
           </Button>
         )
       }

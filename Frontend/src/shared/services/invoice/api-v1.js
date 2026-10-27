@@ -69,7 +69,7 @@ export const getPurchaseReturnPdf = (purchaseReturnId) =>
  * company, counterpartyLabel, counterparty, lines[], subTotal, totalDiscount, totalTax, grandTotal,
  * installmentChargeAmount, payableAmount, paidAmount, balance }`.
  *
- * TODO(بکند): هر سه endpoint هنوز روی سرور نیستند (بندِ ۲۷ frontend-requests.fa.md)؛ تا آن وقت ۴۰۴ می‌آید.
+ * بکند بندِ ۲۷ را دارد (frontend-requests.fa.md)؛ سروری که هنوز به‌روز نشده ۴۰۴ می‌دهد و `InvoicePrintStudio` به PDFِ رسمی برمی‌گردد.
  */
 const DOCUMENT_ENDPOINTS = Object.freeze({
   sale: { url: "/Invoice/GetSaleInvoiceDocument", param: "saleId" },

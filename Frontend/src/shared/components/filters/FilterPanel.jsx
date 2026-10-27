@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
 import { useActiveFilterCount } from "@/shared/hooks/useActiveFilterCount";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import FilterCollapse from "./FilterCollapse";
 
 /**
  * پوسته‌ی واکنش‌گرای فیلترها.
@@ -51,7 +52,7 @@ export function ResponsiveFilters({ primary, secondary, store, onReset, children
           {formatNumber(activeCount)}
         </span>
       )}
-      <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
     </Button>
   );
 
@@ -69,21 +70,19 @@ export function ResponsiveFilters({ primary, secondary, store, onReset, children
         {toggle}
       </div>
 
-      {open && (
-        <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-3">
-          {children}
-          {onReset && (
-            <div className="flex gap-2 border-t border-border pt-3">
-              <Button type="button" variant="outline" className="flex-1" onClick={onReset} disabled={!activeCount}>
-                حذف فیلترها
-              </Button>
-              <Button type="button" variant="ghost" className="flex-1" onClick={() => setOpen(false)}>
-                بستن
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+      <FilterCollapse open={open} className="space-y-4 rounded-xl border border-border bg-muted/30 p-3">
+        {children}
+        {onReset && (
+          <div className="flex gap-2 border-t border-border pt-3">
+            <Button type="button" variant="outline" className="flex-1" onClick={onReset} disabled={!activeCount}>
+              حذف فیلترها
+            </Button>
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => setOpen(false)}>
+              بستن
+            </Button>
+          </div>
+        )}
+      </FilterCollapse>
     </div>
   );
 }

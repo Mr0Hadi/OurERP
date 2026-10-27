@@ -306,7 +306,9 @@ export default function BankAccountStatement({ account, canManage, onEdit, onDea
             {rows.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">در این بازه گردشی ثبت نشده است.</p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-border">
+              // `relative` لازم است: `sr-only`ِ ستونِ ابطال absolute است و بی آن از این قابِ اسکرول بیرون می‌زند
+              // و در موبایل (راست‌به‌چپ) کلِ صفحه را به اندازه‌ی پهنای جدول کش می‌دهد.
+              <div className="relative overflow-x-auto rounded-lg border border-border">
                 <table className="w-full min-w-[600px] text-xs">
                   <thead className="bg-muted text-muted-foreground">
                     <tr>

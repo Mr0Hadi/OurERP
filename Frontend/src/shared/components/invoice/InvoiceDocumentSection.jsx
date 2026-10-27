@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Printer, Download, FileText, Info, SlidersHorizontal } from "lucide-react";
+import { Printer, Download, FileText, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
@@ -42,8 +42,9 @@ import InvoicePrintStudio from "./print/InvoicePrintStudio";
  * تصویری باشد، چاپ در `DocumentPrintStudio` (پوسته‌ی مشترکِ چاپ، با کاغذ و
  * چیدمان) باز می‌شود؛ PDFِ تنها مستقیم چاپ می‌شود.
  *
- * سندی که سرور می‌سازد علاوه بر PDFِ رسمی، «چاپ با کاغذ و چیدمانِ دلخواه» هم دارد (`InvoicePrintStudio`):
- * همان داده‌ی سند در پوسته‌ی مشترکِ چاپ، برای وقتی که کاغذ یا ستون‌های قالبِ ثابتِ PDF به کار نمی‌آید.
+ * سندی که سرور می‌سازد و داده‌ی چاپی دارد فقط یک دکمه‌ی «چاپ و دانلود» دارد که `InvoicePrintStudio` را باز
+ * می‌کند: کاغذ و چیدمان را آنجا انتخاب می‌کند و PDFِ رسمی هم از همان‌جا دانلود می‌شود. پس آن سند در فهرستِ
+ * انتخابِ پایین نمی‌آید و دکمه‌های چاپ/دانلودِ آن فهرست فقط برای ضمیمه‌هاست.
  *
  * وقتی هیچ سندی وجود ندارد دکمه‌ها غیرفعال‌اند — و نباید به‌جایش یک
  * جدولِ HTML از روی داده‌ی فرم ساخته شود: آن برگه فاکتور نیست و
@@ -130,14 +131,18 @@ export default function InvoiceDocumentSection({
     }
   };
 
-  const selected = documents.filter((document_) => !excluded.has(document_.id));
-  const hasDocuments = documents.length > 0;
-  // بدون سندِ انتخاب‌شده، دکمه‌ها کاری ندارند که انجام دهند.
-  const canRun = !isBusy && selected.length > 0;
-
   const serverDoc = documents.find((document_) => document_.id === "server-pdf");
   // فقط سندی که سرور می‌سازد داده‌ی چاپی دارد؛ ضمیمه همان فایلی است که هست.
   const canDesign = Boolean(serverDoc) && hasPrintableDocument(documentKind);
+
+  // سندی که پوسته‌ی چاپ دارد از همان‌جا چاپ و دانلود می‌شود، نه از این فهرست.
+  const listedDocuments = canDesign
+    ? documents.filter((document_) => document_ !== serverDoc)
+    : documents;
+  const selected = listedDocuments.filter((document_) => !excluded.has(document_.id));
+  const hasDocuments = listedDocuments.length > 0;
+  // بدون سندِ انتخاب‌شده، دکمه‌ها کاری ندارند که انجام دهند.
+  const canRun = !isBusy && selected.length > 0;
 
   const handlePrint = () => {
     if (selected.some((document_) => !document_.isPdf)) setStudioDocuments(selected);
@@ -180,7 +185,7 @@ export default function InvoiceDocumentSection({
           <div className="space-y-2 border-t border-border pt-3">
             <fieldset className="space-y-1">
               <legend className="mb-1 text-xs text-muted-foreground">سندهای چاپ و دانلود</legend>
-              {documents.map((document_) => (
+              {listedDocuments.map((document_) => (
                 <label
                   key={document_.id}
                   className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5"
@@ -227,22 +232,25 @@ export default function InvoiceDocumentSection({
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            {emptyHint ?? "با افزودنِ فایل، چاپ و دانلود فعال می‌شود."}
-          </p>
+          !canDesign && (
+            <p className="text-xs text-muted-foreground">
+              {emptyHint ?? "با افزودنِ فایل، چاپ و دانلود فعال می‌شود."}
+            </p>
+          )
         )}
 
         {canDesign && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="w-full gap-1.5"
-            onClick={() => setIsDesignerOpen(true)}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            چاپِ {title} با کاغذ و چیدمانِ دلخواه
-          </Button>
+          <div className="border-t border-border pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full gap-2"
+              onClick={() => setIsDesignerOpen(true)}
+            >
+              <Printer className="h-4 w-4" />
+              چاپ و دانلودِ {title}
+            </Button>
+          </div>
         )}
 
         {localPrints.length > 0 && (
@@ -280,6 +288,7 @@ export default function InvoiceDocumentSection({
           documentId={documentId}
           title={title}
           onDownloadOfficial={() => run(() => downloadDocuments([serverDoc]))}
+          onPrintOfficial={() => run(() => printPdfDocuments([serverDoc]))}
           onClose={() => setIsDesignerOpen(false)}
         />
       )}

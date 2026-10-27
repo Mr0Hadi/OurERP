@@ -77,6 +77,7 @@ flowchart LR
 | `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
 | `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
+| `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
 | `filterUtils.js` | `normalizeFilterValue`، `toFilterOptions`، `getPartyName` | ۹ |
 
 ### `feedback/`
@@ -135,7 +136,7 @@ flowchart LR
 
 | فایل | کار | مصرف‌کننده |
 | --- | --- | --- |
-| `studio/PrintStudio.jsx` | پوسته‌ی تمام‌صفحه: پنلِ تنظیمات + پیش‌نمایشِ بزرگ‌نمایی‌پذیر + نوارِ چاپ؛ دسکتاپ دو ستون، موبایل سوییچِ «پیش‌نمایش/تنظیمات» (پیش‌نمایش همیشه رندر و اندازه‌گیری می‌شود). پورتالِ زیرِ body، نه Dialog | برچسب، لیست قیمت‌ها، تصویرِ سندها |
+| `studio/PrintStudio.jsx` | پوسته‌ی تمام‌صفحه: پنلِ تنظیمات + پیش‌نمایشِ بزرگ‌نمایی‌پذیر + نوارِ چاپ؛ دسکتاپ دو ستون، موبایل سوییچِ «پیش‌نمایش/تنظیمات» (پیش‌نمایش همیشه رندر و اندازه‌گیری می‌شود). `previewNotice` به‌جای ورق و بی‌بزرگ‌نمایی (دریافت، خطا). پورتالِ زیرِ body، نه Dialog | برچسب، لیست قیمت‌ها، تصویرِ سندها |
 | `studio/PaperSettings.jsx` | بخشِ «کاغذ»: اندازه (A3/A4/A5/Letter/رولِ ۸۰ و ۵۸/دلخواه)، جهت، حاشیه؛ `paperKeys` کاغذهای مجاز را محدود می‌کند | لیست قیمت‌ها، تصویرِ سندها |
 | `studio/PrintSettingsSection.jsx`، `studio/SegmentedControl.jsx`، `studio/options.js` | بخشِ پنل با عنوان/آیکون، انتخابِ چندگزینه‌ایِ کوتاه، `optionsFromLabels` | همه‌ی پنل‌ها |
 | `paper.js` | `pageGeometryOf(settings)` (اندازه، جهت، حاشیه، عرض/ارتفاعِ مفید؛ رول ارتفاعِ پیوسته دارد)، `flowPageCount`، `flowPrintOptions` (رول: ارتفاعِ صفحه = طولِ محتوا)، `fixedPagePrintOptions`، `formatPaperSize` | — |
@@ -155,7 +156,7 @@ flowchart LR
 | `charts/` | `ChartCard` (۱۲)، `GroupedBarChart`، `TrendChart`، `DonutChart`، `Sparkline`، `chartUtils.js` (۹)؛ داخلی: `ChartLegend`، `ChartTooltip`، `useChartSize` | نمودارهای SVGِ دست‌ساز (کتابخانه‌ی نمودار نیست)؛ داشبورد و حسابداری |
 | `dataTransfer/` | `DataTransferActions` (۹)؛ داخلی: `ImportDialog`، `ImportResultView` | دکمه‌ی ورود/خروجیِ CSV/Excel در سرتیترِ لیست؛ مجاز بودن از سرور (`GetResources`) |
 | `files/` | `RemoteImage` (۵)، `ImageUploadField` (۳)، `FileUploadList`، `ImageLightbox` | تصویر از سرور، آپلودِ تصویر/پیوست |
-| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton`؛ داخلی: `DocumentPrintStudio`، `print/InvoicePrintStudio` (+ `InvoiceDocumentSheet`، `InvoicePrintSettingsPanel`، `invoicePrintSettings.js`) | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها. چاپِ انتخابی که تصویر دارد در `DocumentPrintStudio` (کاغذ، چیدمان) باز می‌شود؛ PDFِ تنها مستقیم (`printPdfDocuments`). سندِ ساختِ سرور دکمه‌ی «چاپ با کاغذ و چیدمانِ دلخواه» هم دارد: `InvoicePrintStudio` داده‌ی سند را با `useInvoiceDocumentQuery` (`src/shared/services/invoice/queries.js`) می‌گیرد و هم‌شکلِ قالبِ رسمی در `PrintStudio` می‌چیند (بخش‌ها، ستون‌ها، شکلِ جدول، کاغذ، متن؛ تنظیم برای هر نوعِ سند جدا). منتظرِ بندِ ۲۷ِ frontend-requests؛ تا آن وقت ۴۰۴ |
+| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton`؛ داخلی: `DocumentPrintStudio`، `print/InvoicePrintStudio` (+ `InvoiceDocumentSheet`، `InvoicePrintSettingsPanel`، `invoicePrintSettings.js`) | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها. چاپِ انتخابی که تصویر دارد در `DocumentPrintStudio` (کاغذ، چیدمان) باز می‌شود؛ PDFِ تنها مستقیم (`printPdfDocuments`). سندِ ساختِ سرور در فهرست نمی‌آید و فقط دکمه‌ی «چاپ و دانلود» دارد: `InvoicePrintStudio` داده‌ی سند را با `useInvoiceDocumentQuery` (`src/shared/services/invoice/queries.js`) می‌گیرد و هم‌شکلِ قالبِ رسمی در `PrintStudio` می‌چیند (بخش‌ها، ستون‌ها، شکلِ جدول، کاغذ، متن؛ تنظیم برای هر نوعِ سند جدا) و PDFِ رسمی از همان‌جا دانلود می‌شود. سروری که بندِ ۲۷ را ندارد ۴۰۴ می‌دهد؛ آن وقت پوسته چاپ و دانلودِ PDFِ رسمی را پیشنهاد می‌کند |
 | `barcode/` | `CameraScanButton` (۳)، `UnitBarcodeScanList` (۲)؛ داخلی: `CameraScanner`، `BarcodeScanField` | اسکنِ بارکد با دوربین |
 | `map/` | `LocationPickerMap` (۱)؛ داخلی: `MapCanvas`، `MapSearchBar`، `nominatim.js` | انتخابِ مکان روی نقشه (Leaflet + Nominatim) |
 | `products/` | `ProductPicker`، `DocumentItemsSection`، `useReturnedNewProduct` | انتخابِ کالا و برگشت از «کالای جدید» |

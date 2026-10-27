@@ -119,6 +119,8 @@ function PreviewPane({ widthMm, maxFitScale, zoom, onZoomChange, children }) {
  * @param settings       پنلِ تنظیمات (معمولاً چند `PrintSettingsSection`)
  * @param preview        برگه‌ای که چاپ می‌شود؛ باید `[data-print-root]` داشته باشد
  * @param previewWidthMm عرضِ ورق برای جا دادنِ پیش‌نمایش
+ * @param previewNotice  به‌جای پیش‌نمایش (مثلاً «در حالِ دریافت» یا خطا)، بی‌بزرگ‌نمایی — پیامی که در ورقِ
+ *   کوچک‌شده بنشیند ناخوانا می‌شود
  * @param maxFitScale    سقفِ بزرگ‌نماییِ «اندازه‌ی صفحه» (برچسبِ ریز تا ۲ برابر)
  * @param printDisabledReason متنی که وقتی چاپ ممکن نیست کنارِ دکمه می‌آید
  * @param actions        دکمه‌های فرعیِ نوارِ پایین (کنارِ «چاپ»)
@@ -131,6 +133,7 @@ export default function PrintStudio({
   settings,
   preview,
   previewWidthMm,
+  previewNotice,
   maxFitScale = 1,
   onPrint,
   printLabel = "چاپ",
@@ -206,9 +209,15 @@ export default function PrintStudio({
           <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4">{settings}</div>
         </aside>
 
-        <PreviewPane widthMm={previewWidthMm} maxFitScale={maxFitScale} zoom={zoom} onZoomChange={setZoom}>
-          {preview}
-        </PreviewPane>
+        {previewNotice ? (
+          <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto bg-muted/60 p-4">
+            {previewNotice}
+          </div>
+        ) : (
+          <PreviewPane widthMm={previewWidthMm} maxFitScale={maxFitScale} zoom={zoom} onZoomChange={setZoom}>
+            {preview}
+          </PreviewPane>
+        )}
       </div>
 
       <footer className="print-portal__chrome flex flex-wrap items-center gap-2 border-t border-border bg-card p-3">
