@@ -6,6 +6,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Popover, PopoverAnchor, PopoverContent } from "@/shared/components/ui/popover";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { cn } from "@/shared/lib/utils";
+import { isTouchDevice } from "@/shared/lib/isTouchDevice";
 import { useVehiclesQuery } from "../services/queries";
 import VehicleFormDialog from "./VehicleFormDialog";
 
@@ -72,6 +73,13 @@ export default function VehicleMultiSelect({ value = [], onChange }) {
           <PopoverContent
             align="start"
             className="w-(--radix-popover-trigger-width) min-w-64 p-0"
+            // مثلِ `EntitySelect`: روی صفحه‌ی لمسی جست‌وجو خودکار فوکوس نمی‌شود تا
+            // کیبورد بالا نیاید؛ کاربر اگر خواست خودش رویش می‌زند.
+            onOpenAutoFocus={(event) => {
+              if (!isTouchDevice()) return;
+              event.preventDefault();
+              event.currentTarget.focus();
+            }}
             onInteractOutside={(event) => {
               if (fieldRef.current?.contains(event.target)) event.preventDefault();
             }}
@@ -84,7 +92,7 @@ export default function VehicleMultiSelect({ value = [], onChange }) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-8 pr-8"
-                  autoFocus
+                  autoFocus={!isTouchDevice()}
                 />
               </div>
             </div>
