@@ -152,10 +152,26 @@
 5. نمایش در صفحه‌ی مصرف‌کننده: `{open && <XPrint … onClose />}` — پوسته خودش پورتال است. اگر چاپ کنارِ سندهای یک سفارش است، از `localPrints`ِ `InvoiceDocumentSection` باز شود.
 6. سندی که **سرور** می‌سازد (فاکتور، برگه‌های مرجوعی) را از داده‌ی فرم بازسازی نکنید. PDFِ رسمی با `printPdfDocuments`/`printPdfBlob` (`src/shared/services/invoice/documentOutput.js`)؛ چاپ با کاغذ و چیدمانِ دلخواه با `InvoicePrintStudio` (`src/shared/components/invoice/print/InvoicePrintStudio.jsx`) که داده‌ی خودِ سرور را می‌خواند (`getInvoiceDocument`). نوعِ سندِ تازه‌ی سرور = یک ردیف در `DOCUMENT_ENDPOINTS`ِ `src/shared/services/invoice/api-v1.js`.
 
+## ۱۵. نوشتنِ تست برای منطقِ خالص
+
+**الگو:** `src/features/sales/installments/domain/installmentPlan.test.js`، `src/shared/domain/returns/resolutions.test.js`.
+
+1. **چه چیزی:** تابع‌های خالصِ `domain/`، `src/shared/lib/` و `tools/` — بی React و بی شبکه. کامپوننت و هوکِ query اینجا تست نمی‌شوند؛ قاعده را از کامپوننت به یک تابعِ `domain/` ببرید و همان را تست کنید.
+2. **کجا:** کنارِ فایل، `x.js` → `x.test.js`؛ import از `vitest` (`describe`، `it`، `expect`، `vi`) و با aliasِ `@/`.
+3. **چه بسنجید:** قراردادی که کامنتِ خودِ تابع یا سرور (`api-guide`، validatorها) می‌گوید، با عددِ واقعی: مرزها (صفر، خالی، سقف)، گرد کردن، و هر باگِ گذشته — مثلاً «۳۰۰۰ × ۱٫۱۵٪ = ۳۵ نه ۳۴». نامِ تست جمله‌ی فارسیِ همان قاعده است.
+4. **زمان:** وابسته به «امروز» با `vi.useFakeTimers()` + `vi.setSystemTime(...)` و در پایان `vi.useRealTimers()`.
+5. **عددِ معتبر را بسازید، حفظ نکنید:** کارت با Luhn و شبا با mod-97 درونِ تست (`src/features/treasury/bankAccounts/domain/bankAccountForm.test.js`)؛ فایل‌سیستم با پوشه‌ی موقت (`tools/dev-inspector/sourceIndex.test.js`).
+6. **آیا تست واقعاً می‌گیرد؟** یک بار قاعده را عمداً خراب کنید و ببینید قرمز می‌شود.
+7. اجرا: `pnpm test:watch` حینِ کار؛ `pnpm test:coverage` و گزارشِ HTML در `coverage/index.html`.
+
 ## قبل از commit
 
 ```bash
 pnpm lint
+```
+
+```bash
+pnpm test
 ```
 
 ```bash

@@ -230,7 +230,7 @@ export default function LoginPage() {
                   <Input
                     id="username"
                     autoComplete="username"
-                    placeholder="مثال: ali.rezaei"
+                    placeholder="مثال: ali_rezaei"
                     className="h-11 rounded-xl pr-10 input-rtl-placeholder"
                     aria-invalid={!!errors.username}
                     {...register("username", {

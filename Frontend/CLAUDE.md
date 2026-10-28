@@ -35,10 +35,14 @@ pnpm knip
 ```
 
 ```bash
+pnpm test
+```
+
+```bash
 node scripts/check-docs-paths.mjs
 ```
 
-تست و type-check وجود ندارد؛ قبل از commit: `pnpm lint` بدونِ خطا و `pnpm build` موفق. آدرسِ API از `VITE_API_BASE_URL` در `.env` (الگو: `.env.example`).
+تستِ واحد با Vitest فقط برای منطقِ خالص (`src/**/domain/`، `src/shared/lib/`، `tools/`)؛ تست کنارِ فایل است (`x.js` → `x.test.js`)، راهنما در `docs/architecture/13-recipes.md` (بخشِ ۱۵). type-check وجود ندارد. قبل از commit: `pnpm lint` بدونِ خطا، `pnpm test` سبز و `pnpm build` موفق. منطقِ خالصِ تازه یا تغییرِ قاعده‌ی مالی/مرجوعی بی تست نماند. آدرسِ API از `VITE_API_BASE_URL` در `.env` (الگو: `.env.example`).
 
 ## ساختار
 

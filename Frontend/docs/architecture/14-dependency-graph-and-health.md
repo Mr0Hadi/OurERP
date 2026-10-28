@@ -58,7 +58,8 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 
 ### بقیه
 
-- `pnpm lint` — تنها بررسیِ ایستا. **نه تست، نه type-check.**
+- `pnpm lint` — تنها بررسیِ ایستا؛ type-check نیست.
+- `pnpm test` — Vitest روی منطقِ خالص (۱۴۰ تست، ۱۸ فایل، 2026-10-28): `src/shared/lib/` (عدد به حروف، رقم، موبایل، کدِ ملی، قاعده‌های فرم، تاریخ، پیامِ خطا)، پول (`invoice/lineMath`، `payments/paymentSplit`، `paymentRows`، اقساط، علی‌الحساب، حسابِ بانکی)، مرجوعی (`resolutions`، `claimDrafts`، `receivingReport`) و `tools/dev-inspector/sourceIndex`. پوششِ کلِ منطقِ خالص حدودِ ۴۵٪؛ داشبورد، واژه‌نامه‌ها و `labelTemplate` هنوز تست ندارند.
 - `node scripts/check-docs-paths.mjs` — همه‌ی مسیرهای ذکرشده در `docs/architecture/` باید وجود داشته باشند.
 
 ## Known debt
@@ -98,7 +99,6 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 | R4 | دو مسیرِ خروجِ ناهم‌سان | شکستِ refresh در `src/shared/services/api/axios.js` با `window.location.href` در برابرِ `leaveSession` در `src/shared/services/sessionCleanup.js` | در هر دو `leaveSession` |
 | R5 | `unit-label-template` و کلیدِ کارتخوان بعد از خروج می‌مانند | `src/features/warehouse/units/store/unitFilterStore.js`، `src/shared/components/payments/pos/PosReadyForm.jsx` | تصمیم بگیرید ترجیحِ دستگاه است یا کاربر؛ اگر کاربر، در `useLogoutMutation` پاک کنید |
 | R6 | نامِ مجوزها با بکند خودکار سنجیده نمی‌شود | نام‌ها رشته‌اند؛ مرجع `../Backend-Net/Domain/Enums/PermissionEnum.cs` | اسکریپتی شبیهِ `scripts/check-docs-paths.mjs` که نام‌های `permission:`/`can(`/`allows(` را با enum مقایسه کند |
-| R7 | `lineMath.js` قاعده‌ی سرور را بی‌تست تکرار می‌کند | `src/shared/domain/invoice/lineMath.js` | چند تستِ واحد با اعدادِ نمونه‌ی `api-guide.fa.md` |
 | R8 | وارسیِ enumِ ناشناخته فقط برای مرجوعی | `verifyReturnEnums` در `src/shared/domain/returns/apiEnums.js` | همان الگو برای وضعیتِ خرید/فروش/دانه |
 | R9 | `isEnvelope` با هر شیءِ `{ Data, Message }` پوشش فرض می‌کند | `src/shared/services/api/axios.js` | `ResponseMessageType` را هم شرط کنید |
 | R10 | `useDocumentFormDraft` نسخه را از `doc.updatedAt` می‌سازد | `src/shared/hooks/useDocumentFormDraft.js`؛ پرکردنش در `fromApiPurchase`/`fromApiSale` | مستقیم `documentVersion(doc)` از `src/shared/services/api/contract.js` |
@@ -140,7 +140,7 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 | `version` همیشه `0.0.0` | `package.json` | نسخه‌گذاری یا حذف از `__APP_BUILD__` |
 | `Fira Code` بارگذاری نمی‌شود | `--font-mono` در `src/index.css` | فونت را import کنید یا از `--font-mono` حذف |
 | منطقِ تم دو نسخه | اسکریپتِ inline در `index.html` و `src/shared/components/theme/themeClasses.js` | یک تستِ کوچک یا کامنتِ چک‌لیست؛ تولیدِ اسکریپت از `themeClasses.js` در build |
-| تست و type-check نیست | `package.json` | حداقل Vitest برای `src/shared/domain/` و `src/shared/lib/` |
+| type-check نیست | `package.json` | `// @ts-check` + JSDoc روی `domain/` یا `tsc --checkJs` در CI؛ تستِ واحد اکنون هست (`pnpm test`) |
 
 ### تمیزی (سبک و نام‌گذاری)
 

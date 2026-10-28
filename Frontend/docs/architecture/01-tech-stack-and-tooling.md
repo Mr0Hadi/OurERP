@@ -41,6 +41,7 @@
 | نقشه | `leaflet`، `react-leaflet` | `src/shared/components/map/` |
 | بارکد | `react-barcode` (تولید، `src/shared/components/print/BarcodeGraphic.jsx`)، `@zxing/library` و `zxing-wasm` (اسکن، `src/shared/domain/barcode/frameReader.js`) | `src/shared/components/barcode/` |
 | PWA | `vite-plugin-pwa`، `workbox-window` — **عملاً غیرفعال** (پایین) | `vite.config.js` |
+| تست | `vitest` + `@vitest/coverage-v8` — منطقِ خالص، کنارِ فایل (`*.test.js`) | `vitest.config.js` |
 | ابزارِ dev | `tools/dev-inspector/` (از صفحه به کد، پایین) روی وصله‌ی `vite-plugin-react-click-to-component`؛ در build نیست | `vite.config.js` |
 
 ## چطور کار می‌کند
@@ -52,10 +53,11 @@ pnpm dev        # همان `pnpm d`؛ vite روی PORT یا ۵۱۷۳
 pnpm build      # vite build → dist/
 pnpm lint       # eslint .
 pnpm knip       # فایل/export/وابستگیِ بی‌استفاده
+pnpm test       # Vitest یک‌بار (vitest.config.js)؛ test:watch در حالِ کار، test:coverage گزارش در coverage/
 pnpm st         # node structure.js — درختِ پوشه‌ها را چاپ می‌کند
 ```
 
-`scripts/build-label-print-check.js` جداگانه با `node` اجرا می‌شود و یک HTMLِ مستقل برای وارسیِ دستیِ چاپِ برچسب می‌سازد. هیچ اسکریپتِ تستی در `package.json` نیست.
+`scripts/build-label-print-check.js` جداگانه با `node` اجرا می‌شود و یک HTMLِ مستقل برای وارسیِ دستیِ چاپِ برچسب می‌سازد. تستِ واحد فقط منطقِ خالص را می‌سنجد و `vitest.config.js` عمداً از `vite.config.js` جداست (فقط aliasِ `@/` و محیطِ Node؛ بی PWA، dev-inspector و React Compiler)، پس کلِ مجموعه حدودِ دو ثانیه است. چطور تست بنویسید: [13 §۱۵](13-recipes.md).
 
 ### `vite.config.js` به ترتیبِ پلاگین‌ها
 

@@ -30,3 +30,6 @@ label-print-check.html
 
 # Tree Structure Project
 structure.txt
+
+# گزارشِ pnpm test:coverage
+coverage
