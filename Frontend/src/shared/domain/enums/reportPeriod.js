@@ -69,6 +69,8 @@ function toPersian(isoDate) {
       calendar: gregorian,
       format: "YYYY-MM-DD",
     });
+    // ورودیِ خراب خطا نمی‌دهد، فقط `isValid` نادرست می‌شود (برچسبِ « » به‌جای «»).
+    if (!d.isValid) return null;
     d.convert(persian);
     d.setLocale(persian_fa);
     return d;

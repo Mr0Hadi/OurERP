@@ -17,8 +17,9 @@ export const iranianBanks = [
     id: "blubank",
     name: "بلوبانک",
     cardPrefixes: ["62198618", "62198619"],
-    // Shares 056 with Saman (Blu is a digital branch of Saman Bank; Blu IBANs use Saman's 056 code)
-    ibanCodes: ["056"],
+    // بلو شعبه‌ی دیجیتالِ سامان است و شبایش همان کدِ ۰۵۶ِ سامان؛ از شبا جدا نمی‌شود. با ۰۵۶ اینجا،
+    // چون بلو پیش از سامان آمده، شبای *همه‌ی* حساب‌های سامان «بلوبانک» شناخته می‌شد. فقط کارت جدا می‌کند.
+    ibanCodes: [],
   },
   { id: "dey", name: "بانک دی", cardPrefixes: ["502938"], ibanCodes: ["066"] },
   {
