@@ -11,14 +11,14 @@ const BankAccountsPage = lazy(() => import("./bankAccounts/pages/BankAccountsPag
 const PartyPaymentsPage = lazy(() => import("./partyPayments/pages/PartyPaymentsPage"));
 const PartyPaymentDetailPage = lazy(() => import("./partyPayments/pages/PartyPaymentDetailPage"));
 const ChequesPage = lazy(() => import("./cheques/pages/ChequesPage"));
-// اقساط منطقِ فروش است (`sales/installments`) ولی جای مدیریتش، کنارِ بقیه‌ی پول، صندوق و مدیریت پرداخت‌ها است.
+// اقساط منطقِ فروش است (`sales/installments`) ولی جای مدیریتش، کنارِ بقیه‌ی پول، صندوق است.
 const InstallmentsPage = lazy(() => import("@/features/sales/installments/pages/InstallmentsPage"));
 
 const bankAccountPermission = ["BankAccountView", "BankAccountManage"];
 const partyPaymentPermission = ["PartyStatementView", "PartyPaymentCreate"];
 
 /**
- * صندوق و مدیریت پرداخت‌ها: هرچه پول جابه‌جا می‌کند یک‌جا — صفِ صندوق، اقساط، صندوق و بانک، علی‌الحساب و چک‌ها (GAP-03).
+ * صندوق: هرچه پول جابه‌جا می‌کند یک‌جا — صفِ صندوق، اقساط، صندوق و بانک، علی‌الحساب و چک‌ها (GAP-03).
  */
 export const treasuryRoutes = [
   { path: ROUTES.TREASURY, element: <Navigate to={ROUTES.TREASURY_CASHIER} replace /> },

@@ -53,7 +53,7 @@ const ROUTE_TITLES = {
   [ROUTES.SALES_RETURNS_LIST]: "مرجوعی‌های فروش",
   [ROUTES.SALES_RETURNS_NEW]: "ثبت مرجوعی فروش",
 
-  [ROUTES.TREASURY]: "صندوق و مدیریت پرداخت‌ها",
+  [ROUTES.TREASURY]: "صندوق",
   [ROUTES.TREASURY_CASHIER]: "صندوق فروش",
   [ROUTES.TREASURY_INSTALLMENTS]: "اقساط",
   [ROUTES.TREASURY_ACCOUNTS]: "حساب‌های نقدی و بانکی",

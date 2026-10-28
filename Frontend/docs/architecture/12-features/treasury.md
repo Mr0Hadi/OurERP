@@ -1,4 +1,4 @@
-# treasury — صندوق و مدیریت پرداخت‌ها
+# treasury — صندوق
 
 یک جا برای هرچه پول جابه‌جا می‌کند: صفِ صندوق، اقساط، صندوق‌ها و حساب‌های بانکی، دریافت/پرداختِ علی‌الحساب و چک‌ها (GAP-03). `src/features/treasury/` با `routes.jsx` و زیرماژول‌های `cashier/`، `bankAccounts/`، `partyPayments/` و `cheques/`. صفحه‌ی اقساط کدش در `src/features/sales/installments/` می‌ماند (منطقِ فروش است) و فقط مسیرش این‌جاست.
 

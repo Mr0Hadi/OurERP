@@ -53,11 +53,11 @@ export const ROUTES = {
   SALES: "/sales",
   SALES_NEW: "/sales/new",
   SALES_DETAIL: "/sales/:id",
-  // نشانی‌های قدیمی؛ به صندوق و مدیریت پرداخت‌ها هدایت می‌شوند.
+  // نشانی‌های قدیمی؛ به صندوق هدایت می‌شوند.
   LEGACY_SALES_INSTALLMENTS: "/sales/installments",
   LEGACY_SALES_CASHIER: "/sales/cashier",
 
-  // صندوق و مدیریت پرداخت‌ها: صندوق، اقساط، و (بعداً) حساب‌های بانک/صندوق، دریافت‌ها و انتقال‌ها.
+  // صندوق: صندوق، اقساط، و (بعداً) حساب‌های بانک/صندوق، دریافت‌ها و انتقال‌ها.
   TREASURY: "/treasury",
   TREASURY_CASHIER: "/treasury/cashier",
   TREASURY_CASHIER_DETAIL: "/treasury/cashier/:id",
