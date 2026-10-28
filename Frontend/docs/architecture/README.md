@@ -11,6 +11,7 @@
 | سؤالِ شما | فایل |
 | --- | --- |
 | چه ابزارها و کتابخانه‌هایی؟ چطور اجرا/build کنم؟ | [01-tech-stack-and-tooling.md](01-tech-stack-and-tooling.md) |
+| کدِ این دکمه/فیلد/دیالوگِ روی صفحه کجاست؟ کجاهای دیگر استفاده شده؟ | در `pnpm dev`: Alt + کلیک (باز کردن) یا Alt + کلیکِ راست (پنل) — [01 «از صفحه به کد»](01-tech-stack-and-tooling.md) |
 | فایلِ جدید را کجا بگذارم؟ | [02-folder-structure.md](02-folder-structure.md) |
 | صفحه/مسیرِ جدید اضافه کنم | [03-bootstrap-and-routing.md](03-bootstrap-and-routing.md) |
 | ورود، توکن، refresh | [04-auth-and-session.md](04-auth-and-session.md) |

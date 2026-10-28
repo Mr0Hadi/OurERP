@@ -62,6 +62,11 @@ flowchart LR
 | `src/shared/constants/` | `routes.js`، `navigationData.js` | — |
 | `src/shared/styles/themes/` | CSSِ تمِ Material | `material.css` |
 
+### بیرون از `src/`: `scripts/` و `tools/`
+
+- `scripts/` — اسکریپت‌های Node که دستی اجرا می‌شوند (`check-docs-paths.mjs`، `build-label-print-check.js`).
+- `tools/` — ابزارهای توسعه که در `vite.config.js` به Vite وصل می‌شوند و **هرگز در build نیستند** (`apply: "serve"`). کدِ برنامه از اینجا import نمی‌کند. فعلاً `tools/dev-inspector/` (از صفحه به کد، [01](01-tech-stack-and-tooling.md)): `index.js` پلاگینِ Vite، `client.js` رابطِ مرورگر (بی React، در Shadow DOM)، `sourceIndex.js` نمایه‌ی سمتِ سرور. ESLint این فایل‌ها را Node یا مرورگر می‌شناسد (`eslint.config.js`) و knip آن‌ها را در `project` دارد.
+
 **اینجا نه:** کامپوننتی که فقط یک فیچر استفاده می‌کند. مثال: `src/features/accounting/components/AgingBar.jsx` فقط در حسابداری استفاده می‌شود و درست در همان فیچر مانده است.
 
 ## «کدِ جدید می‌نویسم؛ کجا بگذارم؟»

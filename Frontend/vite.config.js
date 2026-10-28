@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
+import { devInspector } from "./tools/dev-inspector/index.js";
 import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
@@ -48,15 +49,25 @@ const swBuildSource =
   JSON.stringify(build) +
   ")});";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define: {
     __APP_BUILD__: JSON.stringify(build),
   },
   plugins: [
     emitVersionFile(),
     react(),
+    // فقط dev: Alt + کلیک/کلیکِ راست روی هر چیزِ صفحه → فایل:خطِ کامپوننت، جاهای استفاده و سندها
+    // (tools/dev-inspector). در build هیچ کدی اضافه نمی‌شود. راهنما: docs/architecture/01-tech-stack-and-tooling.md
+    devInspector(),
     tailwindcss(),
-    babel({ presets: [reactCompilerPreset()] }),
+    babel({
+      // dev: خطِ سورسِ JSX (که بعد از Babel ساخته می‌شود و dev-inspector و React DevTools
+      // نشانش می‌دهند) باید همان خطِ فایل باشد. `retainLines` خروجی را روی خطِ ورودی نگه می‌دارد؛
+      // `enableFunctionOutlining` خاموش است چون Compiler کال‌بک‌های بی‌وابستگی (مثلِ بدنه‌ی `map`)
+      // را به تهِ فایل می‌برد و JSXِ درونشان خطِ اصلی را گم می‌کرد. build دست نمی‌خورد.
+      presets: [reactCompilerPreset({ environment: { enableFunctionOutlining: command !== "serve" } })],
+      retainLines: command === "serve",
+    }),
     VitePWA({
       // PWA غیرفعال: `sw.js`ِ خودنابودشونده — کارگرِ قدیمیِ نصب‌شده را برمی‌دارد، کش‌ها را پاک
       // می‌کند و دیگر چیزی کش/precache نمی‌شود؛ هر بازشدن آخرین نسخه‌ی سرور را می‌گیرد.
@@ -161,7 +172,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "src"),
+      "@": path.resolve(import.meta.dirname, "src"),
     },
   },
   build: {
@@ -193,4 +204,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

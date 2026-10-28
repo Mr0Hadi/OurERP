@@ -75,6 +75,7 @@ node scripts/check-docs-paths.mjs
 - دکمه کنارِ عنوانِ هدر: `PageHeaderActions`؛ تاریخچه‌ی یک سند/رکورد: `AuditHistoryButton` از `src/features/audit/components/` (خودش `AuditLogView` را می‌سنجد).
 - قبل از ساختنِ کامپوننت `docs/architecture/10-shared-components-catalog.md` را ببینید. فایل‌های `src/shared/components/ui/` تولیدِ shadcn هستند.
 - راهنمای زنده: `pnpm dev` → `/dev/ui`.
+- از صفحه به کد (`tools/dev-inspector/`، فقط dev): **Alt + کلیک** جایی که المان ساخته می‌شود را روی همان خط باز می‌کند، **Alt + Shift + کلیک** جایی که همین صفحه آن را گذاشته؛ **Alt + کلیکِ راست** پنلِ لایه‌ها، جاهای استفاده، سندهای مرتبط و «کپی برای Claude Code» ([01](docs/architecture/01-tech-stack-and-tooling.md)).
 
 **کدنویسی**
 - کامنت‌ها فارسی؛ JSDocِ کوتاهِ «چه و چرا» برای exportها. نام‌ها: کامپوننت `PascalCase.jsx`، هوک `useX.js`، store `use<X>Store` در `<x>Store.js`.
