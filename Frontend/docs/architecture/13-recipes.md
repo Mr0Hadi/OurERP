@@ -162,7 +162,13 @@
 4. **زمان:** وابسته به «امروز» با `vi.useFakeTimers()` + `vi.setSystemTime(...)` و در پایان `vi.useRealTimers()`.
 5. **عددِ معتبر را بسازید، حفظ نکنید:** کارت با Luhn و شبا با mod-97 درونِ تست (`src/features/treasury/bankAccounts/domain/bankAccountForm.test.js`)؛ فایل‌سیستم با پوشه‌ی موقت (`tools/dev-inspector/sourceIndex.test.js`).
 6. **آیا تست واقعاً می‌گیرد؟** یک بار قاعده را عمداً خراب کنید و ببینید قرمز می‌شود.
-7. اجرا: `pnpm test:watch` حینِ کار؛ `pnpm test:coverage` و گزارشِ HTML در `coverage/index.html`.
+7. **مرزِ HTTP:** ارکستراسیونِ چندمرحله‌ای (`proformaWorkflow`، `documentChanges`) با `vi.mock("./api-v1")` تست می‌شود — فقط مرزِ شبکه جایگزین می‌شود، نه داده‌ی برنامه؛ `queryClient` با یک شیءِ ضبط‌کننده‌ی `invalidateQueries`.
+8. **تست‌های قرارداد** (بدونِ کارِ اضافه برای فایلِ تازه، با `import.meta.glob`):
+   - `src/shared/domain/enums/backendContract.test.js` — هر enumِ عددیِ فرانت (export‌شده یا نه) با همان نام و عدد در `../Backend-Net/`؛ enumِ تازه با نامِ متفاوت در `BACKEND_NAME`، فقط‌فرانت در `FRONTEND_ONLY`.
+   - `src/shared/domain/enums/labelsContract.test.js` — `_LABELS`/`_TONES`/آیکنِ هر enum همه‌ی اعضا را دارد؛ enumِ تازه را به `COMPLETE_MAPS` اضافه کنید.
+   - `src/shared/constants/appContract.test.js` — هر نامِ دسترسی (`permission:`، `can()`، `allows()`) عضوِ `PermissionEnum`، هر آیتمِ منو routeدار، و ریشه‌ی کلیدهای React Query یکتا.
+   - بی `../Backend-Net/` (کلونِ فقط فرانت) بخشِ بکندیِ این‌ها رد می‌شود.
+9. اجرا: `pnpm test:watch` حینِ کار؛ `pnpm test:coverage` و گزارشِ HTML در `coverage/index.html`.
 
 ## قبل از commit
 

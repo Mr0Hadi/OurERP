@@ -59,7 +59,7 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 ### بقیه
 
 - `pnpm lint` — تنها بررسیِ ایستا؛ type-check نیست.
-- `pnpm test` — Vitest روی منطقِ خالص (۱۴۰ تست، ۱۸ فایل، 2026-10-28): `src/shared/lib/` (عدد به حروف، رقم، موبایل، کدِ ملی، قاعده‌های فرم، تاریخ، پیامِ خطا)، پول (`invoice/lineMath`، `payments/paymentSplit`، `paymentRows`، اقساط، علی‌الحساب، حسابِ بانکی)، مرجوعی (`resolutions`، `claimDrafts`، `receivingReport`) و `tools/dev-inspector/sourceIndex`. پوششِ کلِ منطقِ خالص حدودِ ۴۵٪؛ داشبورد، واژه‌نامه‌ها و `labelTemplate` هنوز تست ندارند.
+- `pnpm test` — Vitest (۴۶۰ تست، ۵۰ فایل، 2026-10-28): همه‌ی `domain/`ها (فروش و پیش‌فاکتور، خرید، مرجوعی، انبار و برچسب، صندوق و چک، اقساط، حسابداری، داشبورد، تاریخچه، تنظیمات)، `src/shared/lib/`، بارکد و کارتخوان، چاپ و نمودار، storeها و invalidation، ارکستراسیونِ پیش‌فاکتور و ذخیره‌ی چندمرحله‌ای، `tools/dev-inspector/sourceIndex`؛ به‌علاوه‌ی سه تستِ قرارداد (enum = بکند، برچسبِ کاملِ enum، دسترسی/منو/کلیدِ query — [13 §۱۵](13-recipes.md)). پوششِ منطقِ خالص ~۹۰٪ خط؛ بیرون مانده فقط چسبِ مرورگر (`frameReader`، `saveBlob`) و پلاگینِ Vite. کامپوننت و هوکِ query تستِ واحد ندارند.
 - `node scripts/check-docs-paths.mjs` — همه‌ی مسیرهای ذکرشده در `docs/architecture/` باید وجود داشته باشند.
 
 ## Known debt
