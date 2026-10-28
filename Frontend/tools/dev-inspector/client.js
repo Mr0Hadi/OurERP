@@ -6,7 +6,7 @@
  *                       دارد، لایه‌ی «این صفحه»
  *  Alt + کلیک           لایه‌ی «ساخت» را در ویرایشگر باز می‌کند (کلیک به صفحه نمی‌رسد)
  *  Alt + Shift + کلیک   لایه‌ی «این صفحه» را باز می‌کند
- *  Alt + کلیکِ راست     پنل: همه‌ی لایه‌ها، محلِ تعریف، جاهای استفاده، سندها، کپی
+ *  Alt + کلیکِ راست     پنل: متنِ المان در کد (داده‌هایی مثلِ منو)، همه‌ی لایه‌ها، محلِ تعریف، جاهای استفاده، سندها، کپی
  *  Alt + Shift + I      حالتِ ماندگار بدونِ نگه‌داشتنِ Alt (کلیک = باز، کلیکِ راست = پنل)
  *  در پنل: ↑↓ انتخاب، Enter باز، C کپیِ مسیر، X کپی برای Claude Code، Esc بستن
  *
@@ -149,8 +149,11 @@ async function copy(text, message) {
 const elementText = (element) => (element.innerText || element.getAttribute("aria-label") || "").trim().replace(/\s+/g, " ").slice(0, 80);
 
 /** متنِ آماده برای Claude Code: صفحه، المان و زنجیره‌ی کامپوننت با مسیرها. */
-function contextText(element, layers) {
+function contextText(element, layers, texts = []) {
   const text = elementText(element);
+  const sources = texts
+    .filter((group) => group.hits.some((hit) => hit.exact))
+    .map((group) => `- «${group.text}» در ${group.hits.filter((hit) => hit.exact).map((hit) => `${hit.rel}:${hit.line}`).join("، ")}`);
   const lines = [
     `صفحه: ${window.location.pathname}${window.location.search}`,
     `المان: <${element.tagName.toLowerCase()}>${text ? ` «${text}»` : ""}`,
@@ -159,6 +162,7 @@ function contextText(element, layers) {
       (layer) =>
         `- <${layer.name}> در ${location(layer)}${layer.definedIn ? ` (تعریف: ${relPath(layer.definedIn)})` : ""}`,
     ),
+    ...(sources.length ? ["متنِ المان در کد:", ...sources] : []),
   ];
   return lines.join("\n");
 }
@@ -190,7 +194,9 @@ shadow.innerHTML = `
   header { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--line);
     position:sticky; top:0; background:var(--bg); }
   header .route { color:var(--muted); font-size:12px; margin-inline-start:auto; }
-  button { all:unset; cursor:pointer; padding:3px 8px; border-radius:6px; border:1px solid var(--line); font-size:12px; color:var(--fg); }
+  button { all:unset; cursor:pointer; padding:3px 8px; border-radius:6px; border:1px solid var(--line); font-size:12px; color:var(--fg);
+    max-width:100%; overflow-wrap:anywhere; }
+  button .mono { word-break:break-all; }
   button:hover { border-color:var(--accent); }
   .layers { padding:4px; }
   .layer { display:grid; grid-template-columns:auto auto 1fr; gap:8px; align-items:center; padding:5px 8px; border-radius:6px; cursor:pointer; }
@@ -210,6 +216,9 @@ shadow.innerHTML = `
   .item small { display:block; color:var(--muted); }
   .hint { color:var(--muted); font-size:11px; padding:6px 12px 8px; }
   .empty { color:var(--muted); font-size:12px; }
+  .texts { background:#1b2030; }
+  .text-group + .text-group { margin-top:6px; }
+  .quote { color:#f0c674; font-size:12px; }
 </style>
 <div id="box"></div><div id="tag"></div><div id="badge">Inspector — کلیک: باز کردن · کلیکِ راست: پنل · Esc: خروج</div>
 <div id="panel"></div><div id="toast"></div>`;
@@ -312,6 +321,59 @@ async function loadInfo(file, name) {
   return panel?.info.get(file);
 }
 
+/**
+ * خط‌های متنِ دیده‌شده‌ی المان (هرکدام ۲ تا ۸۰ نویسه) — برای `/__inspector/text`. فقط برچسب، دکمه و
+ * آیتمِ منو (حداکثر دو خط)؛ ظرفِ بزرگ (هدر، کارت) ده‌ها خط دارد و فهرستِ لایه‌ها را زیرِ خود دفن می‌کرد.
+ */
+function textsOf(element) {
+  const raw = element.innerText || element.getAttribute("aria-label") || element.getAttribute("placeholder") || "";
+  const lines = raw.split("\n").map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (lines.length > 2) return [];
+  return [...new Set(lines.filter((line) => line.length >= 2 && line.length <= 80))];
+}
+
+async function loadTexts(state) {
+  const texts = textsOf(state.element);
+  if (texts.length === 0) {
+    state.texts = [];
+    return;
+  }
+  try {
+    const near = [...new Set(state.layers.flatMap((layer) => [layer.file, layer.definedIn]).filter(Boolean))];
+    const query = `q=${encodeURIComponent(JSON.stringify(texts))}&near=${encodeURIComponent(JSON.stringify(near))}`;
+    const response = await fetch(`${base}__inspector/text?${query}`);
+    state.texts = await response.json();
+  } catch {
+    state.texts = [];
+  }
+  if (panel === state) renderPanel();
+}
+
+/** بخشِ «متن در کد»: جای ویرایشِ متنی که از داده می‌آید نه از JSXِ همین زنجیره. */
+function textSection() {
+  if (!panel.texts) return `<section><h4>این متن در کد</h4><div class="empty">در حالِ جست‌وجو…</div></section>`;
+  const groups = panel.texts.filter((group) => group.hits.length > 0);
+  if (groups.length === 0) return "";
+  const items = groups
+    .map(
+      (group) => `
+      <div class="text-group"><span class="quote">«${escapeHtml(group.text)}»</span>
+        ${group.hits
+          .slice(0, 6)
+          .map(
+            (hit) =>
+              `<a class="item" data-open="${escapeHtml(hit.file)}" data-line="${hit.line}">
+                 <span class="mono">${escapeHtml(hit.rel)}:${hit.line}</span>${hit.related ? ` <span class="kind shared">همین زنجیره</span>` : ""}${hit.exact ? "" : ` <span class="kind">جزئی</span>`}
+                 <small class="mono">${escapeHtml(hit.text)}</small></a>`,
+          )
+          .join("")}
+        ${group.hits.length > 6 ? `<div class="empty">و ${group.hits.length - 6} جای دیگر</div>` : ""}
+      </div>`,
+    )
+    .join("");
+  return `<section class="texts"><h4>این متن در کد نوشته شده — برای عوض کردنِ متن یا ترتیب</h4>${items}</section>`;
+}
+
 function renderPanel() {
   const { element, layers, selected } = panel;
   const layer = layers[selected];
@@ -368,6 +430,7 @@ function renderPanel() {
       <span class="route mono">${escapeHtml(window.location.pathname)}</span>
       <button data-action="close" title="Esc">✕</button>
     </header>
+    ${textSection()}
     <div class="layers">${rows}</div>
     <section>
       <div class="actions">
@@ -396,7 +459,8 @@ function openPanel(element, x, y) {
     toast("منبعی برای این المان پیدا نشد (بیرون از React؟)");
     return;
   }
-  panel = { element, layers, selected: primaryIndex(layers), page: pageIndex(layers), info: new Map() };
+  panel = { element, layers, selected: primaryIndex(layers), page: pageIndex(layers), info: new Map(), texts: null };
+  loadTexts(panel);
   renderPanel();
   placePanel(x, y);
   clearHighlight();
@@ -413,7 +477,7 @@ function act(action) {
   const layer = panel.layers[panel.selected];
   if (action === "open") openInEditor(layer.file, layer.line);
   if (action === "copy-path") copy(location(layer), `کپی شد: ${location(layer)}`);
-  if (action === "copy-context") copy(contextText(panel.element, panel.layers), "زمینه برای Claude Code کپی شد");
+  if (action === "copy-context") copy(contextText(panel.element, panel.layers, panel.texts ?? []), "زمینه برای Claude Code کپی شد");
   if (action === "close") closePanel();
 }
 

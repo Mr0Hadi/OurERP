@@ -8,7 +8,8 @@
  *  2. `client.js` — هایلایت با Alt، پنلِ لایه‌ها، کپی برای Claude Code. با `transformIndexHtml`
  *     تزریق می‌شود؛ کدِ برنامه هیچ importی از آن ندارد.
  *  3. `GET /__inspector/info?file=&name=` — خطِ تعریف، مصرف‌کننده‌ها و سندهای یک فایل، و `GET /__inspector/locate`
- *     — خطِ دقیقِ تگ‌ها (Compiler خط‌ها را جابه‌جا می‌کند)؛ هر دو در `sourceIndex.js`.
+ *     — خطِ دقیقِ تگ‌ها (Compiler خط‌ها را جابه‌جا می‌کند)، و `GET /__inspector/text` — متنِ المان
+ *     در کدام خطِ کد نوشته شده (داده‌هایی مثلِ `navigationData.js`)؛ همه در `sourceIndex.js`.
  *     باز کردن در ویرایشگر با `/__open-in-editor`ِ خودِ Vite است.
  *
  * در build هیچ‌کدام اجرا نمی‌شوند (`apply: "serve"`).
@@ -74,6 +75,24 @@ export function devInspector({ ignoreLayers = ["/src/shared/components/ui/"] } =
         });
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(lines));
+      });
+
+      // متنِ المان در کدام خط‌های `src/` آمده (`sourceIndex.findText`): `q` = JSONِ آرایه‌ی چند متن.
+      server.middlewares.use("/__inspector/text", (req, res) => {
+        // `near` = JSONِ فایل‌های زنجیره‌ی کامپوننت، برای رتبه‌بندی.
+        let texts = [];
+        let near = [];
+        try {
+          const params = new URL(req.url, "http://localhost").searchParams;
+          texts = JSON.parse(params.get("q") ?? "[]");
+          near = JSON.parse(params.get("near") ?? "[]")
+            .map((file) => resolve(root, String(file)))
+            .filter((file) => file.startsWith(root + sep));
+        } catch {
+          // ورودیِ خراب = هیچ متن.
+        }
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(texts.slice(0, 5).map((text) => ({ text: String(text), hits: index.findText(text, { near }) }))));
       });
 
       server.middlewares.use("/__inspector/info", (req, res) => {

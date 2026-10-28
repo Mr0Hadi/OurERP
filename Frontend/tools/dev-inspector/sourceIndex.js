@@ -171,8 +171,56 @@ export function createSourceIndex({ root, srcDir = "src", docGlobs = ["docs/arch
     return line;
   }
 
+  /**
+   * متنِ دیده‌شده روی صفحه در کدام خطِ `src/` نوشته شده. برای المانی که متنش داده است نه JSX —
+   * آیتمِ سایدبار (`navigationData.js`)، برچسبِ enum، ستونِ جدول — زنجیره‌ی React فقط کامپوننتِ
+   * رندرکننده را نشان می‌دهد؛ جای واقعیِ ویرایش این‌جاست. اول رشته‌ی کامل (`"متن"` یا `>متن<`)،
+   * بعد جزئی؛ فاصله‌ها یکسان‌سازی می‌شوند و تست‌ها کنار می‌روند.
+   *
+   * `near`: فایل‌های زنجیره‌ی کامپوننتِ همان المان، از المان به بالا. متنِ کوتاه («خرید») ده‌ها جا
+   * هست؛ خودِ زنجیره و فایلی که زنجیره import می‌کند (داده‌ی سایدبار برای `AppSidebar`) بالا می‌آیند
+   * (`related`)، و هرچه لایه‌ی واردکننده به المان نزدیک‌تر، بالاتر (breadcrumbِ `AppLayout` پایین‌تر).
+   */
+  function findText(rawText, { near = [] } = {}) {
+    const text = String(rawText ?? "").replace(/\s+/g, " ").trim();
+    if (text.length < 2) return [];
+    const distance = new Map();
+    const reach = (file, depth) => distance.set(file, Math.min(distance.get(file) ?? Infinity, depth));
+    near.map((file) => resolve(file)).forEach((file, depth) => reach(file, depth));
+    for (const [target, entries] of get().importers) {
+      for (const entry of entries) if (distance.has(entry.file)) reach(target, distance.get(entry.file) + 0.5);
+    }
+    const hits = [];
+    for (const [file, source] of get().sources) {
+      if (file.includes(".test.")) continue;
+      source.split("\n").forEach((lineText, index) => {
+        const normalized = lineText.replace(/\s+/g, " ");
+        const at = normalized.indexOf(text);
+        if (at < 0) return;
+        const before = normalized[at - 1];
+        const after = normalized[at + text.length];
+        const exact = (/["'`>]/.test(before ?? "") && /["'`<]/.test(after ?? "")) || normalized.trim() === text;
+        hits.push({
+          file,
+          rel: relative(root, file).split(sep).join("/"),
+          line: index + 1,
+          exact,
+          related: distance.has(file),
+          text: lineText.trim().slice(0, 160),
+        });
+      });
+    }
+    // کامل‌های زنجیره، کامل‌های دیگر، جزئی‌های زنجیره، جزئی‌های دیگر؛ درونِ هر گروه نزدیک‌تر اول.
+    const rank = (hit) => (hit.exact ? 2 : 0) + (hit.related ? 1 : 0) + (hit.exact && hit.related ? 2 : 0);
+    const depth = (hit) => distance.get(hit.file) ?? Infinity;
+    return hits
+      .sort((a, b) => rank(b) - rank(a) || depth(a) - depth(b) || a.rel.localeCompare(b.rel) || a.line - b.line)
+      .slice(0, 20);
+  }
+
   return {
     locate,
+    findText,
 
     /** هر تغییر در `src/` یا سندها؛ ساختِ دوباره تا درخواستِ بعدی عقب می‌افتد. */
     invalidate(changedFile) {
