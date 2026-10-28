@@ -1,17 +1,14 @@
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import { useInstallmentFilterStore } from "../../store/installmentFilterStore";
 import { INSTALLMENT_VIEWS } from "../../domain/installmentViews";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 const VIEW_OPTIONS = Object.entries(INSTALLMENT_VIEWS).map(([value, view]) => ({ value, label: view.label }));
 
-const renderCustomerPhone = (customer) =>
-  customer.phoneNumber ? <span className="text-xs text-muted-foreground">{customer.phoneNumber}</span> : null;
-
 /** فیلترهای فهرستِ اقساط: نما (پرداخت‌نشده، سررسیدگذشته، …)، مشتری و بازه‌ی سررسید. */
-export default function InstallmentFilters({ customers = [], isCustomersLoading = false }) {
+export default function InstallmentFilters() {
   const {
     view,
     customerId,
@@ -37,16 +34,7 @@ export default function InstallmentFilters({ customers = [], isCustomersLoading 
         }
         store={useInstallmentFilterStore}
       >
-        <EntitySelect
-          label="مشتری"
-          placeholder="انتخاب مشتری..."
-          emptyText="مشتری‌ای یافت نشد"
-          items={customers}
-          value={customerId}
-          onSelect={(id) => setCustomerId(id)}
-          isLoading={isCustomersLoading}
-          renderMeta={renderCustomerPhone}
-        />
+        <PartySelect side="customer" value={customerId} onSelect={setCustomerId} />
       </FilterPanel>
     </div>
   );

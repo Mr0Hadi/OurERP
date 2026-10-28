@@ -3,7 +3,7 @@ import { LayoutList, RotateCcw, Table2, Type } from "lucide-react";
 import PaperSettings from "@/shared/components/print/studio/PaperSettings";
 import PrintSettingsSection from "@/shared/components/print/studio/PrintSettingsSection";
 import SegmentedControl from "@/shared/components/print/studio/SegmentedControl";
-import { optionsFromLabels } from "@/shared/components/print/studio/options";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { TEXT_SCALE_LABELS } from "@/shared/components/print/typography";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";

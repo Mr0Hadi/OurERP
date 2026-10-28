@@ -2,21 +2,21 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 
 /**
  * فیلترهای فهرستِ مرجوعی — مشترکِ خرید و فروش. نام‌ها همان پارامترهای
  * `Get*ReturnListQuery` است (`search`، طرف‌حساب، `status`، `problem`، بازه‌ی تاریخ).
  *
  * @param useFilterStore storeِ فیلترِ همان سمت (`createFilterStore`)
- * @param party         `{ key: "supplierId", label, emptyText, items, isLoading }`
+ * @param partyLabel    نامِ طرف («تامین‌کننده»/«مشتری») برای راهنمای جست‌وجو
+ * @param partySelect   انتخابگرِ طرف‌حساب (`PartySelect`ِ فیچر، به همین store وصل)؛ shared از
+ *                      features import نمی‌کند، پس صفحه آن را می‌سازد
  * @param side          `sideConfig(...)` — برچسبِ وضعیت‌ها
  * @param problemLabels همه‌ی مشکل‌های همان سمت
  */
-export default function ReturnFilters({ useFilterStore, party, side, problemLabels }) {
+export default function ReturnFilters({ useFilterStore, partyLabel, partySelect, side, problemLabels }) {
   const filters = useFilterStore();
-  const setParty = filters[`set${party.key[0].toUpperCase()}${party.key.slice(1)}`];
 
   return (
     <FilterPanel
@@ -30,28 +30,20 @@ export default function ReturnFilters({ useFilterStore, party, side, problemLabe
       store={useFilterStore}
       primary={
         <FilterSearchInput
-          placeholder={`شماره مرجوعی، فاکتور، ${party.label}...`}
+          placeholder={`شماره مرجوعی، فاکتور، ${partyLabel}...`}
           value={filters.search}
           onChange={(e) => filters.setSearch(e.target.value)}
         />
       }
     >
-      <EntitySelect
-        label={party.label}
-        placeholder={`انتخاب ${party.label}...`}
-        emptyText={party.emptyText}
-        items={party.items}
-        value={filters[party.key]}
-        onSelect={setParty}
-        isLoading={party.isLoading}
-      />
+      {partySelect}
 
       <FilterSelect
         label="وضعیت"
         value={filters.status}
         onChange={filters.setStatus}
         allLabel="همه وضعیت‌ها"
-        options={toFilterOptions(side.statusLabels)}
+        options={optionsFromLabels(side.statusLabels)}
         numeric
       />
 
@@ -60,7 +52,7 @@ export default function ReturnFilters({ useFilterStore, party, side, problemLabe
         value={filters.problem}
         onChange={filters.setProblem}
         allLabel="همه مشکل‌ها"
-        options={toFilterOptions(problemLabels)}
+        options={optionsFromLabels(problemLabels)}
         numeric
       />
     </FilterPanel>

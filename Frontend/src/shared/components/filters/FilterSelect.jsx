@@ -1,13 +1,10 @@
 import { Label } from "@/shared/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import { normalizeFilterValue } from "./filterUtils";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
+/**
+ * فیلترِ تک‌انتخابیِ کم‌گزینه با ردیفِ «همه» (= `""`، یعنی فیلتر فرستاده نمی‌شود).
+ * برای گزینه‌ی زیاد `EntitySelect`.
+ */
 export default function FilterSelect({
   label,
   value,
@@ -22,22 +19,15 @@ export default function FilterSelect({
       <Label className="whitespace-nowrap font-medium text-foreground text-sm">
         {label}
       </Label>
-      <Select
-        value={value === "" || value == null ? "all" : String(value)}
-        onValueChange={(v) => onChange(normalizeFilterValue(v, { numeric, boolean }))}
-      >
-        <SelectTrigger className="flex-1 w-full">
-          <SelectValue placeholder={allLabel} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{allLabel}</SelectItem>
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={String(opt.value)}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <OptionSelect
+        value={value}
+        onChange={onChange}
+        options={options}
+        numeric={numeric}
+        boolean={boolean}
+        emptyLabel={allLabel}
+        className="flex-1 w-full"
+      />
     </div>
   );
 }

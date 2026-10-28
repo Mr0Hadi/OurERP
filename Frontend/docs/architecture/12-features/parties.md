@@ -25,8 +25,9 @@
 | --- | --- |
 | `src/features/partyAccount/store/createPartyFilterStore.js` | `createPartyFilterStore(searchKey)` + `BALANCE_QUICK_FILTERS`؛ مشتری `"fullName"`، تامین‌کننده `"companyNameOrContactName"` |
 | `src/features/partyAccount/components/PartyListFilters.jsx` | فیلترِ لیست با `ResponsiveFilters` |
-| `src/features/suppliers/components/SupplierSelect.jsx` | انتخابگرِ تامین‌کننده (`EntitySelect` + `useSuppliersOptionsQuery`) برای فیلتر و فرمِ فیچرهای دیگر (پیشنهادِ خرید، فرمِ کالا) |
-| `PartyStatementCard.jsx`، `LedgerBalanceBadge.jsx`، `PartyAddressForm.jsx`، `PartyDetailLoading.jsx` | صورت‌حساب، نشانِ مانده، فرمِ نشانی، اسکلتون |
+| `src/features/partyAccount/components/PartySelect.jsx` | انتخابگرِ مشتری/تامین‌کننده (`side`) با جست‌وجو و تلفن؛ فهرست را خودش می‌گیرد (`use*OptionsQuery`، فقط همان `side`). همه‌ی فیلترها و فرم‌های فیچرهای دیگر (فروش، خرید، اقساط، مرجوعی، صفِ انبار، چک، علی‌الحساب، دانه‌ها، حسابداری، پیشنهادِ خرید، فرمِ کالا) |
+| `PartyIdentityForm.jsx` (+ `PartyPhoneField`)، `PartyFinanceForm.jsx` | کارتِ «اطلاعات هویتی» (عکس، شناسه‌های حقوقی، توضیحات؛ فیلدهای خاصِ هر طرف `children`) و «مانده‌ی اولیه» (`side`؛ سقفِ اعتبار فقط مشتری). `CustomerIdentityForm`/`SupplierIdentityForm` فقط نام/تلفن/شرکت/معرف را با قانونِ validatorِ خودشان می‌دهند |
+| `PartyStatementCard.jsx`، `LedgerBalanceBadge.jsx`، `PartyAddressForm.jsx`، `PartyDetailLoading.jsx` | صورت‌حساب، نشانِ مانده، فرمِ نشانی، اسکلتون (روی `FormSkeleton`) |
 | `src/features/partyAccount/domain/partyBalance.js`، `partyName.js` | `partyBalanceOf`، `openingBalanceOf`، `partyDisplayName` |
 
 ## جریان‌ها

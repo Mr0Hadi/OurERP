@@ -3,19 +3,10 @@ import { ChevronLeft, Plus, Trash2, Users } from "lucide-react";
 
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 
 import { useTeamOptionsQuery } from "../../teams/services/queries";
 import { useDeleteTeamMutation } from "../../teams/services/mutations";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 /**
  * تیم‌های یک واحد، داخل صفحه‌ی جزئیات همان واحد: دیدن تیم‌ها و رفتن به
@@ -114,33 +105,16 @@ export default function DepartmentTeamsCard({
         </ul>
       )}
 
-      <AlertDialog
+      <ConfirmDialog
         open={teamToDelete != null}
         onOpenChange={(open) => !open && setTeamToDelete(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف تیم</AlertDialogTitle>
-            <AlertDialogDescription>
-              «{teamToDelete?.name}» حذف (غیرفعال) می‌شود. تیمی که کارمند فعال
-              دارد قابل حذف نیست؛ اول اعضایش را از صفحه‌ی جزئیات همان تیم خارج
-              کنید.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="حذف تیم"
+        description={`«${teamToDelete?.name}» حذف (غیرفعال) می‌شود. تیمی که کارمند فعال دارد قابل حذف نیست؛ اول اعضایش را از صفحه‌ی جزئیات همان تیم خارج کنید.`}
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </FormSectionCard>
   );
 }

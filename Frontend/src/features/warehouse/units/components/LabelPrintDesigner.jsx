@@ -5,30 +5,13 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import LabelSheet from "@/shared/components/print/LabelSheet";
 import { usePrint } from "@/shared/components/print/usePrint";
 import { paginateItems } from "@/shared/components/print/sheetPresets";
 import PrintStudio from "@/shared/components/print/studio/PrintStudio";
 import PrintSettingsSection from "@/shared/components/print/studio/PrintSettingsSection";
 import SegmentedControl from "@/shared/components/print/studio/SegmentedControl";
-import { optionsFromLabels } from "@/shared/components/print/studio/options";
+import { optionsFromLabels } from "@/shared/lib/options";
 
 import {
   CUSTOM_SIZE_KEY,
@@ -52,8 +35,15 @@ import { useLabelTemplateStore } from "../store/labelTemplateStore";
 import { useMarkUnitsPrintedMutation } from "../services/mutations";
 import UnitLabel from "./UnitLabel";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 /** چند دانه از این دسته این متن را واقعاً دارند — برای راهنماییِ کنارِ گزینه. */
+const SIZE_OPTIONS = [
+  ...LABEL_SIZE_PRESETS.map((preset) => ({ value: preset.key, label: preset.label })),
+  { value: CUSTOM_SIZE_KEY, label: "اندازه‌ی دلخواه…" },
+];
+
 function fieldAvailability(units, key) {
   if (key === "supplier") return units.filter((unit) => unit.supplierName).length;
   if (key === "customer") return units.filter((unit) => unit.customerName).length;
@@ -72,22 +62,13 @@ function Settings({ units, template, geometry }) {
   return (
     <>
       <PrintSettingsSection title="اندازه‌ی برچسب" icon={Ruler}>
-        <Select
+        <OptionSelect
+          dir="rtl"
           value={template.sizeKey}
-          onValueChange={(sizeKey) => updateTemplate({ sizeKey })}
-        >
-          <SelectTrigger dir="rtl" className="h-9 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent dir="rtl">
-            {LABEL_SIZE_PRESETS.map((preset) => (
-              <SelectItem key={preset.key} value={preset.key}>
-                {preset.label}
-              </SelectItem>
-            ))}
-            <SelectItem value={CUSTOM_SIZE_KEY}>اندازه‌ی دلخواه…</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(sizeKey) => updateTemplate({ sizeKey })}
+          className="h-9 w-full"
+          options={SIZE_OPTIONS}
+        />
 
         {isCustom && (
           <div className="space-y-2 rounded-lg border border-border p-3">
@@ -144,25 +125,18 @@ function Settings({ units, template, geometry }) {
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">برچسب در هر ردیف</Label>
-                <Select
-                  value={String(geometry.labelsPerRow)}
-                  onValueChange={(value) => updateTemplate({ labelsPerRow: Number(value) })}
-                >
-                  <SelectTrigger dir="rtl" className="h-9 w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent dir="rtl">
-                    {Array.from({ length: MAX_LABELS_PER_ROW }, (_, index) => index + 1).map((count) => (
-                      <SelectItem
-                        key={count}
-                        value={String(count)}
-                        disabled={count > geometry.maxLabelsPerRow && count !== geometry.labelsPerRow}
-                      >
-                        {formatNumber(count)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OptionSelect
+                  dir="rtl"
+                  value={geometry.labelsPerRow}
+                  onChange={(labelsPerRow) => updateTemplate({ labelsPerRow })}
+                  numeric
+                  className="h-9 w-full"
+                  options={Array.from({ length: MAX_LABELS_PER_ROW }, (_, index) => index + 1).map((count) => ({
+                    value: count,
+                    label: formatNumber(count),
+                    disabled: count > geometry.maxLabelsPerRow && count !== geometry.labelsPerRow,
+                  }))}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="label-gap" className="text-xs text-muted-foreground">
@@ -386,32 +360,18 @@ export default function LabelPrintDesigner({ units, onClose }) {
       onClose={() => onClose(false)}
       closeLocked={askConfirm}
     >
-      <AlertDialog open={askConfirm}>
-        <AlertDialogContent dir="rtl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>برچسب‌ها چاپ شدند؟</AlertDialogTitle>
-            <AlertDialogDescription>
-              اگر {formatNumber(count)} برچسب درست از پرینتر بیرون آمد، ثبتش کنید تا این دانه‌ها
-              «برچسب‌خورده» شوند و تاریخ و دفعاتِ چاپ روی هر دانه بماند. اگر چاپ لغو
-              شد یا خراب درآمد، «چاپ نشد» را بزنید و دوباره چاپ کنید.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel disabled={markPrinted.isPending} onClick={() => setAskConfirm(false)}>
-              چاپ نشد
-            </AlertDialogCancel>
-            <AlertDialogAction
-              disabled={markPrinted.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                confirmPrinted();
-              }}
-            >
-              {markPrinted.isPending ? "در حال ثبت..." : "بله، ثبت کن"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={askConfirm}
+        onOpenChange={setAskConfirm}
+        title="برچسب‌ها چاپ شدند؟"
+        description={`اگر ${formatNumber(count)} برچسب درست از پرینتر بیرون آمد، ثبتش کنید تا این دانه‌ها «برچسب‌خورده» شوند و تاریخ و دفعاتِ چاپ روی هر دانه بماند. اگر چاپ لغو شد یا خراب درآمد، «چاپ نشد» را بزنید و دوباره چاپ کنید.`}
+        cancelLabel="چاپ نشد"
+        confirmLabel="بله، ثبت کن"
+        pendingLabel="در حال ثبت..."
+        destructive={false}
+        isPending={markPrinted.isPending}
+        onConfirm={confirmPrinted}
+      />
     </PrintStudio>
   );
 }

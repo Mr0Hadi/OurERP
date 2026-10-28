@@ -3,21 +3,18 @@ import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterSwitch from "@/shared/components/filters/FilterSwitch";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { useBankAccountOptionsQuery } from "@/shared/services/bankAccounts/queries";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { DIRECTION_SHORT_LABELS } from "../domain/partyPayment";
 import { usePartyPaymentFilterStore } from "../store/partyPaymentFilterStore";
+import { optionsFromLabels } from "@/shared/lib/options";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const DIRECTION_OPTIONS = Object.entries(DIRECTION_SHORT_LABELS).map(([value, label]) => ({ value, label }));
+const DIRECTION_OPTIONS = optionsFromLabels(DIRECTION_SHORT_LABELS);
 const UNALLOCATED_OPTIONS = [{ value: "true", label: "فقط قابلِ تخصیص" }];
 
 /** فیلترهای فهرستِ علی‌الحساب‌ها: جست‌وجو، مشتری/تامین‌کننده، جهت، صندوق/حساب، تخصیص‌نیافته، بازه‌ی تاریخ. */
 export default function PartyPaymentFilters() {
   const store = usePartyPaymentFilterStore();
-  const { customers, isLoading: customersLoading } = useCustomersOptionsQuery();
-  const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery();
   const { data: accounts = [] } = useBankAccountOptionsQuery();
 
   return (
@@ -38,22 +35,8 @@ export default function PartyPaymentFilters() {
         </>
       }
     >
-      <EntitySelect
-        label="مشتری"
-        placeholder="همه مشتریان"
-        items={customers}
-        value={store.customerId}
-        onSelect={(id) => store.setCustomerId(id)}
-        isLoading={customersLoading}
-      />
-      <EntitySelect
-        label="تامین‌کننده"
-        placeholder="همه تامین‌کنندگان"
-        items={suppliers}
-        value={store.supplierId}
-        onSelect={(id) => store.setSupplierId(id)}
-        isLoading={suppliersLoading}
-      />
+      <PartySelect side="customer" placeholder="همه مشتریان" value={store.customerId} onSelect={store.setCustomerId} />
+      <PartySelect side="supplier" placeholder="همه تامین‌کنندگان" value={store.supplierId} onSelect={store.setSupplierId} />
       <FilterSelect label="جهت" value={store.direction} onChange={store.setDirection} options={DIRECTION_OPTIONS} numeric />
       <FilterSelect
         label="صندوق/حساب"

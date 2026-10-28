@@ -1,27 +1,10 @@
 import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
+import FormField from "@/shared/components/forms/FormField";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { INSTALLMENT_COUNT_PRESETS } from "../domain/installmentPlan";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { normalizePersianDigits } from "@/shared/lib/persianDigits";
 import { cn } from "@/shared/lib/utils";
-
-function Field({ id, label, required, error, hint, children }) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-xs">
-        {label}
-        {required && <span className="text-destructive"> *</span>}
-      </Label>
-      {children}
-      {error ? (
-        <p className="text-xs text-destructive">{error}</p>
-      ) : (
-        hint && <p className="text-[11px] text-muted-foreground">{hint}</p>
-      )}
-    </div>
-  );
-}
 
 /** فقط رقم و ممیز؛ ارقامِ فارسی هم پذیرفته می‌شوند. */
 const decimalInput = (value) =>
@@ -47,7 +30,7 @@ export default function InstallmentPlanTermsFields({
 }) {
   return (
     <div className="@container/terms grid gap-3 @md/terms:grid-cols-2">
-      <Field id={`${idPrefix}-markup`} label="درصد سود اقساط" required error={errors.markupPercentage}>
+      <FormField size="sm" htmlFor={`${idPrefix}-markup`} label="درصد سود اقساط" required error={errors.markupPercentage}>
         <Input
           id={`${idPrefix}-markup`}
           inputMode="decimal"
@@ -58,9 +41,9 @@ export default function InstallmentPlanTermsFields({
           aria-invalid={Boolean(errors.markupPercentage)}
           className="h-9 tabular-nums"
         />
-      </Field>
+      </FormField>
 
-      <Field id={`${idPrefix}-firstDue`} label={firstDueLabel} required error={errors.firstDueDate}>
+      <FormField size="sm" htmlFor={`${idPrefix}-firstDue`} label={firstDueLabel} required error={errors.firstDueDate}>
         <PersianDatePicker
           id={`${idPrefix}-firstDue`}
           value={value.firstDueDate || ""}
@@ -68,10 +51,10 @@ export default function InstallmentPlanTermsFields({
           placeholder="انتخاب تاریخ"
           error={Boolean(errors.firstDueDate)}
         />
-      </Field>
+      </FormField>
 
-      <Field
-        id={`${idPrefix}-count`}
+      <FormField size="sm"
+        htmlFor={`${idPrefix}-count`}
         label="تعداد اقساط (ماهانه)"
         required
         error={errors.installmentCount}
@@ -103,10 +86,10 @@ export default function InstallmentPlanTermsFields({
             </button>
           ))}
         </div>
-      </Field>
+      </FormField>
 
-      <Field
-        id={`${idPrefix}-penalty`}
+      <FormField size="sm"
+        htmlFor={`${idPrefix}-penalty`}
         label="درصد جریمه‌ی دیرکرد"
         error={errors.latePenaltyPercentage}
         hint="اختیاری؛ فعلاً فقط روی قرارداد ثبت می‌شود و محاسبه‌ای ندارد."
@@ -120,7 +103,7 @@ export default function InstallmentPlanTermsFields({
           aria-invalid={Boolean(errors.latePenaltyPercentage)}
           className="h-9 tabular-nums"
         />
-      </Field>
+      </FormField>
     </div>
   );
 }

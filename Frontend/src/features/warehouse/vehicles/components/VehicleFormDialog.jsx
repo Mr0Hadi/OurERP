@@ -1,17 +1,16 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { useCreateVehicleMutation, useUpdateVehicleMutation } from "../services/mutations";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 /** بدنه‌ی فرم — با `key` روی هر بازشدن از نو mount می‌شود (مثلِ فرمِ دسته‌بندی). */
 function VehicleFormFields({ vehicle, onClose, onSaved }) {
@@ -68,14 +67,7 @@ function VehicleFormFields({ vehicle, onClose, onSaved }) {
         )}
       </div>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-          انصراف
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "در حال ثبت..." : isEdit ? "ذخیره" : "افزودن"}
-        </Button>
-      </DialogFooter>
+      <DialogActions onCancel={onClose} isPending={isPending} submitLabel={isEdit ? "ذخیره" : "افزودن"} />
     </form>
   );
 }

@@ -4,7 +4,6 @@ import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import ServerTable from "@/shared/components/table/ServerTable";
 import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge";
 import { ROUTES } from "@/shared/constants/routes";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 
 import { useReceivablePurchasesQuery, useReceivingListFilters } from "../services/queries";
 import { useReceivingFilterStore } from "../store/receivingFilterStore";
@@ -37,7 +36,6 @@ export default function ReceivingListPage() {
   const listState = useReceivingFilterStore();
   const filters = useReceivingListFilters();
   const query = useReceivablePurchasesQuery(filters, listState.pagination, listState.sorting);
-  const { suppliers, isLoading: isSuppliersLoading } = useSuppliersOptionsQuery();
   const buildRows = useQueueRows("in", filters, listState.pagination.pageIndex === 0);
 
   return (
@@ -47,14 +45,7 @@ export default function ReceivingListPage() {
     >
       <QueueFilters
         useStore={useReceivingFilterStore}
-        party={{
-          key: "supplierId",
-          label: "تامین‌کننده",
-          emptyText: "تامین‌کننده‌ای یافت نشد",
-          items: suppliers,
-          isLoading: isSuppliersLoading,
-          phoneOf: (supplier) => supplier.phone,
-        }}
+        party={{ key: "supplierId", side: "supplier" }}
         statusOptions={RECEIVING_STATUS_OPTIONS}
         searchPlaceholder="شماره فاکتور..."
       />

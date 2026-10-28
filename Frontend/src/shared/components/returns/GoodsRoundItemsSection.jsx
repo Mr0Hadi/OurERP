@@ -9,13 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import ProductThumb from "@/shared/components/forms/ProductThumb";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import UnitBarcodeScanList from "@/shared/components/barcode/UnitBarcodeScanList";
@@ -24,6 +17,7 @@ import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { RETURN_PROBLEM_LABELS } from "@/shared/domain/returns/problems";
 import ObservationEditor from "./ObservationEditor";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
 const { getRowStatus, ROW_STATUS_CONFIG } = createRowStatus({
   completeLabel: "کامل",
@@ -211,26 +205,14 @@ export default function GoodsRoundItemsSection({
                   <span className="text-xs text-muted-foreground">
                     کالا از کجا برداشته می‌شود؟
                   </span>
-                  {/* enum عددی است؛ Radix فقط رشته می‌شناسد. */}
-                  <Select
-                    value={round.source == null ? "" : String(round.source)}
-                    onValueChange={(raw) => onSourceChange(round.effectId, Number(raw))}
-                  >
-                    <SelectTrigger
-                      className={`h-8 w-40 text-xs ${
-                        round.source == null ? "border-warning/50" : ""
-                      }`}
-                    >
-                      <SelectValue placeholder="انتخاب مبدأ" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SOURCE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={String(option.value)}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <OptionSelect
+                    value={round.source}
+                    onChange={(source) => onSourceChange(round.effectId, source)}
+                    numeric
+                    placeholder="انتخاب مبدأ"
+                    className={`h-8 w-40 text-xs ${round.source == null ? "border-warning/50" : ""}`}
+                    options={SOURCE_OPTIONS}
+                  />
                 </div>
               )}
 

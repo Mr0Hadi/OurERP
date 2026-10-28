@@ -13,7 +13,7 @@ import PaperSettings from "@/shared/components/print/studio/PaperSettings";
 import PrintSettingsSection, { PrintSettingLabel } from "@/shared/components/print/studio/PrintSettingsSection";
 import PrintStudio from "@/shared/components/print/studio/PrintStudio";
 import SegmentedControl from "@/shared/components/print/studio/SegmentedControl";
-import { optionsFromLabels } from "@/shared/components/print/studio/options";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { TEXT_SCALES, TEXT_SCALE_LABELS } from "@/shared/components/print/typography";
 import { usePrint } from "@/shared/components/print/usePrint";
 import { Button } from "@/shared/components/ui/button";

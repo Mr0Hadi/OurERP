@@ -14,16 +14,7 @@ import {
 } from "@/shared/components/ui/city-selector";
 import { persianProvinces } from "@/shared/lib/persianProvinces";
 import { requiredMessage } from "@/shared/lib/validationRules";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 /**
  * بخشِ «آدرس» فرمِ مشتری و تامین‌کننده — استان/شهر، آدرس، کد پستی و مختصات از نقشه.
@@ -186,32 +177,18 @@ export default function PartyAddressForm({
         onSelect={handleLocationSelect}
       />
 
-      <AlertDialog open={!!pendingAddress} onOpenChange={(next) => !next && setPendingAddress(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>جایگزینی آدرس</AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 text-right">
-                <p>
-                  شما قبلاً آدرسی را به‌صورت دستی وارد کرده‌اید. آیا می‌خواهید آن را با
-                  آدرس زیر (برگرفته از موقعیت انتخاب‌شده روی نقشه) جایگزین کنید؟
-                </p>
-                <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">
-                  {pendingAddress}
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingAddress(null)}>
-              انصراف، آدرس فعلی بماند
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReplaceAddress}>
-              بله، جایگزین شود
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={!!pendingAddress}
+        onOpenChange={(next) => !next && setPendingAddress(null)}
+        title="جایگزینی آدرس"
+        description="شما قبلاً آدرسی را به‌صورت دستی وارد کرده‌اید. آیا می‌خواهید آن را با آدرس زیر (برگرفته از موقعیت انتخاب‌شده روی نقشه) جایگزین کنید؟"
+        cancelLabel="انصراف، آدرس فعلی بماند"
+        confirmLabel="بله، جایگزین شود"
+        destructive={false}
+        onConfirm={confirmReplaceAddress}
+      >
+        <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-foreground">{pendingAddress}</p>
+      </ConfirmDialog>
     </Card>
   );
 }

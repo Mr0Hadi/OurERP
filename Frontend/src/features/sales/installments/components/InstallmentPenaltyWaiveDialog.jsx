@@ -5,7 +5,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -15,6 +14,8 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { useWaiveInstallmentPenaltyMutation } from "../services/mutations";
 import { grossPenaltyOf, penaltyWaiveErrors } from "../domain/installmentPlan";
 import { formatDigits, formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import DialogActions from "@/shared/components/feedback/DialogActions";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 function WaiveBody({ installment, mutation, onClose }) {
   const gross = grossPenaltyOf(installment);
@@ -43,18 +44,14 @@ function WaiveBody({ installment, mutation, onClose }) {
         </DialogDescription>
       </DialogHeader>
 
-      <dl className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-3 text-sm">
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-muted-foreground">جریمه‌ی تا امروز ({formatNumber(installment.daysLate)} روز)</dt>
-          <dd className="font-medium tabular-nums">{formatRial(gross)}</dd>
-        </div>
-        {current > 0 && (
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">بخشودگیِ فعلی</dt>
-            <dd className="font-medium tabular-nums">{formatRial(current)}</dd>
-          </div>
-        )}
-      </dl>
+      <InfoList variant="boxed" className="text-sm">
+        <InfoRow
+          label={`جریمه‌ی تا امروز (${formatNumber(installment.daysLate)} روز)`}
+          value={formatRial(gross)}
+          valueClassName="font-medium"
+        />
+        {current > 0 && <InfoRow label="بخشودگیِ فعلی" value={formatRial(current)} valueClassName="font-medium" />}
+      </InfoList>
 
       <fieldset disabled={mutation.isPending} className="min-w-0 space-y-3">
         <div className="space-y-1.5">
@@ -100,14 +97,12 @@ function WaiveBody({ installment, mutation, onClose }) {
         </div>
       </fieldset>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" onClick={submit} disabled={mutation.isPending}>
-          {mutation.isPending ? "در حال ثبت..." : draft.amount === 0 ? "برداشتنِ بخشودگی" : "ثبتِ بخشودگی"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onClose}
+        onSubmit={submit}
+        isPending={mutation.isPending}
+        submitLabel={draft.amount === 0 ? "برداشتنِ بخشودگی" : "ثبتِ بخشودگی"}
+      />
     </>
   );
 }

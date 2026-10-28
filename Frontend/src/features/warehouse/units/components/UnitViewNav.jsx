@@ -1,18 +1,11 @@
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 import { cn } from "@/shared/lib/utils";
 
 import { UNIT_SEGMENTS, UNIT_SEGMENT_META, segmentNeedsLabels } from "../domain/unitVocabulary";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { LABEL_VIEWS, SEGMENT_ICONS } from "./unitViews";
 
-/** Radix مقدارِ خالی نمی‌پذیرد. */
-const ALL = "all";
+const [ALL_LABELS_VIEW, ...LABEL_FILTER_VIEWS] = LABEL_VIEWS;
 
 /** شمارِ هر جایگاه از `GetProductUnitSummary`؛ تا نیامده عددی نشان داده نمی‌شود. */
 function segmentCount(summary, segment) {
@@ -40,41 +33,41 @@ export default function UnitViewNav({
 
   return (
     <div className={cn("grid grid-cols-2 gap-2", className)}>
-      <Select value={segment} onValueChange={onSegmentChange}>
-        <SelectTrigger className="h-10 w-full" aria-label="جایگاه دانه">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent dir="rtl">
-          {Object.values(UNIT_SEGMENTS).map((value) => {
-            const Icon = SEGMENT_ICONS[value];
-            const count = segmentCount(summary, value);
-            return (
-              <SelectItem key={value} value={value}>
-                <Icon className="size-4" />
+      <OptionSelect
+        dir="rtl"
+        value={segment}
+        onChange={onSegmentChange}
+        aria-label="جایگاه دانه"
+        className="h-10 w-full"
+        options={Object.values(UNIT_SEGMENTS).map((value) => {
+          const count = segmentCount(summary, value);
+          return {
+            value,
+            icon: SEGMENT_ICONS[value],
+            label: (
+              <>
                 {UNIT_SEGMENT_META[value].label}
                 {count != null && <span className="text-xs text-muted-foreground">({formatNumber(count)})</span>}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-      <Select
-        value={labelsApply ? labelFilter || ALL : ALL}
-        onValueChange={(value) => onLabelFilterChange(value === ALL ? "" : value)}
+              </>
+            ),
+          };
+        })}
+      />
+      <OptionSelect
+        dir="rtl"
+        value={labelsApply ? labelFilter : ""}
+        onChange={onLabelFilterChange}
         disabled={!labelsApply}
-      >
-        <SelectTrigger className="h-10 w-full" aria-label="وضعیت برچسب">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent dir="rtl">
-          {LABEL_VIEWS.map(({ value, icon: Icon, label }) => (
-            <SelectItem key={value || ALL} value={value || ALL}>
-              <Icon className="size-4" />
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        aria-label="وضعیت برچسب"
+        className="h-10 w-full"
+        emptyLabel={
+          <>
+            <ALL_LABELS_VIEW.icon className="size-4" />
+            {ALL_LABELS_VIEW.label}
+          </>
+        }
+        options={LABEL_FILTER_VIEWS}
+      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { cn } from "@/shared/lib/utils";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
 import Amount from "../Amount";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /** خالص: مثبت = بدهیِ مالیاتی، منفی = اعتبارِ مالیاتی. */
 function NetTax({ value }) {
@@ -47,11 +48,11 @@ function Side({ title, count, taxable, exempt, tax }) {
         <span className="font-medium">{title}</span>
         <span className="text-muted-foreground tabular-nums">{formatNumber(count)} فاکتور</span>
       </div>
-      <dl className="space-y-1 text-xs">
-        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">خالصِ مشمول</dt><dd><Amount value={taxable} /></dd></div>
-        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">خالصِ معاف</dt><dd><Amount value={exempt} /></dd></div>
-        <div className="flex justify-between gap-2"><dt className="text-muted-foreground">مالیات</dt><dd><Amount value={tax} strong /></dd></div>
-      </dl>
+      <InfoList className="space-y-1 text-xs">
+        <InfoRow label="خالصِ مشمول" value={<Amount value={taxable} />} />
+        <InfoRow label="خالصِ معاف" value={<Amount value={exempt} />} />
+        <InfoRow label="مالیات" value={<Amount value={tax} strong />} />
+      </InfoList>
     </div>
   );
 }

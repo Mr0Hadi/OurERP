@@ -83,7 +83,11 @@ storeِ فیلتر در حافظه است: رفتن به صفحه‌ی جزئی�
 
 ### ۳. فرم‌های کوچک: react-hook-form + پیش‌نویسِ یک‌بارمصرف
 
-فرم‌های موجودیت‌های ساده با `react-hook-form` هستند و منطقشان در یک هوکِ `use<X>Form`: `src/features/customers/hooks/useCustomerForm.js`، `src/features/suppliers/hooks/useSupplierForm.js`، `src/features/employees/hooks/useEmployeeForm.js`، `src/features/warehouse/products/hooks/useProductForm.js`، `src/features/organization/departments/hooks/useDepartmentForm.js`، `src/features/organization/teams/hooks/useTeamForm.js`. فیلدها: `src/shared/components/forms/FormField.jsx`، `FormSelectField.jsx`؛ قواعد: `src/shared/lib/validationRules.js`.
+فرم‌های موجودیت‌های ساده با `react-hook-form` هستند و منطقشان در یک هوکِ `use<X>Form`: `src/features/customers/hooks/useCustomerForm.js`، `src/features/suppliers/hooks/useSupplierForm.js`، `src/features/employees/hooks/useEmployeeForm.js`، `src/features/warehouse/products/hooks/useProductForm.js`، `src/features/organization/departments/hooks/useDepartmentForm.js`، `src/features/organization/teams/hooks/useTeamForm.js`. فیلدها: `src/shared/components/forms/FormField.jsx`، `FormSelectField.jsx`، `FormPriceField.jsx`؛ قواعد: `src/shared/lib/validationRules.js`.
+
+**React Compiler و `errors`:** react-hook-form خطاها را درجا در همان شیءِ `formState.errors` می‌نویسد. Compiler عنصرِ `<XForm errors={errors} … />` را با propsِ هم‌مرجع از کش برمی‌گرداند و کارتِ فرم پس از «ذخیره» دوباره رندر نمی‌شد — خطا دیده نمی‌شد (فرمِ کالا). دو قاعده:
+- کامپوننتی که `useForm`/`formState.errors` را می‌خواند و `errors` را به کارت‌های فرم می‌دهد با `"use no memo"` شروع شود (صفحه‌های جدید/جزئیاتِ مشتری، تامین‌کننده، کارمند، کالا، واحد، تیم). صفحه‌ای که `watch()` صدا می‌زند را Compiler خودش رها می‌کند، ولی روی آن حساب نکنید.
+- درونِ کارت‌ها خطای همان فیلد (`error={errors.name}`) را پاس بدهید، نه کلِ `errors` را به زیرکامپوننتِ دیگر (`ProductPricingForm` → `PriceField`)؛ خواندنِ `errors[name]` با کلیدِ متغیر هم همان مشکل را دارد.
 
 برای رفت‌وبرگشت (مثلاً از فرمِ واحد به «کارمندِ جدید»): `useFormDraft(key)` (`src/shared/hooks/useFormDraft.js`):
 

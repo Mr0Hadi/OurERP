@@ -3,12 +3,10 @@ import { useState } from "react";
 import { useResolveWarehouseIssueMutation } from "@/features/sales/orders/services/mutations";
 import FormField from "@/shared/components/forms/FormField";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -18,6 +16,7 @@ import {
   SaleWarehouseIssueResolutionEnum,
 } from "@/shared/domain/enums/saleProforma";
 import { formatRial } from "@/shared/lib/numberFormat";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const OPTIONS = [
   {
@@ -88,19 +87,13 @@ export default function WarehouseIssueResolveDialog({ issue, onOpenChange }) {
           </div>
         )}
 
-        <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" onClick={close} disabled={mutation.isPending}>
-            انصراف
-          </Button>
-          <Button
-            type="button"
-            variant={resolution === SaleWarehouseIssueResolutionEnum.SCRAP ? "destructive" : "default"}
-            onClick={submit}
-            disabled={mutation.isPending}
-          >
-            {mutation.isPending ? "در حال ثبت…" : `ثبت: ${SALE_WAREHOUSE_ISSUE_RESOLUTION_LABELS[resolution]}`}
-          </Button>
-        </DialogFooter>
+        <DialogActions
+          onCancel={close}
+          onSubmit={submit}
+          isPending={mutation.isPending}
+          variant={resolution === SaleWarehouseIssueResolutionEnum.SCRAP ? "destructive" : "default"}
+          submitLabel={`ثبت: ${SALE_WAREHOUSE_ISSUE_RESOLUTION_LABELS[resolution]}`}
+        />
       </DialogContent>
     </Dialog>
   );

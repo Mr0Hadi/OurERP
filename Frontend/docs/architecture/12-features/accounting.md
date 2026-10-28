@@ -42,7 +42,7 @@
 
 ## importهای بیرونی
 
-`auth` (`usePermission`)؛ فیلترها: `organization` (واحد/تیم در `EmployeeScopeFilter.jsx`)، `warehouse/categories` (`CategoryFilterSelect.jsx`)، `customers`/`suppliers` (`PartyFilterSelect.jsx`)، `employees` (`src/features/employees/components/UserFilterSelect.jsx`؛ پیش‌تر در `accounting/components/filters/`).
+`auth` (`usePermission`)؛ فیلترها: `organization` (واحد/تیم در `EmployeeScopeFilter.jsx`)، `warehouse/categories` (`CategorySelect`)، `partyAccount` (`PartySelect`)، `employees` (`src/features/employees/components/UserFilterSelect.jsx`؛ پیش‌تر در `accounting/components/filters/`).
 
 ## نکته‌ها و بدهی
 

@@ -34,10 +34,7 @@ export default function UnsavedChangesDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={cancel}>ماندن و ذخیره</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={confirm}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-          >
+          <AlertDialogAction onClick={confirm} variant="destructive">
             نادیده گرفتن تغییرات
           </AlertDialogAction>
         </AlertDialogFooter>

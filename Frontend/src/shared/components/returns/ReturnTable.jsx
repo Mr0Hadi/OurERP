@@ -9,16 +9,12 @@ import { routeWithId } from "@/shared/constants/routes";
 import { RETURN_PROBLEM_LABELS, RETURN_PROBLEM_STYLES } from "@/shared/domain/returns/problems";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 /** حداکثر چند مشکل در ستون دیده شود؛ بقیه «+n». */
 const VISIBLE_PROBLEMS = 2;
 
-const EMPTY_STATE = (
-  <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border py-16 text-center">
-    <Search className="size-8 text-muted-foreground" />
-    <p className="text-sm text-muted-foreground">مرجوعی‌ای یافت نشد.</p>
-  </div>
-);
+const EMPTY_STATE = <EmptyState icon={Search} title="مرجوعی‌ای یافت نشد." />;
 
 const mono = (info) => <span className="font-mono text-xs text-muted-foreground">{info.getValue()}</span>;
 

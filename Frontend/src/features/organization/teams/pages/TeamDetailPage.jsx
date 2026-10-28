@@ -3,16 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Save, X, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
@@ -28,8 +18,12 @@ import OrgLeadershipForm from "../../components/OrgLeadershipForm";
 import { useSyncLeadershipValues } from "../../hooks/useSyncLeadershipValues";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 function TeamDetailForm({ team }) {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -175,29 +169,16 @@ function TeamDetailForm({ team }) {
         </div>
       </form>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف تیم</AlertDialogTitle>
-            <AlertDialogDescription>
-              آیا از حذف «{team.name}» اطمینان دارید؟ تیم غیرفعال می‌شود و دیگر
-              در فهرست‌ها و انتخابگرها نمایش داده نمی‌شود.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="حذف تیم"
+        description={`آیا از حذف «${team.name}» اطمینان دارید؟ تیم غیرفعال می‌شود و دیگر در فهرست‌ها و انتخابگرها نمایش داده نمی‌شود.`}
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

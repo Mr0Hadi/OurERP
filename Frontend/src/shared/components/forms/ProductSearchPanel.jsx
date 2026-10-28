@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import RemoteImage from "@/shared/components/files/RemoteImage";
 import CameraScanButton from "@/shared/components/barcode/CameraScanButton";
 import {
@@ -13,13 +12,13 @@ import {
   useProductSearchLoader,
   useProductSearchQuery,
 } from "@/features/warehouse/products/services/queries";
-import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 
 
 function stockTone(product) {
@@ -54,7 +53,6 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
   const inputRef = useRef(null);
   const listId = useId();
 
-  const { data: categories = [] } = useProductCategoriesQuery();
   const loadDetail = useProductDetailLoader();
   const loadSearch = useProductSearchLoader();
 
@@ -173,10 +171,8 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
 
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1 sm:w-44 sm:flex-none">
-          <EntitySelect
-            placeholder="همه دسته‌ها"
-            emptyText="دسته‌بندی‌ای یافت نشد"
-            items={categories}
+          <CategorySelect
+            label={null}
             value={categoryFilter}
             onSelect={(id) => {
               setCategoryFilter(String(id));

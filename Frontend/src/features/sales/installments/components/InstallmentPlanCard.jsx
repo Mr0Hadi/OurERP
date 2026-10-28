@@ -8,7 +8,7 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import Notice from "@/shared/components/feedback/Notice";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
 import InstallmentSchedule from "./InstallmentSchedule";
-import InstallmentSummary from "./InstallmentSummary";
+import StatGrid from "@/shared/components/data/StatGrid";
 import InstallmentPaymentDialog from "./InstallmentPaymentDialog";
 import InstallmentPlanEditDialog from "./InstallmentPlanEditDialog";
 import InstallmentPenaltyWaiveDialog from "./InstallmentPenaltyWaiveDialog";
@@ -140,7 +140,7 @@ export default function InstallmentPlanCard({ saleId }) {
           </Notice>
         )}
 
-        <InstallmentSummary items={summaryItems(plan, overdue)} />
+        <StatGrid className="@container/summary grid-cols-2 @md/summary:grid-cols-4" items={summaryItems(plan, overdue)} />
 
         <InstallmentSchedule
           installments={plan.installments}

@@ -1,11 +1,9 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -14,6 +12,7 @@ import InstallmentPlanTermsFields from "./InstallmentPlanTermsFields";
 import { useUpdateInstallmentPlanMutation } from "../services/mutations";
 import { planDraftErrors, planEditDraftOf } from "../domain/installmentPlan";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 function EditBody({ plan, mutation, onClose }) {
   const [draft, setDraft] = useState(() => planEditDraftOf(plan));
@@ -55,14 +54,13 @@ function EditBody({ plan, mutation, onClose }) {
         مبلغِ قابل پرداخت و اقساطِ تازه را سرور از درصدِ سودِ جدید حساب می‌کند و مانده روی اقساطِ پرداخت‌نشده پخش می‌شود.
       </Notice>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" onClick={submit} disabled={mutation.isPending}>
-          {mutation.isPending ? "در حال ذخیره..." : "ذخیره‌ی قرارداد"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onClose}
+        onSubmit={submit}
+        isPending={mutation.isPending}
+        pendingLabel="در حال ذخیره..."
+        submitLabel="ذخیره‌ی قرارداد"
+      />
     </>
   );
 }

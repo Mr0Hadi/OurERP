@@ -5,13 +5,6 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import BankAccountSelect from "./BankAccountSelect";
@@ -36,6 +29,9 @@ import {
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+
+const ROW_TYPE_OPTIONS = ROW_PAYMENT_TYPES.map((type) => ({ value: type, label: PAYMENT_TYPE_LABELS[type] }));
 
 /**
  * روش و مبلغِ یک پرداخت (فرمِ «ثبت پرداخت»ِ `PaymentsCard`): نقدی، انتقال بانکی،
@@ -170,21 +166,14 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
           return (
             <li key={row.id} className="rounded-lg border border-border bg-muted/20 p-2.5">
               <div className="grid grid-cols-[1fr_auto] gap-2 @lg/pay:grid-cols-[9rem_1fr_auto]">
-                <Select
-                  value={String(row.type)}
-                  onValueChange={(next) => onChange(row.id, { type: Number(next) })}
-                >
-                  <SelectTrigger className="h-9! w-full" aria-label={`روشِ تکه‌ی ${formatNumber(index + 1)}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROW_PAYMENT_TYPES.map((type) => (
-                      <SelectItem key={type} value={String(type)}>
-                        {PAYMENT_TYPE_LABELS[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OptionSelect
+                  value={row.type}
+                  onChange={(type) => onChange(row.id, { type })}
+                  numeric
+                  aria-label={`روشِ تکه‌ی ${formatNumber(index + 1)}`}
+                  className="h-9! w-full"
+                  options={ROW_TYPE_OPTIONS}
+                />
                 <Button
                   type="button"
                   size="icon"

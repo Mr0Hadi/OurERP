@@ -1,7 +1,7 @@
 import { ResponsiveFilters } from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import SupplierSelect from "@/features/suppliers/components/SupplierSelect";
 import { useReorderFilterStore } from "../store/reorderFilterStore";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 /** جست‌وجو و تامین‌کننده — در یک ردیف؛ موبایل: تامین‌کننده زیرِ دکمه‌ی «فیلترها». */
 export default function ReorderFilters() {
@@ -20,10 +20,12 @@ export default function ReorderFilters() {
       }
       className="grid gap-3 sm:grid-cols-2 sm:space-y-0"
     >
-      <SupplierSelect
+      <PartySelect
+        side="supplier"
+        label={null}
         placeholder="همه تامین‌کنندگان"
         value={store.supplierId}
-        onChange={store.setSupplierId}
+        onSelect={store.setSupplierId}
       />
     </ResponsiveFilters>
   );

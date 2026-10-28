@@ -4,7 +4,6 @@ import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import ServerTable from "@/shared/components/table/ServerTable";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 import { ROUTES } from "@/shared/constants/routes";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 
 import { useShippableSalesQuery, useShippingListFilters } from "../services/queries";
 import { useShippingFilterStore } from "../store/shippingFilterStore";
@@ -38,7 +37,6 @@ export default function ShippingListPage() {
   const filters = useShippingListFilters();
   const query = useShippableSalesQuery(filters, listState.pagination, listState.sorting);
   const buildRows = useQueueRows("out", filters, listState.pagination.pageIndex === 0);
-  const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 
   return (
     <ListPageLayout
@@ -47,14 +45,7 @@ export default function ShippingListPage() {
     >
       <QueueFilters
         useStore={useShippingFilterStore}
-        party={{
-          key: "customerId",
-          label: "مشتری",
-          emptyText: "مشتری‌ای یافت نشد",
-          items: customers,
-          isLoading: isCustomersLoading,
-          phoneOf: (customer) => customer.phoneNumber,
-        }}
+        party={{ key: "customerId", side: "customer" }}
         statusOptions={SHIPPING_STATUS_OPTIONS}
         searchPlaceholder="شماره فاکتور فروش..."
       />

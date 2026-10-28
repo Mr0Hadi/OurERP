@@ -1,11 +1,9 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -16,14 +14,11 @@ import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import FormField from "@/shared/components/forms/FormField";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import BankAccountSelect from "@/shared/components/payments/BankAccountSelect";
 import ChequeFields from "@/shared/components/payments/ChequeFields";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
 import { PAYMENT_REFERENCE_FIELDS, PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { useAllocatableDocumentsQuery } from "../services/queries";
 import { useAddPartyPaymentMutation } from "../services/mutations";
 import AllocationEditor from "./AllocationEditor";
@@ -40,6 +35,8 @@ import {
   toApiAllocations,
   toApiPartyPayment,
 } from "../domain/partyPayment";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const KIND_OPTIONS = [
   { value: PARTY_KIND.CUSTOMER, label: "مشتری" },
@@ -55,8 +52,6 @@ function FormBody({ party, onClose, onSaved }) {
   const mutation = useAddPartyPaymentMutation();
 
   const isSupplier = draft.partyKind === PARTY_KIND.SUPPLIER;
-  const { customers, isLoading: customersLoading } = useCustomersOptionsQuery({ enabled: !fixedParty && !isSupplier });
-  const { suppliers, isLoading: suppliersLoading } = useSuppliersOptionsQuery({ enabled: !fixedParty && isSupplier });
 
   // فقط جهتِ طبیعی تخصیص می‌گیرد (برگرداندنِ بستانکاری هرگز).
   const canAllocate = Boolean(draft.partyId) && draft.direction === naturalDirection(draft.partyKind);
@@ -105,15 +100,14 @@ function FormBody({ party, onClose, onSaved }) {
           <>
             <StatusChoice label="طرف حساب" options={KIND_OPTIONS} value={draft.partyKind} onChange={changeKind} />
             <FormField label={isSupplier ? "تامین‌کننده" : "مشتری"} required error={errorOf("partyId")}>
-              <EntitySelect
-                placeholder={isSupplier ? "انتخاب تامین‌کننده..." : "انتخاب مشتری..."}
-                items={isSupplier ? suppliers : customers}
-                value={draft.partyId ?? ""}
+              <PartySelect
+                side={isSupplier ? "supplier" : "customer"}
+                label={null}
+                value={draft.partyId}
                 onSelect={(id) => {
-                  patch({ partyId: id === "" ? null : Number(id) });
+                  patch({ partyId: id === "" ? null : id });
                   setAllocation(EMPTY_ALLOCATION_DRAFT);
                 }}
-                isLoading={isSupplier ? suppliersLoading : customersLoading}
                 allowClear={false}
               />
             </FormField>
@@ -189,14 +183,7 @@ function FormBody({ party, onClose, onSaved }) {
         )}
       </fieldset>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "در حال ثبت..." : "ثبت"}
-        </Button>
-      </DialogFooter>
+      <DialogActions onCancel={onClose} isPending={mutation.isPending} submitLabel="ثبت" />
     </form>
   );
 }

@@ -10,7 +10,7 @@ import {
 } from "@/features/warehouse/units/domain/unitVocabulary";
 import DateRangeToolbar from "@/shared/components/filters/DateRangeToolbar";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import DataTable from "@/shared/components/table/DataTable";
 import ServerTable from "@/shared/components/table/ServerTable";
@@ -29,7 +29,7 @@ const OPEN_OPTIONS = [
   { value: "false", label: "تصمیم‌گرفته" },
 ];
 // علت‌هایی که بررسیِ انبار می‌پذیرد (`INSPECTION_PASSED` نه).
-const REASON_OPTIONS = toFilterOptions(
+const REASON_OPTIONS = optionsFromLabels(
   Object.fromEntries(
     Object.entries(UNIT_ACTION_REASON_LABELS).filter(([value]) => Number(value) !== UnitActionReasonEnum.INSPECTION_PASSED),
   ),

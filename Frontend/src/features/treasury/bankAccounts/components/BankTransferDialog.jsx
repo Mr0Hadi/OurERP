@@ -1,47 +1,50 @@
 import { useState } from "react";
 import { ArrowDown } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { PriceInput } from "@/shared/components/ui/price-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import FormField from "@/shared/components/forms/FormField";
 import { BANK_ACCOUNT_KIND_LABELS } from "@/shared/domain/enums/bankAccount";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { useTransferBetweenAccountsMutation } from "../services/mutations";
 import { emptyTransferDraft, toApiTransfer, transferDraftErrors } from "../domain/bankAccountForm";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
-/** انتخابگرِ حساب؛ Select رشته می‌دهد و شناسه‌ها عددند. */
+/** انتخابگرِ حساب، بی حسابِ مبدأ در فهرستِ مقصد. */
 function AccountSelect({ id, accounts, value, onChange, exclude }) {
   return (
-    <Select dir="rtl" value={value ? String(value) : ""} onValueChange={(next) => onChange(Number(next))}>
-      <SelectTrigger id={id} className="h-10 w-full">
-        <SelectValue placeholder="انتخاب کنید" />
-      </SelectTrigger>
-      <SelectContent>
-        {accounts
-          .filter((account) => account.id !== exclude)
-          .map((account) => (
-            <SelectItem key={account.id} value={String(account.id)}>
+    <OptionSelect
+      id={id}
+      dir="rtl"
+      value={value || ""}
+      onChange={onChange}
+      numeric
+      className="h-10 w-full"
+      options={accounts
+        .filter((account) => account.id !== exclude)
+        .map((account) => ({
+          value: account.id,
+          label: (
+            <>
               {account.title}
               <span className="text-xs text-muted-foreground">
                 {" · "}
                 {BANK_ACCOUNT_KIND_LABELS[account.kind]} · مانده {formatNumber(account.balance)}
               </span>
-            </SelectItem>
-          ))}
-      </SelectContent>
-    </Select>
+            </>
+          ),
+        }))}
+    />
   );
 }
 
@@ -121,14 +124,7 @@ function TransferBody({ accounts, fromBankAccountId, onClose }) {
         </FormField>
       </fieldset>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-        <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "در حال ثبت..." : "ثبتِ انتقال"}
-        </Button>
-      </DialogFooter>
+      <DialogActions onCancel={onClose} isPending={mutation.isPending} submitLabel="ثبتِ انتقال" />
     </form>
   );
 }

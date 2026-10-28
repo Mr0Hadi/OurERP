@@ -13,6 +13,7 @@ import {
   invoiceLineAmounts,
   invoiceTotals,
 } from "@/shared/domain/invoice/lineMath";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 /**
  * انتخاب کالا + فهرست اقلام انتخاب‌شده — یک‌جا و مشترک.
@@ -271,10 +272,7 @@ export default function ProductPicker({
       {searchPanel}
       {selectedItems}
       {items.length === 0 && (
-        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-border py-8 text-center">
-          <PackageOpen className="size-6 text-muted-foreground/60" aria-hidden />
-          <p className="text-sm text-muted-foreground">{emptyText}</p>
-        </div>
+        <EmptyState size="sm" icon={PackageOpen} title={emptyText} />
       )}
     </div>
   );

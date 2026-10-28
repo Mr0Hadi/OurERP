@@ -4,7 +4,6 @@ import { CalendarClock } from "lucide-react";
 
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import ServerTable from "@/shared/components/table/ServerTable";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 import InstallmentFilters from "../components/table/InstallmentFilters";
@@ -42,7 +41,6 @@ export default function InstallmentsPage() {
     instant: ["view", "customerId", "fromDueDate", "toDueDate"],
   });
   const query = useInstallmentsQuery(installmentListParams(filters), listState.pagination, listState.sorting);
-  const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 
   return (
     <ListPageLayout
@@ -50,7 +48,7 @@ export default function InstallmentsPage() {
       icon={CalendarClock}
       description="اقساطِ قراردادهای فروشِ اقساطی؛ هر قسط یکجا و به مبلغِ کامل، همراهِ جریمه‌ی دیرکرد، دریافت می‌شود."
     >
-      <InstallmentFilters customers={customers} isCustomersLoading={isCustomersLoading} />
+      <InstallmentFilters />
       <ServerTable
         query={query}
         listState={listState}

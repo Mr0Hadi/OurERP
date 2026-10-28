@@ -2,7 +2,7 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterSwitch from "@/shared/components/filters/FilterSwitch";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import {
@@ -13,8 +13,8 @@ import { usePartyBalanceFilterStore } from "../../store/accountingFilterStores";
 
 const toPriceValue = (value) => (value === "" ? null : Number(value));
 
-const PARTY_TYPE_OPTIONS = toFilterOptions(ACCOUNTING_PARTY_TYPE_LABELS);
-const BALANCE_STATE_OPTIONS = toFilterOptions(PARTY_BALANCE_STATE_LABELS);
+const PARTY_TYPE_OPTIONS = optionsFromLabels(ACCOUNTING_PARTY_TYPE_LABELS);
+const BALANCE_STATE_OPTIONS = optionsFromLabels(PARTY_BALANCE_STATE_LABELS);
 
 /**
  * فیلترهای جدولِ حسابِ اشخاص — همه با نامِ پارامترِ `GetPartyBalanceList`. بازه‌ی مانده

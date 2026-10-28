@@ -8,18 +8,8 @@ import {
 import { useSupplierQuery } from "../services/queries";
 import { useSupplierForm } from "../hooks/useSupplierForm";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
-import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
+import PartyFinanceForm from "@/features/partyAccount/components/PartyFinanceForm";
 import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import PartyDetailLoading from "@/features/partyAccount/components/PartyDetailLoading";
 import { ROUTES } from "@/shared/constants/routes";
@@ -33,8 +23,12 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 import PartyOnAccountBar from "@/features/treasury/partyPayments/components/PartyOnAccountBar";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 function SupplierDetailForm({ supplierData }) {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   const navigate = useNavigate();
   const { can } = usePermission();
   const canViewStatement = can("PartyStatementView");
@@ -104,8 +98,8 @@ const {
               control={control}
               imageUpload={imageUpload}
             />
-            <SupplierFinanceForm
-              register={register}
+            <PartyFinanceForm
+              side="supplier"
               errors={errors}
               balanceType={balanceType}
               control={control}
@@ -167,29 +161,16 @@ const {
         </div>
       )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف تامین‌کننده</AlertDialogTitle>
-            <AlertDialogDescription>
-              آیا از حذف {supplierDisplayName} اطمینان دارید؟ این عملیات غیرقابل
-              بازگشت است.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="حذف تامین‌کننده"
+        description={`آیا از حذف ${supplierDisplayName} اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`}
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

@@ -12,6 +12,9 @@ import ProductImageUpload from "../components/forms/ProductImageUpload";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function ProductNewPage() {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   // از فرمِ خرید/فروش آمده باشیم (`state.returnTo`) به همان‌جا برمی‌گردیم و شناسه‌ی
   // رکوردِ تازه را می‌فرستیم تا همان‌جا انتخاب شود؛ وگرنه به لیستِ خودش. برگشتِ ساده در
   // تاریخچه به هر صفحه‌ای که قبلاً باز بود می‌رفت و شناسه را گم می‌کرد.

@@ -12,8 +12,8 @@ import { useProductFilterStore } from "../../store/productFilterStore";
 import { useScanProductMutation } from "../../services/mutations";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import ProductCodeSearchField from "./ProductCodeSearchField";
-import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 import { useVehiclesQuery } from "@/features/warehouse/vehicles/services/queries";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 
 // سرور فقط `isLowOnStock` دارد: «کم‌موجود» یعنی موجودی ≤ آستانه‌ی هشدار (ناموجودها هم جزوش‌اند).
 const STOCK_OPTIONS = [
@@ -50,7 +50,6 @@ export default function ProductFilters() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const scanProduct = useScanProductMutation();
-  const { data: categories = [], isLoading: isCategoriesLoading } = useProductCategoriesQuery();
   const { data: vehicleData, isLoading: isVehiclesLoading } = useVehiclesQuery();
   const {
     code,
@@ -114,15 +113,7 @@ export default function ProductFilters() {
           value={brand}
           onChange={(event) => setBrand(event.target.value)}
         />
-        <EntitySelect
-          label="دسته‌بندی"
-          placeholder="همه دسته‌ها"
-          emptyText="دسته‌بندی‌ای یافت نشد"
-          items={categories}
-          value={productCategoryId}
-          onSelect={setProductCategoryId}
-          isLoading={isCategoriesLoading}
-        />
+        <CategorySelect value={productCategoryId} onSelect={setProductCategoryId} />
         <EntitySelect
           label="خودرو"
           placeholder="همه خودروها"

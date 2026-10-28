@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 
 import DataTable from "@/shared/components/table/DataTable";
 import QuantityStepper from "@/shared/components/forms/QuantityStepper";
-import SupplierSelect from "@/features/suppliers/components/SupplierSelect";
 import SelectCheckbox from "@/shared/components/forms/SelectCheckbox";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 const MAX_QUANTITY = 1_000_000_000;
 
@@ -70,9 +70,11 @@ function buildColumns({ draft, editable }) {
         if (!editable || !line.selected) return <span className="text-xs text-muted-foreground">ندارد</span>;
         return (
           <div className="min-w-40 text-right">
-            <SupplierSelect
+            <PartySelect
+              side="supplier"
+              label={null}
               value={line.supplierId}
-              onChange={(id) => draft.update(s.productId, { supplierId: id === "" ? null : id })}
+              onSelect={(id) => draft.update(s.productId, { supplierId: id === "" ? null : id })}
             />
           </div>
         );

@@ -1,11 +1,9 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -18,6 +16,7 @@ import {
   hasAllocationErrors,
   toApiAllocations,
 } from "../domain/partyPayment";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 function AllocateBody({ payment, onClose }) {
   const [draft, setDraft] = useState(EMPTY_ALLOCATION_DRAFT);
@@ -53,14 +52,13 @@ function AllocateBody({ payment, onClose }) {
           isLoading={documentsQuery.isLoading}
         />
       </fieldset>
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-        <Button type="button" onClick={submit} disabled={mutation.isPending || allocations.length === 0}>
-          {mutation.isPending ? "در حال ثبت..." : "ثبتِ تخصیص"}
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onClose}
+        onSubmit={submit}
+        isPending={mutation.isPending}
+        disabled={allocations.length === 0}
+        submitLabel="ثبتِ تخصیص"
+      />
     </>
   );
 }

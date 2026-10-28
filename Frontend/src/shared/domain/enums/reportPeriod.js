@@ -2,6 +2,7 @@ import DateObject from "react-date-object";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import gregorian from "react-date-object/calendars/gregorian";
+import { optionsFromLabels } from "@/shared/lib/options";
 
 /**
  * `ReportPeriodTypeEnum` — بازه‌ی گروه‌بندیِ گزارش (بخش ۱۸ سند
@@ -30,9 +31,7 @@ const REPORT_PERIOD_LABELS = Object.freeze({
   [ReportPeriodTypeEnum.ANNUAL]: "سالانه",
 });
 
-export const REPORT_PERIOD_OPTIONS = Object.entries(REPORT_PERIOD_LABELS).map(
-  ([value, label]) => ({ value: Number(value), label }),
-);
+export const REPORT_PERIOD_OPTIONS = optionsFromLabels(REPORT_PERIOD_LABELS, { numeric: true });
 
 /**
  * نامِ «یک بازه عقب‌تر» — برای جمله‌ی مقایسه‌ی درصدِ رشد.

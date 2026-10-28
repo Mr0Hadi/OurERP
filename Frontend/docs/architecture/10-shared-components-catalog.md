@@ -74,25 +74,35 @@ flowchart LR
 | --- | --- | --- |
 | `FilterPanel` / `ResponsiveFilters` | پوسته‌ی فیلترها؛ موبایل: `primary`/`secondary` همیشه‌پیدا + پنلِ بازشونده با شمارِ فیلترِ فعال (`store`) | ۱۷ |
 | `FilterSearchInput` | جست‌وجوی متنی | ۱۵ |
-| `FilterSelect` | انتخابِ تکیِ کم‌گزینه | ۱۳ |
+| `FilterSelect` | انتخابِ تکیِ کم‌گزینه با ردیفِ «همه» (روی `OptionSelect`) | ۱۸ |
 | `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
 | `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
 | `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
-| `filterUtils.js` | `normalizeFilterValue`، `toFilterOptions`، `getPartyName` | ۹ |
+| `filterUtils.js` | `getPartyName` (برچسبِ پیش‌فرضِ `EntitySelect`) | — |
+
+انتخابگرهای موجودیتِ هر فیچر روی `EntitySelect` و خودشان فهرست را می‌گیرند؛ صفحه فهرست را برای فیلتر واکشی و پاس نمی‌دهد: `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`، `side="customer"|"supplier"`، ۲۰ مصرف)، `CategorySelect` (`src/features/warehouse/categories/components/CategorySelect.jsx`، ۷)، `UserFilterSelect` (`src/features/employees/components/UserFilterSelect.jsx`). `label={null}` برای فرمی که برچسبِ خودش را دارد. فایلِ `shared/` که انتخابگرِ طرف‌حساب لازم دارد (`ReturnFilters`) آن را از صفحه می‌گیرد (`partySelect`)، نه با importِ تازه از features.
 
 ### `feedback/`
 
 | کامپوننت | کِی | # |
 | --- | --- | --- |
-| `ConfirmDialog` | تأییدِ کارِ برگشت‌ناپذیر؛ تا پایانِ درخواست باز می‌ماند — فراخوان در `onSuccess` می‌بندد | ۱۶ |
+| `ConfirmDialog` | تأییدِ کارِ برگشت‌ناپذیر (حذف، خروجِ اجباری، جایگزینیِ آدرس، …)؛ تا پایانِ درخواست باز می‌ماند — فراخوان در `onSuccess` می‌بندد. `children` زیرِ توضیح؛ `destructive={false}` برای تأییدِ بی‌خطر. `AlertDialog` دستی نسازید: `AlertDialogAction` بی `preventDefault` پیش از پایانِ درخواست می‌بست، و رنگِ قرمز را با `variant="destructive"` بدهید نه با کلاس (کنارِ `bg-primary` می‌باخت) | ۲۹ |
+| `DialogActions` | پاورقیِ دیالوگِ فرم: «انصراف» + ثبت با «در حال ثبت...»، هر دو قفل حینِ درخواست؛ بی `onSubmit` دکمه `type="submit"` است؛ `variant="destructive"`، `disabled`، و `children` برای متنِ کمکی (شمارِ انتخاب‌شده). ترتیبِ دکمه‌ها در همه‌ی دیالوگ‌ها یکی است | ۱۷ |
 | `QueryErrorState` | خطای لیست با «تلاش دوباره» (جای جدول) | ۱۵ |
-| `EmptyState` | فهرستِ خالی: آیکن، عنوان، راهنما و اقدامِ اختیاری (پاک کردنِ فیلترها)؛ برای `emptyState`ِ جدول‌ها | ۲ |
+| `EmptyState` | فهرست یا بخشِ خالی: آیکن، عنوان، راهنما و اقدامِ اختیاری؛ `size="sm"` برای کارت و ویجت، `fill` برای ستونِ جزئیاتِ صفحه‌های فهرست/جزئیات («یک … را انتخاب کنید»، «پیدا نشد») | ۱۲ |
 | `DetailErrorState` | صفحه‌ی جزئیات: «پیدا نشد» (۴۰۴) را از «واکشی شکست خورد» جدا می‌کند | ۱۴ |
 | `Notice` | باکسِ توضیح/هشدار با tone | ۱۴ |
 | `UnsavedChangesDialog` | «تغییرات ذخیره نشده» با `blocker`ِ `useUnsavedChangesGuard` (یا کنترل‌شده با `open`) | ۶ |
 | `FetchingOverlay` | پوششِ واکشیِ دوباره (نه بارِ اول) | ۹ |
 | `ProgressStat` | پیشرفتِ شمارشی | ۴ |
+
+### `data/`
+
+| کامپوننت | کِی | # |
+| --- | --- | --- |
+| `InfoList` + `InfoRow` (`InfoList.jsx`) | فهرستِ «برچسب … مقدار» (`<dl>`): جزئیاتِ دانه، ردیف‌های مبلغِ دیالوگ‌ها، کارتِ مشتریِ صندوق، نتیجه‌ی کارتخوان. `variant`: `plain`/`boxed`/`divided`؛ `InfoRow total` ردیفِ جمعِ پایانی (خطِ بالا، مبلغِ درشت). ردیفِ `flex justify-between` با `dt`/`dd` دستی نسازید | ۸ |
+| `StatGrid` | نوارِ خانه‌های عدد با خطِ جداکننده (`{ label, value, tone?, hint? }`): جمع‌های چک، عددهای قرارداد اقساط، مانده‌ی صندوق‌ها، پرداختِ سند. ستون‌ها با `className`؛ `size="sm"` برای کارتِ باریک. جمع‌های بالای گزارش‌های حسابداری `SummaryStrip`ِ خودشان را دارند (خانه‌های جدا با راهنمای tooltip) | ۵ |
 
 ### `status/`
 
@@ -109,7 +119,10 @@ flowchart LR
 
 | کامپوننت | کِی | # |
 | --- | --- | --- |
-| `FormField`، `FormSelectField` | فیلدِ react-hook-form با label و خطا | ۶، ۳ |
+| `FormField` | برچسب + کنترل + خطا/راهنما؛ `error` شیءِ RHF یا متن؛ `size="sm"` برای کارتِ سند و دیالوگ. فیلدی با `Label` و `<span className="text-destructive">` دستی نسازید | ۲۶ |
+| `OptionSelect` | کشوییِ کنترل‌شده از `options` (`{ value, label, icon?, disabled? }`): `numeric`/`boolean` تبدیلِ رشته‌ی Radix، `emptyLabel`/`emptyValue` ردیفِ «همه/بدون …»، `prefix` داخلِ trigger. جای `Select`+`SelectTrigger`+`map(SelectItem)` دستی؛ استثناها: `OrderInfoCard` (برچسبِ صریح و `key`)، `DataTablePagination`/`SortSelect` (`side="top"`، مقدارِ ترکیبی) | ۲۴ |
+| `FormSelectField` | `OptionSelect` + `Controller` + `FormField` (پیش‌فرض `numeric`) | ۴ |
+| `FormPriceField` | مبلغِ ریالیِ RHF: `PriceInput` (`""` ↔ `null`)، مبلغ به حروف در جای راهنما، `icon`، `suffix` («ریال») | ۲ |
 | `FormSectionCard` | کارتِ بخشِ فرم با هدرِ آیکون‌دار (مشتری، تامین‌کننده، …) | ۱۱ |
 | `PasswordInput` | ورودیِ رمز (ltr) با دکمه‌ی نمایش/پنهان؛ `register` مستقیم رویش | ۱ |
 | `SectionCard` | کارتِ بخشِ صفحه‌ی سند (هدرِ ساده + `action`) | ۸ |
@@ -142,7 +155,7 @@ flowchart LR
 | --- | --- | --- |
 | `studio/PrintStudio.jsx` | پوسته‌ی تمام‌صفحه: پنلِ تنظیمات + پیش‌نمایشِ بزرگ‌نمایی‌پذیر + نوارِ چاپ؛ دسکتاپ دو ستون، موبایل سوییچِ «پیش‌نمایش/تنظیمات» (پیش‌نمایش همیشه رندر و اندازه‌گیری می‌شود). `previewNotice` به‌جای ورق و بی‌بزرگ‌نمایی (دریافت، خطا). پورتالِ زیرِ body، نه Dialog | برچسب، لیست قیمت‌ها، تصویرِ سندها |
 | `studio/PaperSettings.jsx` | بخشِ «کاغذ»: اندازه (A3/A4/A5/Letter/رولِ ۸۰ و ۵۸/دلخواه)، جهت، حاشیه؛ `paperKeys` کاغذهای مجاز را محدود می‌کند | لیست قیمت‌ها، تصویرِ سندها |
-| `studio/PrintSettingsSection.jsx`، `studio/SegmentedControl.jsx`، `studio/options.js` | بخشِ پنل با عنوان/آیکون، انتخابِ چندگزینه‌ایِ کوتاه، `optionsFromLabels` | همه‌ی پنل‌ها |
+| `studio/PrintSettingsSection.jsx`، `studio/SegmentedControl.jsx` | بخشِ پنل با عنوان/آیکون، انتخابِ چندگزینه‌ایِ کوتاه (گزینه‌ها با `optionsFromLabels` از `src/shared/lib/options.js`) | همه‌ی پنل‌ها |
 | `paper.js` | `pageGeometryOf(settings)` (اندازه، جهت، حاشیه، عرض/ارتفاعِ مفید؛ رول ارتفاعِ پیوسته دارد)، `flowPageCount`، `flowPrintOptions` (رول: ارتفاعِ صفحه = طولِ محتوا)، `fixedPagePrintOptions`، `formatPaperSize` | — |
 | `FlowSheet.jsx` | برگه‌ی جاری روی کاغذ؛ مرورگر صفحه‌ها را می‌شکند و خطِ‌چینِ «صفحه‌ی n» فقط روی صفحه‌نمایش است؛ `onMeasure(heightMm)` برای شمارِ صفحه و طولِ رول | لیست قیمت‌ها |
 | `LabelSheet.jsx`، `sheetPresets.js` | صفحه‌های صریحِ برچسب (شبکه‌ی ثابت در هر صفحه) | برچسبِ دانه |
@@ -164,7 +177,7 @@ flowchart LR
 | `barcode/` | `CameraScanButton` (۳)، `UnitBarcodeScanList` (۲)؛ داخلی: `CameraScanner`، `BarcodeScanField` | اسکنِ بارکد با دوربین |
 | `map/` | `LocationPickerMap` (۱)؛ داخلی: `MapCanvas`، `MapSearchBar`، `nominatim.js` | انتخابِ مکان روی نقشه (Leaflet + Nominatim) |
 | `products/` | `ProductPicker`، `DocumentItemsSection`، `useReturnedNewProduct` | انتخابِ کالا و برگشت از «کالای جدید» |
-| `skeletons/` | `WarehouseFormSkeleton` (۴)، `OrderFormSkeleton` (۲) | اسکلتونِ فرم‌ها |
+| `skeletons/` | `WarehouseFormSkeleton` (۴)، `OrderFormSkeleton` (۲)، `FormSkeleton.jsx` (۳: `FormPageSkeleton`، `FormCardSkeleton`، `FieldSkeleton`، `FieldPairSkeleton`، `FormActionsSkeleton`، هم‌شکلِ `FormSectionCard`/`FormField`) | اسکلتونِ فرم‌ها و صفحه‌های جزئیات |
 | `theme/` | `ThemeProvider`، `ThemeToggle`، `useTheme` | [09](09-ui-system-theming-rtl.md) |
 
 ## قراردادها و نکته‌ها

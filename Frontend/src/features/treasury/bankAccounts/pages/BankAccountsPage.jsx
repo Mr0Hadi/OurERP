@@ -22,6 +22,8 @@ import { useDeactivateBankAccountMutation } from "../services/mutations";
 import BankAccountFormDialog from "../components/BankAccountFormDialog";
 import BankTransferDialog from "../components/BankTransferDialog";
 import BankAccountStatement from "../components/BankAccountStatement";
+import StatGrid from "@/shared/components/data/StatGrid";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 const detailPath = (id) => routeWithId(ROUTES.TREASURY_ACCOUNTS_DETAIL, id);
 
@@ -42,16 +44,15 @@ function Totals({ data, includeInactive, onIncludeInactiveChange }) {
 
   return (
     <div className="space-y-2">
-      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border text-center">
-        {rows.map(([label, value]) => (
-          <div key={label} className="bg-card px-1.5 py-1.5">
-            <dt className="text-[10px] text-muted-foreground">{label}</dt>
-            <dd className={cn("text-xs font-semibold tabular-nums", Number(value) < 0 && toneText("danger"))}>
-              {signed(value)}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      <StatGrid
+        size="sm"
+        className="grid-cols-3 text-center"
+        items={rows.map(([label, value]) => ({
+          label,
+          value: signed(value),
+          tone: Number(value) < 0 ? "danger" : undefined,
+        }))}
+      />
       {unassigned !== 0 && (
         <p className="text-[11px] leading-5 text-muted-foreground">
           {signed(unassigned)} ریال دریافت و پرداخت بی‌حساب (ثبت‌های قبل از تعریفِ حساب‌ها) در هیچ مانده‌ای نیست.
@@ -156,20 +157,23 @@ export default function BankAccountsPage() {
         {query.isError ? (
           <QueryErrorState error={query.error} onRetry={() => query.refetch()} />
         ) : accountMissing ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <Wallet className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">این حساب پیدا نشد یا غیرفعال شده است.</p>
-            <div className="flex gap-2">
-              {!includeInactive && (
-                <Button variant="outline" size="sm" onClick={() => setIncludeInactive(true)}>
-                  نمایشِ غیرفعال‌ها
+          <EmptyState
+            fill
+            icon={Wallet}
+            title="این حساب پیدا نشد یا غیرفعال شده است."
+            action={
+              <>
+                {!includeInactive && (
+                  <Button variant="outline" size="sm" onClick={() => setIncludeInactive(true)}>
+                    نمایشِ غیرفعال‌ها
+                  </Button>
+                )}
+                <Button asChild variant="outline" size="sm">
+                  <Link to={ROUTES.TREASURY_ACCOUNTS}>بازگشت به فهرست</Link>
                 </Button>
-              )}
-              <Button asChild variant="outline" size="sm">
-                <Link to={ROUTES.TREASURY_ACCOUNTS}>بازگشت به فهرست</Link>
-              </Button>
-            </div>
-          </div>
+              </>
+            }
+          />
         ) : account ? (
           <BankAccountStatement
             key={account.id}
@@ -180,20 +184,20 @@ export default function BankAccountsPage() {
             onTransfer={() => setTransferOpen(true)}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <Wallet className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">یک صندوق یا حساب را از فهرست انتخاب کنید</p>
-            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-              مانده از مانده‌ی اول دوره و همه‌ی دریافت‌ها، پرداخت‌ها و انتقال‌ها حساب می‌شود. برای اینکه پولی در مانده بیاید،
-              هنگامِ ثبتِ دریافت یا پرداخت حسابش را انتخاب کنید.
-            </p>
-            {canManage && activeAccounts.length > 1 && (
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTransferOpen(true)}>
-                <ArrowLeftRight className="size-4" />
-                انتقال بین حساب‌ها
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            fill
+            icon={Wallet}
+            title="یک صندوق یا حساب را از فهرست انتخاب کنید"
+            description="مانده از مانده‌ی اول دوره و همه‌ی دریافت‌ها، پرداخت‌ها و انتقال‌ها حساب می‌شود. برای اینکه پولی در مانده بیاید، هنگامِ ثبتِ دریافت یا پرداخت حسابش را انتخاب کنید."
+            action={
+              canManage && activeAccounts.length > 1 && (
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setTransferOpen(true)}>
+                  <ArrowLeftRight className="size-4" />
+                  انتقال بین حساب‌ها
+                </Button>
+              )
+            }
+          />
         )}
       </main>
 

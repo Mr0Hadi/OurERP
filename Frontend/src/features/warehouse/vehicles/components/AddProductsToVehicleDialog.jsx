@@ -2,13 +2,11 @@ import { useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Check, Search } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -20,6 +18,7 @@ import { cn } from "@/shared/lib/utils";
 import { fetchProducts } from "@/features/warehouse/products/services/api-v1";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 import { useAddProductsToVehicleMutation } from "../services/mutations";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const SEARCH_TAKE = 30;
 
@@ -123,17 +122,16 @@ function AddProductsBody({ vehicle, onClose }) {
         )}
       </div>
 
-      <DialogFooter className="gap-2 sm:items-center">
-        <span className="me-auto text-xs text-muted-foreground">
-          {picked.size > 0 ? `${formatNumber(picked.size)} کالا انتخاب شده` : "کالایی انتخاب نشده"}
-        </span>
-        <Button type="button" variant="outline" onClick={onClose} disabled={addMutation.isPending}>
-          انصراف
-        </Button>
-        <Button type="button" onClick={handleSubmit} disabled={picked.size === 0 || addMutation.isPending}>
-          {addMutation.isPending ? "در حال افزودن..." : "افزودن"}
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onClose}
+        onSubmit={handleSubmit}
+        isPending={addMutation.isPending}
+        disabled={picked.size === 0}
+        pendingLabel="در حال افزودن..."
+        submitLabel="افزودن"
+      >
+        {picked.size > 0 ? `${formatNumber(picked.size)} کالا انتخاب شده` : "کالایی انتخاب نشده"}
+      </DialogActions>
     </>
   );
 }

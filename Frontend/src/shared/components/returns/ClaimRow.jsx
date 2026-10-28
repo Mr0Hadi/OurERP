@@ -1,13 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
 /**
  * یک ردیف ادعا: چه مشکلی، چند تا، و توضیح.
@@ -28,26 +22,14 @@ export default function ClaimRow({
       {/* موبایل: شبکه‌ی ۶ستونه — مشکل و تعداد در یک سطر، قیمت در سطرِ خودش،
           توضیح و حذف در سطرِ آخر؛ از sm به بالا همه در یک سطر. */}
       <div className="grid grid-cols-6 gap-1.5 sm:flex sm:items-center">
-        {/* problem یک enum عددی است ولی Radix همیشه رشته می‌دهد و
-            می‌گیرد — پس در همین مرز تبدیل می‌شود. */}
-        <Select
-          value={claim.problem == null ? "" : String(claim.problem)}
-          onValueChange={(v) => onUpdate(claim.id, "problem", Number(v))}
-        >
-          <SelectTrigger
-            aria-label="نوع مشکل"
-            className="col-span-4 h-8 w-full text-xs sm:w-52 shrink-0"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {problemOptions.map(([value, label]) => (
-              <SelectItem key={value} value={String(value)}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <OptionSelect
+          value={claim.problem}
+          onChange={(problem) => onUpdate(claim.id, "problem", problem)}
+          numeric
+          aria-label="نوع مشکل"
+          className="col-span-4 h-8 w-full text-xs sm:w-52 shrink-0"
+          options={problemOptions.map(([value, label]) => ({ value, label }))}
+        />
 
         <Input
           type="number"

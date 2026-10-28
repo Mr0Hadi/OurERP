@@ -11,6 +11,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { formatRial } from "@/shared/lib/numberFormat";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
  * مشتریِ پیش‌فاکتور برای صندوقدار: تماس، مانده‌ی حساب و سقفِ اعتبار — تا بداند نسیه بدهد یا نه و چقدر
@@ -54,7 +55,6 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
   const creditLeft = creditLimit > 0 ? creditLimit - Math.max(0, balance) - (Number(saleTotal) || 0) : null;
   const place = [customer.province, customer.city].filter(Boolean).join("، ");
   // ستونِ کناری باریک است: ردیفِ «برچسب / مقدار».
-  const itemClass = "flex items-center justify-between gap-3 py-2";
 
   return (
     <SectionCard title={customerName} description="مشتری" action={action}>
@@ -73,28 +73,21 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
         )}
       </div>
 
-      <dl className="divide-y rounded-lg bg-muted/50 px-3 text-sm">
-        <div className={itemClass}>
-          <dt className="text-xs text-muted-foreground">مانده‌ی حساب</dt>
-          <dd>
-            <LedgerBalanceBadge balance={balance} />
-          </dd>
-        </div>
-        <div className={itemClass}>
-          <dt className="text-xs text-muted-foreground">سقفِ اعتبار</dt>
-          <dd className="font-medium tabular-nums">{creditLimit > 0 ? formatRial(creditLimit) : "تعریف نشده"}</dd>
-        </div>
-        <div className={itemClass}>
-          <dt className="text-xs text-muted-foreground">اعتبارِ مانده پس از فروش</dt>
-          <dd
-            className={
-              creditLeft == null ? "text-muted-foreground" : creditLeft < 0 ? "font-medium text-destructive" : "font-medium"
-            }
-          >
-            {creditLeft == null ? "—" : formatRial(creditLeft)}
-          </dd>
-        </div>
-      </dl>
+      <InfoList className="space-y-0 divide-y rounded-lg bg-muted/50 px-3 text-sm [&>div]:items-center [&>div]:py-2 [&_dt]:text-xs">
+        <InfoRow label="مانده‌ی حساب" value={<LedgerBalanceBadge balance={balance} />} />
+        <InfoRow
+          label="سقفِ اعتبار"
+          value={creditLimit > 0 ? formatRial(creditLimit) : "تعریف نشده"}
+          valueClassName="font-medium"
+        />
+        <InfoRow
+          label="اعتبارِ مانده پس از فروش"
+          value={creditLeft == null ? "—" : formatRial(creditLeft)}
+          valueClassName={
+            creditLeft == null ? "text-muted-foreground" : creditLeft < 0 ? "font-medium text-destructive" : "font-medium"
+          }
+        />
+      </InfoList>
 
       {creditLeft != null && creditLeft < 0 && (
         <Notice tone="caution">اگر این فروش نسیه بماند، از سقفِ اعتبارِ مشتری بیشتر می‌شود؛ بخشی را نقد بگیرید.</Notice>

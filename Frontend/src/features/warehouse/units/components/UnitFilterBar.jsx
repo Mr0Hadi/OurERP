@@ -15,11 +15,10 @@ import { useCustomersOptionsQuery } from "@/features/customers/services/queries"
 import { UNIT_SEGMENTS } from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { optionsFromLabels } from "@/shared/lib/options";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const CUSTODY_OPTIONS = Object.entries(UNIT_CUSTODY_REASON_LABELS).map(([value, label]) => ({
-  value: Number(value),
-  label,
-}));
+const CUSTODY_OPTIONS = optionsFromLabels(UNIT_CUSTODY_REASON_LABELS, { numeric: true });
 
 function Field({ label, children, className = "" }) {
   return (
@@ -46,7 +45,6 @@ export default function UnitFilterBar({ store, search, products }) {
   const customerOptions = useCustomersOptionsQuery({ enabled: showMore || Boolean(store.customerId) });
   const suppliers = supplierOptions.suppliers;
   const customers = customerOptions.customers;
-  const isLoadingParties = supplierOptions.isLoading || customerOptions.isLoading;
   const isQuarantine = store.segment === UNIT_SEGMENTS.QUARANTINE;
 
   const advancedActive = [
@@ -125,24 +123,10 @@ export default function UnitFilterBar({ store, search, products }) {
         className="grid gap-3 rounded-xl border border-border bg-muted/30 p-3 @lg/filters:grid-cols-2 @4xl/filters:grid-cols-4"
       >
         <Field label="تامین‌کننده">
-          <EntitySelect
-            label="تامین‌کننده"
-            placeholder="همه"
-            items={suppliers}
-            isLoading={isLoadingParties}
-            value={store.supplierId}
-            onSelect={(id) => store.setSupplierId(id)}
-          />
+          <PartySelect side="supplier" placeholder="همه" value={store.supplierId} onSelect={store.setSupplierId} />
         </Field>
         <Field label="مشتری">
-          <EntitySelect
-            label="مشتری"
-            placeholder="همه"
-            items={customers}
-            isLoading={isLoadingParties}
-            value={store.customerId}
-            onSelect={(id) => store.setCustomerId(id)}
-          />
+          <PartySelect side="customer" placeholder="همه" value={store.customerId} onSelect={store.setCustomerId} />
         </Field>
         <Field label="تاریخ ورود به انبار">
           <div className="grid grid-cols-2 gap-2">

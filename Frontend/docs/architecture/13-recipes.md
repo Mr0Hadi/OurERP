@@ -77,7 +77,7 @@
 
 1. `src/shared/domain/enums/<x>.js` (یا `domain/`ِ فیچر اگر فقط همان‌جا لازم است) — `<X>Enum` با **همان اعدادِ بکند** + `<X>_LABELS` + `<X>_TONES` (معناها از `src/shared/lib/tone.js`).
 2. اگر badgeِ اختصاصی می‌خواهید: `src/shared/components/status/<X>Badge.jsx` روی `StatusBadge`؛ کپی از `SaleStatusBadge.jsx`. آیکن: `src/shared/components/status/statusIcons.js`.
-3. فیلترِ لیست: گزینه‌ها با `toFilterOptions` (`src/shared/components/filters/filterUtils.js`).
+3. فیلترِ لیست و کشویی‌ها: گزینه‌ها با `optionsFromLabels(LABELS, { numeric })` (`src/shared/lib/options.js`) برای `FilterSelect`/`OptionSelect`؛ گزینه‌ی پرتکرار را کنارِ enum بگذارید (`PRODUCT_UNIT_OPTIONS`، `REPORT_PERIOD_OPTIONS`).
 4. قواعدی که به وضعیت بستگی دارند: `domain/<x>Rules.js`ِ فیچر (مثل `saleRules.js`).
 
 ## ۷. فیلترِ تازه روی لیستِ موجود

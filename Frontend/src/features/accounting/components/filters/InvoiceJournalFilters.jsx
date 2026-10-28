@@ -3,15 +3,15 @@ import FilterMultiChoice from "@/shared/components/filters/FilterMultiChoice";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
-import PartyFilterSelect from "./PartyFilterSelect";
 import UserFilterSelect from "@/features/employees/components/UserFilterSelect";
-import { INVOICE_PAYMENT_STATE_LABELS, AccountingPartyTypeEnum, DocumentSideEnum } from "../../domain/accountingEnums";
+import { INVOICE_PAYMENT_STATE_LABELS, DocumentSideEnum } from "../../domain/accountingEnums";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 const PAYMENT_STATE_OPTIONS = [
   { value: "", label: "همه" },
-  ...Object.entries(INVOICE_PAYMENT_STATE_LABELS).map(([value, label]) => ({ value: Number(value), label })),
+  ...optionsFromLabels(INVOICE_PAYMENT_STATE_LABELS, { numeric: true }),
 ];
 
 /**
@@ -29,8 +29,7 @@ export default function InvoiceJournalFilters({ config, useStore }) {
   const setParty = state[`set${capitalize(config.partyIdKey)}`];
   const setUser = state[`set${capitalize(config.userIdKey)}`];
 
-  const partyType =
-    config.side === DocumentSideEnum.SALE ? AccountingPartyTypeEnum.CUSTOMER : AccountingPartyTypeEnum.SUPPLIER;
+  const partySide = config.side === DocumentSideEnum.SALE ? "customer" : "supplier";
 
   return (
     <div className="space-y-3">
@@ -51,7 +50,7 @@ export default function InvoiceJournalFilters({ config, useStore }) {
             <div className="sm:col-span-2">
               <FilterMultiChoice
                 label="وضعیتِ سند"
-                options={toFilterOptions(config.statusLabels)}
+                options={optionsFromLabels(config.statusLabels)}
                 value={state.statuses}
                 onChange={state.setStatuses}
                 emptyHint="همه‌ی صادرشده‌ها (بدونِ پیش‌فاکتور و لغوشده)"
@@ -68,13 +67,13 @@ export default function InvoiceJournalFilters({ config, useStore }) {
           />
         }
       >
-        <PartyFilterSelect partyType={partyType} value={state[config.partyIdKey]} onSelect={setParty} />
+        <PartySelect side={partySide} value={state[config.partyIdKey]} onSelect={setParty} />
         <UserFilterSelect label={config.userLabel} value={state[config.userIdKey]} onSelect={setUser} />
         <FilterSelect
           label="نوع پرداخت"
           value={state.paymentType}
           onChange={state.setPaymentType}
-          options={toFilterOptions(config.paymentTypeLabels)}
+          options={optionsFromLabels(config.paymentTypeLabels)}
           numeric
         />
       </FilterPanel>

@@ -4,16 +4,13 @@ import FormField from "@/shared/components/forms/FormField";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import UnitBarcodeScanList from "@/shared/components/barcode/UnitBarcodeScanList";
 import Notice from "@/shared/components/feedback/Notice";
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   UNIT_ACTION_REASON_LABELS,
@@ -21,6 +18,8 @@ import {
 } from "@/features/warehouse/units/domain/unitVocabulary";
 import { DEFECT_REASONS } from "../domain/saleCheck";
 import { useInStockUnitsQuery } from "../services/queries";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const KIND_OPTIONS = [
   { value: "defect", label: "معیوب", hint: "دانه را اسکن کنید؛ همان لحظه به قرنطینه می‌رود." },
@@ -105,24 +104,18 @@ export default function WarehouseIssueDialog({ open, onOpenChange, items, exclud
           />
 
           <FormField label="کالا" required error={showErrors && errors.product ? { message: errors.product } : undefined}>
-            <Select
-              value={String(productId)}
-              onValueChange={(value) => {
+            <OptionSelect
+              value={productId}
+              onChange={(value) => {
                 setProductId(value);
                 setBarcode("");
               }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="انتخاب کالا" />
-              </SelectTrigger>
-              <SelectContent>
-                {[...new Map(items.map((item) => [item.productId, item])).values()].map((item) => (
-                  <SelectItem key={item.productId} value={String(item.productId)}>
-                    {item.productName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="انتخاب کالا"
+              options={[...new Map(items.map((item) => [item.productId, item])).values()].map((item) => ({
+                value: item.productId,
+                label: item.productName,
+              }))}
+            />
           </FormField>
 
           {product && kind === "defect" && (
@@ -148,36 +141,33 @@ export default function WarehouseIssueDialog({ open, onOpenChange, items, exclud
               error={showErrors && errors.barcode ? { message: errors.barcode } : undefined}
               hint={units.isFetching ? "در حال دریافتِ دانه‌ها…" : candidates.length === 0 ? "دانه‌ی «در انبار»ی برای این کالا نیست." : undefined}
             >
-              <Select value={barcode} onValueChange={setBarcode} disabled={candidates.length === 0}>
-                <SelectTrigger className="w-full" dir="ltr">
-                  <SelectValue placeholder="انتخاب دانه" />
-                </SelectTrigger>
-                <SelectContent>
-                  {candidates.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.barcode} dir="ltr">
+              <OptionSelect
+                dir="ltr"
+                value={barcode}
+                onChange={setBarcode}
+                disabled={candidates.length === 0}
+                placeholder="انتخاب دانه"
+                options={candidates.map((unit) => ({
+                  value: unit.barcode,
+                  label: (
+                    <>
                       <span className="font-mono text-xs">{unit.barcode}</span>
                       {unit.binLocation && <span className="text-muted-foreground"> · {unit.binLocation}</span>}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </>
+                  ),
+                }))}
+              />
             </FormField>
           )}
 
           {kind === "defect" && (
             <FormField label="علت">
-              <Select value={String(reason)} onValueChange={(value) => setReason(Number(value))}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEFECT_REASONS.map((value) => (
-                    <SelectItem key={value} value={String(value)}>
-                      {UNIT_ACTION_REASON_LABELS[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OptionSelect
+                value={reason}
+                onChange={setReason}
+                numeric
+                options={DEFECT_REASONS.map((value) => ({ value, label: UNIT_ACTION_REASON_LABELS[value] }))}
+              />
             </FormField>
           )}
 
@@ -197,14 +187,7 @@ export default function WarehouseIssueDialog({ open, onOpenChange, items, exclud
           </FormField>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            انصراف
-          </Button>
-          <Button type="button" onClick={submit}>
-            افزودن به گزارش
-          </Button>
-        </DialogFooter>
+        <DialogActions onCancel={() => onOpenChange(false)} onSubmit={submit} submitLabel="افزودن به گزارش" />
       </DialogContent>
     </Dialog>
   );

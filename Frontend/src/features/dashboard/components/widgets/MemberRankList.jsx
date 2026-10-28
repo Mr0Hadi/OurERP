@@ -3,6 +3,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { formatCompact, formatNumber, formatPercent } from "@/shared/components/charts/chartUtils";
 import { cn } from "@/shared/lib/utils";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 /**
  * سهمِ هر عضو از جمعِ تیم/واحد — نسخه‌ی فشرده‌ی `ActivityRankList`ِ
@@ -37,12 +38,7 @@ export default function MemberRankList({
 
   if (!members.length) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-8 text-center">
-        <Inbox className="size-5 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          در این بازه هیچ عضوی سندی ثبت نکرده است.
-        </p>
-      </div>
+      <EmptyState size="sm" icon={Inbox} title="در این بازه هیچ عضوی سندی ثبت نکرده است." />
     );
   }
 

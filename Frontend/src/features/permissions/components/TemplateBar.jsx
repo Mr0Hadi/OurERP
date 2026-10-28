@@ -1,18 +1,12 @@
 import { ArrowLeftRight, CircleCheck, ListPlus, Sparkles } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
 import { useDepartmentOptionsQuery } from "@/features/organization/departments/services/queries";
 
 import { difference, sameSet } from "./permissionSets";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
 /**
  * نوارِ یک‌خطیِ الگو بالای ویرایشگر: الگوی کدام واحد، فاصله‌ی کاربر با آن،
@@ -94,21 +88,15 @@ export default function TemplateBar({
         <span className="text-xs text-muted-foreground">الگوی واحد</span>
 
         {onTemplateDepartmentChange ? (
-          <Select
-            value={templateDepartmentId == null ? "" : String(templateDepartmentId)}
-            onValueChange={(v) => onTemplateDepartmentChange(Number(v))}
-          >
-            <SelectTrigger size="sm" className="min-w-28 bg-background">
-              <SelectValue placeholder="انتخاب واحد" />
-            </SelectTrigger>
-            <SelectContent>
-              {departments.map((d) => (
-                <SelectItem key={d.id} value={String(d.id)}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <OptionSelect
+            size="sm"
+            value={templateDepartmentId}
+            onChange={onTemplateDepartmentChange}
+            numeric
+            placeholder="انتخاب واحد"
+            className="min-w-28 bg-background"
+            options={departments.map((d) => ({ value: d.id, label: d.name }))}
+          />
         ) : (
           <span className="text-sm font-medium">
             {template?.departmentName ?? "—"}

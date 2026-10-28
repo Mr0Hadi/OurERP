@@ -1,11 +1,9 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -20,16 +18,8 @@ import { EMPTY_INSTALLMENT_PAYMENT, installmentPayableToday, unpaidInstallments 
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatDigits, formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
-import { cn } from "@/shared/lib/utils";
-
-function Row({ label, children, className }) {
-  return (
-    <div className={cn("flex items-baseline justify-between gap-3", className)}>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-end font-medium tabular-nums">{children}</dd>
-    </div>
-  );
-}
+import DialogActions from "@/shared/components/feedback/DialogActions";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
  * ردیف‌های مبلغ: پرداختِ قسط = قسط + جریمه‌ی امروز (`penaltyDue`)؛ تسویه = مانده + جریمه‌ی اقساطِ
@@ -94,37 +84,34 @@ function PaymentBody({ target, pay, settle, onClose, onDone }) {
         </DialogDescription>
       </DialogHeader>
 
-      <dl className="space-y-1.5 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+      <InfoList variant="boxed" className="text-sm">
         {(target.customerName || target.invoiceNumber) && (
-          <Row label="مشتری / فاکتور">
+          <InfoRow valueClassName="font-medium" label="مشتری / فاکتور">
             {[target.customerName, target.invoiceNumber].filter(Boolean).join(" · ")}
-          </Row>
+          </InfoRow>
         )}
         {!isSettle && (
           <>
-            <Row label="سررسید">{gregorianToPersian(display.dueDate)}</Row>
-            <Row label="وضعیت">
+            <InfoRow valueClassName="font-medium" label="سررسید">{gregorianToPersian(display.dueDate)}</InfoRow>
+            <InfoRow valueClassName="font-medium" label="وضعیت">
               <InstallmentStatusBadge status={display.status} size="sm" />
-            </Row>
+            </InfoRow>
           </>
         )}
         {!amounts ? (
           planQuery.isError ? null : <Skeleton className="h-12 w-full" />
         ) : (
           <>
-            <Row label={amounts.base[0]}>{formatNumber(amounts.base[1])}</Row>
+            <InfoRow valueClassName="font-medium" label={amounts.base[0]}>{formatNumber(amounts.base[1])}</InfoRow>
             {amounts.penalty > 0 && (
-              <Row label={amounts.days > 0 ? `جریمه‌ی دیرکرد (${formatNumber(amounts.days)} روز)` : "جریمه‌ی دیرکرد"} className={toneText("danger")}>
+              <InfoRow valueClassName="font-medium" label={amounts.days > 0 ? `جریمه‌ی دیرکرد (${formatNumber(amounts.days)} روز)` : "جریمه‌ی دیرکرد"} className={toneText("danger")}>
                 {formatNumber(amounts.penalty)}
-              </Row>
+              </InfoRow>
             )}
-            <div className="flex items-baseline justify-between gap-3 border-t border-border pt-1.5">
-              <dt className="font-medium">{isSettle ? "حداکثرِ مبلغِ دریافت" : "مبلغ دریافت"}</dt>
-              <dd className="text-base font-bold tabular-nums">{formatRial(amounts.total)}</dd>
-            </div>
+            <InfoRow total label={isSettle ? "حداکثرِ مبلغِ دریافت" : "مبلغ دریافت"} value={formatRial(amounts.total)} />
           </>
         )}
-      </dl>
+      </InfoList>
 
       {planQuery.isError && (
         <QueryErrorState error={planQuery.error} onRetry={() => planQuery.refetch()} />
@@ -143,14 +130,13 @@ function PaymentBody({ target, pay, settle, onClose, onDone }) {
         />
       </fieldset>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" onClick={submit} disabled={mutation.isPending || !ready}>
-          {mutation.isPending ? "در حال ثبت..." : isSettle ? "ثبتِ تسویه" : "ثبتِ دریافت"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onClose}
+        onSubmit={submit}
+        isPending={mutation.isPending}
+        disabled={!ready}
+        submitLabel={isSettle ? "ثبتِ تسویه" : "ثبتِ دریافت"}
+      />
     </>
   );
 }

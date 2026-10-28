@@ -41,6 +41,7 @@ import {
 } from "../services/mutations";
 import VehicleFormDialog from "../components/VehicleFormDialog";
 import AddProductsToVehicleDialog from "../components/AddProductsToVehicleDialog";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 /** شناسه‌ی مسیرِ «همه‌ی خودروها»: کالاهایی که به هیچ خودرویی وصل نیستند. */
 const ALL_ID = "all";
@@ -384,13 +385,16 @@ export default function VehiclesPage() {
 
       <main className={id ? "flex min-h-[calc(100svh-7rem)] min-w-0 flex-col lg:min-h-0" : "hidden min-h-0 min-w-0 lg:flex"}>
         {vehicleMissing ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <Car className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">این خودرو پیدا نشد یا حذف شده است.</p>
-            <Button asChild variant="outline" size="sm">
-              <Link to={ROUTES.WAREHOUSE_VEHICLES}>بازگشت به فهرست</Link>
-            </Button>
-          </div>
+          <EmptyState
+            fill
+            icon={Car}
+            title="این خودرو پیدا نشد یا حذف شده است."
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link to={ROUTES.WAREHOUSE_VEHICLES}>بازگشت به فهرست</Link>
+              </Button>
+            }
+          />
         ) : id ? (
           <VehicleDetail
             key={id}
@@ -402,14 +406,12 @@ export default function VehiclesPage() {
             onAddProducts={() => setIsAddOpen(true)}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <Car className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">یک خودرو را از فهرست انتخاب کنید</p>
-            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-              هر کالا می‌تواند برای چند خودرو باشد. کالایی که خودرویی ندارد زیرِ
-              «همه‌ی خودروها» می‌آید و در جست‌وجوی هر خودرویی دیده می‌شود.
-            </p>
-          </div>
+          <EmptyState
+            fill
+            icon={Car}
+            title="یک خودرو را از فهرست انتخاب کنید"
+            description="هر کالا می‌تواند برای چند خودرو باشد. کالایی که خودرویی ندارد زیرِ «همه‌ی خودروها» می‌آید و در جست‌وجوی هر خودرویی دیده می‌شود."
+          />
         )}
       </main>
 

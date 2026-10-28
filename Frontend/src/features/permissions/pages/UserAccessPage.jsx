@@ -3,13 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowRight, KeyRound, UserPen } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
@@ -27,6 +20,8 @@ import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDia
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 const detailPath = (id) => routeWithId(ROUTES.ACCESS_USERS_DETAIL, id);
 const fullNameOf = (u) =>
@@ -55,22 +50,14 @@ function EmployeeList({ selectedId, className }) {
       onSearchChange={setSearch}
       searchPlaceholder="جست‌وجوی نام کارمند..."
       filters={
-        <Select
-          value={departmentId === "" ? "all" : String(departmentId)}
-          onValueChange={(v) => setDepartmentId(v === "all" ? "" : Number(v))}
-        >
-          <SelectTrigger size="sm" className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">همه‌ی واحدها</SelectItem>
-            {departments.map((d) => (
-              <SelectItem key={d.id} value={String(d.id)}>
-                {d.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <OptionSelect
+          size="sm"
+          value={departmentId}
+          onChange={setDepartmentId}
+          numeric
+          emptyLabel="همه‌ی واحدها"
+          options={departments.map((d) => ({ value: d.id, label: d.name }))}
+        />
       }
       isLoading={isLoading}
       selectedId={selectedId}
@@ -183,14 +170,12 @@ export default function UserAccessPage() {
         {id ? (
           <UserAccessDetail key={id} userId={id} onDirtyChange={setDirty} />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <KeyRound className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">یک کارمند را از فهرست انتخاب کنید</p>
-            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-              دسترسی‌ها مالِ هر شخص‌اند. الگوی واحدِ کارمند کنارِ دسترسی‌هایش
-              نشان داده می‌شود تا با یک کلیک اعمالش کنید.
-            </p>
-          </div>
+          <EmptyState
+            fill
+            icon={KeyRound}
+            title="یک کارمند را از فهرست انتخاب کنید"
+            description="دسترسی‌ها مالِ هر شخص‌اند. الگوی واحدِ کارمند کنارِ دسترسی‌هایش نشان داده می‌شود تا با یک کلیک اعمالش کنید."
+          />
         )}
       </main>
 

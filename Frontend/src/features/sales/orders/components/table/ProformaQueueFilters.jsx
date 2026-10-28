@@ -1,18 +1,14 @@
 import { useCallback } from "react";
 
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { SALE_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(SALE_PAYMENT_TYPE_LABELS);
-
-const renderCustomerPhone = (customer) =>
-  customer.phoneNumber ? <span className="text-xs text-muted-foreground">{customer.phoneNumber}</span> : null;
+const PAYMENT_TYPE_OPTIONS = optionsFromLabels(SALE_PAYMENT_TYPE_LABELS);
 
 /**
  * فیلترهای صفِ پیش‌فاکتور (انبار، صندوق): جست‌وجوی نامِ مشتری (در موبایل همیشه پیدا)، انتخابِ دقیقِ
@@ -22,7 +18,6 @@ const renderCustomerPhone = (customer) =>
  */
 export default function ProformaQueueFilters({ useStore }) {
   const store = useStore();
-  const { customers, isLoading } = useCustomersOptionsQuery();
   const onSearch = useCallback((event) => store.setCustomerName(event.target.value), [store]);
 
   return (
@@ -38,16 +33,7 @@ export default function ProformaQueueFilters({ useStore }) {
         </>
       }
     >
-      <EntitySelect
-        label="مشتری"
-        placeholder="انتخاب مشتری..."
-        emptyText="مشتری‌ای یافت نشد"
-        items={customers}
-        value={store.customerId}
-        onSelect={store.setCustomerId}
-        isLoading={isLoading}
-        renderMeta={renderCustomerPhone}
-      />
+      <PartySelect side="customer" value={store.customerId} onSelect={store.setCustomerId} />
       <FilterSelect
         label="شیوه‌ی پرداخت"
         value={store.paymentType}

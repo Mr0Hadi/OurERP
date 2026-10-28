@@ -1,11 +1,9 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -24,6 +22,7 @@ import {
   emptyBankAccountDraft,
   toApiBankAccount,
 } from "../domain/bankAccountForm";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const KIND_OPTIONS = Object.values(BankAccountKindEnum).map((value) => ({
   value,
@@ -162,14 +161,7 @@ function FormBody({ account, onClose, onSaved }) {
         </FormField>
       </fieldset>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-          انصراف
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "در حال ثبت..." : isEdit ? "ذخیره" : "افزودن"}
-        </Button>
-      </DialogFooter>
+      <DialogActions onCancel={onClose} isPending={isPending} submitLabel={isEdit ? "ذخیره" : "افزودن"} />
     </form>
   );
 }

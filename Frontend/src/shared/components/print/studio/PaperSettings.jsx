@@ -2,13 +2,7 @@ import { useId } from "react";
 import { FileText } from "lucide-react";
 
 import { Input } from "@/shared/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 import {
   MARGIN_PRESETS,
   MARGIN_PRESET_LABELS,
@@ -20,7 +14,7 @@ import {
 } from "../paper";
 import PrintSettingsSection, { PrintSettingLabel } from "./PrintSettingsSection";
 import SegmentedControl from "./SegmentedControl";
-import { optionsFromLabels } from "./options";
+import { optionsFromLabels } from "@/shared/lib/options";
 
 const ORIENTATION_OPTIONS = optionsFromLabels(ORIENTATION_LABELS);
 const MARGIN_OPTIONS = optionsFromLabels(MARGIN_PRESET_LABELS);
@@ -43,22 +37,27 @@ export default function PaperSettings({ settings, geometry, onChange, paperKeys,
     <PrintSettingsSection title="کاغذ" icon={FileText}>
       <div className="space-y-1.5">
         <PrintSettingLabel htmlFor={`${id}-paper`}>اندازه‌ی کاغذ</PrintSettingLabel>
-        <Select value={geometry.paperKey} onValueChange={(paperKey) => onChange({ paperKey })}>
-          <SelectTrigger id={`${id}-paper`} dir="rtl" className="h-10 w-full sm:h-9">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent dir="rtl">
-            {papers.map((paper) => (
-              <SelectItem key={paper.key} value={paper.key}>
-                <span>{paper.label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {paper.hint ?? formatPaperSize(paper.widthMm, paper.heightMm)}
-                </span>
-              </SelectItem>
-            ))}
-            {allowCustom && <SelectItem value={PAPER_KEYS.CUSTOM}>اندازه‌ی دلخواه…</SelectItem>}
-          </SelectContent>
-        </Select>
+        <OptionSelect
+          id={`${id}-paper`}
+          dir="rtl"
+          value={geometry.paperKey}
+          onChange={(paperKey) => onChange({ paperKey })}
+          className="h-10 w-full sm:h-9"
+          options={[
+            ...papers.map((paper) => ({
+              value: paper.key,
+              label: (
+                <>
+                  <span>{paper.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {paper.hint ?? formatPaperSize(paper.widthMm, paper.heightMm)}
+                  </span>
+                </>
+              ),
+            })),
+            ...(allowCustom ? [{ value: PAPER_KEYS.CUSTOM, label: "اندازه‌ی دلخواه…" }] : []),
+          ]}
+        />
       </div>
 
       {isCustom && (

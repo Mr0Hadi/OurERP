@@ -2,16 +2,15 @@ import FilterMultiChoice from "@/shared/components/filters/FilterMultiChoice";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { TAX_CATEGORY_LABELS } from "@/shared/domain/enums/taxCategory";
-import CategoryFilterSelect from "./CategoryFilterSelect";
-import PartyFilterSelect from "./PartyFilterSelect";
-import { AccountingPartyTypeEnum } from "../../domain/accountingEnums";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 import { useSaleLineFilterStore } from "../../store/accountingFilterStores";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
-const TAX_OPTIONS = toFilterOptions(TAX_CATEGORY_LABELS);
+const STATUS_OPTIONS = optionsFromLabels(SALE_STATUS_LABELS);
+const TAX_OPTIONS = optionsFromLabels(TAX_CATEGORY_LABELS);
 
 /** فیلترهای ریزِ اقلامِ فروش (`GetSaleLineJournal`). */
 export default function SaleLineFilters() {
@@ -41,12 +40,12 @@ export default function SaleLineFilters() {
         />
       }
     >
-      <PartyFilterSelect
-        partyType={AccountingPartyTypeEnum.CUSTOMER}
+      <PartySelect
+        side="customer"
         value={state.customerId}
         onSelect={state.setCustomerId}
       />
-      <CategoryFilterSelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
+      <CategorySelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
       <FilterSelect label="مالیات" value={state.taxCategory} onChange={state.setTaxCategory} options={TAX_OPTIONS} numeric />
     </FilterPanel>
   );

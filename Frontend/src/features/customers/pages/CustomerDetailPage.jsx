@@ -7,20 +7,10 @@ import {
   useDeleteCustomerMutation,
 } from "../services/mutations";
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import PartyDetailLoading from "@/features/partyAccount/components/PartyDetailLoading";
 import { useCustomerForm } from "../hooks/useCustomerForm";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
-import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
+import PartyFinanceForm from "@/features/partyAccount/components/PartyFinanceForm";
 import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -34,8 +24,12 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 import PartyOnAccountBar from "@/features/treasury/partyPayments/components/PartyOnAccountBar";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 function CustomerDetailForm({ customerData }) {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   const navigate = useNavigate();
   const { can } = usePermission();
   const canViewStatement = can("PartyStatementView");
@@ -103,8 +97,8 @@ function CustomerDetailForm({ customerData }) {
               errors={errors}
               imageUpload={imageUpload}
             />
-            <CustomerFinanceForm
-              register={register}
+            <PartyFinanceForm
+              side="customer"
               errors={errors}
               balanceType={balanceType}
               control={control}
@@ -172,29 +166,16 @@ function CustomerDetailForm({ customerData }) {
         </div>
       )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>حذف مشتری</AlertDialogTitle>
-            <AlertDialogDescription>
-              آیا از حذف {customerData.firstName} {customerData.lastName}{" "}
-              اطمینان دارید؟ این عملیات غیرقابل بازگشت است.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteMutation.isPending ? "در حال حذف..." : "حذف"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="حذف مشتری"
+        description={`آیا از حذف ${customerData.firstName} ${customerData.lastName} اطمینان دارید؟ این عملیات غیرقابل بازگشت است.`}
+        confirmLabel="حذف"
+        pendingLabel="در حال حذف..."
+        isPending={deleteMutation.isPending}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

@@ -20,6 +20,9 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function ProductDetailForm({ productData }) {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 

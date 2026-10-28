@@ -3,26 +3,16 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { usePurchaseFilterStore } from "../../store/purchaseFilterStore";
 import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 import { DOCUMENT_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const STATUS_OPTIONS = toFilterOptions(PURCHASE_STATUS_LABELS);
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(DOCUMENT_PAYMENT_TYPE_LABELS);
+const STATUS_OPTIONS = optionsFromLabels(PURCHASE_STATUS_LABELS);
+const PAYMENT_TYPE_OPTIONS = optionsFromLabels(DOCUMENT_PAYMENT_TYPE_LABELS);
 
-const renderSupplierPhone = (supplier) =>
-  supplier.phone ? (
-    <span className="text-xs text-muted-foreground">{supplier.phone}</span>
-  ) : null;
-
-/**
- * props:
- *  - suppliers: آرایه { id, name } از API
- *  - isSuppliersLoading: boolean
- */
-const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
+const PurchaseFilters = () => {
   const {
     invoiceNumber,
     supplierId,
@@ -70,16 +60,7 @@ const PurchaseFilters = ({ suppliers = [], isSuppliersLoading = false }) => {
         />
       }
     >
-      <EntitySelect
-        label="تامین‌کننده"
-        placeholder="انتخاب تامین‌کننده..."
-        emptyText="تامین‌کننده‌ای یافت نشد"
-        items={suppliers}
-        value={supplierId}
-        onSelect={setSupplierId}
-        isLoading={isSuppliersLoading}
-        renderMeta={renderSupplierPhone}
-      />
+      <PartySelect side="supplier" value={supplierId} onSelect={setSupplierId} />
 
       <FilterSelect
         label="وضعیت"

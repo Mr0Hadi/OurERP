@@ -10,6 +10,7 @@ import { PosStatus, normalizeRrn } from "@/shared/domain/pos/posSession";
 import LazyBankLogo from "@/shared/components/payments/LazyBankLogo";
 import { getIranianBankByCardNumber } from "@/shared/lib/iranian-bank";
 import { formatRial } from "@/shared/lib/numberFormat";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
  * نمای نتیجه‌های پنلِ کارتخوان: تلاشِ ناموفق (رد/لغو/خطا)، ثبت‌شده، ثبت‌نشده با پولِ
@@ -191,13 +192,10 @@ function ReceiptDetails({ result }) {
   if (rows.length === 0) return null;
 
   return (
-    <dl className="divide-y divide-border rounded-lg border border-border text-xs">
+    <InfoList variant="divided" className="text-xs">
       {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
-          <dt className="text-muted-foreground">{row.label}</dt>
-          <dd className="font-medium tabular-nums">{row.value}</dd>
-        </div>
+        <InfoRow key={row.label} label={row.label} value={row.value} valueClassName="font-medium" />
       ))}
-    </dl>
+    </InfoList>
   );
 }

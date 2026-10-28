@@ -4,16 +4,10 @@ import { RotateCcw, ScanLine } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Spinner } from "@/shared/components/ui/spinner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
 import { usePosTerminalsQuery } from "@/shared/services/pos/queries";
 import { formatRial } from "@/shared/lib/numberFormat";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
 const TERMINAL_KEY = "pos.terminalId";
 
@@ -58,20 +52,16 @@ export default function PosReadyForm({ retry, amount, blockedReason, hint, prepa
     <div className="space-y-3">
       <div className="space-y-1.5">
         <Label className="text-xs">دستگاه کارتخوان</Label>
-        <Select value={terminal ? String(terminal.id) : ""} onValueChange={choose} disabled={isLoading || noTerminal}>
-          <SelectTrigger className="h-9! w-full" aria-label="دستگاه کارتخوان">
-            <SelectValue
-              placeholder={isLoading ? "در حال بارگذاری…" : noTerminal ? "دستگاهی تعریف نشده" : "دستگاه را انتخاب کنید"}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {items.map((terminal) => (
-              <SelectItem key={terminal.id} value={String(terminal.id)}>
-                {terminal.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <OptionSelect
+          value={terminal ? String(terminal.id) : ""}
+          onChange={choose}
+          isLoading={isLoading}
+          disabled={noTerminal}
+          placeholder={noTerminal ? "دستگاهی تعریف نشده" : "دستگاه را انتخاب کنید"}
+          aria-label="دستگاه کارتخوان"
+          className="h-9! w-full"
+          options={items.map((item) => ({ value: item.id, label: item.name }))}
+        />
       </div>
 
       <div className="rounded-lg bg-muted/40 px-3 py-2 text-center">

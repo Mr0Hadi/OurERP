@@ -10,7 +10,7 @@ import Notice from "@/shared/components/feedback/Notice";
 import InstallmentPlanTermsFields from "./InstallmentPlanTermsFields";
 import InstallmentPaymentFields from "./InstallmentPaymentFields";
 import InstallmentSchedule from "./InstallmentSchedule";
-import InstallmentSummary from "./InstallmentSummary";
+import StatGrid from "@/shared/components/data/StatGrid";
 import DownPaymentPosPanel from "./DownPaymentPosPanel";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { formatNumber } from "@/shared/lib/numberFormat";
@@ -90,7 +90,7 @@ export default function InstallmentPlanDraftCard({
 
       {preview ? (
         <div className="space-y-2">
-          <InstallmentSummary
+          <StatGrid className="@container/summary grid-cols-2 @md/summary:grid-cols-4"
             items={[
               { label: "جمع فاکتور (اصل)", value: preview.cashAmount },
               { label: "سود اقساط", value: preview.installmentChargeAmount },

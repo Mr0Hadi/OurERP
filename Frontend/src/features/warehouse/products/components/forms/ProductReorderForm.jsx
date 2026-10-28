@@ -13,14 +13,18 @@ import {
 } from "@/shared/components/ui/card";
 import FormField from "@/shared/components/forms/FormField";
 import FilterCollapse from "@/shared/components/filters/FilterCollapse";
-import SupplierSelect from "@/features/suppliers/components/SupplierSelect";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 const isBlank = (value) => value === "" || value == null;
 
-/** عددِ اختیاری روی `FormField`؛ خالی یعنی «تعیین نشده» (`null` در سرور). */
-function NumberField({ id, label, register, rules, errors, placeholder }) {
+/**
+ * عددِ اختیاری روی `FormField`؛ خالی یعنی «تعیین نشده» (`null` در سرور). خطای همان فیلد
+ * (`errors.x`) را می‌گیرد نه کلِ `errors`: RHF آن شیء را درجا عوض می‌کند و Compiler
+ * فرزندی را که فقط همان مرجع را گرفته دوباره رندر نمی‌کند.
+ */
+function NumberField({ id, label, register, rules, error, placeholder }) {
   return (
-    <FormField label={label} htmlFor={id} error={errors[id]}>
+    <FormField label={label} htmlFor={id} error={error}>
       <Input type="number" inputMode="numeric" id={id} min="0" placeholder={placeholder} {...register(id, rules)} />
     </FormField>
   );
@@ -52,7 +56,7 @@ export default function ProductReorderForm({ register, control, errors = {} }) {
             label="نقطه‌ی سفارش"
             placeholder="مثال: 10"
             register={register}
-            errors={errors}
+            error={errors.lowStockThreshold}
             rules={{ min: { value: 0, message: "نمی‌تواند منفی باشد" } }}
           />
           <NumberField
@@ -60,7 +64,7 @@ export default function ProductReorderForm({ register, control, errors = {} }) {
             label="خرید تا موجودیِ"
             placeholder="همان نقطه‌ی سفارش"
             register={register}
-            errors={errors}
+            error={errors.targetStock}
             rules={{
               validate: (value, form) =>
                 isBlank(value) ||
@@ -73,10 +77,12 @@ export default function ProductReorderForm({ register, control, errors = {} }) {
               name="preferredSupplierId"
               control={control}
               render={({ field }) => (
-                <SupplierSelect
+                <PartySelect
+                  side="supplier"
+                  label={null}
                   placeholder="خالی: همان تامین‌کننده‌ی آخرین خرید"
                   value={field.value}
-                  onChange={field.onChange}
+                  onSelect={field.onChange}
                 />
               )}
             />
@@ -105,7 +111,7 @@ export default function ProductReorderForm({ register, control, errors = {} }) {
             label="حداقل مقدار سفارش"
             placeholder="مثلاً کارتنِ ۶تایی: 6"
             register={register}
-            errors={errors}
+            error={errors.minOrderQuantity}
             rules={{
               validate: (value) =>
                 isBlank(value) || Number(value) > 0 || "باید بیشتر از صفر باشد",
@@ -116,7 +122,7 @@ export default function ProductReorderForm({ register, control, errors = {} }) {
             label="زمان تحویل (روز)"
             placeholder="اختیاری"
             register={register}
-            errors={errors}
+            error={errors.leadTimeDays}
             rules={{
               validate: (value) =>
                 isBlank(value) ||

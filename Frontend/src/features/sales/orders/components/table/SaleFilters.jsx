@@ -3,28 +3,18 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { useSaleFilterStore } from "../../store/saleFilterStore";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { SALE_PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { SALE_PROFORMA_STAGE_LABELS } from "@/shared/domain/enums/saleProforma";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const STATUS_OPTIONS = toFilterOptions(SALE_STATUS_LABELS);
-const STAGE_OPTIONS = toFilterOptions(SALE_PROFORMA_STAGE_LABELS);
-const PAYMENT_TYPE_OPTIONS = toFilterOptions(SALE_PAYMENT_TYPE_LABELS);
+const STATUS_OPTIONS = optionsFromLabels(SALE_STATUS_LABELS);
+const STAGE_OPTIONS = optionsFromLabels(SALE_PROFORMA_STAGE_LABELS);
+const PAYMENT_TYPE_OPTIONS = optionsFromLabels(SALE_PAYMENT_TYPE_LABELS);
 
-const renderCustomerPhone = (customer) =>
-  customer.phoneNumber ? (
-    <span className="text-xs text-muted-foreground">{customer.phoneNumber}</span>
-  ) : null;
-
-/**
- * props:
- *  - customers: آرایه { id, name } از API
- *  - isCustomersLoading: boolean
- */
-const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
+const SaleFilters = () => {
   const {
     invoiceNumber,
     customerId,
@@ -74,16 +64,7 @@ const SaleFilters = ({ customers = [], isCustomersLoading = false }) => {
         />
       }
     >
-      <EntitySelect
-        label="مشتری"
-        placeholder="انتخاب مشتری..."
-        emptyText="مشتری‌ای یافت نشد"
-        items={customers}
-        value={customerId}
-        onSelect={(id) => setCustomerId(id)}
-        isLoading={isCustomersLoading}
-        renderMeta={renderCustomerPhone}
-      />
+      <PartySelect side="customer" value={customerId} onSelect={setCustomerId} />
 
       <FilterSelect
         label="وضعیت"

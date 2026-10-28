@@ -1,31 +1,27 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import FormField from "@/shared/components/forms/FormField";
 import Notice from "@/shared/components/feedback/Notice";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import BankAccountSelect from "@/shared/components/payments/BankAccountSelect";
 import { PaymentDirectionEnum, PaymentPurposeEnum } from "@/shared/domain/enums/paymentDirection";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { useAllocatableDocumentsQuery } from "../../partyPayments/services/queries";
 import { useBounceChequeMutation, useCashChequeMutation, useEndorseChequeMutation } from "../services/mutations";
 import { CHEQUE_DIRECTION_LABELS, cashNeedsAccount, isEndorsedOut } from "../domain/cheque";
-
-const NO_PURCHASE = "on-account";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const TITLES = { cash: "وصولِ چک", bounce: "برگشتِ چک", endorse: "خرجِ چک به تامین‌کننده" };
 
@@ -88,43 +84,42 @@ function BounceBody({ cheque, form, patch }) {
 }
 
 function EndorseBody({ form, patch }) {
-  const { suppliers, isLoading } = useSuppliersOptionsQuery();
   const purchasesQuery = useAllocatableDocumentsQuery({ supplierId: form.supplierId }, { enabled: Boolean(form.supplierId) });
   const purchases = purchasesQuery.data ?? [];
 
   return (
     <>
       <FormField label="تامین‌کننده" required>
-        <EntitySelect
-          placeholder="انتخاب تامین‌کننده..."
-          items={suppliers}
-          value={form.supplierId ?? ""}
-          onSelect={(id) => patch({ supplierId: id === "" ? null : Number(id), purchaseId: null })}
-          isLoading={isLoading}
+        <PartySelect
+          side="supplier"
+          label={null}
+          value={form.supplierId}
+          onSelect={(id) => patch({ supplierId: id === "" ? null : id, purchaseId: null })}
           allowClear={false}
         />
       </FormField>
       {form.supplierId && (
         <FormField label="بابتِ" htmlFor="cheque-endorse-purchase" hint="خریدِ بازِ همین تامین‌کننده، یا علی‌الحساب">
-          <Select
+          <OptionSelect
+            id="cheque-endorse-purchase"
             dir="rtl"
-            value={form.purchaseId ? String(form.purchaseId) : NO_PURCHASE}
-            onValueChange={(next) => patch({ purchaseId: next === NO_PURCHASE ? null : Number(next) })}
-            disabled={purchasesQuery.isLoading}
-          >
-            <SelectTrigger id="cheque-endorse-purchase" className="h-9 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_PURCHASE}>علی‌الحسابِ تامین‌کننده</SelectItem>
-              {purchases.map((doc) => (
-                <SelectItem key={doc.purchaseId} value={String(doc.purchaseId)}>
+            value={form.purchaseId}
+            onChange={(purchaseId) => patch({ purchaseId })}
+            numeric
+            emptyLabel="علی‌الحسابِ تامین‌کننده"
+            emptyValue={null}
+            isLoading={purchasesQuery.isLoading}
+            className="h-9 w-full"
+            options={purchases.map((doc) => ({
+              value: doc.purchaseId,
+              label: (
+                <>
                   {doc.invoiceNumber || `خرید #${doc.purchaseId}`}
                   <span className="text-xs text-muted-foreground"> · مانده {formatNumber(doc.remainingAmount)}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </>
+              ),
+            }))}
+          />
         </FormField>
       )}
       <FormField label="تاریخ" htmlFor="cheque-endorse-date">
@@ -187,19 +182,14 @@ function ActionBody({ kind, cheque, onClose }) {
         {kind === "bounce" && <BounceBody cheque={cheque} form={form} patch={patch} />}
         {kind === "endorse" && <EndorseBody form={form} patch={patch} />}
       </fieldset>
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-        <Button
-          type="button"
-          variant={kind === "bounce" ? "destructive" : "default"}
-          onClick={submit}
-          disabled={mutation.isPending || !ready}
-        >
-          {mutation.isPending ? "در حال ثبت..." : TITLES[kind]}
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onClose}
+        onSubmit={submit}
+        isPending={mutation.isPending}
+        disabled={!ready}
+        variant={kind === "bounce" ? "destructive" : "default"}
+        submitLabel={TITLES[kind]}
+      />
     </>
   );
 }

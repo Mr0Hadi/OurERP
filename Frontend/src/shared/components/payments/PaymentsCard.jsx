@@ -13,8 +13,7 @@ import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
-import { toneText } from "@/shared/lib/tone";
-import { cn } from "@/shared/lib/utils";
+import StatGrid from "@/shared/components/data/StatGrid";
 
 /**
  * پرداخت‌های یک سندِ خرید/فروش — یک کارت برای فاکتورِ تازه، پیش‌فاکتوری که
@@ -115,16 +114,19 @@ export default function PaymentsCard({
         </>
       }
     >
-      <dl className="grid grid-cols-3 divide-x divide-x-reverse divide-border rounded-lg border border-border text-center">
-        <Stat label={payable != null && Number(payable) !== Number(total) ? "قابل پرداخت" : "مبلغ فاکتور"} value={formatNumber(due)} />
-        <Stat label="پرداخت‌شده" value={formatNumber(paid)} />
-        <Stat
-          label={remaining < 0 ? "اضافه‌پرداخت" : "مانده"}
-          // سندِ بی‌مبلغ (هنوز کالایی نیست) «تسویه» نیست.
-          value={due === 0 && paid === 0 ? "—" : remaining === 0 ? "تسویه" : formatNumber(Math.abs(remaining))}
-          className={toneText(remaining > 0 ? "warning" : remaining < 0 ? "info" : "success")}
-        />
-      </dl>
+      <StatGrid
+        className="grid-cols-3 text-center"
+        items={[
+          { label: payable != null && Number(payable) !== Number(total) ? "قابل پرداخت" : "مبلغ فاکتور", value: due },
+          { label: "پرداخت‌شده", value: paid },
+          {
+            label: remaining < 0 ? "اضافه‌پرداخت" : "مانده",
+            // سندِ بی‌مبلغ (هنوز کالایی نیست) «تسویه» نیست.
+            value: due === 0 && paid === 0 ? "—" : remaining === 0 ? "تسویه" : Math.abs(remaining),
+            tone: remaining > 0 ? "warning" : remaining < 0 ? "info" : "success",
+          },
+        ]}
+      />
 
       {form && (
         <PaymentForm
@@ -212,14 +214,3 @@ export default function PaymentsCard({
   );
 }
 
-function Stat({ label, value, className }) {
-  return (
-    <div className="min-w-0 px-1.5 py-2 sm:px-2">
-      <dt className="text-[11px] text-muted-foreground">{label}</dt>
-      {/* مبلغِ میلیاردی در ستونِ یک‌سومِ موبایل جا نمی‌شد و از کادر بیرون می‌زد. */}
-      <dd className={cn("text-[13px] font-semibold tabular-nums [overflow-wrap:anywhere] sm:text-sm", className)}>
-        {value}
-      </dd>
-    </div>
-  );
-}
