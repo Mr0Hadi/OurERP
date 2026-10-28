@@ -23,7 +23,5 @@ A warehouse management system handling products, customers, suppliers, purchases
 ## Backend Docs
 
 - [API Guide](Backend-Net/docs/api-guide.fa.md) — All endpoints with inputs, outputs, and usage
-- [Purchase Return Guide](Backend-Net/docs/purchase-return-guide.fa.md) — Purchase receiving and supplier return implementation
-- [Sale Return Guide](Backend-Net/docs/sale-return-guide.fa.md) — Sale shipping and customer return implementation
-- [Return Scenarios Guide](Backend-Net/docs/return-scenarios-guide.fa.md) — Business scenarios for both purchase and sale returns
+- [Frontend Requests](Backend-Net/docs/frontend-requests.fa.md) — Open backend requests from the frontend team, with a status checklist
 - [Product Code, Barcode & Invoice Design](Backend-Net/docs/product-code-barcode-invoice-design.fa.md) — Product code generation, barcode rendering, and invoice PDF design

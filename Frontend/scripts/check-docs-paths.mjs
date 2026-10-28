@@ -40,7 +40,6 @@ const ROOT_FILES = new Set([
   "tailwind.config.js",
   "structure.js",
   ".env.example",
-  "REFACTOR.md",
   "FEATURE-GAPS.fa.md",
   "CLAUDE.md",
   "pnpm-lock.yaml",

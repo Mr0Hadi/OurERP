@@ -94,4 +94,4 @@ node scripts/check-docs-paths.mjs
 | enumها و منطقِ مرجوعی/پرداخت | `docs/architecture/11-domain-layer.md` |
 | بدهی‌ها و باگ‌های شناخته‌شده | `docs/architecture/14-dependency-graph-and-health.md` |
 
-`REFACTOR.md` تاریخچه‌ی ریفکتور است و `FEATURE-GAPS.fa.md` کمبودهای فیچری.
+`FEATURE-GAPS.fa.md` کمبودهای فیچری و جدولِ پیگیریِ آن‌هاست.

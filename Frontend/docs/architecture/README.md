@@ -63,7 +63,6 @@ flowchart TD
 
 ## اسنادِ دیگرِ این مخزن
 
-- `REFACTOR.md` — سندِ پیگیریِ ریفکتور (تاریخچه‌ی فازها). مرجعِ معماری نیست.
 - `FEATURE-GAPS.fa.md` — فهرستِ کمبودهای فیچری نسبت به بکند.
 - `README.md`ِ انگلیسیِ قدیمیِ `Frontend/` حذف شد (2026-10-16)؛ پر از ادعای نادرست بود (بکندِ Go، `services/api.js`، aliasِ `#/*`، …). راه‌اندازیِ عمومی در `CLAUDE.md` و فایلِ [01](01-tech-stack-and-tooling.md) است.
 - `Backend-Net/docs/frontend-requests.fa.md` — درخواست‌های فرانت از بکند (فرانت کدِ بکند را تغییر نمی‌دهد).

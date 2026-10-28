@@ -192,6 +192,13 @@ Backend-Net/
 
 ## 6. Current state
 
+> **Deleted docs (2026-10-28).** The frontend migration guides, request/answer pairs and superseded design docs that the dated
+> entries below point at (`return-frontend-migration`, `proforma-lock-frontend-guide`, `permission-frontend-guide`,
+> `settings-dashboard`, `image-serving-guide`, `purchase-frontend-sync-requests`, `frontend-sync-followup`, the three old return
+> guides, `returns-effects-and-org-structure-summary`, `return-offscopekind-and-inflight-ledger-fix`, ...) were all implemented
+> and have been removed. The current contract is `docs/api-guide.fa.md`; read an old doc with
+> `git log --diff-filter=D -- Backend-Net/docs/<file>` and `git show <commit>^:Backend-Net/docs/<file>`.
+
 **Implemented**: JWT auth + account flows (login with lockout, single-session logout, refresh token; forget password removed 2026-10-04 in favour of manager reset + forced change); full CRUD for Customer, Product, ProductCategory, Supplier; create/update + list/detail for Purchase and Sale; user create/update/info; purchase receiving + returns (below). OpenAPI via Scalar (`/scalar`). **IsActive** exists on every entity and each entity feature folder has a soft-delete command (`DeleteCustomerCommand`, `DeleteProductCommand`, `DeleteProductCategoryCommand`, `DeletePurchaseCommand`, `DeleteSaleCommand`, `DeleteSupplierCommand`, `DeleteUserCommand`), all setting `IsActive = false` and throwing `NotFoundCustomException` when the row is missing. Each controller exposes a matching `[HttpDelete("DeleteX")]` action that `Send`s the command (`DeleteCustomer`, `DeleteProduct`, `DeleteProductCategory`, `DeletePurchase`, `DeleteSale`, `DeleteSupplier`, `DeleteUser`), taking the command via `[FromQuery]`. Create mappings default `IsActive = true` (existing rows default to active via the migration's column default). Schema change shipped as EF migration `20260802123347_add-isactive` (see `Infrastructure/Migrations`).
 
 > **SUPERSEDED — historical.** This entry and "Sale shipping & sale returns (2026-08-10)" below describe the return model that

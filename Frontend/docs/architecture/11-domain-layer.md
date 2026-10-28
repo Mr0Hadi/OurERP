@@ -91,7 +91,7 @@ flowchart LR
 
 واژگانِ مخصوصِ هر سمت در فیچر: `src/features/sales/returns/domain/salesReturnVocabulary.js`، `src/features/purchases/returns/domain/purchaseReturnVocabulary.js`. mutationهای مشترک: `src/shared/services/returns/createReturnMutations.js`.
 
-مراجعِ بکند: `../Backend-Net/docs/return-frontend-migration.fa.md`، `return-scenarios-guide.fa.md`، `purchase-return-guide.fa.md`.
+مرجعِ بکند: `../Backend-Net/docs/api-guide.fa.md` بخش‌های ۱۰ و ۱۲.
 
 ## قراردادها و نکته‌ها
 
