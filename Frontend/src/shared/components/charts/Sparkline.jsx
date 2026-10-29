@@ -2,10 +2,10 @@ import {
   areaPath,
   makeBandScale,
   makeValueScale,
-  monotonePath,
   niceScale,
 } from "./chartUtils";
 import { useChartSize } from "./useChartSize";
+import { useChartSkin } from "./useChartSkin";
 import { cn } from "@/shared/lib/utils";
 
 /**
@@ -26,6 +26,7 @@ export default function Sparkline({
   className,
 }) {
   const { ref, width } = useChartSize(96);
+  const skin = useChartSkin();
 
   const points =
     values.length < 2
@@ -54,18 +55,18 @@ export default function Sparkline({
         <svg width={width} height={height} className="block overflow-visible">
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-              <stop offset="100%" stopColor={color} stopOpacity="0" />
+              <stop offset="0%" stopColor={color} stopOpacity={skin.sparkAreaOpacity[0]} />
+              <stop offset="100%" stopColor={color} stopOpacity={skin.sparkAreaOpacity[1]} />
             </linearGradient>
           </defs>
           <path d={areaPath(points, height)} fill={`url(#${gradientId})`} />
           <path
-            d={monotonePath(points)}
+            d={skin.linePath(points)}
             fill="none"
             stroke={color}
             strokeWidth={1.75}
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            strokeLinecap={skin.lineCap}
+            strokeLinejoin={skin.classic ? "miter" : "round"}
           />
           <circle
             cx={points[points.length - 1].x}

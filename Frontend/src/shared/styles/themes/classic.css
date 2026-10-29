@@ -1,0 +1,111 @@
+/*
+ * تمِ «کلاسیک» — ظاهرِ نرم‌افزارهای حسابداری و انبارِ قدیمیِ Windows Forms
+ * (پالتِ «Windows Standard»ِ ویندوز ۲۰۰۰ / Classic).
+ *
+ * فعال‌شدن: کلاس `theme-classic` روی <html> (`shared/components/theme/themeClasses.js`).
+ *
+ * مثلِ Material: نقش‌های `--cl-*` رنگِ سیستمیِ ویندوزند و توکن‌های shadcn
+ * به آن‌ها اشاره می‌کنند. شکل (bevelِ سه‌بعدی، نوارِ عنوان، …) در
+ * `classic-components.css` است.
+ *
+ * عمداً بیرون از `@layer` تا با specificityِ `html.theme-classic` بر `:root`
+ * و `.dark` غلبه کند.
+ */
+html.theme-classic {
+  /* ── رنگ‌های سیستمیِ ویندوز (GetSysColor) ── */
+  --cl-face: #d4d0c8;          /* ButtonFace / 3DFace */
+  --cl-hilight: #ffffff;       /* ButtonHighlight */
+  --cl-light: #e9e7e3;         /* 3DLight */
+  --cl-shadow: #808080;        /* ButtonShadow */
+  --cl-dkshadow: #404040;      /* 3DDkShadow */
+  --cl-window: #ffffff;        /* Window */
+  --cl-window-text: #000000;   /* WindowText */
+  --cl-gray-text: #6d6d6d;     /* GrayText — کمی تیره‌تر از #808080 تا کنتراست ≥ ۴٫۵:۱ بماند */
+  --cl-highlight: #0a246a;     /* Highlight */
+  --cl-highlight-text: #ffffff;
+  --cl-caption: #0a246a;       /* ActiveCaption */
+  --cl-caption-2: #a6caf0;     /* GradientActiveCaption */
+  --cl-caption-text: #ffffff;
+  --cl-info: #ffffe1;          /* InfoBk (tooltip) */
+  --cl-hot: #e8eef9;           /* hot-track ردیف‌ها */
+  --cl-grid: #c9c6bf;          /* خطوطِ DataGridView */
+
+  /* ── bevelها ── (نور از بالا-چپ، مثلِ ویندوز) */
+  --cl-raised:
+    inset -1px -1px var(--cl-dkshadow), inset 1px 1px var(--cl-hilight),
+    inset -2px -2px var(--cl-shadow), inset 2px 2px var(--cl-light);
+  --cl-pressed:
+    inset 1px 1px var(--cl-dkshadow), inset -1px -1px var(--cl-hilight),
+    inset 2px 2px var(--cl-shadow), inset -2px -2px var(--cl-light);
+  --cl-sunken:
+    inset 1px 1px var(--cl-shadow), inset -1px -1px var(--cl-hilight),
+    inset 2px 2px var(--cl-dkshadow), inset -2px -2px var(--cl-light);
+  --cl-thin-raised: inset -1px -1px var(--cl-shadow), inset 1px 1px var(--cl-hilight);
+  --cl-thin-sunken: inset 1px 1px var(--cl-shadow), inset -1px -1px var(--cl-hilight);
+  /* نوارِ عنوان: در پنجره‌ی mirrored (RTL) رنگِ تیره سمتِ راست است. */
+  --cl-caption-bg: linear-gradient(to left, var(--cl-caption), var(--cl-caption-2));
+  /* الگوی شطرنجیِ ۵۰٪ (dither) — زمینه‌ی اسکرول‌بار و پشتِ دیالوگ */
+  --cl-dither: repeating-conic-gradient(var(--cl-face) 0 25%, var(--cl-hilight) 0 50%) 0 0 / 2px 2px;
+
+  /* ── رنگ‌های معنایی (tone.js) — رنگ‌های ۱۶تاییِ VGA، کمی نرم‌تر ── */
+  --success: #007a00;
+  --warning: #7a5c00;
+  --caution: #b04000;
+  --info: #000080;
+  --special: #800080;
+
+  /* ── نمودار: پالتِ BrightPastelِ MSChart ── */
+  --chart-1: #418cf0;
+  --chart-2: #e0400a;
+  --chart-3: #056492;
+  --chart-4: #fcb441;
+  --chart-5: #1a3b69;
+
+  /* ── Toast: بادکنکِ زردِ System Tray ── */
+  --toast-bg: var(--cl-info);
+  --toast-fg: var(--cl-window-text);
+  --toast-icon-fg: var(--cl-info);
+  --toast-success: #008000;
+  --toast-error: #c00000;
+
+  /* ── نگاشت به توکن‌های shadcn ── */
+  --background: var(--cl-face);
+  --foreground: var(--cl-window-text);
+  --card: var(--cl-face);
+  --card-foreground: var(--cl-window-text);
+  --popover: var(--cl-face);
+  --popover-foreground: var(--cl-window-text);
+  --primary: var(--cl-highlight);
+  --primary-foreground: var(--cl-highlight-text);
+  --secondary: var(--cl-face);
+  --secondary-foreground: var(--cl-window-text);
+  --muted: #e6e3dd;
+  --muted-foreground: #4a4a4a;
+  /* accent برای hoverهای ملایم است؛ highlightِ سرمه‌ایِ منو در کامپوننت‌ها. */
+  --accent: #c1d2ee;
+  --accent-foreground: var(--cl-window-text);
+  --destructive: #c00000;
+  --destructive-foreground: #ffffff;
+  --border: #a19d94;
+  --input: var(--cl-shadow);
+  --ring: var(--cl-window-text);
+  /* گوشه‌ی گرد در Windows Forms نبود. */
+  --radius: 0rem;
+  --sidebar: var(--cl-face);
+  --sidebar-foreground: var(--cl-window-text);
+  --sidebar-primary: var(--cl-highlight);
+  --sidebar-primary-foreground: var(--cl-highlight-text);
+  --sidebar-accent: var(--cl-hot);
+  --sidebar-accent-foreground: var(--cl-window-text);
+  --sidebar-border: var(--cl-shadow);
+  --sidebar-ring: var(--cl-window-text);
+
+  /* Tahoma فونتِ رابطِ ویندوزِ فارسی بود؛ اگر نصب نیست Vazirmatn. */
+  font-family: Tahoma, "Vazirmatn Variable", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+html.theme-classic ::selection {
+  background: var(--cl-highlight);
+  color: var(--cl-highlight-text);
+}

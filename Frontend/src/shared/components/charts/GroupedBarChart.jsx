@@ -9,6 +9,7 @@ import {
   niceScale,
 } from "./chartUtils";
 import { useChartSize } from "./useChartSize";
+import { useChartSkin } from "./useChartSkin";
 import ChartTooltip from "./ChartTooltip";
 import ChartLegend from "./ChartLegend";
 
@@ -56,6 +57,7 @@ export default function GroupedBarChart({
   emptyMessage = "داده‌ای برای نمایش نیست",
 }) {
   const { ref, width } = useChartSize();
+  const skin = useChartSkin();
   const [hoverIndex, setHoverIndex] = useState(null);
   const [hiddenKeys, setHiddenKeys] = useState(() => new Set());
 
@@ -137,9 +139,32 @@ export default function GroupedBarChart({
               // انتخاب بازه است.
               className="block touch-pan-y select-none"
             >
+              {skin.barSheen && (
+                <defs>
+                  {/* سایه‌روشنِ استوانه‌ای روی ستون‌ها (DrawingStyle=Cylinder در MSChart) */}
+                  <linearGradient id="chart-bar-sheen" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#fff" stopOpacity="0.1" />
+                    <stop offset="30%" stopColor="#fff" stopOpacity="0.55" />
+                    <stop offset="60%" stopColor="#fff" stopOpacity="0" />
+                    <stop offset="100%" stopColor="#000" stopOpacity="0.3" />
+                  </linearGradient>
+                </defs>
+              )}
+              {skin.plotBackground && (
+                <rect
+                  data-chart="plot"
+                  x={plot.left}
+                  y={plot.top}
+                  width={plot.right - plot.left}
+                  height={plot.bottom - plot.top}
+                />
+              )}
+
               {geometry.scale.ticks.map((tick) => (
                 <g key={tick}>
                   <line
+                    data-chart="grid"
+                    data-zero={tick === 0 ? "" : undefined}
                     x1={plot.left}
                     x2={plot.right}
                     y1={geometry.y(tick)}
@@ -150,6 +175,7 @@ export default function GroupedBarChart({
                     opacity={tick === 0 ? 0.9 : 0.5}
                   />
                   <text
+                    data-chart="axis-label"
                     x={plot.right + 8}
                     y={geometry.y(tick) + 4}
                     fill="var(--muted-foreground)"
@@ -185,23 +211,30 @@ export default function GroupedBarChart({
                     geometry.band.center(index) -
                     geometry.groupWidth / 2 +
                     seriesIndex * geometry.barWidth;
+                  const d = barPath({
+                    x: x + 1,
+                    y: Math.min(top, geometry.zeroY),
+                    width: Math.max(1, geometry.barWidth - 2),
+                    height:
+                      value >= 0
+                        ? geometry.zeroY - top
+                        : -(top - geometry.zeroY),
+                    radius: skin.barRadius,
+                  });
                   return (
-                    <path
+                    <g
                       key={`${index}-${s.key}`}
-                      d={barPath({
-                        x: x + 1,
-                        y: Math.min(top, geometry.zeroY),
-                        width: Math.max(1, geometry.barWidth - 2),
-                        height:
-                          value >= 0
-                            ? geometry.zeroY - top
-                            : -(top - geometry.zeroY),
-                      })}
-                      fill={s.color}
+                      data-chart="bar"
+                      data-negative={value < 0 ? "" : undefined}
                       opacity={
                         hoverIndex == null || hoverIndex === index ? 0.9 : 0.35
                       }
-                    />
+                    >
+                      <path d={d} fill={s.color} />
+                      {skin.barSheen && (
+                        <path d={d} fill="url(#chart-bar-sheen)" stroke="none" />
+                      )}
+                    </g>
                   );
                 }),
               )}
@@ -210,6 +243,7 @@ export default function GroupedBarChart({
                 if (!labelIndices.has(index)) return null;
                 return (
                   <text
+                    data-chart="axis-label"
                     key={index}
                     x={geometry.band.center(index)}
                     y={height - 8}

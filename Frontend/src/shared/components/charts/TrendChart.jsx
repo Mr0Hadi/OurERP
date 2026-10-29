@@ -6,10 +6,10 @@ import {
   indexAtPosition,
   makeBandScale,
   makeValueScale,
-  monotonePath,
   niceScale,
 } from "./chartUtils";
 import { useChartSize } from "./useChartSize";
+import { useChartSkin } from "./useChartSkin";
 import ChartTooltip from "./ChartTooltip";
 import ChartLegend from "./ChartLegend";
 
@@ -65,6 +65,7 @@ export default function TrendChart({
   emptyMessage = "داده‌ای برای نمایش نیست",
 }) {
   const { ref, width } = useChartSize();
+  const skin = useChartSkin();
   const [hoverIndex, setHoverIndex] = useState(null);
   const [hiddenKeys, setHiddenKeys] = useState(() => new Set());
 
@@ -158,16 +159,28 @@ export default function TrendChart({
                     x2="0"
                     y2="1"
                   >
-                    <stop offset="0%" stopColor={s.color} stopOpacity="0.28" />
-                    <stop offset="100%" stopColor={s.color} stopOpacity="0.02" />
+                    <stop offset="0%" stopColor={s.color} stopOpacity={skin.areaOpacity[0]} />
+                    <stop offset="100%" stopColor={s.color} stopOpacity={skin.areaOpacity[1]} />
                   </linearGradient>
                 ))}
               </defs>
+
+              {skin.plotBackground && (
+                <rect
+                  data-chart="plot"
+                  x={plot.left}
+                  y={plot.top}
+                  width={plot.right - plot.left}
+                  height={plot.bottom - plot.top}
+                />
+              )}
 
               {/* خطوط راهنما و برچسبِ محورِ مقدار (سمت راست) */}
               {geometry.scale.ticks.map((tick) => (
                 <g key={tick}>
                   <line
+                    data-chart="grid"
+                    data-zero={tick === 0 ? "" : undefined}
                     x1={plot.left}
                     x2={plot.right}
                     y1={geometry.y(tick)}
@@ -178,6 +191,7 @@ export default function TrendChart({
                     opacity={tick === 0 ? 0.9 : 0.5}
                   />
                   <text
+                    data-chart="axis-label"
                     x={plot.right + 8}
                     y={geometry.y(tick) + 4}
                     fill="var(--muted-foreground)"
@@ -217,25 +231,44 @@ export default function TrendChart({
                     />
                   )}
                   <path
-                    d={monotonePath(points)}
+                    data-chart="line"
+                    data-dashed={s.dashed ? "" : undefined}
+                    // pathLength=1 تا انیمیشنِ «کشیده‌شدنِ» خط در تمِ کلاسیک
+                    // مستقل از طولِ واقعی کار کند؛ روی خط‌چین اثری ندارد.
+                    pathLength={skin.classic && !s.dashed ? 1 : undefined}
+                    d={skin.linePath(points)}
                     fill="none"
                     stroke={s.color}
                     strokeWidth={2}
                     strokeDasharray={s.dashed ? "6 4" : undefined}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    strokeLinecap={skin.lineCap}
+                    strokeLinejoin={skin.classic ? "miter" : "round"}
                   />
-                  {points.map((point, index) => (
-                    <circle
-                      key={index}
-                      cx={point.x}
-                      cy={point.y}
-                      r={hoverIndex === index ? 4.5 : 0}
-                      fill="var(--card)"
-                      stroke={s.color}
-                      strokeWidth={2.5}
-                    />
-                  ))}
+                  {points.map((point, index) => {
+                    const r = hoverIndex === index ? 4.5 : skin.alwaysShowMarkers ? 3 : 0;
+                    return skin.markerShape === "square" ? (
+                      <rect
+                        key={index}
+                        x={point.x - r}
+                        y={point.y - r}
+                        width={r * 2}
+                        height={r * 2}
+                        fill={hoverIndex === index ? "var(--card)" : s.color}
+                        stroke={hoverIndex === index ? s.color : "#000"}
+                        strokeWidth={hoverIndex === index ? 2 : 0.75}
+                      />
+                    ) : (
+                      <circle
+                        key={index}
+                        cx={point.x}
+                        cy={point.y}
+                        r={r}
+                        fill="var(--card)"
+                        stroke={s.color}
+                        strokeWidth={2.5}
+                      />
+                    );
+                  })}
                 </g>
               ))}
 
@@ -244,6 +277,7 @@ export default function TrendChart({
                 if (!labelIndices.has(index)) return null;
                 return (
                   <text
+                    data-chart="axis-label"
                     key={index}
                     x={geometry.band.center(index)}
                     y={height - 8}

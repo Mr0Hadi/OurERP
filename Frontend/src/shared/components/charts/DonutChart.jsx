@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { donutArcPath, formatCompact, formatPercent } from "./chartUtils";
 import { cn } from "@/shared/lib/utils";
+import { useChartSkin } from "./useChartSkin";
 
 const TAU = Math.PI * 2;
 
@@ -25,6 +26,7 @@ export default function DonutChart({
   className,
 }) {
   const [hoverKey, setHoverKey] = useState(null);
+  const { donutGap } = useChartSkin();
 
   const { arcs, total } = useMemo(() => {
     const usable = segments.filter((s) => Number(s.value) > 0);
@@ -36,7 +38,7 @@ export default function DonutChart({
       const share = Number(segment.value) / sum;
       // فاصله‌ی ریزِ بین قوس‌ها؛ روی سهم‌های خیلی کوچک صفر می‌شود تا
       // قوس کاملاً ناپدید نشود.
-      const gap = share > 0.02 ? 0.02 : 0;
+      const gap = share > 0.02 ? donutGap : 0;
       const start = angle;
       const end = angle + share * TAU;
       angle = end;
@@ -44,7 +46,7 @@ export default function DonutChart({
     });
 
     return { arcs: result, total: sum };
-  }, [segments]);
+  }, [segments, donutGap]);
 
   const active = arcs.find((a) => a.key === hoverKey);
   const cx = size / 2;
@@ -64,6 +66,7 @@ export default function DonutChart({
                 const isActive = hoverKey === arc.key;
                 return (
                   <path
+                    data-chart="slice"
                     key={arc.key}
                     d={donutArcPath({
                       cx,
@@ -117,6 +120,7 @@ export default function DonutChart({
             >
               <span className="flex items-center gap-2">
                 <span
+                  data-chart="swatch"
                   className="size-2.5 rounded-full"
                   style={{ backgroundColor: segment.color }}
                 />

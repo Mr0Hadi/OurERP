@@ -10,6 +10,9 @@
 | --- | --- |
 | `src/index.css` | ترتیبِ لایه‌ها، `@import`ها، `@custom-variant`، `@theme inline`، توکن‌های `:root`، `.dark`، `.theme-accessible`، `.theme-rose`، `.theme-forest` |
 | `src/shared/styles/themes/material.css`، `material-tokens.css`، `material-components.css` | تمِ Material (نقش‌های `--md-*` و بازنویسیِ کامپوننت‌ها) |
+| `src/shared/styles/themes/classic.css`، `classic-components.css` | تمِ کلاسیکِ Windows Forms با ظاهرِ ویندوز ۷ (رنگ‌های سیستمیِ `--cl-*`، bevel، نوارِ عنوان، آیکن‌های رنگی، حرکتِ پله‌ای) |
+| `src/shared/components/charts/useChartSkin.js` | تفاوتِ هندسیِ نمودار بینِ تم‌ها (گوشه‌ی ستون، خطِ شکسته، نشانگر) |
+| `src/app/layouts/ClassicStatusBar.jsx` | نوارِ وضعیتِ پایینِ پنجره، فقط در تمِ کلاسیک |
 | `src/shared/components/theme/ThemeProvider.jsx`، `themeClasses.js`، `themeContext.js`، `ThemeToggle.jsx` | انتخاب و اعمالِ تم |
 | `src/shared/lib/syncThemeColor.js` | `<meta name="theme-color">` از `--background` |
 | `src/shared/lib/tone.js` | `TONES`، `toneSoft`، `toneRow`، `toneSolid`، `toneText` |
@@ -34,11 +37,17 @@ flowchart LR
   I["index.html inline script"] -.->|"همان منطق، پیش از React"| H
 ```
 
-مقدارهای ممکن (منوی `ThemeToggle.jsx`): `light`، `dark`، `system`، `material-light`، `material-dark`، `theme-accessible`، `theme-rose`، `theme-forest`. `ThemeProvider` قبل از افزودن، همه‌ی `THEME_CLASSES` را از `<html>` برمی‌دارد؛ برای `system` به `change`ِ `matchMedia("(prefers-color-scheme: dark)")` گوش می‌دهد تا با تغییرِ تمِ سیستم‌عامل همان لحظه عوض شود. تمِ Material دو کلاس می‌گیرد (`theme-material` + `light|dark`) تا واریانتِ `dark:` و توکن‌های پایه هم کار کنند. پیش‌فرضِ واقعی `"dark"` است (`defaultTheme="dark"` در `src/app/providers/AppProviders.jsx`).
+مقدارهای ممکن (منوی `ThemeToggle.jsx`): `light`، `dark`، `system`، `material-light`، `material-dark`، `classic`، `theme-accessible`، `theme-rose`، `theme-forest`. `ThemeProvider` قبل از افزودن، همه‌ی `THEME_CLASSES` را از `<html>` برمی‌دارد؛ برای `system` به `change`ِ `matchMedia("(prefers-color-scheme: dark)")` گوش می‌دهد تا با تغییرِ تمِ سیستم‌عامل همان لحظه عوض شود. تمِ Material دو کلاس می‌گیرد (`theme-material` + `light|dark`) تا واریانتِ `dark:` و توکن‌های پایه هم کار کنند. پیش‌فرضِ واقعی `"dark"` است (`defaultTheme="dark"` در `src/app/providers/AppProviders.jsx`).
+
+### تمِ کلاسیک (Windows Forms)
+
+`classic` → کلاس `theme-classic` (فقط روشن). الگوی Material را دنبال می‌کند: `classic.css` بی‌لایه رنگ‌های سیستمیِ ویندوز (`--cl-face`، `--cl-highlight`، …) و bevelها (`--cl-raised`، `--cl-sunken`) را تعریف و توکن‌های shadcn را به آن‌ها نگاشت می‌کند؛ `classic-components.css` در `@layer classic` (آخرین لایه) با `data-slot` ظاهرِ کامپوننت‌ها را عوض می‌کند: کارت و دیالوگ پنجره با نوارِ عنوانِ سرمه‌ای، فیلد و جدول سفیدِ فرورفته (DataGridView)، Tabs مثلِ TabControl، سایدبار مثلِ درختِ Explorer، اسکرول‌بارِ ۱۶px، tooltip زردِ InfoBk، spinner ساعتِ شنی. آیکن‌های lucide با کلاسِ `lucide-<name>` رنگِ پُرِ `--ci` می‌گیرند. هدرِ `AppLayout` با `data-slot="app-header"` نوارِ عنوانِ پنجره‌ی اصلی می‌شود و `ClassicStatusBar` فقط در این تم پایینِ صفحه می‌آید.
+
+نمودارها: چیزی که با CSS می‌شود با `data-chart` (`grid`، `bar`، `line`، `slice`، `swatch`، `tooltip`، …) در فایلِ تم است؛ شکلِ مسیرها (`barRadius`، `linePath`، نشانگرِ مربعی) از `useChartSkin()` می‌آید.
 
 ### توکن‌ها و لایه‌ها
 
-- `src/index.css` با `@layer theme, base, components, utilities, material;` شروع می‌شود. لایه‌ی `material` بعد از `utilities` است تا بتواند کلاس‌های cvaِ کامپوننت‌ها را فقط در تمِ Material بازنویسی کند.
+- `src/index.css` با `@layer theme, base, components, utilities, material, classic;` شروع می‌شود. لایه‌ی `material` بعد از `utilities` است تا بتواند کلاس‌های cvaِ کامپوننت‌ها را فقط در تمِ Material بازنویسی کند.
 - `@custom-variant dark (&:is(.dark *))` و `@custom-variant material (&:where(.theme-material, .theme-material *))`.
 - `@theme inline` متغیرها را به utilityهای Tailwind وصل می‌کند؛ فونت: `--font-sans: "Vazirmatn Variable", system-ui, sans-serif` (بسته‌ی `@fontsource-variable/vazirmatn` در همین فایل import می‌شود).
 - هر تم همان مجموعه‌ی توکن را بازتعریف می‌کند: shadcn (`--background`، `--primary`، `--destructive`، …) به‌علاوه‌ی توکن‌های وضعیت (`--success`، `--warning`، `--caution`، `--info`، `--special`).
@@ -127,6 +136,7 @@ export const SALE_STATUS_TONES = Object.freeze({
 | معنای رنگیِ تازه (tone) | توکن در هر تم در `index.css` + `@theme inline` + هر چهار نقشه در `src/shared/lib/tone.js` |
 | رنگِ یک وضعیت | `*_TONES` در `src/shared/domain/enums/<x>.js` |
 | ظاهرِ یک کامپوننتِ پایه فقط در Material | `src/shared/styles/themes/material-components.css` |
+| ظاهرِ یک کامپوننت یا نمودار فقط در تمِ کلاسیک | `src/shared/styles/themes/classic-components.css` (و `useChartSkin.js` برای هندسه‌ی نمودار) |
 | قالبِ تاریخ | `gregorianToPersian` در `src/shared/lib/dateUtils.js` |
 | دیدنِ همه‌ی کامپوننت‌ها و toneها | `pnpm dev` → `/dev/ui` (`src/app/dev/StyleGuidePage.jsx`) |
 

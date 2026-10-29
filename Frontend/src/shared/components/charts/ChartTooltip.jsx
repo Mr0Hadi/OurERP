@@ -16,6 +16,7 @@ export default function ChartTooltip({ x, title, rows, className }) {
 
   return (
     <div
+      data-chart="tooltip"
       className={cn(
         "pointer-events-none absolute top-2 z-10 w-44 max-w-[calc(100%-1rem)] rounded-lg border border-border",
         "bg-popover/95 px-3 py-2 text-popover-foreground shadow-lg backdrop-blur-sm",
@@ -35,6 +36,7 @@ export default function ChartTooltip({ x, title, rows, className }) {
             <span className="flex min-w-0 items-center gap-1.5">
               {row.color ? (
                 <span
+                  data-chart="swatch"
                   className="size-2 shrink-0 rounded-full"
                   style={{ backgroundColor: row.color }}
                 />

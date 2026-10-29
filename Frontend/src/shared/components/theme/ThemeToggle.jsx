@@ -1,4 +1,4 @@
-import { Eye, Layers, Leaf, Moon, Palette, Sun } from "lucide-react"
+import { Eye, Layers, Leaf, Monitor, Moon, Palette, Sun } from "lucide-react"
 
 import { Button } from "@/shared/components/ui/button"
 import {
@@ -18,6 +18,7 @@ function ThemeIcon({ theme }) {
   if (theme === "theme-rose") return <Palette className="h-[1.2rem] w-[1.2rem] text-rose-500" />
   if (theme === "theme-forest") return <Leaf className="h-[1.2rem] w-[1.2rem] text-green-600" />
   if (theme === "material-light" || theme === "material-dark") return <Layers className="h-[1.2rem] w-[1.2rem] text-primary" />
+  if (theme === "classic") return <Monitor className="h-[1.2rem] w-[1.2rem]" />
   // light / system
   return <Sun className="h-[1.2rem] w-[1.2rem]" />
 }
@@ -58,6 +59,13 @@ export function ThemeToggle() {
         <DropdownMenuItem onClick={() => setTheme("material-dark")}>
           <Layers className="mr-2 h-4 w-4" />
           متریال تاریک
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>کلاسیک</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => setTheme("classic")}>
+          <Monitor className="mr-2 h-4 w-4" />
+          کلاسیک
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

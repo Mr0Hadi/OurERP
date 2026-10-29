@@ -12,6 +12,7 @@ import {
   makeBandScale,
   makeValueScale,
   monotonePath,
+  linearPath,
   niceScale,
 } from "./chartUtils";
 
@@ -46,6 +47,14 @@ describe("مقیاس", () => {
 });
 
 describe("مسیرهای SVG", () => {
+  it("linearPath پاره‌خطِ راست بین نقطه‌ها می‌کشد", () => {
+    expect(linearPath([])).toBe("");
+    expect(linearPath([{ x: 1, y: 2 }])).toBe("M 1 2");
+    expect(linearPath([{ x: 0, y: 10 }, { x: 10, y: 0 }, { x: 20, y: 5 }])).toBe(
+      "M 0 10 L 10 0 L 20 5",
+    );
+  });
+
   it("منحنی از همه‌ی نقطه‌ها می‌گذرد و در اکسترمم سرریز نمی‌کند", () => {
     expect(monotonePath([])).toBe("");
     expect(monotonePath([{ x: 1, y: 2 }])).toBe("M 1 2");

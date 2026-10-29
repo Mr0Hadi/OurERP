@@ -59,7 +59,8 @@
           }
           // منطقِ کامل: shared/components/theme/themeClasses.js
           var c = t === "material-light" ? ["theme-material", "light"]
-            : t === "material-dark" ? ["theme-material", "dark"] : [t];
+            : t === "material-dark" ? ["theme-material", "dark"]
+            : t === "classic" ? ["theme-classic"] : [t];
           document.documentElement.classList.add.apply(document.documentElement.classList, c);
         } catch (e) {}
       })();
@@ -81,6 +82,17 @@
       html.theme-material.dark #app-splash { background: #131314; }
       html.theme-material #app-splash i { border-color: rgba(11, 87, 208, 0.25); border-top-color: #0b57d0; }
       html.theme-material.dark #app-splash i { border-color: rgba(168, 199, 250, 0.25); border-top-color: #a8c7fa; }
+      /* تمِ کلاسیک: زمینه‌ی ButtonFace و حلقه‌ی آبیِ «مشغول»ِ ویندوز ۷ (classic.css) */
+      html.theme-classic #app-splash { background: #f0f0f0; }
+      html.theme-classic #app-splash i {
+        border: 0;
+        width: 32px;
+        height: 32px;
+        background: conic-gradient(from 0deg, transparent 0 20%, #9fd3f8, #1c7fd8 95%, transparent);
+        -webkit-mask: radial-gradient(circle, transparent 9px, #000 10px);
+        mask: radial-gradient(circle, transparent 9px, #000 10px);
+        animation: app-splash-spin 0.9s linear infinite;
+      }
       #app-splash.hide { opacity: 0; pointer-events: none; }
       #app-splash i {
         width: 36px;

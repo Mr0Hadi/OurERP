@@ -1,0 +1,857 @@
+/*
+ * تمِ «کلاسیک» — نمای کامپوننت‌ها، آیکن‌ها و حرکت.
+ *
+ * مثلِ `material-components.css` فقط CSS و `data-slot` است و ساختارِ JSX دست
+ * نمی‌خورد. همه‌ی قانون‌ها داخلِ `@layer classic` (بعد از utilities) و زیرِ
+ * `.theme-classic`اند، پس بیرون از این تم اثری ندارند.
+ *
+ * ⚠ این لایه از utilities قوی‌تر است و `className`ِ مصرف‌کننده را هم
+ * بازنویسی می‌کند؛ برای همین زمینه‌ی فیلدها و ردیف‌ها فقط وقتی عوض می‌شود
+ * که مصرف‌کننده زمینه‌ی خودش را نگذاشته (`:not([class*="bg-"])`).
+ *
+ * زبانِ بصری:
+ *   • پنجره (Card، Dialog) = سطحِ خاکستریِ برجسته + نوارِ عنوانِ سرمه‌ای.
+ *   • فیلد (Input، Select، جدول) = سفیدِ فرورفته.
+ *   • دکمه = برجسته؛ با فشار فرو می‌رود و محتوا ۱px جابه‌جا می‌شود. دکمه‌ی
+ *     اصلی (default) قابِ سیاهِ «دکمه‌ی پیش‌فرضِ فرم» را دارد.
+ *   • انتخاب = سرمه‌ای با متنِ سفید (Highlight).
+ *   • حرکت: پله‌ای (`steps()`) و کوتاه، مثلِ انیمیشن‌های ویندوز ۲۰۰۰؛
+ *     بستن‌ها فوری‌اند.
+ */
+
+@layer classic {
+  /* ════════════════ پایه ════════════════ */
+  .theme-classic body {
+    font-size: 13px;
+  }
+  /* سایه‌های نرمِ مدرن در Windows Forms نبود؛ عمق را bevel می‌دهد. */
+  .theme-classic :is(.shadow-xs, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl) {
+    --tw-shadow: 0 0 #0000;
+  }
+  .theme-classic :is(.backdrop-blur-xs, .backdrop-blur-sm, .backdrop-blur, .backdrop-blur-md) {
+    backdrop-filter: none;
+  }
+  /* رنگِ لینک‌ها (مثل «مشاهده همه») */
+  .theme-classic a:not([data-slot], [data-sidebar], .group\/button):hover {
+    text-decoration: underline;
+  }
+
+  /* ════════════════ اسکرول‌بار ════════════════
+     کلاسیک یعنی ۱۶px با دکمه‌ی فلش و زمینه‌ی شطرنجی. `scrollbar-width/color`
+     باید auto باشد وگرنه کروم سراغِ ‎::-webkit-scrollbar نمی‌رود. */
+  .theme-classic,
+  .theme-classic * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  .theme-classic ::-webkit-scrollbar,
+  .theme-classic .custom-scroll::-webkit-scrollbar {
+    width: 16px;
+    height: 16px;
+  }
+  .theme-classic ::-webkit-scrollbar-track,
+  .theme-classic .custom-scroll::-webkit-scrollbar-track {
+    background: var(--cl-dither);
+  }
+  .theme-classic ::-webkit-scrollbar-thumb,
+  .theme-classic .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--cl-face);
+    border-radius: 0;
+    box-shadow: var(--cl-raised);
+  }
+  .theme-classic ::-webkit-scrollbar-corner {
+    background: var(--cl-face);
+  }
+  .theme-classic ::-webkit-scrollbar-button:single-button {
+    display: block;
+    width: 16px;
+    height: 16px;
+    background-color: var(--cl-face);
+    background-repeat: no-repeat;
+    background-position: center;
+    box-shadow: var(--cl-raised);
+  }
+  .theme-classic ::-webkit-scrollbar-button:single-button:active {
+    box-shadow: var(--cl-thin-sunken);
+    background-position: calc(50% + 1px) calc(50% + 1px);
+  }
+  .theme-classic ::-webkit-scrollbar-button:single-button:vertical:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M3.5 0 7 4H0z'/%3E%3C/svg%3E");
+  }
+  .theme-classic ::-webkit-scrollbar-button:single-button:vertical:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='4'%3E%3Cpath d='M0 0h7L3.5 4z'/%3E%3C/svg%3E");
+  }
+  .theme-classic ::-webkit-scrollbar-button:single-button:horizontal:decrement {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M0 3.5 4 0v7z'/%3E%3C/svg%3E");
+  }
+  .theme-classic ::-webkit-scrollbar-button:single-button:horizontal:increment {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='7'%3E%3Cpath d='M0 0l4 3.5L0 7z'/%3E%3C/svg%3E");
+  }
+  /* نوارهای افقیِ «بی‌اسکرول‌بار» (scrollbar-hide) همان‌طور پنهان بمانند. */
+  .theme-classic .scrollbar-hide {
+    scrollbar-width: none;
+  }
+  .theme-classic .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ════════════════ Button ════════════════
+     با `group/button` شناخته می‌شود (data-slot زیرِ Trigger asChild عوض می‌شود). */
+  .theme-classic .group\/button {
+    border-radius: 0;
+    transition: none;
+    font-weight: 400;
+  }
+  .theme-classic .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="outline"], [data-variant="destructive"]) {
+    background-color: var(--cl-face);
+    color: var(--cl-window-text);
+    border-color: transparent;
+    box-shadow: var(--cl-raised);
+  }
+  /* دکمه‌ی پیش‌فرضِ فرم: قابِ سیاهِ یک‌پیکسلی دورِ bevel */
+  .theme-classic .group\/button[data-variant="default"] {
+    border-color: var(--cl-window-text);
+    font-weight: 700;
+  }
+  .theme-classic .group\/button[data-variant="destructive"] {
+    color: var(--destructive);
+  }
+  .theme-classic .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="outline"], [data-variant="destructive"]):hover:not(:disabled) {
+    background-color: var(--cl-face);
+  }
+  .theme-classic .group\/button:is([data-variant="default"], [data-variant="secondary"], [data-variant="outline"], [data-variant="destructive"]):is(:active, [aria-expanded="true"]):not(:disabled) {
+    box-shadow: var(--cl-pressed);
+  }
+  /* فشار: bevel برعکس و محتوا یک پیکسل پایین-راست؛ خودِ دکمه جابه‌جا نمی‌شود. */
+  .theme-classic .group\/button:active:not(:disabled) {
+    translate: none;
+  }
+  .theme-classic .group\/button:active:not(:disabled) > * {
+    translate: 1px 1px;
+  }
+  /* ghost = دکمه‌ی تخت‌ِ نوارابزار: با hover برجسته، با فشار فرورفته */
+  .theme-classic .group\/button[data-variant="ghost"] {
+    border-color: transparent;
+    background-color: transparent;
+  }
+  .theme-classic .group\/button[data-variant="ghost"]:hover:not(:disabled) {
+    background-color: transparent;
+    box-shadow: var(--cl-thin-raised);
+  }
+  .theme-classic .group\/button[data-variant="ghost"]:is(:active, [aria-expanded="true"]):not(:disabled) {
+    box-shadow: var(--cl-thin-sunken);
+  }
+  .theme-classic .group\/button[data-variant="link"] {
+    color: #0000ee;
+  }
+  /* غیرفعال: متنِ «حکاکی‌شده» (خاکستری با سایه‌ی سفید)، نه کم‌رنگ‌شدنِ کلِ دکمه */
+  .theme-classic .group\/button:disabled {
+    opacity: 1;
+    color: var(--cl-shadow);
+    text-shadow: 1px 1px 0 var(--cl-hilight);
+  }
+  .theme-classic .group\/button:disabled svg {
+    filter: drop-shadow(1px 1px 0 var(--cl-hilight));
+  }
+  /* focus: مستطیلِ نقطه‌چینِ داخلِ دکمه */
+  .theme-classic .group\/button:focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: 1px dotted var(--cl-window-text);
+    outline-offset: -4px;
+  }
+  /* دکمه‌های فوتِ دیالوگ پهنای استانداردِ ۷۵px را دارند. */
+  .theme-classic :is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"]) .group\/button[data-size="default"] {
+    min-width: 75px;
+  }
+
+  /* ════════════════ Input / Textarea / Select / Combobox ════════════════ */
+  .theme-classic :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"], [data-slot="combobox-input-group"], [data-slot="input-group"], [data-slot="sidebar-input"]) {
+    border-radius: 0;
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+    box-shadow: inset 1px 1px var(--cl-dkshadow), inset -1px -1px var(--cl-light);
+    transition: none;
+  }
+  .theme-classic :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"], [data-slot="combobox-input-group"], [data-slot="input-group"], [data-slot="sidebar-input"]):is(:not([class*="bg-"]), [class~="bg-transparent"]) {
+    background-color: var(--cl-window);
+  }
+  /* inputِ داخلِ input-group قابِ خودش را نمی‌خواهد. */
+  .theme-classic :is([data-slot="input-group"], [data-slot="combobox-input-group"]) [data-slot] :is([data-slot="input"], [data-slot="input-group-control"]),
+  .theme-classic :is([data-slot="input-group"], [data-slot="combobox-input-group"]) > :is([data-slot="input"], [data-slot="input-group-control"]) {
+    border-color: transparent;
+    box-shadow: none;
+    background-color: transparent;
+  }
+  .theme-classic :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):focus-visible,
+  .theme-classic :is([data-slot="combobox-input-group"], [data-slot="input-group"]):focus-within {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: none;
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+    box-shadow: inset 1px 1px var(--cl-dkshadow), inset -1px -1px var(--cl-light);
+  }
+  .theme-classic :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"])[aria-invalid="true"] {
+    border-color: var(--destructive);
+    background-color: #fff4f4;
+  }
+  /* غیرفعال = زمینه‌ی خاکستری و متنِ GrayText */
+  .theme-classic :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]):disabled,
+  .theme-classic [data-slot="combobox-input-group"]:has(input:disabled) {
+    opacity: 1;
+    background-color: var(--cl-face);
+    color: var(--cl-gray-text);
+  }
+  /* فلشِ Select = دکمه‌ی برجسته‌ی کوچکِ ComboBox */
+  .theme-classic [data-slot="select-trigger"] {
+    padding-inline-end: 2px;
+  }
+  .theme-classic [data-slot="select-trigger"] > svg:last-child {
+    box-sizing: border-box;
+    width: 17px;
+    /* تا لبه‌های فیلد کشیده شود: paddingِ عمودیِ trigger (py-2) را پس می‌گیرد. */
+    height: calc(100% + 12px);
+    margin-block: -6px;
+    padding: 2px;
+    background-color: var(--cl-face);
+    color: var(--cl-window-text);
+    box-shadow: var(--cl-raised);
+    stroke-width: 3;
+  }
+  .theme-classic [data-slot="select-trigger"][data-state="open"] > svg:last-child {
+    box-shadow: var(--cl-thin-sunken);
+  }
+
+  /* ════════════════ Checkbox / Switch ════════════════ */
+  .theme-classic [data-slot="checkbox"] {
+    border-radius: 0;
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+    box-shadow: inset 1px 1px var(--cl-dkshadow), inset -1px -1px var(--cl-light);
+    background-color: var(--cl-window);
+    color: var(--cl-window-text);
+    transition: none;
+  }
+  .theme-classic [data-slot="checkbox"]:is([data-state="checked"], [data-state="indeterminate"], [data-checked]) {
+    background-color: var(--cl-window);
+    color: var(--cl-window-text);
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+  }
+  .theme-classic [data-slot="checkbox-indicator"] svg {
+    stroke-width: 4;
+  }
+  .theme-classic :is([data-slot="checkbox"], [data-slot="switch"]):focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: 1px dotted var(--cl-window-text);
+    outline-offset: 2px;
+  }
+  .theme-classic [data-slot="checkbox"]:disabled {
+    opacity: 1;
+    background-color: var(--cl-face);
+  }
+  /* Switch = شیارِ فرورفته با دستگیره‌ی برجسته‌ی مربعی (TrackBar) */
+  .theme-classic [data-slot="switch"] {
+    border-radius: 0;
+    border-color: transparent;
+    background-color: var(--cl-window);
+    box-shadow: var(--cl-sunken);
+  }
+  .theme-classic [data-slot="switch"][data-state="checked"] {
+    background-color: var(--cl-highlight);
+  }
+  .theme-classic [data-slot="switch-thumb"] {
+    border-radius: 0;
+    background-color: var(--cl-face);
+    box-shadow: var(--cl-raised);
+    transition: translate 120ms steps(3), transform 120ms steps(3);
+  }
+
+  /* ════════════════ Card = پنجره‌ی فرزندِ MDI ════════════════ */
+  .theme-classic [data-slot="card"] {
+    border-radius: 0;
+    background-color: var(--cl-face);
+    box-shadow: var(--cl-raised);
+    --tw-ring-shadow: 0 0 #0000;
+  }
+  /* کارتی که سربرگِ عنوان‌دار دارد: سربرگ نوارِ عنوانِ پنجره می‌شود. */
+  .theme-classic [data-slot="card"]:has(> [data-slot="card-header"]:first-child [data-slot="card-title"]) {
+    padding-top: 3px;
+  }
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) {
+    margin-inline: 3px;
+    min-height: 22px;
+    padding: 2px 6px 2px 3px;
+    align-items: center;
+    border-radius: 0;
+    border: 0;
+    background: var(--cl-caption-bg);
+    color: var(--cl-caption-text);
+  }
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child [data-slot="card-title"] {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 18px;
+  }
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) :is([data-slot="card-description"], .text-muted-foreground, .text-foreground) {
+    color: #dce6f6;
+  }
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) :is([data-slot="card-description"]) {
+    font-size: 11px;
+  }
+  /* دکمه‌های تختِ روی نوارِ عنوان سفید بمانند. */
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) .group\/button:is([data-variant="ghost"], [data-variant="link"]) {
+    color: var(--cl-caption-text);
+  }
+  .theme-classic [data-slot="card-footer"] {
+    border-radius: 0;
+    background-color: transparent;
+    border-top: 1px solid var(--cl-shadow);
+    box-shadow: inset 0 1px var(--cl-hilight);
+  }
+
+  /* ════════════════ Dialog / AlertDialog / Sheet ════════════════ */
+  /* پشتِ پنجره‌ی مُدال: الگوی شطرنجیِ نیمه‌شفاف (مثلِ دیالوگِ Shut Down) */
+  .theme-classic :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"], [data-slot="sheet-overlay"]) {
+    background: repeating-conic-gradient(oklch(0 0 0 / 0.22) 0 25%, transparent 0 50%) 0 0 / 2px 2px;
+    backdrop-filter: none;
+  }
+  .theme-classic :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) {
+    border-radius: 0;
+    border: 1px solid var(--cl-face);
+    background-color: var(--cl-face);
+    box-shadow: var(--cl-raised);
+    --tw-ring-shadow: 0 0 #0000;
+  }
+  /* سربرگ «محو» می‌شود تا عنوان نوارِ عنوانِ تمام‌عرض شود و توضیح زیرِ آن بیاید. */
+  .theme-classic :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) > :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"], [data-slot="sheet-header"]):first-child {
+    display: contents;
+  }
+  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-header"]:first-child > [data-slot="dialog-title"]:first-child,
+  .theme-classic [data-slot="alert-dialog-content"] > [data-slot="alert-dialog-header"]:first-child > [data-slot="alert-dialog-title"] {
+    display: block;
+    margin: calc(-1rem + 2px) calc(-1rem + 2px) 0;
+    padding: 4px 6px;
+    padding-inline-end: 32px;
+    background: var(--cl-caption-bg);
+    color: var(--cl-caption-text);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    text-align: start;
+  }
+  /* دکمه‌ی × = دکمه‌ی کوچکِ برجسته روی نوارِ عنوان */
+  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"] {
+    top: 5px;
+    inset-inline-end: 5px;
+    width: 16px;
+    height: 14px;
+    min-width: 0;
+    padding: 0;
+    background-color: var(--cl-face);
+    color: var(--cl-window-text);
+    box-shadow: var(--cl-raised);
+  }
+  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"]:hover:not(:disabled) {
+    background-color: var(--cl-face);
+    box-shadow: var(--cl-raised);
+  }
+  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"]:active:not(:disabled) {
+    box-shadow: var(--cl-pressed);
+  }
+  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"] svg {
+    width: 10px;
+    height: 10px;
+    stroke-width: 3.5;
+  }
+  .theme-classic :is([data-slot="dialog-footer"], [data-slot="alert-dialog-footer"]) {
+    border-radius: 0;
+    border-top: 0;
+    background-color: transparent;
+  }
+
+  /* ════════════════ Menus / Popover / Tooltip ════════════════ */
+  .theme-classic :is([data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="popover-content"], [data-slot="select-content"], [data-slot="combobox-content"]) {
+    border-radius: 0;
+    border: 1px solid var(--cl-face);
+    box-shadow: var(--cl-raised), 2px 2px 0 oklch(0 0 0 / 0.25);
+    --tw-ring-shadow: 0 0 #0000;
+  }
+  /* فهرستِ بازشوِ ComboBox سفید است (رنگِ Window) با قابِ سیاهِ یک‌پیکسلی. */
+  .theme-classic :is([data-slot="select-content"], [data-slot="combobox-content"]) {
+    background-color: var(--cl-window);
+    border-color: var(--cl-window-text);
+    box-shadow: none;
+  }
+  .theme-classic :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-sub-trigger"], [data-slot="select-item"], [data-slot="combobox-item"]) {
+    border-radius: 0;
+    transition: none;
+  }
+  .theme-classic :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-sub-trigger"], [data-slot="select-item"], [data-slot="combobox-item"]):is([data-highlighted], :focus, [data-state="open"]) {
+    background-color: var(--cl-highlight);
+    color: var(--cl-highlight-text);
+  }
+  .theme-classic :is([data-slot="dropdown-menu-item"], [data-slot="select-item"], [data-slot="combobox-item"]):is([data-highlighted], :focus) * {
+    color: inherit;
+  }
+  .theme-classic :is([data-slot="dropdown-menu-separator"], [data-slot="select-separator"]) {
+    height: 2px;
+    background-color: transparent;
+    border-top: 1px solid var(--cl-shadow);
+    border-bottom: 1px solid var(--cl-hilight);
+  }
+  .theme-classic [data-slot="dropdown-menu-label"] {
+    color: var(--cl-gray-text);
+    font-weight: 700;
+  }
+  .theme-classic [data-slot="tooltip-content"] {
+    border-radius: 0;
+    border: 1px solid var(--cl-window-text);
+    background-color: var(--cl-info);
+    color: var(--cl-window-text);
+    padding: 2px 5px;
+    font-size: 11px;
+    box-shadow: 2px 2px 0 oklch(0 0 0 / 0.2);
+  }
+  /* پیکانِ tooltip در ویندوز نبود. */
+  .theme-classic [data-slot="tooltip-content"] > :is(svg, span:last-child:empty) {
+    display: none;
+  }
+
+  /* ════════════════ Table = DataGridView ════════════════ */
+  .theme-classic :is(.rounded-md, .rounded-lg, .rounded-xl, .border):has(> [data-slot="table-container"]) {
+    border-radius: 0;
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+    box-shadow: inset 1px 1px var(--cl-dkshadow), inset -1px -1px var(--cl-light);
+    padding: 2px;
+  }
+  .theme-classic [data-slot="table-container"] {
+    background-color: var(--cl-window);
+  }
+  .theme-classic [data-slot="table-head"] {
+    height: 24px;
+    padding-block: 2px;
+    background-color: var(--cl-face);
+    color: var(--cl-window-text);
+    font-weight: 400;
+    box-shadow: inset -1px -1px var(--cl-dkshadow), inset 1px 1px var(--cl-hilight), inset -2px -2px var(--cl-shadow);
+  }
+  .theme-classic [data-slot="table-head"]:active {
+    box-shadow: var(--cl-thin-sunken);
+  }
+  .theme-classic [data-slot="table-header"] [data-slot="table-row"] {
+    border-bottom: 0;
+  }
+  .theme-classic [data-slot="table-cell"] {
+    padding-block: 3px;
+    border-inline-start: 1px solid var(--cl-grid);
+  }
+  .theme-classic [data-slot="table-cell"]:first-child {
+    border-inline-start: 0;
+  }
+  .theme-classic [data-slot="table-body"] [data-slot="table-row"] {
+    border-bottom: 1px solid var(--cl-grid);
+    transition: none;
+  }
+  .theme-classic [data-slot="table-body"] [data-slot="table-row"]:nth-child(even):is(:not([class*="bg-"]), [class~="bg-transparent"]) {
+    background-color: #f6f6f1;
+  }
+  .theme-classic [data-slot="table-body"] [data-slot="table-row"]:hover {
+    background-color: var(--cl-hot);
+  }
+  .theme-classic [data-slot="table-row"][data-state="selected"] {
+    background-color: var(--cl-highlight);
+    color: var(--cl-highlight-text);
+  }
+  .theme-classic [data-slot="table-footer"] {
+    background-color: var(--cl-face);
+    border-top: 1px solid var(--cl-shadow);
+  }
+
+  /* ════════════════ Tabs = TabControl ════════════════ */
+  .theme-classic [data-slot="tabs-list"] {
+    height: auto;
+    padding: 2px 2px 0;
+    gap: 0;
+    align-items: flex-end;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: inset 0 -1px var(--cl-hilight);
+  }
+  .theme-classic [data-slot="tabs-trigger"] {
+    flex: 0 0 auto;
+    height: 22px;
+    padding-inline: 10px;
+    border: 0;
+    border-radius: 3px 3px 0 0;
+    background-color: var(--cl-face);
+    color: var(--cl-window-text);
+    font-weight: 400;
+    box-shadow: inset 1px 1px var(--cl-hilight), inset -1px 0 var(--cl-dkshadow), inset -2px 0 var(--cl-shadow), inset 0 -1px var(--cl-hilight);
+    transition: none;
+  }
+  .theme-classic [data-slot="tabs-trigger"]::after {
+    display: none;
+  }
+  .theme-classic [data-slot="tabs-trigger"]:is([data-state="active"], [data-active]:not([data-active="false"])) {
+    position: relative;
+    z-index: 1;
+    height: 25px;
+    margin-inline: -2px;
+    background-color: var(--cl-face);
+    box-shadow: inset 1px 1px var(--cl-hilight), inset -1px 0 var(--cl-dkshadow), inset -2px 0 var(--cl-shadow);
+    font-weight: 700;
+  }
+  .theme-classic [data-slot="tabs-trigger"]:focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: 1px dotted var(--cl-window-text);
+    outline-offset: -4px;
+  }
+
+  /* ════════════════ Badge ════════════════ */
+  .theme-classic [data-slot="badge"] {
+    border-radius: 0;
+  }
+
+  /* ════════════════ Progress / Skeleton ════════════════ */
+  .theme-classic [data-slot="progress"] {
+    height: 16px;
+    border-radius: 0;
+    padding: 2px;
+    background-color: var(--cl-window);
+    box-shadow: var(--cl-thin-sunken);
+  }
+  /* نوارِ پیشرفتِ بلوکی */
+  .theme-classic [data-slot="progress-indicator"] {
+    background: repeating-linear-gradient(to left, var(--cl-highlight) 0 8px, transparent 8px 10px);
+    transition: transform 300ms steps(6);
+  }
+  /* اسکلتون: «marquee»ِ آرامِ سه بلوکِ سرمه‌ای که روی شیار جلو می‌رود */
+  .theme-classic [data-slot="skeleton"] {
+    border-radius: 0;
+    background-color: #e4e1da;
+    background-image: linear-gradient(to left, transparent 0, transparent 40%, oklch(0.32 0.11 265 / 0.16) 40%, oklch(0.32 0.11 265 / 0.16) 60%, transparent 60%);
+    background-size: 300% 100%;
+    background-repeat: no-repeat;
+    animation: classic-marquee 1.8s steps(18) infinite;
+  }
+
+  /* ════════════════ Spinner = ساعتِ شنی ════════════════
+     هر آیکنِ چرخان (Loader2 یا هر `animate-spin`) جایش را به ساعتِ شنی‌ای
+     می‌دهد که مثلِ نشانگرِ «مشغولِ» ویندوز پر می‌شود و برمی‌گردد. */
+  .theme-classic svg.animate-spin {
+    stroke: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect x='3' y='1' width='10' height='2'/%3E%3Crect x='3' y='13' width='10' height='2'/%3E%3Cpath d='M4.5 3h7v2.5L9 8l2.5 2.5V13h-7v-2.5L7 8 4.5 5.5z' fill='%23fff' stroke='%23000'/%3E%3Cpath d='M5.5 4h5v1L8 7.3 5.5 5z' fill='%23c8a000'/%3E%3Cpath d='M5.5 12h5v-.8L8 9.6l-2.5 1.6z' fill='%23c8a000'/%3E%3C/svg%3E") center / contain no-repeat;
+    animation: classic-hourglass 1.5s ease-in-out infinite;
+  }
+
+  /* ════════════════ Sidebar = درختِ Explorer ════════════════ */
+  .theme-classic [data-slot="sidebar-inner"] {
+    background-color: var(--cl-face);
+  }
+  .theme-classic [data-slot="sidebar-container"] {
+    border-color: var(--cl-shadow);
+  }
+  /* ناحیه‌ی درخت: سفیدِ فرورفته */
+  .theme-classic [data-slot="sidebar-content"] {
+    margin: 2px 4px;
+    background-color: var(--cl-window);
+    box-shadow: var(--cl-sunken);
+  }
+  .theme-classic [data-slot="sidebar-group-label"] {
+    color: var(--cl-window-text);
+    font-weight: 700;
+  }
+  .theme-classic :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]) {
+    border-radius: 0;
+    transition: none;
+  }
+  .theme-classic [data-slot="sidebar-content"] :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):is([data-size="default"], [data-size="sm"], :not([data-size])) {
+    height: 24px;
+  }
+  /* hot-tracking: لینکِ زیرخط‌دار مثلِ درختِ Explorer */
+  .theme-classic [data-slot="sidebar-content"] :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):hover:not([data-active="true"]) {
+    background-color: transparent;
+    color: var(--cl-highlight);
+    text-decoration: underline;
+  }
+  .theme-classic :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"])[data-active="true"] {
+    background-color: var(--cl-highlight);
+    color: var(--cl-highlight-text);
+    font-weight: 400;
+  }
+  .theme-classic :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):focus-visible {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: 1px dotted var(--cl-window-text);
+    outline-offset: -1px;
+  }
+  /* خطوطِ نقطه‌چینِ درخت */
+  .theme-classic [data-sidebar="menu-sub"] {
+    border-inline-start: 1px dotted var(--cl-shadow);
+  }
+  .theme-classic [data-sidebar="menu-sub"] > li {
+    position: relative;
+  }
+  .theme-classic [data-sidebar="menu-sub"] > li::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    inset-inline-start: -0.625rem;
+    width: 0.5rem;
+    border-top: 1px dotted var(--cl-shadow);
+  }
+  /* سربرگ و پاورقیِ سایدبار (فضای کار / کاربر) */
+  .theme-classic :is([data-slot="sidebar-header"], [data-slot="sidebar-footer"]) [data-sidebar="menu-button"][data-size="lg"] {
+    box-shadow: var(--cl-thin-raised);
+  }
+  .theme-classic :is([data-slot="sidebar-header"], [data-slot="sidebar-footer"]) [data-sidebar="menu-button"][data-size="lg"]:is(:hover, [data-state="open"]) {
+    background-color: var(--cl-face);
+    box-shadow: var(--cl-thin-sunken);
+  }
+
+  /* ════════════════ پوسته‌ی برنامه ════════════════ */
+  /* هدرِ AppLayout = نوارِ عنوانِ پنجره‌ی اصلی */
+  .theme-classic [data-slot="app-header"] {
+    border-bottom: 0;
+    background: var(--cl-caption-bg);
+    color: var(--cl-caption-text);
+    box-shadow: inset 0 -2px var(--cl-face), inset 0 -3px var(--cl-shadow);
+  }
+  .theme-classic [data-slot="app-header"] :is(.text-muted-foreground, .text-foreground, [data-slot="breadcrumb-link"], [data-slot="breadcrumb-page"], [data-slot="breadcrumb-separator"], [data-slot="breadcrumb-list"]) {
+    color: var(--cl-caption-text);
+  }
+  .theme-classic [data-slot="app-header"] .group\/button[data-variant="ghost"] {
+    color: var(--cl-caption-text);
+  }
+  .theme-classic [data-slot="app-header"] .group\/button[data-variant="ghost"]:hover:not(:disabled) {
+    box-shadow: inset 1px 1px oklch(1 0 0 / 0.6), inset -1px -1px oklch(0 0 0 / 0.5);
+  }
+
+  /* نوارِ وضعیت (`ClassicStatusBar`) */
+  .theme-classic [data-slot="classic-status-bar"] {
+    background-color: var(--cl-face);
+    box-shadow: inset 0 1px var(--cl-hilight);
+    border-top: 1px solid var(--cl-shadow);
+  }
+  .theme-classic [data-slot="classic-status-panel"] {
+    box-shadow: var(--cl-thin-sunken);
+  }
+  /* «گیره‌ی» تغییرِ اندازه در گوشه‌ی پنجره */
+  .theme-classic [data-slot="classic-size-grip"] {
+    background:
+      linear-gradient(135deg, transparent 0 45%, var(--cl-hilight) 45% 52%, var(--cl-shadow) 52% 62%, transparent 62% 70%, var(--cl-hilight) 70% 77%, var(--cl-shadow) 77% 87%, transparent 87%);
+  }
+
+  /* ════════════════ نمودارها = MSChart ════════════════
+     ظاهرِ هندسی (گوشه‌ی تیز، خطِ شکسته، نشانگرِ مربعی) در `chartSkin.js`
+     است؛ اینجا فقط چیزهایی که با CSS می‌شود. */
+  .theme-classic [data-chart="grid"] {
+    stroke: var(--cl-grid);
+    stroke-dasharray: none;
+    opacity: 1;
+  }
+  .theme-classic [data-chart="grid"][data-zero] {
+    stroke: var(--cl-window-text);
+  }
+  .theme-classic [data-chart="plot"] {
+    fill: var(--cl-window);
+    stroke: var(--cl-shadow);
+  }
+  .theme-classic [data-chart="axis-label"] {
+    fill: var(--cl-window-text);
+  }
+  .theme-classic [data-chart="bar"] {
+    stroke: oklch(0 0 0 / 0.55);
+    stroke-width: 1;
+    transform-box: fill-box;
+    transform-origin: bottom;
+    animation: classic-bar-grow 480ms steps(8) both;
+  }
+  .theme-classic [data-chart="bar"][data-negative] {
+    transform-origin: top;
+  }
+  .theme-classic [data-chart="line"]:not([data-dashed]) {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: classic-line-draw 700ms steps(12) both;
+  }
+  .theme-classic [data-chart="slice"] {
+    stroke: var(--cl-window);
+    stroke-width: 1;
+    filter: drop-shadow(2px 2px 0 oklch(0 0 0 / 0.3));
+  }
+  .theme-classic [data-chart="swatch"] {
+    border-radius: 0;
+    outline: 1px solid oklch(0 0 0 / 0.6);
+    outline-offset: -1px;
+  }
+  .theme-classic [data-chart="legend-item"] {
+    border-radius: 0;
+  }
+  .theme-classic [data-chart="legend-item"]:hover {
+    background-color: transparent;
+    outline: 1px dotted var(--cl-window-text);
+  }
+  .theme-classic [data-chart="tooltip"] {
+    border-radius: 0;
+    border-color: var(--cl-window-text);
+    background-color: var(--cl-info);
+    color: var(--cl-window-text);
+    box-shadow: 2px 2px 0 oklch(0 0 0 / 0.2);
+  }
+  .theme-classic [data-chart="tooltip"] .text-muted-foreground {
+    color: #3a3a3a;
+  }
+
+  /* ════════════════ آیکن‌ها ════════════════
+     آیکن‌های lucide خطی‌اند؛ آیکن‌های ۱۶×۱۶ِ ویندوز رنگی و پُر. هر آیکنِ
+     شکل‌بسته یک «رنگِ پُر» می‌گیرد و خطِ دورش همان currentColor می‌ماند.
+     آیکن‌های بازشکل (فلش، ×، +) عمداً در این فهرست نیستند. */
+  .theme-classic svg.lucide {
+    fill: var(--ci, none);
+    stroke-linejoin: miter;
+  }
+  .theme-classic :is(.lucide-folder, .lucide-folder-open, .lucide-folder-tree, .lucide-folders) { --ci: #f5d76e; }
+  .theme-classic :is(.lucide-box, .lucide-boxes, .lucide-package, .lucide-package-search, .lucide-package-x, .lucide-package-check, .lucide-package-plus, .lucide-archive) { --ci: #e2b46c; }
+  .theme-classic :is(.lucide-file, .lucide-file-text, .lucide-file-plus, .lucide-file-check, .lucide-file-check-2, .lucide-file-check-corner, .lucide-files, .lucide-receipt, .lucide-receipt-text, .lucide-sticky-note, .lucide-scroll-text) { --ci: #fffff4; }
+  .theme-classic :is(.lucide-clipboard, .lucide-clipboard-list, .lucide-clipboard-check) { --ci: #e9c98f; }
+  .theme-classic :is(.lucide-book-open, .lucide-book-open-text, .lucide-book, .lucide-notebook) { --ci: #b9d3f4; }
+  .theme-classic :is(.lucide-user, .lucide-users, .lucide-user-cog, .lucide-user-round, .lucide-users-round, .lucide-user-plus, .lucide-contact, .lucide-badge-check) { --ci: #8fb4e8; }
+  .theme-classic :is(.lucide-settings, .lucide-cog, .lucide-settings-2, .lucide-printer, .lucide-calculator, .lucide-trash, .lucide-trash-2, .lucide-hard-drive, .lucide-server) { --ci: #cfcfcf; }
+  .theme-classic :is(.lucide-landmark, .lucide-building, .lucide-building-2, .lucide-warehouse, .lucide-store, .lucide-house, .lucide-home, .lucide-factory) { --ci: #f1e1b4; }
+  .theme-classic :is(.lucide-wallet, .lucide-banknote, .lucide-credit-card, .lucide-hand-coins, .lucide-piggy-bank) { --ci: #9fd39f; }
+  .theme-classic :is(.lucide-coins, .lucide-key, .lucide-key-round, .lucide-lock, .lucide-lock-keyhole, .lucide-tag, .lucide-tags, .lucide-star, .lucide-chart-pie, .lucide-pie-chart, .lucide-lightbulb, .lucide-triangle-alert, .lucide-alert-triangle) { --ci: #f7d84a; }
+  .theme-classic :is(.lucide-truck, .lucide-save, .lucide-layout-dashboard, .lucide-layout-template, .lucide-monitor, .lucide-info, .lucide-circle-help, .lucide-mail, .lucide-database) { --ci: #8fb4e8; }
+  .theme-classic :is(.lucide-car, .lucide-shopping-cart, .lucide-shopping-bag, .lucide-circle-x, .lucide-x-circle, .lucide-octagon-x, .lucide-ban, .lucide-circle-alert, .lucide-alert-circle) { --ci: #f08a7a; }
+  .theme-classic :is(.lucide-circle-check, .lucide-circle-check-big, .lucide-check-circle, .lucide-shield-check, .lucide-plus-circle, .lucide-circle-plus) { --ci: #9fd39f; }
+  .theme-classic :is(.lucide-calendar, .lucide-calendar-days, .lucide-calendar-clock, .lucide-clock, .lucide-history, .lucide-search, .lucide-scale, .lucide-image) { --ci: #e8f2ff; }
+  /* روی زمینه‌ی سرمه‌ای (انتخاب، نوارِ عنوان) رنگِ پُر کمی با Highlight می‌آمیزد،
+     مثلِ آیکنِ انتخاب‌شده در Explorer. */
+  .theme-classic :is([data-active="true"], [data-highlighted], [data-state="selected"], [data-slot="app-header"]) svg.lucide {
+    fill: color-mix(in srgb, var(--ci, transparent) 55%, var(--cl-highlight));
+  }
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) svg.lucide {
+    fill: color-mix(in srgb, var(--ci, transparent) 55%, var(--cl-highlight));
+  }
+
+  /* ════════════════ حرکت ════════════════ */
+  /* بازشدنِ پنجره: بزرگ‌شدنِ پله‌ای (DrawAnimatedRects ویندوز) */
+  .theme-classic :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"]):is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation: classic-window-open 200ms steps(5, end) both;
+  }
+  .theme-classic [data-slot="sheet-content"]:is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation-duration: 180ms;
+    animation-timing-function: steps(6, end);
+  }
+  /* منوها: «اسلاید» از بالا (یا از پایین وقتی رو به بالا باز می‌شوند) */
+  .theme-classic :is([data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="select-content"], [data-slot="popover-content"], [data-slot="combobox-content"]):is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation: classic-menu-slide-down 150ms linear both;
+  }
+  .theme-classic :is([data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="select-content"], [data-slot="popover-content"], [data-slot="combobox-content"])[data-side="top"]:is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation-name: classic-menu-slide-up;
+  }
+  .theme-classic :is([data-slot="dropdown-menu-sub-content"])[data-side="left"]:is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation-name: classic-menu-slide-left;
+  }
+  /* tooltip: محوشدنِ ویندوز ۲۰۰۰ */
+  .theme-classic [data-slot="tooltip-content"] {
+    animation: classic-fade 200ms linear both;
+  }
+  /* بستن‌ها فوری‌اند (Radix با animation: none بلافاصله unmount می‌کند). */
+  .theme-classic :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"], [data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"], [data-slot="sheet-overlay"], [data-slot="dropdown-menu-content"], [data-slot="dropdown-menu-sub-content"], [data-slot="select-content"], [data-slot="popover-content"], [data-slot="combobox-content"], [data-slot="tooltip-content"]):is([data-state="closed"], [data-closed]:not([data-closed="false"])) {
+    animation: none;
+  }
+  .theme-classic :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]):is([data-state="open"], [data-open]:not([data-open="false"])) {
+    animation: none;
+  }
+  .theme-classic [data-slot="checkbox-indicator"] {
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .theme-classic *:not(.animate-spin),
+    .theme-classic *:not(.animate-spin)::before,
+    .theme-classic *:not(.animate-spin)::after {
+      animation-duration: 0.01ms;
+      animation-iteration-count: 1;
+      transition-duration: 0.01ms;
+    }
+  }
+}
+
+@keyframes classic-window-open {
+  from { scale: 0.35; opacity: 0.6; }
+  to { scale: 1; opacity: 1; }
+}
+@keyframes classic-menu-slide-down {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes classic-menu-slide-up {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes classic-menu-slide-left {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes classic-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes classic-marquee {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+@keyframes classic-hourglass {
+  0%, 70% { rotate: 0deg; }
+  100% { rotate: 180deg; }
+}
+@keyframes classic-bar-grow {
+  from { scale: 1 0; }
+  to { scale: 1 1; }
+}
+@keyframes classic-line-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* ════════════════ DatePicker (react-multi-date-picker) ════════════════
+   `persian-date-picker.css` بدونِ لایه است؛ این بخش هم بدونِ لایه. */
+.theme-classic .rmdp-app-calendar .rmdp-calendar {
+  background: var(--cl-face);
+  border-radius: 0;
+  box-shadow: var(--cl-raised);
+}
+.theme-classic .rmdp-app-calendar .rmdp-shadow {
+  box-shadow: var(--cl-raised), 2px 2px 0 oklch(0 0 0 / 0.25);
+  border-radius: 0;
+}
+.theme-classic .rmdp-app-calendar .rmdp-header {
+  background: var(--cl-caption-bg);
+  color: var(--cl-caption-text);
+}
+.theme-classic .rmdp-app-calendar .rmdp-day-picker {
+  background: var(--cl-window);
+  box-shadow: var(--cl-thin-sunken);
+}
+.theme-classic .rmdp-app-calendar .rmdp-day span {
+  border-radius: 0;
+}
+.theme-classic .rmdp-app-calendar .rmdp-day.rmdp-today span {
+  background: transparent;
+  color: var(--cl-window-text);
+  outline: 1px solid #c00000;
+}
+.theme-classic .rmdp-app-calendar .rmdp-day.rmdp-selected span:not(.highlight) {
+  background: var(--cl-highlight);
+  color: var(--cl-highlight-text);
+  box-shadow: none;
+}
+.theme-classic .rmdp-app-calendar .rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden) span:hover {
+  background: var(--cl-hot);
+  color: var(--cl-window-text);
+}
+.theme-classic .rmdp-app-calendar .rmdp-arrow-container {
+  border-radius: 0;
+  background: var(--cl-face);
+  box-shadow: var(--cl-raised);
+}
+.theme-classic .rmdp-app-calendar .rmdp-arrow {
+  border-color: var(--cl-window-text);
+}

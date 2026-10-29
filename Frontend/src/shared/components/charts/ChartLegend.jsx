@@ -21,6 +21,7 @@ export default function ChartLegend({ series, hidden, onToggle, className }) {
           <button
             key={item.key}
             type="button"
+            data-chart="legend-item"
             onClick={() => onToggle?.(item.key)}
             aria-pressed={!isHidden}
             className={cn(
@@ -30,6 +31,7 @@ export default function ChartLegend({ series, hidden, onToggle, className }) {
             )}
           >
             <span
+              data-chart="swatch"
               className={cn("size-2.5 rounded-full", isHidden && "grayscale")}
               style={{ backgroundColor: item.color }}
             />

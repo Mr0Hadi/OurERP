@@ -14,6 +14,8 @@ import { AppSidebar } from "./AppSidebar";
 import { AppBreadcrumb } from "./AppBreadcrumb";
 import RouteLoadingOverlay from "@/shared/components/layout/RouteLoadingOverlay";
 import { ThemeToggle } from "@/shared/components/theme/ThemeToggle";
+import { useTheme } from "@/shared/components/theme/themeContext";
+import { ClassicStatusBar } from "./ClassicStatusBar";
 import { useHeaderStore } from "@/shared/store/headerStore";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { useHideOnScroll } from "@/shared/hooks/useHideOnScroll";
@@ -36,6 +38,7 @@ export default function AppLayout() {
   // می‌دهند که پیش از رفتن کاری داشته باشند (مثلاً پاک‌کردن فرم).
   const goBack = useGoBack();
   const isHeaderHidden = useHideOnScroll();
+  const { theme } = useTheme();
 
   const location = useLocation();
 
@@ -59,6 +62,7 @@ export default function AppLayout() {
         <SidebarInset style={{ "--app-header-offset": isHeaderHidden ? "0px" : "4rem" }}>
           {/* هدر مثلِ نوارِ کروم: با اسکرول به پایین کنار می‌رود و با اسکرول به بالا برمی‌گردد. */}
           <header
+            data-slot="app-header"
             className={`sticky top-0 z-30 flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4 transition-transform duration-200 ${
               isHeaderHidden ? "-translate-y-full" : ""
             }`}
@@ -95,6 +99,7 @@ export default function AppLayout() {
               </PermissionGate>
             </Suspense>
           </div>
+          {theme === "classic" && <ClassicStatusBar />}
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
