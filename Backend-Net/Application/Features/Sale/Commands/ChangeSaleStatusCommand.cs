@@ -1,4 +1,4 @@
-using Application.Common.Payments;
+﻿using Application.Common.Payments;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductUnit;
@@ -19,9 +19,10 @@ using Application.Common.Audit;
 namespace Application.Features.Sale.Commands
 {
     /// <summary>
-    /// The manual status changes a sale allows: DELIVERED once everything ordered has shipped (SHIPPED), and CANCELLED
-    /// while nothing has shipped and no installment plan is active. Every other status is set by the system - PROCESSING by
-    /// the first payment, PARTIALLY_DELIVERED/SHIPPED by shipping, RETURNED by returns. CANCELLED is final.
+    /// The manual status changes a sale allows: PROCESSING on a warehouse-checked proforma, which issues its invoice with
+    /// nothing paid (a credit sale - frontend-requests 9.11); DELIVERED once everything ordered has shipped (SHIPPED); and
+    /// CANCELLED while nothing has shipped and no installment plan is active. Otherwise PROCESSING is set by the first
+    /// payment, and PARTIALLY_DELIVERED/SHIPPED by shipping. CANCELLED is final.
     /// Payments stay on a cancelled sale; money given back to the customer is recorded with AddSalePayment (OUT).
     /// </summary>
     [AuditAction(AuditActionEnum.ChangeSaleStatus)]
@@ -29,6 +30,9 @@ namespace Application.Features.Sale.Commands
     {
         public int Id { get; set; }
         public SalesStatusEnum Status { get; set; }
+
+        /// <summary>Only with PROCESSING: the invoice date to issue with (not after today). Omitted: the proforma's own date, else now.</summary>
+        public DateTime? InvoiceDate { get; set; }
     }
 
     public class ChangeSaleStatusCommandValidator : AbstractValidator<ChangeSaleStatusCommand>
@@ -37,8 +41,11 @@ namespace Application.Features.Sale.Commands
         {
             RuleFor(x => x.Id).GreaterThan(0).WithMessage("فروش نامعتبر است.");
             RuleFor(x => x.Status)
-                .Must(s => s is SalesStatusEnum.DELIVERED or SalesStatusEnum.CANCELLED)
-                .WithMessage("وضعیت فروش را فقط می‌توان به تحویل‌شده یا لغوشده تغییر داد.");
+                .Must(s => s is SalesStatusEnum.PROCESSING or SalesStatusEnum.DELIVERED or SalesStatusEnum.CANCELLED)
+                .WithMessage("وضعیت فروش را فقط می‌توان به صدور فاکتور، تحویل‌شده یا لغوشده تغییر داد.");
+            RuleFor(x => x.InvoiceDate).Must(SaleInvoiceFinalizer.IsValidInvoiceDate).WithMessage(SaleInvoiceFinalizer.InvoiceDateMessage);
+            RuleFor(x => x.InvoiceDate).Null().When(x => x.Status != SalesStatusEnum.PROCESSING)
+                .WithMessage("تاریخ فاکتور فقط هنگام صدور فاکتور فرستاده می‌شود.");
         }
     }
 
@@ -72,6 +79,26 @@ namespace Application.Features.Sale.Commands
 
             if (sale.Status == SalesStatusEnum.CANCELLED)
                 throw new ValidationCustomException("فروش لغوشده قابل تغییر وضعیت نیست.");
+
+            if (request.Status == SalesStatusEnum.PROCESSING)
+            {
+                // A credit sale: the invoice is issued and goes on the customer's account with nothing paid. Only after the
+                // customer and the warehouse have approved it - the same gate a payment passes.
+                if (sale.Status != SalesStatusEnum.PROFORMA)
+                    throw new ValidationCustomException("فاکتور این فروش قبلاً صادر شده است.");
+                if (sale.PaymentType == PaymentTypeEnum.INSTALLMENT)
+                    throw new ValidationCustomException("فاکتور فروش اقساطی با ثبت قرارداد و پیش‌پرداخت صادر می‌شود.");
+                SaleProformaPipeline.EnsureReadyForPayment(sale);
+
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, request.InvoiceDate, cancellationToken);
+                sale.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, sale.Id, cancellationToken);
+                res.Message = "فاکتور فروش صادر شد.";
+                res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
+                return res;
+            }
 
             if (request.Status == SalesStatusEnum.DELIVERED)
             {

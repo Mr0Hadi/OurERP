@@ -195,7 +195,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.Add(product);
             scope.Context.SaveChanges();
 
-            var handler = new DeleteProductCommandHandler(scope.ProductRepository, scope.UnitOfWork);
+            var handler = new DeleteProductCommandHandler(scope.ProductRepository, scope.UnitOfWork, scope.Db);
             await handler.Handle(new DeleteProductCommand { Id = product.Id }, CancellationToken.None);
 
             using var verify = db.NewContext();

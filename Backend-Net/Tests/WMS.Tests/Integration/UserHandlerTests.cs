@@ -24,7 +24,7 @@ namespace WMS.Tests.Integration
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "newuser",
                 Password = "Test@1234",
@@ -45,7 +45,7 @@ namespace WMS.Tests.Integration
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "newuser",
                 Password = "Test@1234",
@@ -70,7 +70,7 @@ namespace WMS.Tests.Integration
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "newuser",
                 Password = "Test@1234",
@@ -94,7 +94,7 @@ namespace WMS.Tests.Integration
 
             await Assert.ThrowsAsync<ValidationCustomException>(() => handler.Handle(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "taken",
                 Password = "Test@1234",
@@ -118,7 +118,7 @@ namespace WMS.Tests.Integration
 
             await handler.Handle(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "brandnew",
                 Password = "Test@1234",
@@ -145,7 +145,7 @@ namespace WMS.Tests.Integration
 
             await handler.Handle(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "departmenthead",
                 Password = "Test@1234",
@@ -165,7 +165,7 @@ namespace WMS.Tests.Integration
 
             var result = validator.Validate(new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "brandnew",
                 Password = "Test@1234",

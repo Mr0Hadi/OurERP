@@ -41,6 +41,14 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        // Read-only: whoever builds the sale or the contract may show the customer the schedule before anything is saved.
+        [HasPermission(PermissionEnum.SaleCreate, PermissionEnum.SaleInstallmentManage)]
+        [HttpPost("PreviewSaleInstallmentPlan")]
+        public async Task<ActionResult<ResponseDto>> PreviewSaleInstallmentPlan([FromBody] PreviewSaleInstallmentPlanQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.SaleInstallmentManage)]
         [HttpPost("CreateSaleInstallmentPlan")]
         public async Task<ActionResult<ResponseDto>> CreateSaleInstallmentPlan([FromBody] CreateSaleInstallmentPlanCommand request)

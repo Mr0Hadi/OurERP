@@ -207,7 +207,7 @@ namespace WMS.Tests.Integration
             var returnId = scope.Context.PurchaseReturns.Single().Id;
 
             // The pending money effect must not appear on the warehouse queue.
-            var pendingRes = await new PRQ.GetPurchaseReturnPendingEffectsQueryHandler(scope.Db).Handle(new PRQ.GetPurchaseReturnPendingEffectsQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
+            var pendingRes = await new PRQ.GetPurchaseReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(new PRQ.GetPurchaseReturnPendingEffectsQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
             var pending = ((IEnumerable<PRD.PendingEffectDto>)pendingRes.Data!.GetType().GetProperty("PendingEffects")!.GetValue(pendingRes.Data)!).ToList();
             Assert.Equal(goodsId, Assert.Single(pending).EffectId);
 

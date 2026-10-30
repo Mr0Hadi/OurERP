@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Common.Queries;
@@ -90,8 +90,8 @@ namespace Application.Features.Accounting.Queries
             public decimal Total { get; set; }
         }
 
-        private IQueryable<Line> Lines(DocumentSideEnum side) => side == DocumentSideEnum.PURCHASE
-            ? _context.PurchaseItems
+        private static IQueryable<Line> Lines(IWMSDbContext context, DocumentSideEnum side) => side == DocumentSideEnum.PURCHASE
+            ? context.PurchaseItems
                 .Where(x => x.Purchase.IsActive && x.Purchase.Status != PurchaseStatusEnum.PROFORMA && x.Purchase.Status != PurchaseStatusEnum.CANCELLED)
                 .Select(x => new Line
                 {
@@ -113,7 +113,7 @@ namespace Application.Features.Accounting.Queries
                     Tax = (decimal)x.TaxAmount,
                     Total = (decimal)x.TotalAmount,
                 })
-            : _context.SaleItems
+            : context.SaleItems
                 .Where(x => x.Sale.IsActive && x.Sale.Status != SalesStatusEnum.PROFORMA && x.Sale.Status != SalesStatusEnum.CANCELLED)
                 .Select(x => new Line
                 {
@@ -136,11 +136,10 @@ namespace Application.Features.Accounting.Queries
                     Total = (decimal)x.TotalAmount,
                 });
 
-        public async Task<ResponseDto> Handle(GetTradeBreakdownQuery request, CancellationToken cancellationToken)
+        /// <summary>Issued lines of the request's side and period, with its party/product/category filters.</summary>
+        private static IQueryable<Line> FilteredLines(IWMSDbContext context, GetTradeBreakdownQuery request)
         {
-            var res = new ResponseDto();
-
-            var lines = Lines(request.Side);
+            var lines = Lines(context, request.Side);
             var from = DateRange.Start(request.FromDate);
             var to = DateRange.EndExclusive(request.ToDate);
             if (from.HasValue)
@@ -153,7 +152,15 @@ namespace Application.Features.Accounting.Queries
                 lines = lines.Where(x => x.ProductId == request.ProductId);
             if (request.ProductCategoryId.HasValue)
                 lines = lines.Where(x => x.CategoryId == request.ProductCategoryId);
+            return lines;
+        }
 
+        /// <summary>The groups the table pages and the trade-breakdown export streams (the export without NetSharePercent).</summary>
+        public static IQueryable<TradeBreakdownRowDto> Build(IWMSDbContext context, GetTradeBreakdownQuery request) =>
+            Groups(FilteredLines(context, request), request);
+
+        private static IQueryable<TradeBreakdownRowDto> Groups(IQueryable<Line> lines, GetTradeBreakdownQuery request)
+        {
             var groups = request.GroupBy switch
             {
                 TradeBreakdownGroupEnum.CATEGORY => lines.GroupBy(x => new { Id = x.CategoryId, Title = x.CategoryName, Code = (string?)null })
@@ -171,6 +178,30 @@ namespace Application.Features.Accounting.Queries
                 var search = request.Search.Trim();
                 groups = groups.Where(x => x.Title.Contains(search) || x.Code!.Contains(search));
             }
+            return groups;
+        }
+
+        /// <summary>Default: the biggest net first; always ends on the group id so paging is stable.</summary>
+        public static IOrderedQueryable<TradeBreakdownRowDto> Sort(IQueryable<TradeBreakdownRowDto> groups, TradeBreakdownSortEnum? sortBy, SortDirectionEnum? sortDirection)
+        {
+            var direction = SortingExtensions.ResolveDirection(sortBy.HasValue, sortDirection, SortDirectionEnum.DESC);
+            var sorted = sortBy switch
+            {
+                TradeBreakdownSortEnum.TITLE => groups.SortBy(x => x.Title, direction),
+                TradeBreakdownSortEnum.QUANTITY => groups.SortBy(x => x.Quantity, direction),
+                TradeBreakdownSortEnum.INVOICE_COUNT => groups.SortBy(x => x.InvoiceCount, direction),
+                TradeBreakdownSortEnum.TOTAL_AMOUNT => groups.SortBy(x => x.TotalAmount, direction),
+                _ => groups.SortBy(x => x.NetAmount, direction),
+            };
+            return sorted.ThenSortBy(x => x.Id, direction);
+        }
+
+        public async Task<ResponseDto> Handle(GetTradeBreakdownQuery request, CancellationToken cancellationToken)
+        {
+            var res = new ResponseDto();
+
+            var lines = FilteredLines(_context, request);
+            var groups = Groups(lines, request);
 
             // The totals of the period (before the title search, so a share is always of the whole period).
             var totals = await lines
@@ -188,18 +219,9 @@ namespace Application.Features.Accounting.Queries
                 .FirstOrDefaultAsync(cancellationToken) ?? new TradeBreakdownSummaryDto();
             totals.GroupCount = await groups.CountAsync(cancellationToken);
 
-            // Default: the biggest net first.
-            var direction = SortingExtensions.ResolveDirection(request.SortBy.HasValue, request.SortDirection, SortDirectionEnum.DESC);
-            var sorted = request.SortBy switch
-            {
-                TradeBreakdownSortEnum.TITLE => groups.SortBy(x => x.Title, direction),
-                TradeBreakdownSortEnum.QUANTITY => groups.SortBy(x => x.Quantity, direction),
-                TradeBreakdownSortEnum.INVOICE_COUNT => groups.SortBy(x => x.InvoiceCount, direction),
-                TradeBreakdownSortEnum.TOTAL_AMOUNT => groups.SortBy(x => x.TotalAmount, direction),
-                _ => groups.SortBy(x => x.NetAmount, direction),
-            };
+            var sorted = Sort(groups, request.SortBy, request.SortDirection);
 
-            var paged = await sorted.ThenSortBy(x => x.Id, direction).ToPagedAsync(request.Page, request.Take, cancellationToken);
+            var paged = await sorted.ToPagedAsync(request.Page, request.Take, cancellationToken);
             foreach (var row in paged.Items)
                 row.NetSharePercent = totals.NetAmount == 0 ? 0 : Math.Round(row.NetAmount * 100m / totals.NetAmount, 2);
 

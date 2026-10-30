@@ -1,4 +1,4 @@
-using Common.Exceptions;
+﻿using Common.Exceptions;
 using Domain.Entities;
 using Domain.Enums;
 
@@ -19,10 +19,12 @@ namespace Application.Common.Payments
 
         /// <summary>
         /// Methods a single payment row can carry. MIXED is several rows, INSTALLMENT is the installment feature's
-        /// own rows - neither describes one movement of money.
+        /// own rows - neither describes one movement of money. CREDIT (on account) is a payment term, not a payment: a
+        /// row with it moved no money yet counted as paid, so it is refused (frontend-requests 9.4). Rows written before
+        /// that stay readable and keep counting; nothing rewrites them.
         /// </summary>
         public static bool IsRowMethod(PaymentTypeEnum type) =>
-            type is PaymentTypeEnum.CASH or PaymentTypeEnum.CREDIT or PaymentTypeEnum.CHECK or PaymentTypeEnum.TRANSFER;
+            type is PaymentTypeEnum.CASH or PaymentTypeEnum.CHECK or PaymentTypeEnum.TRANSFER;
 
         /// <summary>
         /// Rows in the document's own direction minus rows the other way (refunds), voided rows excluded, plus the active

@@ -84,6 +84,7 @@ namespace WMS.Tests.Integration
             await RunAll<SaleJournalSortEnum>((s, d) => new GetSaleJournalQueryHandler(scope.Db).Handle(new GetSaleJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseJournalSortEnum>((s, d) => new GetPurchaseJournalQueryHandler(scope.Db).Handle(new GetPurchaseJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SaleLineJournalSortEnum>((s, d) => new GetSaleLineJournalQueryHandler(scope.Db).Handle(new GetSaleLineJournalQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<PurchaseLineJournalSortEnum>((s, d) => new GetPurchaseLineJournalQueryHandler(scope.Db).Handle(new GetPurchaseLineJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PaymentJournalSortEnum>((s, d) => new GetPaymentJournalQueryHandler(scope.Db).Handle(new GetPaymentJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<InventoryValuationSortEnum>((s, d) => new GetInventoryValuationQueryHandler(scope.Db).Handle(new GetInventoryValuationQuery { SortBy = s, SortDirection = d }, ct));
             foreach (var side in Enum.GetValues<DocumentSideEnum>())

@@ -23,6 +23,13 @@
         public string ProductCode { get; set; } = string.Empty;
         public string Unit { get; set; } = string.Empty;
 
+        // What the warehouse needs to identify the product and know whether every unit must be scanned
+        // (frontend-requests 15.1). ImageUrl is the GetImage URL of ImageKey, as on ProductDto.
+        public bool RequiresUnitTracking { get; set; }
+        public string? Brand { get; set; }
+        public string? ImageKey { get; set; }
+        public string? ImageUrl { get; set; }
+
         /// <summary>
         /// How much of this line a new ON_ORDER claim may still take: shipped - settled - what open claims of other returns
         /// already reserve. The same number CreateSaleReturn enforces (ISaleReturnCalculationService.GetClaimableQuantity).

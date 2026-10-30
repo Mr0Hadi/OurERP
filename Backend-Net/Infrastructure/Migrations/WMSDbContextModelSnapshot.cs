@@ -281,7 +281,7 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Province")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RefferalCode")
+                    b.Property<string>("ReferralCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RegistrationNumber")
@@ -370,6 +370,20 @@ namespace Infrastructure.Migrations
                     b.HasIndex("DocumentKind", "DocumentId");
 
                     b.ToTable("DocumentAttachments");
+                });
+
+            modelBuilder.Entity("Domain.Entities.DocumentNumberCounter", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("LastValue")
+                        .HasColumnType("int");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("DocumentNumberCounters");
                 });
 
             modelBuilder.Entity("Domain.Entities.InventoryCostLedgerEntry", b =>
@@ -1171,6 +1185,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("ReceivedQuantity")
                         .HasColumnType("int");
 
+                    b.Property<int>("ReplacementReceivedQuantity")
+                        .HasColumnType("int");
+
                     b.Property<int>("SettledQuantity")
                         .HasColumnType("int");
 
@@ -1342,7 +1359,8 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("ReturnNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -1359,6 +1377,9 @@ namespace Infrastructure.Migrations
                     b.HasIndex("PreviousReturnId");
 
                     b.HasIndex("PurchaseId");
+
+                    b.HasIndex("ReturnNumber")
+                        .IsUnique();
 
                     b.ToTable("PurchaseReturns");
                 });
@@ -1638,7 +1659,8 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("InvoiceNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1679,6 +1701,10 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("InvoiceNumber")
+                        .IsUnique()
+                        .HasFilter("[InvoiceNumber] <> ''");
 
                     b.HasIndex("ReservationExpiresAt")
                         .HasFilter("[ReservationExpiresAt] IS NOT NULL");
@@ -1915,6 +1941,9 @@ namespace Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
+                    b.Property<int>("ReplacementShippedQuantity")
+                        .HasColumnType("int");
+
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
 
@@ -2013,7 +2042,8 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("ReturnNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("SaleId")
                         .HasColumnType("int");
@@ -2034,6 +2064,9 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("PreviousReturnId");
+
+                    b.HasIndex("ReturnNumber")
+                        .IsUnique();
 
                     b.HasIndex("SaleId");
 
@@ -2785,6 +2818,9 @@ namespace Infrastructure.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("DashboardLayout")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");

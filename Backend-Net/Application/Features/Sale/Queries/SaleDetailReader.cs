@@ -123,6 +123,9 @@ namespace Application.Features.Sale.Queries
                         TaxAmount = y.TaxAmount,
                         TotalAmount = y.TotalAmount,
                         FreeStock = y.Product.Stock,
+                        RequiresUnitTracking = y.Product.RequiresUnitTracking,
+                        Brand = y.Product.Brand,
+                        ImageKey = y.Product.ImageUrl,
                     }).ToList(),
                     Drivers = x.Drivers.Select(d => new SaleDriverDto
                     {
@@ -141,6 +144,10 @@ namespace Application.Features.Sale.Queries
 
             await FillClaimCapsAsync(context, saleReturnCalculationService, sale, cancellationToken);
             await FillPipelineAsync(context, sale, cancellationToken);
+
+            // Signed after the read, like every image URL - GetFixedUrl is not translatable to SQL.
+            foreach (var item in sale.Items)
+                item.ImageUrl = objectStorageService.GetFixedUrl(item.ImageKey);
 
             sale.Attachments = await DocumentAttachmentWriter.ReadAsync(context, objectStorageService, DocumentKindEnum.SALE, saleId, cancellationToken);
 

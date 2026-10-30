@@ -61,6 +61,8 @@ namespace Infrastructure.Persistence
                 }
             }
 
+            ClearEmptyDates();
+
             var recorder = AuditRecorder.Capture(this);
 
             // Without accepting, the saved rows stay Added/Modified and the audit save would write them a second time.
@@ -131,6 +133,25 @@ namespace Infrastructure.Persistence
         private int? CurrentUserId() =>
             int.TryParse(_userContextService?.GetUserId(), out var id) && id > 0 ? id : null;
 
+        /// <summary>
+        /// An optional date that arrives as 0001-01-01 (a client's "no date", or an unset DateTime copied across) is stored
+        /// as null, for every nullable date column, so the API never hands that value back (frontend-requests 7.4).
+        /// </summary>
+        private void ClearEmptyDates()
+        {
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.State is not (EntityState.Added or EntityState.Modified))
+                    continue;
+
+                foreach (var property in entry.Properties)
+                {
+                    if (property.Metadata.ClrType == typeof(DateTime?) && property.CurrentValue is DateTime value && value == DateTime.MinValue)
+                        property.CurrentValue = null;
+                }
+            }
+        }
+
         public DbSet<User> Users => Set<User>();
         public DbSet<Team> Teams => Set<Team>();
         public DbSet<Supplier> Suppliers => Set<Supplier>();
@@ -180,6 +201,7 @@ namespace Infrastructure.Persistence
         public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
         public DbSet<AuditEntityChange> AuditEntityChanges => Set<AuditEntityChange>();
         public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+        public DbSet<DocumentNumberCounter> DocumentNumberCounters => Set<DocumentNumberCounter>();
         public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
         public DbSet<BankAccountTransfer> BankAccountTransfers => Set<BankAccountTransfer>();
         public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
@@ -200,6 +222,23 @@ namespace Infrastructure.Persistence
         public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {
             return await this.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        }
+
+        public async Task<int> NextDocumentNumberAsync(string key, CancellationToken cancellationToken)
+        {
+            // MERGE ... HOLDLOCK: the first draw of a key creates its row, two concurrent first draws cannot both insert,
+            // and every later draw is a locked increment. Not composed (ToListAsync with no operator), since a MERGE
+            // cannot sit inside a SELECT.
+            var values = await Database.SqlQueryRaw<int>(
+                """
+                MERGE [DocumentNumberCounters] WITH (HOLDLOCK) AS t
+                USING (SELECT {0} AS [Key]) AS s ON t.[Key] = s.[Key]
+                WHEN MATCHED THEN UPDATE SET [LastValue] = t.[LastValue] + 1
+                WHEN NOT MATCHED THEN INSERT ([Key], [LastValue]) VALUES (s.[Key], 1)
+                OUTPUT inserted.[LastValue] AS [Value];
+                """, key).ToListAsync(cancellationToken);
+
+            return values[0];
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -633,12 +672,30 @@ namespace Infrastructure.Persistence
                 .Property(x => x.Note)
                 .HasMaxLength(1000);
 
+            // Official document numbers are unique (frontend-requests 9.10); the counter that issues them
+            // (DocumentNumberCounter) is the real guarantee, the index is the backstop. A proforma has no number yet ('').
+            modelBuilder.Entity<Sale>().Property(x => x.InvoiceNumber).HasMaxLength(50);
+            modelBuilder.Entity<Sale>()
+                .HasIndex(x => x.InvoiceNumber)
+                .IsUnique()
+                .HasFilter("[InvoiceNumber] <> ''");
+            modelBuilder.Entity<PurchaseReturn>().Property(x => x.ReturnNumber).HasMaxLength(50);
+            modelBuilder.Entity<PurchaseReturn>().HasIndex(x => x.ReturnNumber).IsUnique();
+            modelBuilder.Entity<SaleReturn>().Property(x => x.ReturnNumber).HasMaxLength(50);
+            modelBuilder.Entity<SaleReturn>().HasIndex(x => x.ReturnNumber).IsUnique();
+
             // The background sweep looks for proformas whose reservation has run out.
             modelBuilder.Entity<Sale>()
                 .HasIndex(x => x.ReservationExpiresAt)
                 .HasFilter("[ReservationExpiresAt] IS NOT NULL");
 
             // System settings: the catalogue is in code (SystemSettingCatalog); a row is a value that differs from its default.
+            modelBuilder.Entity<DocumentNumberCounter>(entry =>
+            {
+                entry.HasKey(x => x.Key);
+                entry.Property(x => x.Key).HasMaxLength(50);
+            });
+
             modelBuilder.Entity<SystemSetting>(entry =>
             {
                 entry.HasKey(x => x.Key);

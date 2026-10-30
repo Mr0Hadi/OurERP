@@ -54,16 +54,16 @@ namespace Application.Common.Contracts.SaleReturn
         ReturnStatusEnum RecomputeReturnStatus(Domain.Entities.SaleReturn saleReturn);
 
         /// <summary>
-        /// How much of a sale item's on-order claimed quantity is currently claimed but not yet
-        /// resolved, summed across every active (non-terminal) return for that sale item. Off-order
+        /// How much of a sale item's on-order claimed quantity is claimed and not yet settled
+        /// (undecided, or decided with an effect still pending), summed across every active (non-terminal) return for that sale item. Off-order
         /// claims (Scope == OFF_ORDER) never consume a line's quota.
         /// </summary>
         int GetOpenClaimQuantity(int saleItemId, List<Domain.Entities.SaleReturn> activeReturns);
 
         /// <summary>
         /// How much of a sale item's shipped quantity is still eligible for a brand-new on-order
-        /// claim: shipped minus what's already been settled, minus whatever is currently
-        /// claimed-but-undecided across active returns.
+        /// claim: shipped plus replacements shipped on the line, minus what's already been settled,
+        /// minus whatever active returns still hold (GetOpenClaimQuantity).
         /// </summary>
         int GetClaimableQuantity(Domain.Entities.SaleItem item, List<Domain.Entities.SaleReturn> activeReturns);
 

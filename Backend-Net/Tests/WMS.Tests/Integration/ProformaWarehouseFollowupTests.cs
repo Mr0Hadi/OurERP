@@ -1,4 +1,4 @@
-using Application.Features.Sale.Commands;
+﻿using Application.Features.Sale.Commands;
 using Application.Features.Sale.Dtos;
 using Common.Exceptions;
 using Domain.Enums;
@@ -58,6 +58,9 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
             var (mediator, scenario, barcodes) = await SetupAsync(scope, stock: 3);
+            // Tracked, so an unscanned remaining line is short; an untracked one would be reserved FIFO (frontend-requests 29.1).
+            scenario.Product.RequiresUnitTracking = true;
+            await scope.Context.SaveChangesAsync(Ct);
             var sale = await ProformaFlow.ApproveAsync(mediator, await ProformaFlow.CreateAsync(mediator, scenario, quantity: 2));
             var line = sale.Items.Single();
 

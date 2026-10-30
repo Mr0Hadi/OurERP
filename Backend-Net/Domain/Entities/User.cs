@@ -19,6 +19,12 @@ namespace Domain.Entities
         public Team? Team { get; set; }
         public List<UserPermission> Permissions { get; set; } = new();
         public string? RefreshToken { get; set; }
+
+        /// <summary>
+        /// The dashboard layout the frontend saved for this user (which widgets, in what order): opaque JSON owned by the
+        /// frontend, never interpreted here. Null = the frontend's default (frontend-requests 6.3).
+        /// </summary>
+        public string? DashboardLayout { get; set; }
         public DateTime? ExpireRefreshToken { get; set; }
 
         /// <summary>

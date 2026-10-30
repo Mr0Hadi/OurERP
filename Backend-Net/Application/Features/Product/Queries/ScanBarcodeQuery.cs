@@ -4,6 +4,7 @@ using Application.Common.Contracts.ProductCode;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Product.Dtos;
+using Application.Features.Product.Mappings;
 using Common.Exceptions;
 using Common.Extensions;
 using Domain.Enums;
@@ -59,11 +60,15 @@ namespace Application.Features.Product.Queries
                 .FirstOrDefaultAsync(cancellationToken)
                     ?? throw new NotFoundCustomException("محصول متناظر با این بارکد یافت نشد.");
 
-            Domain.Entities.ProductUnit? unit = null;
+            // The same projection as GetProductUnitList/GetProductUnitHistory, so the three endpoints return one unit
+            // one way (frontend-requests 8).
+            ProductUnitDto? unit = null;
             if (reference.Kind == BarcodeReferenceKindEnum.UNIT)
             {
                 unit = await _context.ProductUnits
-                    .FirstOrDefaultAsync(x => x.BarcodePayload == reference.NormalizedPayload, cancellationToken);
+                    .Where(x => x.BarcodePayload == reference.NormalizedPayload)
+                    .SelectDto(_context)
+                    .FirstOrDefaultAsync(cancellationToken);
             }
 
             res.Data = new ScanBarcodeResultDto
@@ -95,18 +100,7 @@ namespace Application.Features.Product.Queries
                     ImageUrl = _objectStorageService.GetFixedUrl(product.ImageUrl),
                     ProductCategoryId = product.ProductCategoryId,
                 },
-                Unit = unit == null ? null : new ProductUnitDto
-                {
-                    Id = unit.Id,
-                    ProductId = unit.ProductId,
-                    SerialNumber = unit.SerialNumber,
-                    Barcode = unit.Barcode,
-                    BarcodePayload = unit.BarcodePayload,
-                    Status = unit.Status,
-                    PurchaseItemId = unit.PurchaseItemId,
-                    SaleItemId = unit.SaleItemId,
-                    SoldAt = unit.SoldAt,
-                },
+                Unit = unit,
             };
 
             res.Message = "اطلاعات بارکد با موفقیت ارسال شد.";

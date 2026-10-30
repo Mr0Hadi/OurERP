@@ -1,4 +1,4 @@
-using Application.Common.Audit;
+﻿using Application.Common.Audit;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.UnitOfWork;
@@ -124,7 +124,7 @@ namespace Application.Features.Warehousing.Commands
 
         private async Task<string> NextNumberAsync(CancellationToken cancellationToken)
         {
-            var seq = await _context.StockTransfers.CountAsync(cancellationToken) + 1;
+            var seq = await _context.NextDocumentNumberAsync(Application.Common.Documents.DocumentNumbers.StockTransferKey, cancellationToken);
             return $"ST-{DateTime.Now.Year}-{seq:D4}";
         }
     }

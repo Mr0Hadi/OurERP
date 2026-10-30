@@ -24,6 +24,12 @@ namespace Application.Features.PurchaseReturn.Dtos
         /// <summary>Name of <see cref="ProductId"/>. Without it a replacement effect carrying a
         /// different product than its claim renders as a bare id.</summary>
         public string? ProductName { get; set; }
+
+        // For the warehouse screens that execute this effect (frontend-requests 15.1). Null on a money effect.
+        public bool? RequiresUnitTracking { get; set; }
+        public string? Brand { get; set; }
+        public string? ImageKey { get; set; }
+        public string? ImageUrl { get; set; }
         public UInt64? Amount { get; set; }
         public ReturnPaymentMethodEnum? Method { get; set; }
         public string? Reference { get; set; }

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Accounting.Dtos;
@@ -43,35 +43,34 @@ namespace Application.Features.Accounting.Queries
             _context = context;
         }
 
-        public async Task<ResponseDto> Handle(GetTaxReportQuery request, CancellationToken cancellationToken)
+        /// <summary>The periods and their totals; shared with the tax-report export so the file matches the screen.</summary>
+        public static async Task<(List<TaxReportPeriodDto> Periods, TaxReportPeriodDto Totals)> BuildAsync(IWMSDbContext context, GetTaxReportQuery request, CancellationToken cancellationToken)
         {
-            var res = new ResponseDto();
-
             var to = DateRange.EndExclusive(request.ToDate ?? DateTime.Now)!.Value;
             var from = DateRange.Start(request.FromDate) ?? to.AddMonths(-12);
 
             // Grouped per day in SQL, then bucketed in memory: six Persian-calendar granularities don't map onto one GROUP BY.
-            var saleLines = await _context.SaleItems
+            var saleLines = await context.SaleItems
                 .Where(x => x.Sale.IsActive && x.Sale.Status != SalesStatusEnum.PROFORMA && x.Sale.Status != SalesStatusEnum.CANCELLED)
                 .Where(x => x.Sale.InvoiceDate >= from && x.Sale.InvoiceDate < to)
                 .GroupBy(x => new { Day = x.Sale.InvoiceDate!.Value.Date, x.TaxCategory })
                 .Select(g => new { g.Key.Day, g.Key.TaxCategory, Net = g.Sum(x => (decimal)x.NetAmount), Tax = g.Sum(x => (decimal)x.TaxAmount) })
                 .ToListAsync(cancellationToken);
 
-            var purchaseLines = await _context.PurchaseItems
+            var purchaseLines = await context.PurchaseItems
                 .Where(x => x.Purchase.IsActive && x.Purchase.Status != PurchaseStatusEnum.PROFORMA && x.Purchase.Status != PurchaseStatusEnum.CANCELLED)
                 .Where(x => x.Purchase.InvoiceDate >= from && x.Purchase.InvoiceDate < to)
                 .GroupBy(x => new { Day = x.Purchase.InvoiceDate!.Value.Date, x.TaxCategory })
                 .Select(g => new { g.Key.Day, g.Key.TaxCategory, Net = g.Sum(x => (decimal)x.NetAmount), Tax = g.Sum(x => (decimal)x.TaxAmount) })
                 .ToListAsync(cancellationToken);
 
-            var saleCounts = await _context.Sales.WhereIssued()
+            var saleCounts = await context.Sales.WhereIssued()
                 .Where(x => x.InvoiceDate >= from && x.InvoiceDate < to)
                 .GroupBy(x => x.InvoiceDate!.Value.Date)
                 .Select(g => new { Day = g.Key, Count = g.Count() })
                 .ToListAsync(cancellationToken);
 
-            var purchaseCounts = await _context.Purchases.WhereIssued()
+            var purchaseCounts = await context.Purchases.WhereIssued()
                 .Where(x => x.InvoiceDate >= from && x.InvoiceDate < to)
                 .GroupBy(x => x.InvoiceDate!.Value.Date)
                 .Select(g => new { Day = g.Key, Count = g.Count() })
@@ -126,6 +125,15 @@ namespace Application.Features.Accounting.Queries
                 InputTax = periods.Sum(x => x.InputTax),
             };
             totals.NetTaxPayable = totals.OutputTax - totals.InputTax;
+
+            return (periods, totals);
+        }
+
+        public async Task<ResponseDto> Handle(GetTaxReportQuery request, CancellationToken cancellationToken)
+        {
+            var res = new ResponseDto();
+
+            var (periods, totals) = await BuildAsync(_context, request, cancellationToken);
 
             res.Data = new { Periods = periods, Totals = totals };
             res.Message = "گزارش مالیات با موفقیت ارسال شد.";

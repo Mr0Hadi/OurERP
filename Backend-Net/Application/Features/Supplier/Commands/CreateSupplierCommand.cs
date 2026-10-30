@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
+using Application.Common.Ledger;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -85,8 +87,10 @@ namespace Application.Features.Supplier.Commands
         private readonly IMapper _mapper;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
-        public CreateSupplierCommandHandler(ISupplierRepository supplierRepository, IMapper mapper, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork)
+        private readonly IWMSDbContext _context;
+        public CreateSupplierCommandHandler(ISupplierRepository supplierRepository, IMapper mapper, IObjectStorageService objectStorageService, IUnitOfWork unitOfWork, IWMSDbContext context)
         {
+            _context = context;
             _supplierRepository = supplierRepository;
             _mapper = mapper;
             _objectStorageService = objectStorageService;
@@ -99,8 +103,12 @@ namespace Application.Features.Supplier.Commands
             var newSupplier = BuildEntity(request, _mapper, _objectStorageService);
 
             await _supplierRepository.AddAsync(newSupplier, cancellationToken);
-            await _unitOfWork.SaveChangesAsync();
+            // The typed opening balance goes on the party ledger, where every balance is read from (frontend-requests 21.1).
+            await PartyLedger.OpeningBalanceChangedAsync(_context, null, newSupplier, 0,
+                PartyLedger.SignedOpeningBalance(newSupplier.Balance, newSupplier.BalanceType), newSupplier.CreatedAt, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            res.Data = new { newSupplier.Id };
             res.Message = "تامین کننده جدید با موفقیت ایجاد شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

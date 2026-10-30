@@ -1,4 +1,4 @@
-using Application.Common.Documents;
+﻿using Application.Common.Documents;
 using Application.Common.Contracts.Context;
 using Domain.Entities;
 using Domain.Enums;
@@ -217,6 +217,42 @@ namespace Application.Common.Ledger
                 reversal, $"مرجوعی خرید {returnNumber}", occurredAt, cancellationToken);
 
         /// <summary>Balance of a customer or supplier: sum(DEBIT) - sum(CREDIT). Positive = they owe us.</summary>
+        /// <summary>
+        /// The hand-typed opening balance as a signed amount from our side: positive when the party owes us (Debtor),
+        /// negative when we owe them (Creditor), 0 when settled or blank.
+        /// </summary>
+        public static long SignedOpeningBalance(ulong? balance, BalanceTypeEnum? type) => type switch
+        {
+            BalanceTypeEnum.Debtor => (long)(balance ?? 0),
+            BalanceTypeEnum.Creditor => -(long)(balance ?? 0),
+            _ => 0,
+        };
+
+        /// <summary>
+        /// Writes the change of a party's hand-typed opening balance (<paramref name="previous"/> to <paramref name="current"/>,
+        /// both signed) as one OPENING_BALANCE row; nothing when it did not change. Takes the entity, not its id, so a party
+        /// created in the same save works too.
+        /// </summary>
+        public static async Task OpeningBalanceChangedAsync(IWMSDbContext context, Customer? customer, Supplier? supplier,
+            long previous, long current, DateTime occurredAt, CancellationToken cancellationToken)
+        {
+            var difference = current - previous;
+            if (difference == 0)
+                return;
+
+            await context.PartyLedgerEntries.AddAsync(new PartyLedgerEntry
+            {
+                Customer = customer,
+                Supplier = supplier,
+                Direction = difference > 0 ? PartyLedgerDirectionEnum.DEBIT : PartyLedgerDirectionEnum.CREDIT,
+                Amount = (ulong)Math.Abs(difference),
+                EntryType = PartyLedgerEntryTypeEnum.OPENING_BALANCE,
+                OccurredAt = occurredAt,
+                CreatedAt = DateTime.Now,
+                Description = previous == 0 ? "مانده‌ی اول دوره" : "اصلاح مانده‌ی اول دوره",
+            }, cancellationToken);
+        }
+
         public static async Task<decimal> BalanceAsync(IWMSDbContext context, int? customerId, int? supplierId, CancellationToken cancellationToken)
         {
             var sides = await context.PartyLedgerEntries

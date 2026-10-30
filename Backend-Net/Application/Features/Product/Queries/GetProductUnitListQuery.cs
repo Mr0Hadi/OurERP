@@ -125,12 +125,14 @@ namespace Application.Features.Product.Queries
                 }
                 else
                 {
-                    // Anything else is a partial search: part of a barcode, a serial, or the product's name/code.
+                    // Anything else is a partial search: part of a barcode, a serial, the product's name/code, or the shelf.
                     int? serial = int.TryParse(search, out var n) ? n : null;
+                    var bin = BinLocations.Normalize(search);
                     query = query.Where(x => x.Barcode.Contains(search)
                         || (serial != null && x.SerialNumber == serial)
                         || x.Product.Name.Contains(search)
-                        || x.Product.Code.Contains(search));
+                        || x.Product.Code.Contains(search)
+                        || (bin != null && x.BinLocation != null && x.BinLocation.Contains(bin)));
                 }
             }
 
@@ -157,9 +159,13 @@ namespace Application.Features.Product.Queries
             if (request.WarehouseId.HasValue)
                 query = query.Where(x => x.WarehouseId == request.WarehouseId);
 
+            // Whole segments: "A-5" is shelf A-5 and everything under it (A-5-2), never A-50.
             var binPrefix = BinLocations.Normalize(request.BinLocation);
             if (binPrefix != null)
-                query = query.Where(x => x.BinLocation != null && x.BinLocation.StartsWith(binPrefix));
+            {
+                var binChildren = binPrefix + "-";
+                query = query.Where(x => x.BinLocation != null && (x.BinLocation == binPrefix || x.BinLocation.StartsWith(binChildren)));
+            }
 
             if (request.FromDate.HasValue)
                 query = query.Where(x => x.CreatedAt >= request.FromDate);

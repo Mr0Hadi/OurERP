@@ -1,4 +1,4 @@
-using Application.Common.Contracts.ProductUnit;
+﻿using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
@@ -127,6 +127,12 @@ namespace Application.Features.PurchaseReturn.Queries
                         ReceivedQuantity = item.ReceivedQuantity,
                         StillOwedQuantity = item.StillOwedQuantity,
                         ShortClosedQuantity = item.ShortClosedQuantity,
+                        SupplementOfPurchaseItemId = item.SupplementOfPurchaseItemId,
+                        TotalAmount = item.TotalAmount,
+                        RequiresUnitTracking = item.Product.RequiresUnitTracking,
+                        Brand = item.Product.Brand,
+                        ImageKey = item.Product.ImageUrl,
+                        ImageUrl = _objectStorageService.GetFixedUrl(item.Product.ImageUrl),
                         QuarantinedOnOrderQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.ON_ORDER && h.PurchaseItemId == item.Id).Sum(h => h.Count),
                         QuarantinedCustomerReturnQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.CUSTOMER_RETURN && h.PurchaseItemId == item.Id).Sum(h => h.Count),
                         QuarantinedWarehouseHoldQuantity = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.WAREHOUSE_HOLD && h.PurchaseItemId == item.Id).Sum(h => h.Count),
@@ -145,6 +151,10 @@ namespace Application.Features.PurchaseReturn.Queries
                         ProductCode = p.Code,
                         ProductName = p.Name,
                         Unit = p.Unit.GetDescription(),
+                        RequiresUnitTracking = p.RequiresUnitTracking,
+                        Brand = p.Brand,
+                        ImageKey = p.ImageUrl,
+                        ImageUrl = _objectStorageService.GetFixedUrl(p.ImageUrl),
                         QuarantinedQuantity = quarantined,
                         FreeQuantity = Math.Max(0, quarantined - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(
                             new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, null, UnitCustodyReasonEnum.UNLISTED), p.Id, purchase.Id, openReturns)),

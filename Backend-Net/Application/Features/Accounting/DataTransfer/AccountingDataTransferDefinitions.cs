@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.DataTransfer;
 using Application.Features.Accounting.Dtos;
 using Application.Features.Accounting.Queries;
@@ -178,6 +178,42 @@ namespace Application.Features.Accounting.DataTransfer
         };
     }
 
+    public class PurchaseLineJournalDataTransferDefinition : IDataTransferDefinition
+    {
+        private readonly IWMSDbContext _context;
+        public PurchaseLineJournalDataTransferDefinition(IWMSDbContext context) { _context = context; }
+
+        public string Resource => "purchase-lines";
+        public string Title => "ریز اقلام خرید";
+        public IImportSpec? Import => null;
+
+        public IExportSpec Export => new ExportSpec<GetPurchaseLineJournalQuery, PurchaseLineJournalRowDto>
+        {
+            Permission = PermissionEnum.AccountingView,
+            Query = (filter, ct) => Task.FromResult<IQueryable<PurchaseLineJournalRowDto>>(GetPurchaseLineJournalQueryHandler.Sort(
+                GetPurchaseLineJournalQueryHandler.Build(_context, filter), filter.SortBy, filter.SortDirection)),
+            Fields = new List<ExportColumn<PurchaseLineJournalRowDto>>
+            {
+                new() { Key = "invoiceNumber", Header = "شماره فاکتور", Value = r => r.InvoiceNumber },
+                new() { Key = "invoiceDate", Header = "تاریخ فاکتور", Type = DataFieldTypeEnum.Date, Value = r => r.InvoiceDate },
+                new() { Key = "supplierName", Header = "تامین‌کننده", Value = r => r.SupplierName },
+                new() { Key = "productCode", Header = "کد کالا", Value = r => r.ProductCode },
+                new() { Key = "productName", Header = "کالا", Value = r => r.ProductName },
+                new() { Key = "productCategoryName", Header = "دسته‌بندی", Value = r => r.ProductCategoryName },
+                new() { Key = "unit", Header = "واحد", Type = DataFieldTypeEnum.Enum, Value = r => r.Unit },
+                new() { Key = "quantity", Header = "تعداد", Type = DataFieldTypeEnum.Integer, Value = r => r.Quantity },
+                new() { Key = "unitPrice", Header = "فی", Type = DataFieldTypeEnum.Decimal, Value = r => r.UnitPrice },
+                new() { Key = "discountPercent", Header = "درصد تخفیف", Type = DataFieldTypeEnum.Integer, Value = r => r.DiscountPercent },
+                new() { Key = "grossAmount", Header = "مبلغ ناخالص", Type = DataFieldTypeEnum.Decimal, Value = r => r.GrossAmount },
+                new() { Key = "discountAmount", Header = "تخفیف", Type = DataFieldTypeEnum.Decimal, Value = r => r.DiscountAmount },
+                new() { Key = "netAmount", Header = "مبلغ خالص", Type = DataFieldTypeEnum.Decimal, Value = r => r.NetAmount },
+                new() { Key = "taxPercent", Header = "درصد مالیات", Type = DataFieldTypeEnum.Integer, Value = r => r.TaxPercent },
+                new() { Key = "taxAmount", Header = "مالیات", Type = DataFieldTypeEnum.Decimal, Value = r => r.TaxAmount },
+                new() { Key = "totalAmount", Header = "جمع", Type = DataFieldTypeEnum.Decimal, Value = r => r.TotalAmount },
+            },
+        };
+    }
+
     public class PaymentJournalDataTransferDefinition : IDataTransferDefinition
     {
         private readonly IWMSDbContext _context;
@@ -237,6 +273,76 @@ namespace Application.Features.Accounting.DataTransfer
                 new() { Key = "quarantinedQuantity", Header = "تعداد قرنطینه", Type = DataFieldTypeEnum.Integer, Value = r => r.QuarantinedQuantity },
                 new() { Key = "offPoolValue", Header = "ارزش قرنطینه", Type = DataFieldTypeEnum.Decimal, Value = r => r.OffPoolValue },
                 new() { Key = "totalValue", Header = "ارزش کل", Type = DataFieldTypeEnum.Decimal, Value = r => r.TotalValue },
+            },
+        };
+    }
+
+    /// <summary>One row of the tax-report file: a period, or the totals row that closes the file.</summary>
+    public sealed record TaxReportExportRow(bool IsTotal, TaxReportPeriodDto Period);
+
+    public class TaxReportDataTransferDefinition : IDataTransferDefinition
+    {
+        private readonly IWMSDbContext _context;
+        public TaxReportDataTransferDefinition(IWMSDbContext context) { _context = context; }
+
+        public string Resource => "tax-report";
+        public string Title => "گزارش مالیات بر ارزش افزوده";
+        public IImportSpec? Import => null;
+
+        // The report is a handful of period rows bucketed in memory (GetTaxReportQueryHandler.BuildAsync), so it is
+        // handed over whole rather than streamed.
+        public IExportSpec Export => new ExportSpec<GetTaxReportQuery, TaxReportExportRow>
+        {
+            Permission = PermissionEnum.AccountingView,
+            Rows = async (filter, ct) =>
+            {
+                var (periods, totals) = await GetTaxReportQueryHandler.BuildAsync(_context, filter, ct);
+                return periods.Select(p => new TaxReportExportRow(false, p)).Append(new TaxReportExportRow(true, totals)).ToList();
+            },
+            Fields = new List<ExportColumn<TaxReportExportRow>>
+            {
+                new() { Key = "row", Header = "ردیف", Value = r => r.IsTotal ? "جمع" : null },
+                new() { Key = "periodStart", Header = "از تاریخ", Type = DataFieldTypeEnum.Date, Value = r => r.Period.PeriodStart },
+                new() { Key = "periodEnd", Header = "تا تاریخ", Type = DataFieldTypeEnum.Date, Value = r => r.Period.PeriodEnd },
+                new() { Key = "saleInvoiceCount", Header = "تعداد فاکتور فروش", Type = DataFieldTypeEnum.Integer, Value = r => r.Period.SaleInvoiceCount },
+                new() { Key = "taxableSalesNet", Header = "فروش مشمول (خالص)", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.TaxableSalesNet },
+                new() { Key = "exemptSalesNet", Header = "فروش معاف (خالص)", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.ExemptSalesNet },
+                new() { Key = "outputTax", Header = "مالیات فروش", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.OutputTax },
+                new() { Key = "purchaseInvoiceCount", Header = "تعداد فاکتور خرید", Type = DataFieldTypeEnum.Integer, Value = r => r.Period.PurchaseInvoiceCount },
+                new() { Key = "taxablePurchasesNet", Header = "خرید مشمول (خالص)", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.TaxablePurchasesNet },
+                new() { Key = "exemptPurchasesNet", Header = "خرید معاف (خالص)", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.ExemptPurchasesNet },
+                new() { Key = "inputTax", Header = "مالیات خرید", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.InputTax },
+                new() { Key = "netTaxPayable", Header = "مالیات قابل پرداخت", Type = DataFieldTypeEnum.Decimal, Value = r => r.Period.NetTaxPayable },
+            },
+        };
+    }
+
+    public class TradeBreakdownDataTransferDefinition : IDataTransferDefinition
+    {
+        private readonly IWMSDbContext _context;
+        public TradeBreakdownDataTransferDefinition(IWMSDbContext context) { _context = context; }
+
+        public string Resource => "trade-breakdown";
+        public string Title => "تفکیک خرید و فروش";
+        public IImportSpec? Import => null;
+
+        // Same side/groupBy/filters as the table. NetSharePercent is filled after paging there, so it is not in the file.
+        public IExportSpec Export => new ExportSpec<GetTradeBreakdownQuery, TradeBreakdownRowDto>
+        {
+            Permission = PermissionEnum.AccountingView,
+            Query = (filter, ct) => Task.FromResult<IQueryable<TradeBreakdownRowDto>>(GetTradeBreakdownQueryHandler.Sort(
+                GetTradeBreakdownQueryHandler.Build(_context, filter), filter.SortBy, filter.SortDirection)),
+            Fields = new List<ExportColumn<TradeBreakdownRowDto>>
+            {
+                new() { Key = "title", Header = "عنوان", Value = r => r.Title },
+                new() { Key = "code", Header = "کد", Value = r => r.Code },
+                new() { Key = "invoiceCount", Header = "تعداد فاکتور", Type = DataFieldTypeEnum.Integer, Value = r => r.InvoiceCount },
+                new() { Key = "quantity", Header = "تعداد", Type = DataFieldTypeEnum.Integer, Value = r => r.Quantity },
+                new() { Key = "grossAmount", Header = "مبلغ ناخالص", Type = DataFieldTypeEnum.Decimal, Value = r => r.GrossAmount },
+                new() { Key = "discountAmount", Header = "تخفیف", Type = DataFieldTypeEnum.Decimal, Value = r => r.DiscountAmount },
+                new() { Key = "netAmount", Header = "مبلغ خالص", Type = DataFieldTypeEnum.Decimal, Value = r => r.NetAmount },
+                new() { Key = "taxAmount", Header = "مالیات", Type = DataFieldTypeEnum.Decimal, Value = r => r.TaxAmount },
+                new() { Key = "totalAmount", Header = "جمع", Type = DataFieldTypeEnum.Decimal, Value = r => r.TotalAmount },
             },
         };
     }

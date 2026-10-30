@@ -24,6 +24,7 @@ namespace WMS.Tests.Unit
             "AccountController.Login",              // there is no identity yet
             "AccountController.RefreshToken",       // authenticated by the refresh token itself
             "FileController.GetImage",              // an <img src> cannot send a bearer token
+            "HealthController.Get",                 // an uptime ping has no token; answers only "up"
         };
 
         /// <summary>Authenticated, but open to every user - nothing to grant.</summary>
@@ -39,6 +40,9 @@ namespace WMS.Tests.Unit
             "DataTransferController.CommitImport",
             "FileController.GetImageUrl",               // re-signs a key the caller already has
             "PermissionController.GetMyPermissions",    // asking what you yourself may do
+            "UserController.GetUserOptions",            // id + name, as any document shows them; for filters
+            "UserController.GetMyDashboardLayout",      // your own dashboard layout
+            "UserController.SaveMyDashboardLayout",
             "SettingController.GetFeatureFlags",
             "WarehouseController.GetWarehouseList",     // names for the warehouse pickers; nothing sensitive        // which features are switched on; nothing sensitive (IsPublic only)
             "ReportController.GetScopePerformance",     // your own numbers; TEAM/DEPARTMENT gated by org role in the handler
