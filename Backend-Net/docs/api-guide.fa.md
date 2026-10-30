@@ -3403,6 +3403,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 7 | برگشت (REVERSAL) — `reversalOfEntryId` ردیف اصلی را نشان می‌دهد |
 | 8 | بستن قلم خرید با کسری (PURCHASE_SHORT_CLOSE) |
 | 9 | جریمه‌ی دیرکرد قسط (LATE_PENALTY) — از ۲۰۲۶-۱۰-۱۹؛ بدهکار، همراه پرداخت همان قسط |
+| 10 | مانده‌ی اول دوره (OPENING_BALANCE) — از ۲۰۲۶-۱۰-۳۰؛ مانده‌ی دستیِ مشتری/تامین‌کننده (بدهکار برای `Debtor`، بستانکار برای `Creditor`)؛ ویرایشِ بعدی تفاوت را با همین نوع می‌نویسد |
 
 ### `PaymentSourceEnum` (منبع پرداخت کارتخوان — روی `paymentDetails[]`، از ۲۰۲۶-۱۰-۰۵)
 | مقدار | معنی |
@@ -3723,6 +3724,54 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۳۰ (بقیه‌ی درخواست‌های فرانت: بخش‌های ۶.۳، ۷، ۸، ۹، ۱۵، ۱۷، ۱۹، ۲۰، ۲۱، ۲۳، ۲۸، ۲۹)
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `CreateUser` | `fisrtName` | **`firstName`** (شکستنی) |
+| `CreateCustomer`/`UpdateCustomer`/`CustomerDto`، ورود/خروجِ مشتری | `refferalCode` | **`referralCode`** (شکستنی؛ ستون هم تغییر نام داد) |
+| `claims[]` در جزئیاتِ هر دو مرجوعی | فقط `purchaseItemId`/`saleItemId` | به‌علاوه‌ی `orderLineId` (همان مقدار) |
+| همه‌ی تاریخ‌های اختیاری | `0001-01-01` ممکن بود ذخیره شود | هنگامِ ذخیره `null` می‌شود؛ ردیف‌های موجود هم در migration اصلاح شد |
+| زمان‌های ورودی با `Z` | ساعتِ UTC همان‌طور ذخیره می‌شد | به وقتِ محلیِ سرور تبدیل می‌شود (offset صریح از قبل تبدیل می‌شد) |
+| `ScanBarcode` → `data.unit` | چند فیلد خالی (`purchaseId`، `custodyReason`، `createdAt`، …) | همان شکلِ کاملِ `GetProductUnitList` |
+| `CreateCustomer`، `CreateSupplier` | `data` خالی | `data = { id }` |
+| `CreateProductCategory` | `data` خالی | `data = { id, name }` |
+| `ProductListDto` | — | `purchasePrice`، `unit`، `tax`، `taxCategory` |
+| ردیفِ پرداخت با `type = CREDIT` (۱) | پذیرفته و «پرداخت‌شده» حساب می‌شد | **۴۰۰** در همه‌ی دستورهای پرداخت، دریافت/پرداختِ مستقل و اقساط. ردیف‌های قبلی دست نخوردند |
+| پیامِ `AcceptPurchaseExcess` | «… وارد موجودی شد» | «… کالا تا بازگشت به موجودی در قرنطینه می‌ماند» |
+| `GetPurchaseReceivingInfo` → `items[]` | — | `supplementOfPurchaseItemId`، `totalAmount`، `requiresUnitTracking`، `brand`، `imageKey`، `imageUrl` (این چهار تا روی `unlistedItems[]` هم) |
+| `SaleItemDto`، `pendingEffects[]` هر دو سمت، `effects[]` جزئیاتِ هر دو مرجوعی | — | `requiresUnitTracking`، `brand`، `imageKey`، `imageUrl` |
+| شماره‌ی فاکتورِ فروش، مرجوعی‌ها، حواله و انبارگردانی | «تعدادِ ردیف + ۱» (تکراری می‌شد) | شمارنده‌ی قفل‌دار (`DocumentNumberCounters`) + unique index؛ قالب همان `INV-سال-0001`. تکراری‌های موجود در migration شماره‌ی تازه گرفتند (کمترین `Id` شماره‌اش را نگه داشت) |
+| سهمیه‌ی ادعا (`claimableQuantity`) | جایگزینِ رسیده/ارسال‌شده حساب نمی‌شد؛ تصمیمِ ثبت‌شده با اثرِ معلق آزاد حساب می‌شد | `دریافت/ارسال + جایگزین − تسویه − ادعاهای باز (تسویه‌نشده)` |
+| `ChangeSaleStatus` | فقط `DELIVERED`/`CANCELLED` | به‌علاوه‌ی **`PROCESSING`** با `invoiceDate` اختیاری: صدورِ فاکتورِ نسیه بی‌پرداخت، فقط برای پیش‌فاکتورِ `WAREHOUSE_CHECKED` با رزروِ معتبر و غیراقساطی |
+| `GetCustomerList.fullName`، `GetSupplierList.companyNameOrContactName` | یک عبارت روی نام یا نام خانوادگی | هر کلمه جدا (AND) روی نام، نام خانوادگی و **تلفن** (تامین‌کننده: شرکت، نامِ مسئول، تلفن) |
+| `GET api/Product/GetBrandList?search=` | — | تازه: `[{ brand, productCount }]` برای کالاهای فعال (`ProductView`) |
+| `DeleteProduct` | همیشه حذف می‌شد | ۴۰۰ وقتی موجودی/رزرو/قرنطینه/در راه دارد یا روی خرید، فروش یا مرجوعیِ باز است |
+| `CreateSaleInstallmentPlan` | پیش‌پرداختِ ۰ پذیرفته می‌شد؛ قراردادِ دوم کلِ فاکتور را دوباره بدهکار می‌کرد | `downPaymentAmount > 0` الزامی (و فقط بعد از `WAREHOUSE_CHECKED`)؛ فروشی که پرداخت دارد قراردادِ تازه نمی‌گیرد (مانده با «دریافت از مشتری») |
+| `paymentType` در `CreateSaleInstallmentPlan`، `PaySaleInstallment`، `SettleSaleInstallmentPlan` | هر مقداری | فقط `CASH`/`CHECK`/`TRANSFER` |
+| `POST api/SaleInstallment/PreviewSaleInstallmentPlan` | — | تازه: یکی از `saleId` یا `items` + شرایطِ قرارداد ⇒ همان `SaleInstallmentPlanDto` بی‌ذخیره (`SaleCreate` یا `SaleInstallmentManage`) |
+| `GetProductUnitList` | `search` قفسه را نمی‌دید؛ فیلترِ `binLocation` «شروع‌با» بود | `search` روی قفسه هم می‌گردد؛ `binLocation` بخش‌به‌بخش: `A-5` یعنی `A-5` و `A-5-…`، نه `A-50` |
+| ذخیره‌ی قفسه (`SetProductUnitLocation`) | `A-05` همان‌طور | صفرِ چپِ بخش‌های عددی حذف می‌شود (`A-05-2` ⇒ `A-5-2`)؛ مقادیرِ موجود در migration یکدست شد |
+| `GET api/Health` | — | تازه، بی‌احراز هویت: `200 {status:"ok"}` یا `503` وقتی دیتابیس در دسترس نیست. برای ping جلوگیری از خوابیدنِ app pool |
+| IPِ کلاینت پشتِ Cloudflare | IPِ لبه‌ی Cloudflare | `X-Forwarded-For` فقط از بازه‌های Cloudflare (`ForwardedHeaders:KnownNetworks` در appsettings) |
+| مانده‌ی دستیِ مشتری/تامین‌کننده | بیرون از دفتر | ردیفِ `OPENING_BALANCE = 10` در دفتر؛ ویرایشِ مانده تفاوت را می‌نویسد. پس `ledgerBalance` و `GetPartyStatement` آن را دارند و **فرانت دیگر نباید مانده‌ی دستی را جمع بزند** |
+| خروجی‌های حسابداری | — | `tax-report` (دوره‌ها + ردیفِ جمع)، `trade-breakdown` (بدونِ درصدِ سهم)، `purchase-lines` |
+| `GET api/Accounting/GetPurchaseLineJournal` | — | تازه: قرینه‌ی `GetSaleLineJournal` (`supplierId`، `productId`، `productCategoryId`، `taxCategory`، بازه، `summary`) |
+| `GET api/User/GetUserOptions?includeInactive=` | — | تازه، برای هر کاربرِ واردشده: `[{ id, fullName, isActive }]` |
+| `GET api/User/GetMyDashboardLayout`، `PUT api/User/SaveMyDashboardLayout` | — | تازه: رشته‌ی JSONِ چیدمان (حداکثر ۴۰۰۰ نویسه)، فقط برای خودِ کاربر |
+| `GetPurchaseReturnDetail`، `GetPurchaseReceivingInfo`، `GetPurchaseReturnPendingEffects` | `PurchaseReturnView` | `PurchaseReturnView` **یا** `PurchaseReturnExecute` |
+| `GetSaleReturnDetail`، `GetSaleReturnPendingEffects` | `SaleReturnView` | `SaleReturnView` **یا** `SaleReturnExecute` |
+| `GetReorderSuggestionList` | کالایی که تا نقطه‌ی سفارش سفارش داده شده بود دوباره با «۱» می‌آمد | کالایی که سفارشِ در راه دارد و با آن به هدف (`targetStock ?? reorderPoint`) رسیده برنمی‌گردد |
+| `CheckSaleWarehouse` | همه‌ی ردیف‌ها اسکنِ کامل می‌خواستند | ردیفِ کالای **بدون** `requiresUnitTracking` می‌تواند بی‌بارکد بیاید: سرور قدیمی‌ترین دانه‌های آزاد (FIFO بر اساس سریال) را رزرو می‌کند، یا اگر کم بود «کسری» ثبت می‌شود. این FIFO فقط انتخابِ دانه است؛ بهای تمام‌شده همان میانگینِ موزون می‌ماند |
+| `AuditActionEnum` | — | `27 SaveMyDashboardLayout` |
+
+**ساخته نشد (عمداً):** ۱۷.۱ (`installmentPlan` روی `CreateSale`): با خطِ تأییدِ پیش‌فاکتور، قرارداد با پیش‌پرداخت فقط بعد از تأییدِ انبار ممکن است، پس
+روی `CreateSale` جایی ندارد؛ قرارداد در مرحله‌ی پرداخت (یا `CompleteInPersonSale`) ثبت می‌شود و `PreviewSaleInstallmentPlan` شرایط را از قبل نشان می‌دهد.
+۹.۸ تصمیم گرفته شد: ارزشِ ادعای مرجوعی فقط بهای کالاست، **بدونِ مالیات بر ارزش افزوده** (همان رفتارِ فعلی؛ ممکن است بعداً بازبینی شود). ۹.۹ منتظرِ پاسخ است. بخش‌های ۱۱، ۱۲ (کارتخوان)، ۱۳، ۱۴ و ۴.۶ در این دور نبودند.
+
+Migration: `20261030102630_frontend-requests-backlog`. ساخته شده، **اعمال نشده**؛ روی پایگاه‌داده‌ی آزمایشیِ تازه از صفر و با داده‌ی تکراری بررسی شد.
+بندِ یکدست‌کردنِ قفسه از `STRING_SPLIT(..., 1)` استفاده می‌کند و SQL Server 2022 یا بالاتر می‌خواهد.
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۴ (بخش ۲۴ درخواست‌های فرانت: انبار و صدورِ فاکتور)
 

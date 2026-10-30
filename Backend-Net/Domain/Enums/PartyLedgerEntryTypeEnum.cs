@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 namespace Domain.Enums
 {
@@ -50,5 +50,13 @@ namespace Domain.Enums
         /// </summary>
         [Description("جریمه‌ی دیرکرد قسط")]
         LATE_PENALTY = 9,
+
+        /// <summary>
+        /// The balance carried over from before the ledger, typed on the customer/supplier (Balance + BalanceType): DEBIT for
+        /// a debtor, CREDIT for a creditor. Editing it later writes the difference as another row of this type, so every
+        /// balance comes from the ledger alone (frontend-requests 21.1).
+        /// </summary>
+        [Description("مانده‌ی اول دوره")]
+        OPENING_BALANCE = 10,
     }
 }

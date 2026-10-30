@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
@@ -188,12 +188,10 @@ namespace Application.Features.SaleReturn.Commands
 
             var now = DateTime.Now;
             var returnDate = request.ReturnDate ?? now;
-            // Deliberately counts soft-deleted returns too, so a deleted return never frees up its number.
-            var returnCount = await _context.SaleReturns.CountAsync(cancellationToken);
 
             var saleReturn = new Domain.Entities.SaleReturn
             {
-                ReturnNumber = Generator.GenerateSaleReturnNumber(returnCount + 1),
+                ReturnNumber = await Application.Common.Documents.DocumentNumbers.NextSaleReturnAsync(_context, cancellationToken),
                 SaleId = request.SaleId,
                 ReturnDate = returnDate,
                 Status = ReturnStatusEnum.OPEN,

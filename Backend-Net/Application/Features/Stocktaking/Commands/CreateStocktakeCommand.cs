@@ -1,4 +1,4 @@
-using Application.Common.Audit;
+﻿using Application.Common.Audit;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductUnit;
 using Application.Common.Contracts.UnitOfWork;
@@ -101,7 +101,7 @@ namespace Application.Features.Stocktaking.Commands
             var now = DateTime.Now;
             var stocktake = new Stocktake
             {
-                Number = $"STK-{now.Year}-{await _context.Stocktakes.CountAsync(cancellationToken) + 1:D4}",
+                Number = $"STK-{now.Year}-{await _context.NextDocumentNumberAsync(Application.Common.Documents.DocumentNumbers.StocktakeKey, cancellationToken):D4}",
                 Title = request.Title.Trim(),
                 WarehouseId = warehouseId,
                 ProductCategoryId = request.ProductCategoryId,

@@ -1,4 +1,4 @@
-using Application.Common.Ledger;
+﻿using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -103,12 +103,17 @@ namespace Application.Features.Customer.Queries
                 query = query.Where(x => x.Id == request.Id);
             }
 
-            if (!string.IsNullOrEmpty(request.FullName))
+            // Every word must match the first name, last name or phone number, so "علی رضایی" and a phone number both find
+            // the customer (frontend-requests 9.12).
+            if (!string.IsNullOrWhiteSpace(request.FullName))
             {
-                query = query
-                    .Where(x =>
-                    x.FirstName.Contains(request.FullName)
-                    || x.LastName.Contains(request.FullName));
+                foreach (var word in request.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    query = query.Where(x =>
+                        x.FirstName.Contains(word)
+                        || x.LastName.Contains(word)
+                        || x.PhoneNumber.Contains(word));
+                }
             }
 
             if (request.MinBalance.HasValue)

@@ -28,7 +28,8 @@ namespace WMS
 
             // Add services to the container.
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers()
+                .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new WMS.Serialization.LocalDateTimeJsonConverter()));
             builder.Services.AddOpenApi(options =>
             {
                 options.AddDocumentTransformer(async (document, context, cancellationToken) =>
@@ -95,6 +96,7 @@ namespace WMS
             builder.Services.AddPermissionAuthorization();
 
             builder.Services.AddLoginRateLimiting(builder.Configuration);
+            builder.Services.AddTrustedForwardedHeaders(builder.Configuration);
 
             // Every request body is capped at the same size, uploads included (an image is at most
             // ObjectStorage:MaxImageSizeBytes, 5 MB, so this leaves room for the multipart framing).
@@ -136,6 +138,10 @@ namespace WMS
             });
 
             var app = builder.Build();
+
+            // First, so the rate limiter, the request log and everything else see the real client address.
+            if (ForwardedHeadersRegistration.IsEnabled(builder.Configuration))
+                app.UseForwardedHeaders();
 
             // Configure the HTTP request pipeline.
             // OpenAPI/Scalar is deliberately served in every environment, not just Development -

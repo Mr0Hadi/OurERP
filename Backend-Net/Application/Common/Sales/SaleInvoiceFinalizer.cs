@@ -1,4 +1,4 @@
-using Application.Common.Ledger;
+﻿using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Common.Exceptions;
 using Common.Extensions;
@@ -15,12 +15,8 @@ namespace Application.Common.Sales
     public static class SaleInvoiceFinalizer
     {
         /// <summary>شماره‌ی فاکتور رسمی بعدی.</summary>
-        public static async Task<string> NextInvoiceNumberAsync(IWMSDbContext context, CancellationToken cancellationToken)
-        {
-            var seq = await context.Sales.CountAsync(cancellationToken) + 1;
-
-            return Generator.GenerateInvoiceNumber(seq);
-        }
+        public static Task<string> NextInvoiceNumberAsync(IWMSDbContext context, CancellationToken cancellationToken) =>
+            Documents.DocumentNumbers.NextSaleInvoiceAsync(context, cancellationToken);
 
         /// <summary>
         /// The invoice date a request may name when it issues the invoice: optional, and never after today. Shared by the

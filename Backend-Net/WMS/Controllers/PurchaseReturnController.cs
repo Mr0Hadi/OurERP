@@ -27,21 +27,24 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PurchaseReturnView)]
+        // Also the warehouse executing the return's goods effects, without the returns pages (frontend-requests 23).
+        [HasPermission(PermissionEnum.PurchaseReturnView, PermissionEnum.PurchaseReturnExecute)]
         [HttpGet("GetPurchaseReturnDetail")]
         public async Task<ActionResult<ResponseDto>> GetPurchaseReturnDetail([FromQuery] GetPurchaseReturnDetailQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PurchaseReturnView)]
+        // Also the warehouse executing the return's goods effects, without the returns pages (frontend-requests 23).
+        [HasPermission(PermissionEnum.PurchaseReturnView, PermissionEnum.PurchaseReturnExecute)]
         [HttpGet("GetPurchaseReceivingInfo")]
         public async Task<ActionResult<ResponseDto>> GetPurchaseReceivingInfo([FromQuery] GetPurchaseReceivingInfoQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PurchaseReturnView)]
+        // Also the warehouse executing the return's goods effects, without the returns pages (frontend-requests 23).
+        [HasPermission(PermissionEnum.PurchaseReturnView, PermissionEnum.PurchaseReturnExecute)]
         [HttpGet("GetPurchaseReturnPendingEffects")]
         public async Task<ActionResult<ResponseDto>> GetPurchaseReturnPendingEffects([FromQuery] GetPurchaseReturnPendingEffectsQuery request)
         {

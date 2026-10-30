@@ -1,4 +1,6 @@
-﻿namespace Application.Features.Product.Dtos
+﻿using Domain.Enums;
+
+namespace Application.Features.Product.Dtos
 {
     public class ProductListDto
     {
@@ -10,6 +12,13 @@
         public string CategoryName { get; set; }
         public UInt64 RetailPrice { get; set; }
         public UInt64 WholeSalePrice { get; set; }
+
+        // Enough for a purchase/sale line picker to price and tax a new line without a GetProductDetail per product
+        // (frontend-requests 9.3).
+        public UInt64 PurchasePrice { get; set; }
+        public ProductUnitEnum Unit { get; set; }
+        public int Tax { get; set; }
+        public TaxCategoryEnum TaxCategory { get; set; }
         public int Stock { get; set; }
 
         /// <summary>Units the warehouse reserved for proformas - still on the shelf and still ours, but not free to sell, so not part of Stock.</summary>

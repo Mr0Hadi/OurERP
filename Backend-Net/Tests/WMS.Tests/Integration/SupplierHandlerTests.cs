@@ -1,4 +1,4 @@
-using Application.Features.Supplier.Commands;
+﻿using Application.Features.Supplier.Commands;
 using Application.Features.Supplier.Dtos;
 using Application.Features.Supplier.Queries;
 using Common.Exceptions;
@@ -14,7 +14,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new CreateSupplierCommandHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new CreateSupplierCommandHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db);
             await handler.Handle(new CreateSupplierCommand
             {
                 FirstName = "رضا",
@@ -36,7 +36,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdateSupplierCommandHandler(scope.UnitOfWork, scope.SupplierRepository, FakeObjectStorage.Instance);
+            var handler = new UpdateSupplierCommandHandler(scope.UnitOfWork, scope.SupplierRepository, FakeObjectStorage.Instance, scope.Db);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateSupplierCommand
             {

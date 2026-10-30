@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Features.PurchaseReturn.Dtos
 {
@@ -29,6 +29,13 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string ProductCode { get; set; }
         public string ProductName { get; set; }
         public string Unit { get; set; }
+        // What the warehouse needs to identify the product and know whether every unit must be scanned
+        // (frontend-requests 15.1). ImageUrl is the GetImage URL of ImageKey, as on ProductDto.
+        public bool RequiresUnitTracking { get; set; }
+        public string? Brand { get; set; }
+        public string? ImageKey { get; set; }
+        public string? ImageUrl { get; set; }
+
         public int QuarantinedQuantity { get; set; }
 
         /// <summary>
@@ -96,5 +103,18 @@ namespace Application.Features.PurchaseReturn.Dtos
 
         /// <summary>Ordered units written off the line by ClosePurchaseItem; not owed any more.</summary>
         public int ShortClosedQuantity { get; set; }
+
+        /// <summary>Set on a supplement line (accepted excess): the ordered line it supplements (frontend-requests 9.7).</summary>
+        public int? SupplementOfPurchaseItemId { get; set; }
+
+        /// <summary>The line's stored total, tax included (InvoiceLineMath), as on PurchaseItemDto.</summary>
+        public UInt64 TotalAmount { get; set; }
+
+        // What the warehouse needs to identify the product and know whether every unit must be scanned
+        // (frontend-requests 15.1). ImageUrl is the GetImage URL of ImageKey, as on ProductDto.
+        public bool RequiresUnitTracking { get; set; }
+        public string? Brand { get; set; }
+        public string? ImageKey { get; set; }
+        public string? ImageUrl { get; set; }
     }
 }

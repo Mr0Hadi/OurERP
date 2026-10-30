@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Repositories;
+﻿using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -45,8 +45,9 @@ namespace Application.Features.ProductCategory.Commands
 
             var productCategory = _mapper.Map<Domain.Entities.ProductCategory>(request);
             await _productCategoryRepository.AddAsync(productCategory, cancellationToken);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            res.Data = new { productCategory.Id, productCategory.Name };
             res.Message = "دسته‌بندی محصول با موفقیت ایجاد شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;

@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
+using Application.Common.Ledger;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -84,9 +86,11 @@ namespace Application.Features.Supplier.Commands
         private readonly ISupplierRepository _supplierRepository;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IWMSDbContext _context;
 
-        public UpdateSupplierCommandHandler(IUnitOfWork unitOfWork, ISupplierRepository supplierRepository, IObjectStorageService objectStorageService)
+        public UpdateSupplierCommandHandler(IUnitOfWork unitOfWork, ISupplierRepository supplierRepository, IObjectStorageService objectStorageService, IWMSDbContext context)
         {
+            _context = context;
             _unitOfWork = unitOfWork;
             _supplierRepository = supplierRepository;
             _objectStorageService = objectStorageService;
@@ -112,6 +116,7 @@ namespace Application.Features.Supplier.Commands
             supplier.RegistrationNumber = request.RegistrationNumber;
             supplier.Province = request.Province;
             supplier.City = request.City;
+            var previousOpening = PartyLedger.SignedOpeningBalance(supplier.Balance, supplier.BalanceType);
             supplier.Balance = request.Balance;
             supplier.PostalCode = request.PostalCode;
             supplier.BalanceType = request.BalanceType;
@@ -123,8 +128,11 @@ namespace Application.Features.Supplier.Commands
             supplier.Description = request.Description;
             supplier.UpdatedAt = DateTime.Now;
 
+            await PartyLedger.OpeningBalanceChangedAsync(_context, null, supplier, previousOpening,
+                PartyLedger.SignedOpeningBalance(supplier.Balance, supplier.BalanceType), DateTime.Now, cancellationToken);
+
             _supplierRepository.Update(supplier);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "اطلاعات تامین کننده با موفقیت بروزرسانی شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

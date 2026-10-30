@@ -1,4 +1,4 @@
-using Application.Common.Ledger;
+﻿using Application.Common.Ledger;
 using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Settings;
@@ -49,6 +49,9 @@ namespace Application.Features.SaleInstallment.Commands
     {
         public SettleSaleInstallmentPlanCommandValidator()
         {
+            // One movement of money, as on every other payment row (frontend-requests 17.3).
+            RuleFor(x => x.PaymentType).Must(Application.Common.Payments.DocumentPayments.IsRowMethod)
+                .WithMessage("روش پرداخت باید نقدی، چک یا انتقال بانکی باشد.");
             RuleFor(x => x).Must(x => x.SaleId.HasValue || x.PlanId.HasValue)
                 .WithMessage("شناسه‌ی فروش یا شناسه‌ی قرارداد اقساطی باید ارسال شود.");
         }

@@ -1,4 +1,4 @@
-using Application.Common.Ledger;
+﻿using Application.Common.Ledger;
 using Application.Features.Accounting;
 using Application.Common.Payments;
 using Application.Common.Settings;
@@ -363,8 +363,9 @@ namespace WMS.Tests.Integration
             await Assert.ThrowsAsync<ValidationCustomException>(() =>
                 mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CASH, Amount = 100 }, TestContext.Current.CancellationToken));
 
-            // A CREDIT row moves no money, so it needs no account.
-            await mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CREDIT, Amount = 100 }, TestContext.Current.CancellationToken);
+            // A CREDIT row is not a payment at all (frontend-requests 9.4).
+            await Assert.ThrowsAsync<ValidationCustomException>(() =>
+                mediator.Send(new AddSalePaymentCommand { SaleId = first.Id, Type = PaymentTypeEnum.CREDIT, Amount = 100 }, TestContext.Current.CancellationToken));
         }
 
         [Fact]

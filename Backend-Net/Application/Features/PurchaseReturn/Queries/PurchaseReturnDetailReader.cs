@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Documents;
@@ -76,7 +76,7 @@ public static class PurchaseReturnDetailReader
             CanReject = calc.CanPerform(purchaseReturn, ReturnLifecycleActionEnum.REJECT),
             CanReopen = calc.CanPerform(purchaseReturn, ReturnLifecycleActionEnum.REOPEN),
             ReceivingImages = [.. purchaseReturn.ReceivingImages.Select(i => i.ToDto(storage))],
-            Claims = [.. purchaseReturn.Claims.Select(c => c.ToDto())],
+            Claims = [.. purchaseReturn.Claims.Select(c => c.ToDto(storage))],
             Attachments = attachments,
         };
     }

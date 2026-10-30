@@ -521,8 +521,8 @@ namespace WMS.Tests.Integration
 
         [Theory]
         [InlineData(SalesStatusEnum.PROFORMA)]
-        [InlineData(SalesStatusEnum.PROCESSING)]
         [InlineData(SalesStatusEnum.SHIPPED)]
+        // PROCESSING is accepted since 2026-10-30: it issues a checked proforma's invoice with nothing paid (frontend-requests 9.11).
         public void ChangeSaleStatusValidator_SystemSetStatus_IsInvalid(SalesStatusEnum status)
         {
             Assert.False(new ChangeSaleStatusCommandValidator().Validate(new ChangeSaleStatusCommand { Id = 1, Status = status }).IsValid);
