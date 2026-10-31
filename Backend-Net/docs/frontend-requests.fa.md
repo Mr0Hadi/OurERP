@@ -614,15 +614,15 @@ POST api/Product/SetProductUnitLocation
 
 ### چک‌لیستِ این بخش
 
-- [ ] بند ۱ — ستون‌های چاپ + `MarkProductUnitsPrinted`
-- [ ] بند ۲ — پارامترهای تازه، `Statuses`، سه عضوِ `ProductUnitListSortEnum`، `Take ≤ 200`
-- [ ] بند ۲ — فیلدهای تازه‌ی `ProductUnitDto` + ستون‌های `QuarantinedAt` و سندِ منشأ
-- [ ] بند ۳ — `GetProductUnitSummary`
-- [ ] بند ۴ — `ApplyProductUnitAction` با قواعد، بهای تمام‌شده و ایدمپوتنسی
-- [ ] بند ۵ — `CUSTOMER_RETURN = 4`، `WAREHOUSE_HOLD = 5`، `STOCK_QUARANTINED = 14`، `ActionReason` روی حرکت
+- [x] بند ۱ — ستون‌های چاپ + `MarkProductUnitsPrinted`
+- [x] بند ۲ — پارامترهای تازه، `Statuses`، سه عضوِ `ProductUnitListSortEnum`، `Take ≤ 200`
+- [x] بند ۲ — فیلدهای تازه‌ی `ProductUnitDto` + ستون‌های `QuarantinedAt` و سندِ منشأ
+- [x] بند ۳ — `GetProductUnitSummary`
+- [x] بند ۴ — `ApplyProductUnitAction` با قواعد، بهای تمام‌شده و ایدمپوتنسی
+- [x] بند ۵ — `CUSTOMER_RETURN = 4`، `WAREHOUSE_HOLD = 5`، `STOCK_QUARANTINED = 14`، `ActionReason` روی حرکت
 - [ ] بند ۶ — تشخیص و رفعِ مغایرتِ `Stock` / `IN_STOCK`
-- [ ] بند ۷ — `ProductUnitManage = 172` (بخشِ ۱.۴) و گاردِ `ApplyProductUnitAction`
-- [ ] بند ۸ (اختیاری) — `BinLocation` + `SetProductUnitLocation`
+- [x] بند ۷ — `ProductUnitManage = 172` (بخشِ ۱.۴) و گاردِ `ApplyProductUnitAction`
+- [x] بند ۸ (اختیاری) — `BinLocation` + `SetProductUnitLocation`
 
 ---
 
@@ -665,8 +665,8 @@ POST api/Product/SetProductUnitLocation
 
 ### چک‌لیستِ این بخش
 
-- [ ] بند ۱ — `GetPurchaseReturnPdf`
-- [ ] بند ۲ (اختیاری) — پیوستِ مرجوعی
+- [x] بند ۱ — `GetPurchaseReturnPdf`
+- [x] بند ۲ (اختیاری) — پیوستِ مرجوعی
 
 
 ---
@@ -799,9 +799,9 @@ POST api/Product/SetProductUnitLocation
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۶.۱ — `ReportScopeEnum` + `GET api/Report/GetScopePerformance`، مجوز از نقشِ سازمانی، تست‌ها
-- [ ] ۶.۲ (اختیاری) — فیلترِ تیم/واحد روی دو گزارشِ رتبه‌بندیِ کارمندان
-- [ ] ۶.۳ (اختیاری) — ذخیره‌ی چیدمانِ داشبورد روی سرور
+- [x] ۶.۱ — `ReportScopeEnum` + `GET api/Report/GetScopePerformance`، مجوز از نقشِ سازمانی، تست‌ها
+- [x] ۶.۲ (اختیاری) — فیلترِ تیم/واحد روی دو گزارشِ رتبه‌بندیِ کارمندان
+- [x] ۶.۳ (اختیاری) — ذخیره‌ی چیدمانِ داشبورد روی سرور
 
 ---
 
@@ -845,10 +845,10 @@ payload و پاسخ). فقط سه جا مانده که خودِ بکند برا�
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۷.۱ — `FisrtName` → `FirstName`
-- [ ] ۷.۲ — `RefferalCode` → `ReferralCode`
-- [ ] ۷.۳ — `OrderLineId` در `PurchaseReturnClaimDto` و `SaleReturnClaimDto`
-- [ ] ۷.۴ — `PaymentDate` خالی = `null`، نه `DateTime.MinValue`
+- [x] ۷.۱ — `FisrtName` → `FirstName`
+- [x] ۷.۲ — `RefferalCode` → `ReferralCode`
+- [x] ۷.۳ — `OrderLineId` در `PurchaseReturnClaimDto` و `SaleReturnClaimDto`
+- [x] ۷.۴ — `PaymentDate` خالی = `null`، نه `DateTime.MinValue`
 
 ---
 
@@ -873,7 +873,7 @@ projectionِ فهرست استفاده شود تا سه endpoint یک دانه �
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۸ — `ScanBarcode` دانه را با همان projectionِ `GetProductUnitList` برگرداند
+- [x] ۸ — `ScanBarcode` دانه را با همان projectionِ `GetProductUnitList` برگرداند
 
 ## بخشِ ۹ — یافته‌های تستِ سرتاسری (۲۰۲۶-۰۹-۲۹)
 
@@ -997,18 +997,18 @@ claimableQuantity: 4` — دو دانه‌ی جایگزین هرگز قابلِ 
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۹.۱۰ — شماره‌ی فاکتورِ یکتا (sequence + unique index)
-- [ ] ۹.۱ — سهمیه‌ی ادعا بعد از دریافتِ جایگزین برگردد (خرید و فروش)
-- [ ] ۹.۲ — `CreateCustomer` / `CreateSupplier` → `Data = { id }`
-- [ ] ۹.۳ — `PurchasePrice`، `Unit`، `Tax`، `TaxCategory` در `ProductListDto`
-- [ ] ۹.۴ — ردیفِ پرداختِ `CREDIT` رد شود
-- [ ] ۹.۵ — متنِ پیامِ `AcceptPurchaseExcess`
-- [ ] ۹.۶ — تبدیلِ زمانِ ورودیِ دارای منطقه به وقتِ محلی
-- [ ] ۹.۷ — `SupplementOfPurchaseItemId` و `TotalAmount` در `PurchaseReceivingItemInfoDto`
-- [ ] ۹.۸ — تصمیم: مالیات در ارزشِ ادعا
+- [x] ۹.۱۰ — شماره‌ی فاکتورِ یکتا (sequence + unique index)
+- [x] ۹.۱ — سهمیه‌ی ادعا بعد از دریافتِ جایگزین برگردد (خرید و فروش)
+- [x] ۹.۲ — `CreateCustomer` / `CreateSupplier` → `Data = { id }`
+- [x] ۹.۳ — `PurchasePrice`، `Unit`، `Tax`، `TaxCategory` در `ProductListDto`
+- [x] ۹.۴ — ردیفِ پرداختِ `CREDIT` رد شود
+- [x] ۹.۵ — متنِ پیامِ `AcceptPurchaseExcess`
+- [x] ۹.۶ — تبدیلِ زمانِ ورودیِ دارای منطقه به وقتِ محلی
+- [x] ۹.۷ — `SupplementOfPurchaseItemId` و `TotalAmount` در `PurchaseReceivingItemInfoDto`
+- [x] ۹.۸ — تصمیم: مالیات در ارزشِ ادعا
 - [ ] ۹.۹ — تصمیم: «فروش غیر رسمی» (فیلد در بکند یا کنار گذاشتن)
-- [ ] ۹.۱۱ — `CreateSaleCommand.Status` و نگه‌داشتنِ `InvoiceDate`ِ کاربر
-- [ ] ۹.۱۲ — جست‌وجوی مشتری/تامین‌کننده با نامِ کامل و تلفن
+- [x] ۹.۱۱ — `CreateSaleCommand.Status` و نگه‌داشتنِ `InvoiceDate`ِ کاربر
+- [x] ۹.۱۲ — جست‌وجوی مشتری/تامین‌کننده با نامِ کامل و تلفن
 
 ---
 
@@ -1076,8 +1076,8 @@ migration لازم نیست.
 
 ### چک‌لیستِ این بخش
 
-- [ ] بازبینی و build/test شاخه‌ی `feature/barcode-dash-format`
-- [ ] مرج با `main` و deploy
+- [x] بازبینی و build/test شاخه‌ی `feature/barcode-dash-format`
+- [x] مرج با `main` و deploy
 - [ ] اجرای `EnsureProductCodes` روی سرورِ تست
 - [ ] (اختیاری، بعداً) حذفِ `ProductUnit.BarcodePayload` / `Product.BarCode` و به‌روزکردنِ سندِ طراحی
 
@@ -1435,10 +1435,10 @@ access token و refresh token هر دو در `localStorage` مرورگرند؛ �
 ### چک‌لیستِ این بخش
 
 - [ ] ۱۳.۱ — `canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `items[].canClose/canReopen`
-- [ ] ۱۳.۲ — `UpdatedAt`/`RowVersion` و `409` برای ویرایشِ هم‌زمانِ پیش‌فاکتور
+- [ ] ۱۳.۲ — `UpdatedAt`/`RowVersion` و `409` برای ویرایشِ هم‌زمانِ پیش‌فاکتور — نیمه: `updatedAt` فقط روی `SaleDto` آمد (۲۴.۲)؛ روی خرید و `409` نه
 - [ ] ۱۳.۳ — `Returnable = true` روی فهرستِ خرید و فروش
 - [ ] ۱۳.۴ — `PreviewResolution` برای هر دو سمتِ مرجوعی
-- [ ] ۱۳.۵ — `Search` روی `GetProductList` و فیلدهای کاملِ کالا در فهرست
+- [ ] ۱۳.۵ — `Search` روی `GetProductList` و فیلدهای کاملِ کالا در فهرست — نیمه: فیلدهای کالا با ۹.۳ آمد؛ پارامترِ `Search` نه
 
 ---
 
@@ -1512,7 +1512,7 @@ access token و refresh token هر دو در `localStorage` مرورگرند؛ �
 ### چک‌لیستِ این بخش
 
 - [ ] ۱۴.۱ — `otherReturnClaims` روی اقلامِ `GetPurchaseReceivingInfo` و `GetSaleDetail`
-- [ ] ۱۴.۲ — `Search` (شماره‌ی فاکتور یا نامِ طرف‌حساب) روی `GetPurchaseList`/`GetSaleList`
+- [ ] ۱۴.۲ — `Search` (شماره‌ی فاکتور یا نامِ طرف‌حساب) روی `GetPurchaseList`/`GetSaleList` — نیمه: روی `GetPurchaseList` هست؛ روی `GetSaleList` نه
 - [ ] ۱۴.۳ — `canRemove` روی تصمیم، `lifecycleBlocker` روی مرجوعی، `canPrintCreditNote` روی مرجوعیِ فروش
 - [ ] ۱۴.۴ — `freeQuarantinedQuantity` روی ادعای مرجوعیِ خرید
 - [ ] ۱۴.۵ — `pendingWarehouseWork` روی جزئیاتِ مرجوعی
