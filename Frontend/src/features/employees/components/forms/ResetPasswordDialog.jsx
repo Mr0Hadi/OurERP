@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/shared/components/ui/dialog";
 import FormField from "@/shared/components/forms/FormField";
 import { Input } from "@/shared/components/ui/input";
@@ -19,6 +18,7 @@ import {
   PASSWORD_RULE_MESSAGE,
 } from "@/shared/lib/validationRules";
 import { useResetUserPasswordMutation } from "../../services/mutations";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 /**
  * بازنشانیِ رمز عبورِ کارمندی که آن را فراموش کرده — فقط برای مسئولِ
@@ -99,7 +99,7 @@ export default function ResetPasswordDialog({
                   size="sm"
                   onClick={() => setVisible((prev) => !prev)}
                   aria-label={visible ? "پنهان کردن رمز عبور" : "نمایش رمز عبور"}
-                  className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                  className="absolute inset-y-0 left-1 my-auto h-8 w-8 p-0"
                 >
                   {visible ? (
                     <EyeOff className="h-4 w-4" />
@@ -133,19 +133,7 @@ export default function ResetPasswordDialog({
             </FormField>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={close}
-              disabled={resetMutation.isPending}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" disabled={resetMutation.isPending}>
-              {resetMutation.isPending ? "در حال ثبت..." : "بازنشانی رمز عبور"}
-            </Button>
-          </DialogFooter>
+          <DialogActions onCancel={close} isPending={resetMutation.isPending} submitLabel="بازنشانی رمز عبور" />
         </form>
       </DialogContent>
     </Dialog>

@@ -1,4 +1,4 @@
-using Application.Features.Customer.Commands;
+﻿using Application.Features.Customer.Commands;
 using Application.Features.Customer.Dtos;
 using Application.Features.Customer.Queries;
 using Common.Exceptions;
@@ -15,7 +15,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new CreateCustomerCommandHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var handler = new CreateCustomerCommandHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db);
             await handler.Handle(new CreateCustomerCommand
             {
                 FirstName = "علی",
@@ -38,7 +38,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository, FakeObjectStorage.Instance);
+            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository, FakeObjectStorage.Instance, scope.Db);
 
             await Assert.ThrowsAsync<NotFoundCustomException>(() => handler.Handle(new UpdateCustomerCommand
             {
@@ -60,7 +60,7 @@ namespace WMS.Tests.Integration
             scope.Context.Customers.Add(customer);
             scope.Context.SaveChanges();
 
-            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository, FakeObjectStorage.Instance);
+            var handler = new UpdateCustomerCommandHandler(scope.UnitOfWork, scope.CustomerRepository, FakeObjectStorage.Instance, scope.Db);
             await handler.Handle(new UpdateCustomerCommand
             {
                 Id = customer.Id,

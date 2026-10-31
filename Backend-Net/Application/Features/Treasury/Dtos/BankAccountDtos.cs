@@ -69,6 +69,12 @@ namespace Application.Features.Treasury.Dtos
         public int? CounterpartBankAccountId { get; set; }
         public string? CounterpartBankAccountTitle { get; set; }
 
+        // RETURN_MONEY lines: an applied money effect of a purchase or sale return (or one part of a MIXED one).
+        public int? PurchaseReturnId { get; set; }
+        public int? SaleReturnId { get; set; }
+        public string? ReturnNumber { get; set; }
+        public int? ReturnEffectId { get; set; }
+
         /// <summary>Cheque number or transfer/RRN reference.</summary>
         public string? Reference { get; set; }
         public string? Description { get; set; }

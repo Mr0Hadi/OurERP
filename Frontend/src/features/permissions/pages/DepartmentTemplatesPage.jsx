@@ -10,10 +10,11 @@ import { useDepartmentUserCountQuery } from "@/features/employees/services/queri
 
 import MasterListPane from "@/shared/components/layout/MasterListPane";
 import DepartmentTemplatePanel from "../components/DepartmentTemplatePanel";
-import UnsavedChangesDialog from "../components/UnsavedChangesDialog";
+import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDialog";
 import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 const detailPath = (id) => routeWithId(ROUTES.ACCESS_TEMPLATES_DETAIL, id);
 
@@ -65,7 +66,8 @@ export default function DepartmentTemplatesPage() {
   const { id } = useParams();
 
   const [search, setSearch] = useState("");
-  const { departments, isLoading } = useDepartmentOptionsQuery();
+  const departmentsQuery = useDepartmentOptionsQuery();
+  const { departments, isLoading } = departmentsQuery;
 
   const [dirty, setDirty] = useState(false);
   const blocker = useUnsavedChangesGuard(dirty);
@@ -85,6 +87,7 @@ export default function DepartmentTemplatesPage() {
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:h-[calc(100svh-6.5rem)] lg:grid-cols-[17rem_minmax(0,1fr)]">
       <MasterListPane
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
+        refresh={departmentsQuery}
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder="جست‌وجوی واحد..."
@@ -109,14 +112,12 @@ export default function DepartmentTemplatesPage() {
             onDirtyChange={setDirty}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <LayoutTemplate className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">یک واحد را انتخاب کنید</p>
-            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-              برای هر واحد مشخص کنید کارمندانش معمولاً چه دسترسی‌هایی دارند.
-              هنگام تنظیم یا جابه‌جاییِ کارمند، همین الگو پیشنهاد می‌شود.
-            </p>
-          </div>
+          <EmptyState
+            fill
+            icon={LayoutTemplate}
+            title="یک واحد را انتخاب کنید"
+            description="برای هر واحد مشخص کنید کارمندانش معمولاً چه دسترسی‌هایی دارند. هنگام تنظیم یا جابه‌جاییِ کارمند، همین الگو پیشنهاد می‌شود."
+          />
         )}
       </main>
 

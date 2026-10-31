@@ -76,6 +76,10 @@ namespace Application.Features.Product.Queries
                 LowStockThreshold = x.LowStockThreshold,
                 RetailPrice = x.RetailPrice,
                 WholeSalePrice = x.WholeSalePrice,
+                PurchasePrice = x.PurchasePrice,
+                Unit = x.Unit,
+                Tax = x.Tax,
+                TaxCategory = x.TaxCategory,
                 ImageKey = x.ImageUrl
             });
 

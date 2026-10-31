@@ -78,22 +78,22 @@ namespace WMS.Tests.Functional
             var client = _factory.CreateClient();
             var token = await LoginAsync(client, username);
 
-            var blocked = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", token));
+            var blocked = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", token), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
             Assert.True(Get(Get(await ReadAsync(blocked), "data"), "mustChangePassword").GetBoolean());
 
-            var profile = await client.SendAsync(Authorized(HttpMethod.Get, "/api/User/GetUserInfo", token));
+            var profile = await client.SendAsync(Authorized(HttpMethod.Get, "/api/User/GetUserInfo", token), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, profile.StatusCode);
 
             var changed = await client.SendAsync(Authorized(HttpMethod.Put, "/api/User/ChangePassword", token,
-                new { OldPassword = Password, Password = "Fresh@12345", RePassword = "Fresh@12345" }));
+                new { OldPassword = Password, Password = "Fresh@12345", RePassword = "Fresh@12345" }), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
             var newToken = Get(Get(await ReadAsync(changed), "data"), "accessToken").GetString()!;
 
-            var oldTokenNow = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", token));
+            var oldTokenNow = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", token), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Unauthorized, oldTokenNow.StatusCode);
 
-            var allowed = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", newToken));
+            var allowed = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", newToken), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
         }
 
@@ -106,8 +106,8 @@ namespace WMS.Tests.Functional
             var first = await LoginAsync(client, username);
             var second = await LoginAsync(client, username);
 
-            var withFirst = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", first));
-            var withSecond = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", second));
+            var withFirst = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", first), TestContext.Current.CancellationToken);
+            var withSecond = await client.SendAsync(Authorized(HttpMethod.Get, "/api/Product/GetProductList", second), TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, withFirst.StatusCode);
             Assert.Equal(HttpStatusCode.OK, withSecond.StatusCode);
@@ -119,11 +119,11 @@ namespace WMS.Tests.Functional
             var client = _factory.CreateClient();
 
             var cashier = await LoginAsync(client, SeedUser(false, Domain.Enums.PermissionEnum.PosCharge));
-            var allowed = await client.SendAsync(Authorized(HttpMethod.Get, "/api/PosTerminal/GetPosTerminalList", cashier));
+            var allowed = await client.SendAsync(Authorized(HttpMethod.Get, "/api/PosTerminal/GetPosTerminalList", cashier), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
 
             var other = await LoginAsync(client, SeedUser(false, Domain.Enums.PermissionEnum.SaleView));
-            var refused = await client.SendAsync(Authorized(HttpMethod.Get, "/api/PosTerminal/GetPosTerminalList", other));
+            var refused = await client.SendAsync(Authorized(HttpMethod.Get, "/api/PosTerminal/GetPosTerminalList", other), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
         }
 
@@ -147,7 +147,7 @@ namespace WMS.Tests.Functional
             var response = await client.SendAsync(Authorized(HttpMethod.Post, "/api/Sale/AddSalePayment", token, new
             {
                 SaleId = saleId, Type = 3, Amount = 5000, TransferRef = $"rrn-{Guid.NewGuid():N}"[..20], PosTerminalId = terminalId,
-            }));
+            }), TestContext.Current.CancellationToken);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             var row = Get(Get(await ReadAsync(response), "data"), "paymentDetails").EnumerateArray()
@@ -159,7 +159,7 @@ namespace WMS.Tests.Functional
         [Fact]
         public async Task EveryResponse_CarriesTheSecurityHeaders()
         {
-            var response = await _factory.CreateClient().GetAsync("/api/Product/GetProductList");
+            var response = await _factory.CreateClient().GetAsync("/api/Product/GetProductList", TestContext.Current.CancellationToken);
 
             Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
             Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
@@ -174,11 +174,11 @@ namespace WMS.Tests.Functional
 
             for (var i = 0; i < 3; i++)
             {
-                var allowed = await client.PostAsJsonAsync("/api/Account/Login", new { Username = "nobody", Password = "Wrong@1234" });
+                var allowed = await client.PostAsJsonAsync("/api/Account/Login", new { Username = "nobody", Password = "Wrong@1234" }, cancellationToken: TestContext.Current.CancellationToken);
                 Assert.NotEqual(HttpStatusCode.TooManyRequests, allowed.StatusCode);
             }
 
-            var rejected = await client.PostAsJsonAsync("/api/Account/Login", new { Username = "nobody", Password = "Wrong@1234" });
+            var rejected = await client.PostAsJsonAsync("/api/Account/Login", new { Username = "nobody", Password = "Wrong@1234" }, cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
             Assert.True(rejected.Headers.Contains("Retry-After"));

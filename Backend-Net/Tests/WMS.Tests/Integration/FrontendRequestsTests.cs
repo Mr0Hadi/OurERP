@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Common.Dtos.Returns;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
@@ -171,7 +171,7 @@ namespace WMS.Tests.Integration
                     Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
                 }, CancellationToken.None);
 
-            var res = await new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db).Handle(new GetPurchaseReturnPendingEffectsQuery(), CancellationToken.None);
+            var res = await new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(new GetPurchaseReturnPendingEffectsQuery(), CancellationToken.None);
             var row = Read<Application.Features.PurchaseReturn.Dtos.PendingEffectDto>(res, "PendingEffects").Single();
 
             Assert.Equal(returnId, row.PurchaseReturnId);
@@ -213,7 +213,7 @@ namespace WMS.Tests.Integration
                     Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } } },
                 }, CancellationToken.None);
 
-            var res = await new SRQ.GetSaleReturnPendingEffectsQueryHandler(scope.Db).Handle(new SRQ.GetSaleReturnPendingEffectsQuery(), CancellationToken.None);
+            var res = await new SRQ.GetSaleReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(new SRQ.GetSaleReturnPendingEffectsQuery(), CancellationToken.None);
             var row = Read<Application.Features.SaleReturn.Dtos.PendingEffectDto>(res, "PendingEffects").Single();
 
             Assert.Equal(scenario.Sale.Id, row.SaleId);
@@ -271,7 +271,7 @@ namespace WMS.Tests.Integration
 
             // The QuestPDF engine: the Excel one needs LibreOffice on the machine running the tests.
             var pdf = new Infrastructure.Services.QuestPdfInvoiceDocumentService(scope.QuestPdfDocumentService);
-            var file = await new Application.Features.Invoice.Queries.GetPurchaseReturnPdfQueryHandler(scope.Db, pdf, new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build())
+            var file = await new Application.Features.Invoice.Queries.GetPurchaseReturnPdfQueryHandler(scope.Db, pdf)
                 .Handle(new Application.Features.Invoice.Queries.GetPurchaseReturnPdfQuery { PurchaseReturnId = returnId }, CancellationToken.None);
 
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(file.Content, 0, 4));

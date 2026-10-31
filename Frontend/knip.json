@@ -1,13 +1,13 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
-    "src/main.jsx",
     "scripts/*.js",
-    "structure.js"
+    "tools/dev-inspector/client.js"
   ],
   "project": [
     "src/**/*.{js,jsx}",
-    "scripts/**/*.js"
+    "scripts/**/*.js",
+    "tools/**/*.js"
   ],
   "ignore": [
     "src/shared/components/ui/**"

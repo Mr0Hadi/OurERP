@@ -99,7 +99,7 @@ export async function downloadDocuments(documents) {
  * چاپِ نمایشگرِ PDF بگردد. iframe هم‌مبدأ است، پس `contentWindow.print()`
  * کار می‌کند و پنجره‌ی چاپ مستقیم بالا می‌آید.
  */
-function printPdfBlob(blob) {
+export function printPdfBlob(blob) {
   const url = URL.createObjectURL(blob);
   const frame = document.createElement("iframe");
 
@@ -130,52 +130,12 @@ function printPdfBlob(blob) {
   }, 120000);
 }
 
-/** تصویرها همه در یک صفحه، هر کدام روی یک برگه. */
-function printImageBlobs(blobs) {
-  const urls = blobs.map((blob) => URL.createObjectURL(blob));
-  const win = window.open("", "_blank", "width=900,height=1200");
-
-  if (!win) {
-    urls.forEach(URL.revokeObjectURL);
-    throw new Error("پنجره‌ی چاپ باز نشد؛ مسدودکننده‌ی پاپ‌آپ را غیرفعال کنید.");
-  }
-
-  win.document.write(`<!DOCTYPE html>
-<html dir="rtl" lang="fa"><head><meta charset="utf-8" /><title>چاپ سند</title>
-<style>
-  @page { margin: 10mm; }
-  body { margin: 0; }
-  img { display: block; width: 100%; object-fit: contain; }
-  img + img { page-break-before: always; }
-</style></head>
-<body>${urls.map((url) => `<img src="${url}" />`).join("")}</body></html>`);
-  win.document.close();
-
-  // چاپ فقط بعد از بارگذاریِ *همه‌ی* تصویرها؛ وگرنه برگه‌های خالی
-  // چاپ می‌شوند.
-  // آدرس‌های blob تا بسته‌شدنِ پنجره‌ی چاپ لازم‌اند؛ بعدش آزاد می‌شوند
-  // وگرنه هر چاپ، حافظه‌ی همه‌ی تصویرها را تا بستنِ تب نگه می‌داشت.
-  win.addEventListener("afterprint", () => urls.forEach((url) => URL.revokeObjectURL(url)));
-
-  const images = [...win.document.images];
-  let remaining = images.length;
-  const start = () => {
-    if (--remaining > 0) return;
-    win.focus();
-    win.print();
-  };
-
-  images.forEach((image) => {
-    if (image.complete) start();
-    else {
-      image.addEventListener("load", start);
-      image.addEventListener("error", start);
-    }
-  });
-}
-
-/** چاپِ همه‌ی سندها — تصویرها با هم، هر PDF جداگانه. */
-export async function printDocuments(documents) {
+/**
+ * بایت‌های چند سند. خطای یک سند بقیه را متوقف نمی‌کند.
+ *
+ * @returns `{ loaded: [{ ...document, blob }], failures: [name] }`
+ */
+export async function loadDocuments(documents) {
   const failures = [];
   const loaded = [];
 
@@ -188,10 +148,19 @@ export async function printDocuments(documents) {
     }
   }
 
-  const images = loaded.filter((item) => !item.isPdf);
-  if (images.length) printImageBlobs(images.map((item) => item.blob));
+  return { loaded, failures };
+}
 
-  loaded.filter((item) => item.isPdf).forEach((item) => printPdfBlob(item.blob));
-
+/**
+ * چاپِ سندهای PDF، هر کدام جدا با اندازه‌ی کاغذِ خودش.
+ *
+ * تصویرها اینجا چاپ نمی‌شوند: کاغذ، حاشیه و چیدمانشان را کاربر در
+ * `DocumentPrintStudio` (`src/shared/components/invoice/`) انتخاب می‌کند و
+ * از همان پوسته‌ی مشترکِ چاپ بیرون می‌آیند — نه پنجره‌ی پاپ‌آپی که مرورگرِ
+ * موبایل اغلب می‌بندد.
+ */
+export async function printPdfDocuments(documents) {
+  const { loaded, failures } = await loadDocuments(documents.filter((item) => item.isPdf));
+  loaded.forEach((item) => printPdfBlob(item.blob));
   return failures;
 }

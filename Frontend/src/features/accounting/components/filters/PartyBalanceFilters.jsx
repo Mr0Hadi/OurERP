@@ -2,7 +2,7 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterSwitch from "@/shared/components/filters/FilterSwitch";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import {
@@ -13,8 +13,8 @@ import { usePartyBalanceFilterStore } from "../../store/accountingFilterStores";
 
 const toPriceValue = (value) => (value === "" ? null : Number(value));
 
-const PARTY_TYPE_OPTIONS = toFilterOptions(ACCOUNTING_PARTY_TYPE_LABELS);
-const BALANCE_STATE_OPTIONS = toFilterOptions(PARTY_BALANCE_STATE_LABELS);
+const PARTY_TYPE_OPTIONS = optionsFromLabels(ACCOUNTING_PARTY_TYPE_LABELS);
+const BALANCE_STATE_OPTIONS = optionsFromLabels(PARTY_BALANCE_STATE_LABELS);
 
 /**
  * فیلترهای جدولِ حسابِ اشخاص — همه با نامِ پارامترِ `GetPartyBalanceList`. بازه‌ی مانده
@@ -40,6 +40,9 @@ export default function PartyBalanceFilters() {
   return (
     <FilterPanel
       onReset={resetFilters}
+      dateRowClassName="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-4 pt-3 border-t border-border"
+      resetWrapperClassName="flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end"
+      resetButtonClassName="w-full px-4"
       dateRow={
         <>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

@@ -1,4 +1,4 @@
-namespace Application.Common.Contracts.ProductUnit
+﻿namespace Application.Common.Contracts.ProductUnit
 {
     /// <summary>
     /// Keeps Domain.Entities.ProductUnit rows in sync with Product.Stock at every point that
@@ -34,10 +34,12 @@ namespace Application.Common.Contracts.ProductUnit
         Task<List<Domain.Entities.ProductUnit>> ConsumeAsync(Domain.Entities.Product product, int count, int? saleItemId, Domain.Enums.UnitCustodyReasonEnum? custodyReason, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Proforma warehouse check: exactly the scanned IN_STOCK units of <paramref name="product"/> become RESERVED for
-        /// <paramref name="saleItemId"/>. The caller lowers Product.Stock - a reserved unit is not free to sell.
+        /// Proforma warehouse check: <paramref name="count"/> IN_STOCK units of <paramref name="product"/> become RESERVED for
+        /// <paramref name="saleItemId"/> - exactly the scanned ones when <paramref name="barcodes"/> has any (their number must
+        /// be <paramref name="count"/>), otherwise FIFO by serial, as ConsumeAsync picks unscanned units (for a product that does
+        /// not require unit tracking). The caller lowers Product.Stock - a reserved unit is not free to sell.
         /// </summary>
-        Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, List<string> barcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+        Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, int count, List<string>? barcodes, UnitMovementContext movement, CancellationToken cancellationToken);
 
         /// <summary>
         /// Every RESERVED unit of <paramref name="saleItemId"/> goes back to IN_STOCK (the line was edited or removed, or the
@@ -108,5 +110,21 @@ namespace Application.Common.Contracts.ProductUnit
         /// mints the difference if the new stock is higher, scraps the newest units (by serial) if lower.
         /// </summary>
         Task ReconcileStockAsync(Domain.Entities.Product product, int newStock, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        // ---- Warehouses and stocktake (GAP-08, GAP-01) ----
+
+        /// <summary>IN_STOCK units of the product in <paramref name="fromWarehouseId"/> (scanned, or FIFO) put on a transfer: IN_TRANSIT.</summary>
+        Task<List<Domain.Entities.ProductUnit>> DispatchToTransferAsync(Domain.Entities.Product product, int count, int fromWarehouseId, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>IN_TRANSIT (a transfer arriving or called back) or IN_STOCK (relocated by a stocktake) units onto <paramref name="warehouseId"/>'s shelf.</summary>
+        Task PlaceInStockAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, int warehouseId, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>IN_STOCK units a stocktake did not find: SCRAPPED (the movement reason says why).</summary>
+        Task MarkMissingAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        /// <summary>A counted shortage on unlabelled stock: the newest <paramref name="count"/> IN_STOCK units in the warehouse, marked missing.</summary>
+        Task<List<Domain.Entities.ProductUnit>> TakeFromStockAsync(Domain.Entities.Product product, int count, int warehouseId, UnitMovementContext movement, CancellationToken cancellationToken);
+
+        Task<int> DefaultWarehouseIdAsync(CancellationToken cancellationToken);
     }
 }

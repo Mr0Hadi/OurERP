@@ -512,7 +512,7 @@ namespace WMS.Tests.Integration
 
             // Ledger lost entirely (the pre-ledger state): rebuilt to the same balances.
             using (var context = db.NewContext())
-                await context.Database.ExecuteSqlRawAsync("DELETE FROM PartyLedgerEntries");
+                await context.Database.ExecuteSqlRawAsync("DELETE FROM PartyLedgerEntries", cancellationToken: TestContext.Current.CancellationToken);
             await RunBackfillAsync(db);
             Assert.Equal(live, await BalancesAsync(db));
 

@@ -1,5 +1,7 @@
 ﻿using Application.Common.Contracts.Repositories;
+using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
+using Application.Common.Ledger;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -21,7 +23,7 @@ namespace Application.Features.Customer.Commands
         public string PhoneNumber { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; } = string.Empty;
-        public string? RefferalCode { get; set; }
+        public string? ReferralCode { get; set; }
         public UInt64? CreditLimit { get; set; }
         public string? EconomicCode { get; set; }
         public string? NationalId { get; set; }
@@ -75,9 +77,11 @@ namespace Application.Features.Customer.Commands
         private readonly ICustomerRepository _customerRepository;
         private readonly IObjectStorageService _objectStorageService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IWMSDbContext _context;
 
-        public UpdateCustomerCommandHandler(IUnitOfWork unitOfWork, ICustomerRepository customerRepository, IObjectStorageService objectStorageService)
+        public UpdateCustomerCommandHandler(IUnitOfWork unitOfWork, ICustomerRepository customerRepository, IObjectStorageService objectStorageService, IWMSDbContext context)
         {
+            _context = context;
             _unitOfWork = unitOfWork;
             _customerRepository = customerRepository;
             _objectStorageService = objectStorageService;
@@ -95,11 +99,12 @@ namespace Application.Features.Customer.Commands
             customer.LastName = request.LastName;
             customer.PhoneNumber = request.PhoneNumber;
             customer.Address = request.Address;
+            var previousOpening = PartyLedger.SignedOpeningBalance(customer.Balance, customer.BalanceType);
             customer.Balance = request.Balance;
             customer.PostalCode = request.PostalCode;
             customer.BalanceType = request.BalanceType;
             customer.CreditLimit = request.CreditLimit;
-            customer.RefferalCode = request.RefferalCode;
+            customer.ReferralCode = request.ReferralCode;
             customer.EconomicCode = request.EconomicCode;
             customer.NationalId = request.NationalId;
             customer.RegistrationNumber = request.RegistrationNumber;
@@ -113,8 +118,11 @@ namespace Application.Features.Customer.Commands
             customer.Description = request.Description;
             customer.UpdatedAt = DateTime.Now;
 
+            await PartyLedger.OpeningBalanceChangedAsync(_context, customer, null, previousOpening,
+                PartyLedger.SignedOpeningBalance(customer.Balance, customer.BalanceType), DateTime.Now, cancellationToken);
+
             _customerRepository.Update(customer);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Message = "اطلاعات مشتری با موفقیت بروزرسانی شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();

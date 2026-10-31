@@ -471,7 +471,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3, UnitPrice = 1000 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 3000 } },
             }, CancellationToken.None);
 
-            var handler = new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db);
+            var handler = new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetPurchaseReturnPendingEffectsQuery { PurchaseId = scenario.Purchase.Id }, CancellationToken.None);
 
             var list = ((System.Collections.Generic.IEnumerable<PendingEffectDto>)res.Data!.GetType().GetProperty("PendingEffects")!.GetValue(res.Data)!).ToList();
@@ -656,7 +656,7 @@ namespace WMS.Tests.Integration
             await NewReject(scope).Handle(new RejectPurchaseReturnCommand { Id = returnId }, CancellationToken.None);
 
             // A rejected return's still-pending goods effect must not be offered to the warehouse.
-            var pendingHandler = new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db);
+            var pendingHandler = new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var pendingRes = await pendingHandler.Handle(new GetPurchaseReturnPendingEffectsQuery(), CancellationToken.None);
             var pending = (System.Collections.Generic.IEnumerable<PendingEffectDto>)pendingRes.Data!.GetType().GetProperty("PendingEffects")!.GetValue(pendingRes.Data)!;
             Assert.Empty(pending);
@@ -943,7 +943,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(0, effect.AppliedQuantity);
             Assert.Equal(stockBefore, scope.Context.Products.Local.Single(x => x.Id == scenario.Product.Id).Stock);
 
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
             using var verify = db.NewContext();
             Assert.Equal(0, verify.PurchaseReturnEffects.Single(e => e.Direction == ReturnEffectDirectionEnum.GOODS_IN).AppliedQuantity);
             Assert.Empty(verify.PurchaseReturnEffectRounds);

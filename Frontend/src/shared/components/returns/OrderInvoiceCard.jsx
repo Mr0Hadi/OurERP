@@ -10,6 +10,7 @@ import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
 import { claimLineKey, useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
  * دو سندِ پشتِ این کارت، دو شکلِ متفاوتِ بک‌اند دارند و هیچ‌کدام فیلدِ
@@ -193,23 +194,23 @@ function InvoiceItems({ items, total, totalLabel, quantityLabel, deliveredLabel,
                 {item.productCode}
               </p>
             </div>
-            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
-              <Row label={quantityLabel}>
+            <InfoList className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-3 gap-y-1 space-y-0 text-[11px] [&>div]:items-start [&>div]:gap-2">
+              <InfoRow label={quantityLabel}>
                 {formatNumber(orderedOf(item))} {item.unit || "عدد"}
-              </Row>
-              <Row label={deliveredLabel}>
+              </InfoRow>
+              <InfoRow label={deliveredLabel}>
                 <DeliveredCell
                   item={item}
                   claimsElsewhere={claimsElsewhere}
                 />
-              </Row>
-              <Row label="قیمت واحد">{formatNumber(item.unitPrice)}</Row>
-              <Row label="جمع خط">
+              </InfoRow>
+              <InfoRow label="قیمت واحد">{formatNumber(item.unitPrice)}</InfoRow>
+              <InfoRow label="جمع خط">
                 <span className="font-medium text-card-foreground">
                   {formatNumber(lineTotalOf(item))}
                 </span>
-              </Row>
-            </div>
+              </InfoRow>
+            </InfoList>
           </div>
         ))}
         <div className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs">
@@ -218,15 +219,6 @@ function InvoiceItems({ items, total, totalLabel, quantityLabel, deliveredLabel,
         </div>
       </div>
     </CardContent>
-  );
-}
-
-function Row({ label, children }) {
-  return (
-    <div className="flex items-start justify-between gap-2 min-w-0">
-      <span className="text-muted-foreground shrink-0">{label}</span>
-      <span className="tabular-nums text-left min-w-0">{children}</span>
-    </div>
   );
 }
 

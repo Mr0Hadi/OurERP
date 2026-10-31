@@ -10,7 +10,9 @@ import Notice from "@/shared/components/feedback/Notice";
 import InstallmentPlanTermsFields from "./InstallmentPlanTermsFields";
 import InstallmentPaymentFields from "./InstallmentPaymentFields";
 import InstallmentSchedule from "./InstallmentSchedule";
-import InstallmentSummary from "./InstallmentSummary";
+import StatGrid from "@/shared/components/data/StatGrid";
+import DownPaymentPosPanel from "./DownPaymentPosPanel";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { cn } from "@/shared/lib/utils";
 
@@ -27,8 +29,18 @@ import { cn } from "@/shared/lib/utils";
  * @param errors   `planDraftErrors` (فقط بعد از اولین تلاشِ ثبت)
  * @param taxUnknown جمعِ فاکتور هنوز مالیاتِ کالاهای تازه را ندارد
  * @param blockedReason قرارداد از این‌جا ثبت‌شدنی نیست (دسترسی، محدودیتِ سرور)؛ فقط پیام
+ * @param posPayment    کارت‌کشیدنِ پیش‌پرداخت وقتی روشِ آن «انتقال بانکی» است (`DownPaymentPosPanel`)؛
+ *                      `undefined` یعنی بی‌کارتخوان
  */
-export default function InstallmentPlanDraftCard({ draft, onChange, preview, errors = {}, taxUnknown, blockedReason }) {
+export default function InstallmentPlanDraftCard({
+  draft,
+  onChange,
+  preview,
+  errors = {},
+  taxUnknown,
+  blockedReason,
+  posPayment,
+}) {
   const [showSchedule, setShowSchedule] = useState(false);
 
   if (blockedReason) {
@@ -67,11 +79,18 @@ export default function InstallmentPlanDraftCard({ draft, onChange, preview, err
           )}
         </div>
         <InstallmentPaymentFields value={draft} onChange={onChange} idPrefix="new-plan-down" />
+        {posPayment && Number(draft.paymentType) === PaymentTypeEnum.TRANSFER && (
+          <DownPaymentPosPanel
+            amount={Number(draft.downPaymentAmount) || 0}
+            posPayment={posPayment}
+            onManual={({ amount, transferRef }) => onChange({ downPaymentAmount: amount, transferRef })}
+          />
+        )}
       </div>
 
       {preview ? (
         <div className="space-y-2">
-          <InstallmentSummary
+          <StatGrid className="@container/summary grid-cols-2 @md/summary:grid-cols-4"
             items={[
               { label: "جمع فاکتور (اصل)", value: preview.cashAmount },
               { label: "سود اقساط", value: preview.installmentChargeAmount },

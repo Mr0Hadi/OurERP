@@ -17,8 +17,9 @@ export const iranianBanks = [
     id: "blubank",
     name: "بلوبانک",
     cardPrefixes: ["62198618", "62198619"],
-    // Shares 056 with Saman (Blu is a digital branch of Saman Bank; Blu IBANs use Saman's 056 code)
-    ibanCodes: ["056"],
+    // بلو شعبه‌ی دیجیتالِ سامان است و شبایش همان کدِ ۰۵۶ِ سامان؛ از شبا جدا نمی‌شود. با ۰۵۶ اینجا،
+    // چون بلو پیش از سامان آمده، شبای *همه‌ی* حساب‌های سامان «بلوبانک» شناخته می‌شد. فقط کارت جدا می‌کند.
+    ibanCodes: [],
   },
   { id: "dey", name: "بانک دی", cardPrefixes: ["502938"], ibanCodes: ["066"] },
   {
@@ -251,4 +252,38 @@ export function validateIranianShaba(value) {
     remainder = String(Number(remainder) % 97)
   }
   return Number(remainder) === 1
+}
+
+/** نامِ بانک بی پیشوند و فاصله: «بانک ملی ایران» → «ملی»، «پست بانک ایران» → «پست». */
+function compactBankName(value) {
+  return normalizePersianDigits(String(value ?? ""))
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/بانک|موسسه\s*اعتباری|قرض\s*الحسنه/g, " ")
+    .replace(/\s+ایران(یان)?\s*$/, "")
+    .replace(/[\s‌\-_.]/g, "")
+}
+
+/**
+ * بانک از روی نامِ آزادی که کاربر نوشته (`bankName`ِ حساب، مثلاً «بانک ملت - جاری»). وقتی چند بانک در متن
+ * پیدا شود بلندترین نام برنده است تا «توسعه صادرات» با «صادرات» اشتباه نشود.
+ */
+export function getIranianBankByName(value) {
+  const text = compactBankName(value)
+  if (!text) return undefined
+  let best
+  for (const bank of iranianBanks) {
+    const core = compactBankName(bank.name)
+    if (core && text.includes(core) && (!best || core.length > best.core.length)) best = { bank, core }
+  }
+  return best?.bank
+}
+
+/** بانکِ یک حساب: اول از کارت، بعد از شبا و در آخر از نامی که نوشته شده. */
+export function getIranianBank({ cardNumber, iban, bankName } = {}) {
+  return (
+    (cardNumber && getIranianBankByCardNumber(cardNumber)) ||
+    (iban && getIranianBankByShaba(iban)) ||
+    getIranianBankByName(bankName)
+  )
 }

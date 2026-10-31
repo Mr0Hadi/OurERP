@@ -4,6 +4,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Popover, PopoverAnchor, PopoverContent } from "@/shared/components/ui/popover";
 import { getPartyName } from "./filterUtils";
+import { isTouchDevice } from "@/shared/lib/isTouchDevice";
 
 /**
  * انتخابِ *یک* موجودیت از یک لیست، با جست‌وجوی داخلی.
@@ -31,8 +32,6 @@ import { getPartyName } from "./filterUtils";
  * فهرست در پورتال (`Popover`) باز می‌شود، نه `absolute` داخلِ والد؛ وگرنه
  * داخلِ کارتِ `overflow-hidden` (مثلِ بخشِ اقلامِ فرمِ خرید/فروش) بریده می‌شد.
  */
-const isTouchDevice = () => window.matchMedia("(pointer: coarse)").matches;
-
 export default function EntitySelect({
   label,
   placeholder,

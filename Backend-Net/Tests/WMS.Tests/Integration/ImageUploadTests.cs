@@ -162,7 +162,7 @@ namespace WMS.Tests.Integration
         public async Task DeleteImage_RemovesObjectFromBucket()
         {
             var storage = new FakeObjectStorage();
-            var uploaded = await storage.UploadAsync(Bytes(), "old.png", "image/png", ImageFolderEnum.PRODUCTS);
+            var uploaded = await storage.UploadAsync(Bytes(), "old.png", "image/png", ImageFolderEnum.PRODUCTS, TestContext.Current.CancellationToken);
 
             var handler = new DeleteImageCommandHandler(storage);
             await handler.Handle(new DeleteImageCommand { ObjectKey = uploaded.ObjectKey }, CancellationToken.None);
@@ -235,7 +235,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            var createHandler = new CreateCustomerCommandHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork);
+            var createHandler = new CreateCustomerCommandHandler(scope.CustomerRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db);
             await createHandler.Handle(new CreateCustomerCommand
             {
                 FirstName = "علی",
@@ -269,7 +269,7 @@ namespace WMS.Tests.Integration
             using var db = new TestDatabase();
             using var scope = db.NewScope();
 
-            await new CreateSupplierCommandHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork)
+            await new CreateSupplierCommandHandler(scope.SupplierRepository, TestMapper.Instance, FakeObjectStorage.Instance, scope.UnitOfWork, scope.Db)
                 .Handle(new CreateSupplierCommand
                 {
                     FirstName = "رضا",

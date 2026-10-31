@@ -2,29 +2,22 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
-import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { createProduct } from "@/features/warehouse/products/services/api-v1";
 import { productKeys } from "@/features/warehouse/products/services/queryKeys";
-import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
-import { PRODUCT_UNIT_LABELS, unitLabelOf } from "@/shared/domain/enums/productUnit";
+import { PRODUCT_UNIT_OPTIONS, unitLabelOf } from "@/shared/domain/enums/productUnit";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 const DEFAULT_UNIT = 1;
 
@@ -37,7 +30,6 @@ const DEFAULT_UNIT = 1;
  */
 export default function QuickCreateProductDialog({ open, onOpenChange, onCreated }) {
   const queryClient = useQueryClient();
-  const { data: categories = [] } = useProductCategoriesQuery();
   const [name, setName] = useState("");
   const [unit, setUnit] = useState(DEFAULT_UNIT);
   const [productCategoryId, setProductCategoryId] = useState(null);
@@ -87,52 +79,35 @@ export default function QuickCreateProductDialog({ open, onOpenChange, onCreated
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label className="text-xs">واحد</Label>
-              <Select value={String(unit)} onValueChange={(raw) => setUnit(Number(raw))}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PRODUCT_UNIT_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OptionSelect
+                value={unit}
+                onChange={setUnit}
+                options={PRODUCT_UNIT_OPTIONS}
+                numeric
+                className="h-9 w-fit text-sm"
+              />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">دسته‌بندی</Label>
-              <Select
-                value={productCategoryId == null ? "" : String(productCategoryId)}
-                onValueChange={(raw) => setProductCategoryId(Number(raw))}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="انتخاب دسته" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={String(category.id)}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategorySelect
+                label={null}
+                placeholder="انتخاب دسته"
+                value={productCategoryId}
+                onSelect={(id) => setProductCategoryId(id === "" ? null : id)}
+                allowClear={false}
+              />
             </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            type="button"
-            disabled={!canSubmit || mutation.isPending}
-            onClick={() => mutation.mutate()}
-          >
-            {mutation.isPending ? "در حال ساخت..." : "ساخت و افزودن به دریافت"}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            انصراف
-          </Button>
-        </DialogFooter>
+        <DialogActions
+          onCancel={() => onOpenChange(false)}
+          onSubmit={() => mutation.mutate()}
+          isPending={mutation.isPending}
+          disabled={!canSubmit}
+          pendingLabel="در حال ساخت..."
+          submitLabel="ساخت و افزودن به دریافت"
+        />
       </DialogContent>
     </Dialog>
   );

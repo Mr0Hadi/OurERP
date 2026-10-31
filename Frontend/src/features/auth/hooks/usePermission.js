@@ -20,7 +20,7 @@ export function satisfies(names, required) {
 }
 
 /**
- * `can` / `canAny` روی دسترسی‌های کاربرِ واردشده.
+ * `can` / `allows` روی دسترسی‌های کاربرِ واردشده.
  *
  * ⚠️ تا وقتی `isPending` است، `can()` برای همه‌چیز false می‌دهد. منو و
  * گاردِ مسیر باید این حالت را از «دسترسی ندارد» جدا کنند، وگرنه کاربر
@@ -41,7 +41,6 @@ export function usePermission() {
     isError,
     names,
     can: (required) => satisfies(names, required),
-    canAny: (...permissions) => permissions.some((p) => names.has(p)),
     /**
      * برای دکمه‌های داخلِ صفحه: اگر فهرستِ دسترسی نیامد (`isError`) دکمه
      * می‌ماند و خودِ سرور ۴۰۳ می‌دهد — بهتر از پنهان‌کردنِ کار از کسی که

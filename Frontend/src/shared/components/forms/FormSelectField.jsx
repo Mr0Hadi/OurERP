@@ -1,13 +1,7 @@
 import { Controller } from "react-hook-form";
 
 import FormField from "./FormField";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import OptionSelect from "./OptionSelect";
 
 /**
  * انتخابگرِ متصل به react-hook-form — برچسب، Select و پیام خطا در یک جا.
@@ -16,10 +10,8 @@ import {
  * تیم بارها لازم می‌شود و هر بار همان ده خط بویلرپلیت است. تنها نکته‌ی
  * غیرِ بدیهی‌اش نگاشتِ نوع است:
  *
- * Select همیشه *رشته* می‌دهد و می‌گیرد، ولی enum های این پروژه عددی‌اند.
- * پس مقدار در ورودی به رشته و در خروجی به عدد برمی‌گردد (`numeric`، که
- * پیش‌فرض است). بدون این، مقایسه‌ی بعدی با مقدار عددیِ واقعی هیچ‌وقت
- * درست درنمی‌آید — همان دامی که `normalizeFilterValue` در فیلترها می‌گیرد.
+ * نگاشتِ رشته ↔ عدد را `OptionSelect` می‌کند؛ اینجا `numeric` پیش‌فرض است چون
+ * enumهای این پروژه عددی‌اند.
  *
  * `emptyValue` برای فیلدهای اختیاری است (مثل «مدیر واحد» که می‌تواند
  * خالی بماند): یک گزینه‌ی صریحِ «بدون مدیر» اضافه می‌کند که به `null`
@@ -41,23 +33,6 @@ export default function FormSelectField({
   emptyLabel,
   rules,
 }) {
-  // مقدارِ ویژه‌ی «هیچ‌کدام». رشته‌ی خالی به Select داده نمی‌شود چون
-  // Radix آن را «بدون انتخاب» می‌فهمد و placeholder را نگه می‌دارد.
-  const NONE = "__none__";
-  const showEmptyOption = emptyLabel != null;
-
-  const toFieldValue = (raw) => {
-    if (raw === NONE) return emptyValue;
-    return numeric ? Number(raw) : raw;
-  };
-
-  const toSelectValue = (value) => {
-    if (value === null || value === undefined || value === "") {
-      return showEmptyOption ? NONE : undefined;
-    }
-    return String(value);
-  };
-
   return (
     <FormField
       label={label}
@@ -71,33 +46,25 @@ export default function FormSelectField({
         control={control}
         rules={rules}
         render={({ field }) => (
-          <Select
-            value={toSelectValue(field.value)}
-            onValueChange={(raw) => field.onChange(toFieldValue(raw))}
-            disabled={disabled || isLoading}
-          >
-            <SelectTrigger id={name} className="h-10 rounded-lg transition-all">
-              <SelectValue
-                placeholder={isLoading ? "در حال بارگذاری..." : placeholder}
-              />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              {showEmptyOption && (
-                <SelectItem value={NONE} className="rounded-lg">
-                  <span className="text-muted-foreground">{emptyLabel}</span>
-                </SelectItem>
-              )}
-              {options.map((option) => (
-                <SelectItem
-                  key={option.value}
-                  value={String(option.value)}
-                  className="rounded-lg"
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <OptionSelect
+            id={name}
+            value={field.value}
+            onChange={field.onChange}
+            options={options}
+            numeric={numeric}
+            placeholder={placeholder}
+            isLoading={isLoading}
+            disabled={disabled}
+            emptyLabel={
+              emptyLabel == null ? undefined : (
+                <span className="text-muted-foreground">{emptyLabel}</span>
+              )
+            }
+            emptyValue={emptyValue}
+            className="h-10 w-full rounded-lg transition-all"
+            contentClassName="rounded-xl"
+            itemClassName="rounded-lg"
+          />
         )}
       />
     </FormField>

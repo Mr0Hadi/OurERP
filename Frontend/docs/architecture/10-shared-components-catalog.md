@@ -31,9 +31,13 @@ flowchart LR
   T --> DT["DataTable<br/>columns, sorting, pagination"]
   DT -->|موبایل| MR[MobileRowCards]
   DT --> DP[DataTablePagination]
+  DT -->|refresh| RB[RefreshButton]
+  MR -->|refresh| RB
 ```
 
 `ServerTable` (`src/shared/components/table/ServerTable.jsx`) کارِ تکراری را می‌کند: خطا → `QueryErrorState`، واکشیِ دوباره → `FetchingOverlay`، و تبدیلِ `{ items, total, page, totalPages }` و `listState` (از `createFilterStore`) به propsِ جدول. جدولِ هر فیچر فقط `DataTable` را با `columns` می‌پیچد (`src/features/customers/components/CustomerTable.jsx`).
+
+**تازه‌سازی:** هر جدول و فهرست دکمه‌ی «تازه‌سازی» دارد. `ServerTable` همان کوئری را به‌صورتِ `refresh` به جدول می‌دهد و `DataTable` دکمه را خودش می‌گذارد، بی‌ردیفِ اضافه: دسکتاپ در گوشه‌ی سرتیترِ چسبانِ جدول (یک ستونِ باریکِ اول، راست در RTL؛ با اسکرولِ جدول هم در دید)، موبایل در نوارِ موجودِ بالای کارت‌ها کنارِ شمار و مرتب‌سازی، و با `emptyState` بالای همان بلوک. جدولِ فیچر باید propsِ ناشناخته (`refresh`) را به `DataTable` برساند (`{...props}`)؛ جدولی که props را تک‌تک می‌گیرد `refresh` را هم بگیرد. فهرستِ بی‌`ServerTable` `refresh={query}` را دستی می‌دهد؛ `MasterListPane` پراپِ `refresh` دارد (کنارِ جست‌وجو)؛ فهرست/گزارشِ بی‌جدول `RefreshButton` را مستقیم در نوارِ خودش یا `actions`ِ `ListPageLayout` می‌گذارد.
 
 **`table` و React Compiler:** نمونه‌ی `useReactTable` در همه‌ی رندرها همان شیء است. Compiler خودِ `DataTable` را memo نمی‌کند (هشدارِ `react-hooks/incompatible-library`)، ولی فرزندی که فقط `table` را prop می‌گیرد با همان `table` دوباره رندر نمی‌شود و `table.getState()` در آن کهنه می‌ماند. هر state‌ی که فرزند لازم دارد (مثلِ `sorting` برای `MobileRowCards`) را جدا prop بدهید.
 
@@ -44,11 +48,13 @@ flowchart LR
 | کامپوننت | کِی | # |
 | --- | --- | --- |
 | `ServerTable` | لیستِ صفحه‌بندی‌شده‌ی سرور در صفحه‌ی لیست؛ `transform`، `singlePage` | ۱۷ |
-| `DataTable` | پوسته‌ی جدول (مرتب‌سازیِ تک‌ستونی، `sortable`، `emptyState`، `rowClassName`، `getRowKey`)؛ در موبایل `MobileRowCards` | ۱۹ |
+| `DataTable` | پوسته‌ی جدول (مرتب‌سازیِ تک‌ستونی، `sortable`، `emptyState`، `rowClassName`، `getRowKey`)؛ در موبایل `MobileRowCards` (جای هر ستون با `meta.mobile`: `title`، `subtitle`، `badge`، `highlight`، `leading` کنارِ عنوان مثلِ چک‌باکسِ انتخاب، `hidden`)؛ `meta.corner` ستون را در ستونِ گوشه‌ی دکمه‌ی تازه‌سازی می‌نشاند (چک‌باکس زیرِ دکمه، بی‌ستونِ خالی)؛ متنِ سلول‌ها می‌شکند (`whitespace-normal`)، و جدولی که باز هم در عرضِ قاب جا نشود (تبلت، سایدبارِ باز) کارت می‌شود (`useTableFit`)، چون قابِ `custom-scroll` به چپ اسکرول نمی‌شود | ۱۹ |
 | `detailsColumn(getPath)` (`columns.jsx`) | ستونِ استانداردِ «جزئیات»؛ در موبایل کلِ کارت لینک می‌شود | ۹ |
 | `DataTablePagination` | صفحه‌بندی بیرون از `DataTable` | ۴ |
 | `PaymentProgress` | نوارِ «پرداخت‌شده از کل» در ردیف | ۲ |
+| `RefreshButton` | «تازه‌سازی»ِ یک کوئری: کمینه‌ی چرخش، زمانِ آخرین به‌روزرسانی در راهنما؛ `variant="pill"` برای موبایل. خودکار در `DataTable`/`MasterListPane`؛ مستقیم در دانه‌ها (گوشه‌ی سرتیتر به‌جای چک‌باکسِ انتخابِ صفحه) و مالیات | ۵ |
 | `TableLoadingSkeleton` | اسکلتونِ جدول | ۲ |
+| `SortSelect` | انتخابِ مرتب‌سازیِ موبایل (`options`، `sorting`، `onChange`)؛ خودکار در `MobileRowCards`، مستقیم در کارت‌های دانه‌ها | ۲ |
 | `MobileRowCards`، `SortIcon`، `DetailsLink` | داخلی | — |
 
 ### `layout/`
@@ -56,9 +62,11 @@ flowchart LR
 | کامپوننت | کِی | # |
 | --- | --- | --- |
 | `ListPageLayout` | پوسته‌ی هر صفحه‌ی لیست: `title`، `icon`، `description`، `create`، `actions` | ۱۱ |
-| `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها) | ۴ |
+| `MasterListPane` | ستونِ فهرست در صفحه‌های «فهرست/جزئیات» کنارِ هم (دسترسی‌ها، خودروها)؛ `refresh` = کوئریِ فهرست | ۴ |
+| `RedirectKeepingSearch` | در `routes.jsx`: نشانیِ قدیمی → تازه با همان query (صفحه‌ی جابه‌جاشده) | ۲ |
+| `StickyActionBar` | نوارِ چسبانِ پایینِ صفحه: خلاصه + دکمه‌ها (ثبتِ مرجوعی، ذخیره‌ی تنظیمات، پیشنهادِ خرید)؛ داخلِ کارتِ `overflow-hidden` نگذارید | ۳ |
 | `PageHeaderActions` | دکمه‌ی صفحه در هدرِ اپ کنارِ عنوان (پورتال به `headerStore.actionsSlot`)؛ مثلاً «تاریخچه» در صفحه‌های جزئیات ([08](08-client-state-zustand.md)) | ۲ |
-| `AppSidebar`، `NavMain`، `NavSecondary`، `NavTools`، `NavUser`، `NavWorkspace`، `AppBreadcrumb`، `RouteLoadingOverlay` | فقط پوسته‌ی برنامه ([03](03-bootstrap-and-routing.md)) | ۱–۲ |
+| `RouteLoadingOverlay` | فقط پوسته‌ها (`AppLayout`، `AuthLayout`)؛ سایدبار و breadcrumb در `src/app/layouts/` هستند ([03](03-bootstrap-and-routing.md)) | ۲ |
 
 ### `filters/`
 
@@ -66,22 +74,35 @@ flowchart LR
 | --- | --- | --- |
 | `FilterPanel` / `ResponsiveFilters` | پوسته‌ی فیلترها؛ موبایل: `primary`/`secondary` همیشه‌پیدا + پنلِ بازشونده با شمارِ فیلترِ فعال (`store`) | ۱۷ |
 | `FilterSearchInput` | جست‌وجوی متنی | ۱۵ |
-| `FilterSelect` | انتخابِ تکیِ کم‌گزینه | ۱۳ |
+| `FilterSelect` | انتخابِ تکیِ کم‌گزینه با ردیفِ «همه» (روی `OptionSelect`) | ۱۸ |
 | `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
 | `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
-| `filterUtils.js` | `normalizeFilterValue`، `toFilterOptions`، `getPartyName` | ۹ |
+| `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
+| `filterUtils.js` | `getPartyName` (برچسبِ پیش‌فرضِ `EntitySelect`) | — |
+
+انتخابگرهای موجودیتِ هر فیچر روی `EntitySelect` و خودشان فهرست را می‌گیرند؛ صفحه فهرست را برای فیلتر واکشی و پاس نمی‌دهد: `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`، `side="customer"|"supplier"`، ۲۰ مصرف)، `CategorySelect` (`src/features/warehouse/categories/components/CategorySelect.jsx`، ۷)، `UserFilterSelect` (`src/features/employees/components/UserFilterSelect.jsx`). `label={null}` برای فرمی که برچسبِ خودش را دارد. فایلِ `shared/` که انتخابگرِ طرف‌حساب لازم دارد (`ReturnFilters`) آن را از صفحه می‌گیرد (`partySelect`)، نه با importِ تازه از features.
 
 ### `feedback/`
 
 | کامپوننت | کِی | # |
 | --- | --- | --- |
-| `ConfirmDialog` | تأییدِ کارِ برگشت‌ناپذیر؛ تا پایانِ درخواست باز می‌ماند — فراخوان در `onSuccess` می‌بندد | ۱۶ |
+| `ConfirmDialog` | تأییدِ کارِ برگشت‌ناپذیر (حذف، خروجِ اجباری، جایگزینیِ آدرس، …)؛ تا پایانِ درخواست باز می‌ماند — فراخوان در `onSuccess` می‌بندد. `children` زیرِ توضیح؛ `destructive={false}` برای تأییدِ بی‌خطر. `AlertDialog` دستی نسازید: `AlertDialogAction` بی `preventDefault` پیش از پایانِ درخواست می‌بست، و رنگِ قرمز را با `variant="destructive"` بدهید نه با کلاس (کنارِ `bg-primary` می‌باخت) | ۲۹ |
+| `DialogActions` | پاورقیِ دیالوگِ فرم: «انصراف» + ثبت با «در حال ثبت...»، هر دو قفل حینِ درخواست؛ بی `onSubmit` دکمه `type="submit"` است؛ `variant="destructive"`، `disabled`، و `children` برای متنِ کمکی (شمارِ انتخاب‌شده). ترتیبِ دکمه‌ها در همه‌ی دیالوگ‌ها یکی است | ۱۷ |
 | `QueryErrorState` | خطای لیست با «تلاش دوباره» (جای جدول) | ۱۵ |
+| `EmptyState` | فهرست یا بخشِ خالی: آیکن، عنوان، راهنما و اقدامِ اختیاری؛ `size="sm"` برای کارت و ویجت، `fill` برای ستونِ جزئیاتِ صفحه‌های فهرست/جزئیات («یک … را انتخاب کنید»، «پیدا نشد») | ۱۲ |
 | `DetailErrorState` | صفحه‌ی جزئیات: «پیدا نشد» (۴۰۴) را از «واکشی شکست خورد» جدا می‌کند | ۱۴ |
 | `Notice` | باکسِ توضیح/هشدار با tone | ۱۴ |
+| `UnsavedChangesDialog` | «تغییرات ذخیره نشده» با `blocker`ِ `useUnsavedChangesGuard` (یا کنترل‌شده با `open`) | ۶ |
 | `FetchingOverlay` | پوششِ واکشیِ دوباره (نه بارِ اول) | ۹ |
 | `ProgressStat` | پیشرفتِ شمارشی | ۴ |
+
+### `data/`
+
+| کامپوننت | کِی | # |
+| --- | --- | --- |
+| `InfoList` + `InfoRow` (`InfoList.jsx`) | فهرستِ «برچسب … مقدار» (`<dl>`): جزئیاتِ دانه، ردیف‌های مبلغِ دیالوگ‌ها، کارتِ مشتریِ صندوق، نتیجه‌ی کارتخوان. `variant`: `plain`/`boxed`/`divided`؛ `InfoRow total` ردیفِ جمعِ پایانی (خطِ بالا، مبلغِ درشت). ردیفِ `flex justify-between` با `dt`/`dd` دستی نسازید | ۸ |
+| `StatGrid` | نوارِ خانه‌های عدد با خطِ جداکننده (`{ label, value, tone?, hint? }`): جمع‌های چک، عددهای قرارداد اقساط، مانده‌ی صندوق‌ها، پرداختِ سند. ستون‌ها با `className`؛ `size="sm"` برای کارتِ باریک. جمع‌های بالای گزارش‌های حسابداری `SummaryStrip`ِ خودشان را دارند (خانه‌های جدا با راهنمای tooltip) | ۵ |
 
 ### `status/`
 
@@ -98,13 +119,18 @@ flowchart LR
 
 | کامپوننت | کِی | # |
 | --- | --- | --- |
-| `FormField`، `FormSelectField` | فیلدِ react-hook-form با label و خطا | ۶، ۳ |
+| `FormField` | برچسب + کنترل + خطا/راهنما؛ `error` شیءِ RHF یا متن؛ `size="sm"` برای کارتِ سند و دیالوگ. فیلدی با `Label` و `<span className="text-destructive">` دستی نسازید | ۲۶ |
+| `OptionSelect` | کشوییِ کنترل‌شده از `options` (`{ value, label, icon?, disabled? }`): `numeric`/`boolean` تبدیلِ رشته‌ی Radix، `emptyLabel`/`emptyValue` ردیفِ «همه/بدون …»، `prefix` داخلِ trigger. جای `Select`+`SelectTrigger`+`map(SelectItem)` دستی؛ استثناها: `OrderInfoCard` (برچسبِ صریح و `key`)، `DataTablePagination`/`SortSelect` (`side="top"`، مقدارِ ترکیبی) | ۲۴ |
+| `FormSelectField` | `OptionSelect` + `Controller` + `FormField` (پیش‌فرض `numeric`) | ۴ |
+| `FormPriceField` | مبلغِ ریالیِ RHF: `PriceInput` (`""` ↔ `null`)، مبلغ به حروف در جای راهنما، `icon`، `suffix` («ریال») | ۲ |
 | `FormSectionCard` | کارتِ بخشِ فرم با هدرِ آیکون‌دار (مشتری، تامین‌کننده، …) | ۱۱ |
+| `PasswordInput` | ورودیِ رمز (ltr) با دکمه‌ی نمایش/پنهان؛ `register` مستقیم رویش | ۱ |
 | `SectionCard` | کارتِ بخشِ صفحه‌ی سند (هدرِ ساده + `action`) | ۸ |
-| `DocumentFormLayout` + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
+| `DocumentFormLayout` (`main`/`payments`/`aside`، و `below` تمام‌عرض) + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
 | `StatusChoice` | انتخابِ وضعیت به‌صورتِ دکمه | ۷ |
-| `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد، مبلغ به حروف | ۵–۶ |
-| `OrderInfoCard`، `OrderItemsReadOnly`، `OrderLogisticsSection`، `TransporterSection`، `PartySection` | بخش‌های سندِ خرید/فروش | ۲–۴ |
+| `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد (`min` اختیاری)، مبلغ به حروف | ۵–۷ |
+| `SelectCheckbox` | چک‌باکسِ انتخابِ ردیف با ناحیه‌ی لمسِ بزرگ (`indeterminate`)؛ دانه‌ها و پیشنهادِ خرید | ۲ |
+| `OrderInfoCard`، `OrderItemsReadOnly`، `OrderLogisticsSection`، `TransporterSection`، `PartySection` | بخش‌های سندِ خرید/فروش (`OrderInfoCard`: `showInvoiceDate`/`showDueDate` برای فروش، که تاریخِ فاکتور را سرور می‌گذارد و سررسید جزوِ پیش‌فاکتور است) | ۲–۴ |
 | `ProductSearchPanel`، `PartyPickerCard`، `SelectedItemsCards`، `SelectedItemsTable`، `MixedPaymentList` | انتخابِ کالا/طرف‌حساب در فرمِ سند | ۱–۳ |
 | `ScannedUnitCodes` | داخلی | — |
 
@@ -112,12 +138,33 @@ flowchart LR
 
 | کامپوننت | کِی | # |
 | --- | --- | --- |
-| `PaymentsCard` | همه‌ی پرداخت‌های یک سند؛ جز کارتخوان، همه در پیش‌نویسِ `usePaymentDraft` تا «ثبت تغییرات» | ۴ |
+| `PaymentsCard` | همه‌ی پرداخت‌های یک سند؛ جز کارتخوان، همه در پیش‌نویسِ `usePaymentDraft` تا «ثبت تغییرات». تخصیص‌های علی‌الحساب (`allocations`) فقط نمایش و جزوِ پرداخت‌شده | ۴ |
 | `PaymentForm`، `PaymentRow`، `PaymentMethodEditor`، `useFormPosPayment`، `pos/PosPaymentPanel`، `pos/PosReadyForm`، `pos/PosResultViews` | داخلیِ `PaymentsCard` | — |
+| `ChequeFields` | سررسید، بانک و صاحب حسابِ یک چک (`compact` برای ردیفِ ترکیبی)؛ شماره‌ی چک جدا | ۳ |
+| `BankAccountSelect` | صندوق/حسابِ یک دریافت/پرداختِ نقدی یا انتقالی (`GetBankAccountOptions`)؛ «بدون حساب» = `null`؛ بی حسابِ تعریف‌شده چیزی رندر نمی‌کند | ۲ |
 
 ### `returns/` (مرجوعیِ خرید و فروش، [11](11-domain-layer.md))
 
 قطعاتِ صفحه‌ی مرجوعی که هر دو فیچر استفاده می‌کنند (اغلب ۲ مصرف‌کننده = خرید + فروش): `ReturnSourcePicker`، `ReturnInfoSection`، `ReturnItemsSection`، `ReturnResolutionSection`، `ReturnDocumentSection`، `ReturnStatusBar`، `ReturnSubmitBar`، `ReturnTable`، `ReturnFilters`، `ReturnStatusBadge`، `RelatedReturnsCard`، `OrderInvoiceCard`، `ReceivingReportCard`/`ReceivingReportLines`، `GoodsRoundItemsSection`، `GoodsRoundPartySection`، `GoodsRoundSummaryCard`، `ObservationEditor`، `DeleteReturnAction`، `PreviousReturnBadge`/`FollowUpReturnAction` (`ReturnChain.jsx`)، `ReturnPageSkeleton`، `ReturnSourceError`. داخلی: `ClaimRow`، `ClaimResolutionCard`، `EffectBadge`، `GoodsItemsPicker`، `ResolutionComposer`، `ResolutionLineRow`، `ResolutionMoneySection`، `ReturnStatusReasonDialog`.
+
+### `print/` (چاپ با مرورگر)
+
+هر برگه‌ای که در مرورگر ساخته و چاپ می‌شود از یک پوسته و یک مدلِ کاغذ استفاده می‌کند. سندی که سرور می‌سازد (فاکتور/پیش‌فاکتور فروش، برگه‌ی طلبکاری، برگه‌ی مرجوعی خرید) دو راه دارد: PDFِ رسمی با قالبِ ثابت (`src/shared/services/invoice/documentOutput.js`) و چاپ در همین پوسته از *داده‌ی همان سند* (`invoice/print/`، پایین).
+
+| فایل | کار | مصرف‌کننده |
+| --- | --- | --- |
+| `studio/PrintStudio.jsx` | پوسته‌ی تمام‌صفحه: پنلِ تنظیمات + پیش‌نمایشِ بزرگ‌نمایی‌پذیر + نوارِ چاپ؛ دسکتاپ دو ستون، موبایل سوییچِ «پیش‌نمایش/تنظیمات» (پیش‌نمایش همیشه رندر و اندازه‌گیری می‌شود). `previewNotice` به‌جای ورق و بی‌بزرگ‌نمایی (دریافت، خطا). پورتالِ زیرِ body، نه Dialog | برچسب، لیست قیمت‌ها، تصویرِ سندها |
+| `studio/PaperSettings.jsx` | بخشِ «کاغذ»: اندازه (A3/A4/A5/Letter/رولِ ۸۰ و ۵۸/دلخواه)، جهت، حاشیه؛ `paperKeys` کاغذهای مجاز را محدود می‌کند | لیست قیمت‌ها، تصویرِ سندها |
+| `studio/PrintSettingsSection.jsx`، `studio/SegmentedControl.jsx` | بخشِ پنل با عنوان/آیکون، انتخابِ چندگزینه‌ایِ کوتاه (گزینه‌ها با `optionsFromLabels` از `src/shared/lib/options.js`) | همه‌ی پنل‌ها |
+| `paper.js` | `pageGeometryOf(settings)` (اندازه، جهت، حاشیه، عرض/ارتفاعِ مفید؛ رول ارتفاعِ پیوسته دارد)، `flowPageCount`، `flowPrintOptions` (رول: ارتفاعِ صفحه = طولِ محتوا)، `fixedPagePrintOptions`، `formatPaperSize` | — |
+| `FlowSheet.jsx` | برگه‌ی جاری روی کاغذ؛ مرورگر صفحه‌ها را می‌شکند و خطِ‌چینِ «صفحه‌ی n» فقط روی صفحه‌نمایش است؛ `onMeasure(heightMm)` برای شمارِ صفحه و طولِ رول | لیست قیمت‌ها |
+| `LabelSheet.jsx`، `sheetPresets.js` | صفحه‌های صریحِ برچسب (شبکه‌ی ثابت در هر صفحه) | برچسبِ دانه |
+| `typography.js` | `TEXT_SCALES` و `baseFontPt`: اندازه‌ی پایه‌ی متنِ برگه (pt)؛ بقیه‌ی متن‌ها `em` | لیست قیمت‌ها |
+| `usePrint.js` | `window.print()` با `@page` و `body.printing`؛ حالتِ چاپ تا unmountِ پورتال می‌ماند، نه تا `afterprint` (کرومِ اندروید `afterprint` را فوراً می‌دهد) | همه |
+| `print.css` | در چاپ فقط پورتال می‌ماند؛ کروم (`print-portal__chrome`)، قاب و مقیاسِ پیش‌نمایش و حاشیه‌ی `FlowSheet` کنار می‌روند | — |
+| `BarcodeGraphic`، `QrCodeGraphic` | نمادِ بارکد/QR | برچسب |
+
+تنظیماتِ هر نوع برگه با `usePrintSettings(kind, defaults)` (`src/shared/store/printSettingsStore.js`) روی همان دستگاه می‌ماند؛ فقط تغییرها ذخیره می‌شوند. برچسبِ دانه store و هندسه‌ی خودش را دارد (`labelTemplate.js`). برگه‌ی تازه: [13 §۱۴](13-recipes.md).
 
 ### بقیه
 
@@ -126,12 +173,11 @@ flowchart LR
 | `charts/` | `ChartCard` (۱۲)، `GroupedBarChart`، `TrendChart`، `DonutChart`، `Sparkline`، `chartUtils.js` (۹)؛ داخلی: `ChartLegend`، `ChartTooltip`، `useChartSize` | نمودارهای SVGِ دست‌ساز (کتابخانه‌ی نمودار نیست)؛ داشبورد و حسابداری |
 | `dataTransfer/` | `DataTransferActions` (۹)؛ داخلی: `ImportDialog`، `ImportResultView` | دکمه‌ی ورود/خروجیِ CSV/Excel در سرتیترِ لیست؛ مجاز بودن از سرور (`GetResources`) |
 | `files/` | `RemoteImage` (۵)، `ImageUploadField` (۳)، `FileUploadList`، `ImageLightbox` | تصویر از سرور، آپلودِ تصویر/پیوست |
-| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton` | خروجیِ فاکتور و پیوستِ سند |
-| `print/` | `BarcodeGraphic`، `QrCodeGraphic`، `LabelSheet`، `sheetPresets.js`، `usePrint` | چاپ برچسب و صفحه با مرورگر (`[data-print-root]`) |
+| `invoice/` | `InvoiceDocumentSection` (۵)، `useInvoiceAttachments`/`useDocumentAttachments` (۴)، `IssuedInvoiceNotice`، `InvoiceAttachmentsSaveButton`؛ داخلی: `DocumentPrintStudio`، `print/InvoicePrintStudio` (+ `InvoiceDocumentSheet`، `InvoicePrintSettingsPanel`، `invoicePrintSettings.js`) | خروجیِ فاکتور و پیوستِ سند؛ `InvoiceDocumentSection.localPrints` برای برگه‌های ساختِ صفحه (لیست قیمت‌ها) کنارِ سندها. چاپِ انتخابی که تصویر دارد در `DocumentPrintStudio` (کاغذ، چیدمان) باز می‌شود؛ PDFِ تنها مستقیم (`printPdfDocuments`). سندِ ساختِ سرور در فهرست نمی‌آید و فقط دکمه‌ی «چاپ و دانلود» دارد: `InvoicePrintStudio` داده‌ی سند را با `useInvoiceDocumentQuery` (`src/shared/services/invoice/queries.js`) می‌گیرد و هم‌شکلِ قالبِ رسمی در `PrintStudio` می‌چیند (بخش‌ها، ستون‌ها، شکلِ جدول، کاغذ، متن؛ تنظیم برای هر نوعِ سند جدا) و PDFِ رسمی از همان‌جا دانلود می‌شود. سروری که بندِ ۲۷ را ندارد ۴۰۴ می‌دهد؛ آن وقت پوسته چاپ و دانلودِ PDFِ رسمی را پیشنهاد می‌کند |
 | `barcode/` | `CameraScanButton` (۳)، `UnitBarcodeScanList` (۲)؛ داخلی: `CameraScanner`، `BarcodeScanField` | اسکنِ بارکد با دوربین |
 | `map/` | `LocationPickerMap` (۱)؛ داخلی: `MapCanvas`، `MapSearchBar`، `nominatim.js` | انتخابِ مکان روی نقشه (Leaflet + Nominatim) |
 | `products/` | `ProductPicker`، `DocumentItemsSection`، `useReturnedNewProduct` | انتخابِ کالا و برگشت از «کالای جدید» |
-| `skeletons/` | `WarehouseFormSkeleton` (۴)، `OrderFormSkeleton` (۲) | اسکلتونِ فرم‌ها |
+| `skeletons/` | `WarehouseFormSkeleton` (۴)، `OrderFormSkeleton` (۲)، `FormSkeleton.jsx` (۳: `FormPageSkeleton`، `FormCardSkeleton`، `FieldSkeleton`، `FieldPairSkeleton`، `FormActionsSkeleton`، هم‌شکلِ `FormSectionCard`/`FormField`) | اسکلتونِ فرم‌ها و صفحه‌های جزئیات |
 | `theme/` | `ThemeProvider`، `ThemeToggle`، `useTheme` | [09](09-ui-system-theming-rtl.md) |
 
 ## قراردادها و نکته‌ها
@@ -140,7 +186,7 @@ flowchart LR
 - **صفحه‌ی جزئیات:** در خطا/۴۰۴ `DetailErrorState` با `onRetry={refetch}`.
 - **حذف/لغو:** `ConfirmDialog`؛ در `onSuccess`ِ mutation ببندید، نه در `onConfirm`.
 - **وضعیت:** `StatusBadge` با tone از enum؛ رنگِ پالت ننویسید.
-- چند کامپوننت در `shared/components` از `@/features/...` import می‌کنند (`PartyPickerCard`، `ProductSearchPanel`، `ProductPicker`، `useReturnedNewProduct`، `layout/AppSidebar`، `NavUser`، `NavWorkspace`) — فایل ۰۲ و ۱۴.
+- چند کامپوننت در `shared/components` از `@/features/...` import می‌کنند (`PartyPickerCard`، `ProductSearchPanel`، `ProductPicker`، `useReturnedNewProduct`) — فایل ۰۲ و ۱۴.
 - کامپوننتی که فقط یک فیچر مصرف می‌کند در همان فیچر بماند ([02](02-folder-structure.md)).
 
 ## برای تغییرِ X، به Y بروید
@@ -154,10 +200,11 @@ flowchart LR
 | ورود/خروجی برای یک لیست | `<DataTransferActions resource="…" filters={filters} invalidateKey={…Keys.all} />` در `actions`ِ `ListPageLayout` |
 | دکمه در هدرِ صفحه‌ی جزئیات | `<PageHeaderActions>` (`src/shared/components/layout/PageHeaderActions.jsx`) |
 | تاریخچه‌ی تغییراتِ یک سند/رکورد | `AuditHistoryButton` از `src/features/audit/components/AuditHistoryButton.jsx` ([12-features/audit](12-features/audit.md)) |
+| برگه‌ی چاپیِ تازه (گزارش، رسید، …) | `PrintStudio` + `PaperSettings` + `FlowSheet` و `usePrintSettings` ([13 §۱۴](13-recipes.md))؛ الگو: `src/features/sales/orders/components/proforma/PriceListPrint.jsx` |
+| کاغذِ تازه یا رفتارِ حاشیه | `src/shared/components/print/paper.js` |
 | کامپوننتِ پایه‌ی shadcn | CLIِ shadcn → `src/shared/components/ui/` |
 
 ## سؤال‌های باز / بدهی
 
-- `src/shared/components/app-update/AppUpdateDialog.jsx` و `UpdateAvailableToast.jsx` بی‌استفاده‌اند (knip؛ PWA غیرفعال).
 - `charts/chartUtils.js` یک `formatNumber` جدا از `src/shared/lib/numberFormat.js` export می‌کند؛ دو تابع با یک نام و رفتارِ کمی متفاوت (`maximumFractionDigits: 0` در نسخه‌ی نمودار؛ `Number(value) || 0` در نسخه‌ی lib).
 - `DataTable` (۱۹) بیشتر از `ServerTable` (۱۷) مستقیم import می‌شود، چون جدول‌های فیچر آن را می‌پیچند؛ این عمدی است، نه تکرار.

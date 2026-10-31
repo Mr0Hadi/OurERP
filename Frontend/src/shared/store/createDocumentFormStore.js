@@ -8,8 +8,8 @@ import { create } from "zustand";
  * `initializedForId` می‌گوید فرم از کدام نسخه پر شده: `"new"` یا
  * `"id:updatedAt"`؛ فرم فقط وقتی از سرور پر می‌شود که سند یا نسخه‌اش عوض شود.
  *
- * `baseline` فرم در لحظه‌ی پر شدن است؛ `isDocumentFormChanged` با آن می‌سنجد کاربر
- * چیزی ذخیره‌نشده دارد یا نه (بروزرسانیِ برنامه به آن نگاه می‌کند).
+ * `baseline` فرم در لحظه‌ی پر شدن است؛ سلکتورهای فیچر (مثلاً `isSaleCoreChanged`)
+ * تغییرِ کاربر را با آن می‌سنجند.
  *
  * @param emptyForm         فیلدهای فرمِ خالی
  * @param formFromDocument  سند (پاسخِ سرور) → فیلدهای فرم
@@ -49,6 +49,3 @@ export function createDocumentFormStore({ emptyForm, formFromDocument }) {
   }));
 }
 
-/** سلکتور: فرم از لحظه‌ی پر شدن تغییر کرده؟ (`useXFormStore(isDocumentFormChanged)`) */
-export const isDocumentFormChanged = (state) =>
-  state.formData !== state.baseline && JSON.stringify(state.formData) !== JSON.stringify(state.baseline);

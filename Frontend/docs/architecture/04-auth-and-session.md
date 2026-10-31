@@ -10,13 +10,13 @@
 | --- | --- |
 | `src/features/auth/store/authStore.js` | `useAuthStore` — فقط توکن‌ها و پرچم‌ها، persist در `localStorage["auth-storage"]` |
 | `src/features/auth/services/api-v1.js` | `login`، `logout`، `getUserInfo`، `getMyPermissions` |
-| `src/features/auth/services/queries.js` | `useLoginMutation`، `useSessionCheck`، `useLogoutMutation`، `useUserInfoQuery`، `useMyPermissionsQuery` |
+| `src/features/auth/services/queries.js` | `useLoginMutation`، `useSessionCheck`، `useLogoutMutation`، `useUserInfoQuery`، `useMyPermissionsQuery`، `useFeatureFlagsQuery` |
 | `src/features/auth/services/queryKeys.js` | `authKeys.session()`، `authKeys.myPermissions()` |
 | `src/features/auth/hooks/useCurrentUser.js` | `useCurrentUser()` — دادهِ `useUserInfoQuery` یا `null` |
 | `src/features/auth/pages/LoginPage.jsx` | فرم (react-hook-form) + سنجشِ خودکارِ نشست |
 | `src/shared/services/api/axios.js` | افزودنِ Bearer، صفِ refresh، logout در شکست |
 | `src/shared/services/sessionCleanup.js` | `leaveSession()`، `purgeLegacyApiCache()` |
-| `src/shared/components/layout/NavUser.jsx` | دکمه‌ی خروج |
+| `src/app/layouts/NavUser.jsx` | دکمه‌ی خروج |
 | `src/app/routes/protectedLoader.jsx`، `src/app/layouts/AppLayout.jsx` | گاردهای مسیر (فایل [03](03-bootstrap-and-routing.md)) |
 
 ## چطور کار می‌کند
@@ -27,6 +27,7 @@
 | --- | --- | --- |
 | `accessToken`، `refreshToken` | بله | توکن‌ها |
 | `isAuthenticated` | بله | «توکنی در localStorage هست» — نه بیشتر |
+| `mustChangePassword` | بله | مدیر رمز را بازنشانی کرده؛ تا تغییرِ رمز فقط `ROUTES.CHANGE_PASSWORD` |
 | `sessionVerified` | **نه** | سرور در *همین بارگذاری* توکن را پذیرفته |
 | `hasHydrated` | نه | rehydrateِ persist تمام شده (`onRehydrateStorage` → `setHasHydrated(true)`) |
 
@@ -98,17 +99,23 @@ const { isSuccess, isError, error } = useQuery({
 
 موفقیت → `LoginPage` به `from` برمی‌گردد. نتیجه در همان کلیدِ `authKeys.session()` می‌ماند، پس `useUserInfoQuery` در سایدبار درخواستِ دوم نمی‌زند. اگر کاربر حین سنجش فرم را بفرستد، `cancel()` آن query را لغو می‌کند.
 
+### تغییرِ رمز و «تغییرِ رمزِ اجباری»
+
+- **صفحه‌ی حساب** (`ROUTES.ACCOUNT` = `/account`، `src/features/auth/pages/AccountPage.jsx`، بی‌مجوز): مشخصاتِ سازمانی فقط‌خواندنی، ویرایشِ نام (`PUT /User/UpdateUserInfo`، `ProfileForm`) و تغییرِ رمز (`PUT /User/ChangePassword`، `ChangePasswordForm`). «حساب کاربری» در `NavUser.jsx` به همین صفحه می‌رود (جزئیاتِ کارمند `UserUpdate` می‌خواهد).
+- `ChangePassword` همه‌ی نشست‌ها، حتی همین توکن را، می‌بندد و جفتِ توکنِ تازه برمی‌گرداند؛ `useChangePasswordMutation` (`src/features/auth/services/mutations.js`) آن را با `passwordChanged()` در store می‌نشاند. بدونِ این، درخواستِ بعدی ۴۰۱ و خروج است.
+- **اجباری:** بعد از `ResetUserPassword`ِ مدیر، `Login` پرچمِ `mustChangePassword` می‌دهد و سرور تا تغییرِ رمز هر درخواستی جز `ChangePassword`، `GetUserInfo`، `GetMyPermissions` و `Logout` را ۴۰۳ با `data.mustChangePassword` جواب می‌دهد. پرچم در `useAuthStore.mustChangePassword` (persist، چون `GetUserInfo` آن را ندارد) از دو راه می‌نشیند: `loginSuccess` و interceptorِ ۴۰۳ در `axios.js`. `protectedLoader`، `AppLayout` و `LoginPage` با این پرچم به `ROUTES.CHANGE_PASSWORD` (`/auth/change-password`، `ChangePasswordPage` زیرِ `AuthLayout`، با `from`) می‌برند؛ بعد از تغییر، صفحه به `from` برمی‌گردد.
+
 ### همگام‌سازیِ چند تب
 
 `authStore.js` به رویدادِ `storage` گوش می‌دهد: اگر `event.key === "auth-storage"` در تبِ دیگری عوض شد، `useAuthStore.persist.rehydrate()`. پس refresh یا خروج در یک تب به بقیه می‌رسد؛ خروج در تبِ دیگر `isAuthenticated` را false می‌کند و `AppLayout` با `<Navigate>` به ورود می‌برد.
 
 ### خروج
 
-`NavUser.jsx` → `logoutMutation.mutate(undefined, { onSettled: leaveSession })`:
+`NavUser.jsx` (و `ChangePasswordPage`) → `logoutMutation.mutate()`:
 
-1. `useLogoutMutation` → `POST /Account/Logout` (بدون بدنه؛ سرور از هدر کاربر را می‌شناسد).
-2. `onSettled` (موفق یا ناموفق): `logout()` در store و `queryClient.clear()`.
-3. `leaveSession()` (`src/shared/services/sessionCleanup.js`): `purgeLegacyApiCache()` و `window.location.replace(ROUTES.LOGIN)` — بارگذاریِ کامل تا همه‌ی stateِ درونِ حافظه (پیش‌نویس‌ها، فرم‌ها، فیلترها) پاک شود.
+1. `useLogoutMutation` → `logout()`: `POST /Account/Logout` با `axiosInstance` روی آداپترِ `fetch` و `fetchOptions: { keepalive: true }` (بدنه‌ی `{}` چون اکشن `[FromBody]` است و بدنه‌ی خالی را ۴۰۰ می‌دهد؛ سرور کاربر را از هدر می‌شناسد)، **بی‌انتظار برای پاسخ** — خروجِ محلی فوری است و درخواست بعد از بارگذاریِ دوباره‌ی صفحه هم به سرور می‌رسد.
+2. `onSettled`ِ خودِ هوک (موفق یا ناموفق): `logout()` در store و `queryClient.clear()`.
+3. در همان `onSettled`، `leaveSession()` — نه در `mutate(…, { onSettled })`: `logout()` دکمه‌ی خروج را unmount می‌کند و React Query callbackِ `mutate`ِ کامپوننتِ unmountشده را صدا نمی‌زند (کاربر با `?from=<صفحه‌ی فعلی>` می‌ماند). `leaveSession()` (`src/shared/services/sessionCleanup.js`): `purgeLegacyApiCache()` و `window.location.replace(ROUTES.LOGIN)` — بارگذاریِ کامل تا همه‌ی stateِ درونِ حافظه (پیش‌نویس‌ها، فرم‌ها، فیلترها) پاک شود.
 
 ## قراردادها و نکته‌ها
 
@@ -117,7 +124,7 @@ const { isSuccess, isError, error } = useQuery({
 - پاسخِ refresh هم ممکن است پوشش داشته باشد؛ با `isEnvelope`/`unwrapEnvelope` باز می‌شود.
 - `LOGIN_TIMEOUT_MS = 45_000` در `api-v1.js` — اولین درخواست بعد از خوابِ IIS کند است.
 - بعد از هر تغییرِ جایگاهِ کارمند یا مجوزهای خودِ کاربر، `authKeys.session()` یا `authKeys.myPermissions()` باید invalidate شود — الان این کار را `useUpdateUserMutation` و `useChangeUserTeamMutation` (`src/features/employees/services/mutations.js`)، `useUpdateUserPermissionsMutation` (`src/features/permissions/services/mutations.js`)، و mutationهای `src/features/organization/teams/services/mutations.js` و `src/features/organization/departments/services/mutations.js` انجام می‌دهند. mutationِ تازه‌ای که روی کاربرِ جاری اثر دارد باید همین کار را بکند.
-- **خروج همه‌ی localStorage را پاک نمی‌کند.** این‌ها می‌مانند: `dashboard-layout` (`src/features/dashboard/store/dashboardLayoutStore.js`، عمداً — ترجیحِ دستگاه)، `unit-label-template` (`src/features/warehouse/units/store/unitFilterStore.js`)، `TERMINAL_KEY` در `src/shared/components/payments/pos/PosReadyForm.jsx`، و `vite-ui-theme`.
+- **خروج همه‌ی localStorage را پاک نمی‌کند.** این‌ها می‌مانند: `dashboard-layout` (`src/features/dashboard/store/dashboardLayoutStore.js`، عمداً — ترجیحِ دستگاه)، `unit-label-template` (`src/features/warehouse/units/store/labelTemplateStore.js`)، `print-settings` (`src/shared/store/printSettingsStore.js`)، `TERMINAL_KEY` در `src/shared/components/payments/pos/PosReadyForm.jsx`، و `vite-ui-theme`.
 
 ## برای تغییرِ X، به Y بروید
 
@@ -128,6 +135,7 @@ const { isSuccess, isError, error } = useQuery({
 | رفتار در ۴۰۱/شکستِ refresh | interceptorِ پاسخ در `src/shared/services/api/axios.js` |
 | چیزی هنگامِ خروج پاک شود | `useLogoutMutation` (`onSettled`) در `src/features/auth/services/queries.js` یا `leaveSession` در `src/shared/services/sessionCleanup.js` |
 | ظاهرِ صفحه‌ی ورود | `src/features/auth/pages/LoginPage.jsx` |
+| صفحه‌ی حسابِ کاربر یا فرمِ تغییرِ رمز | `src/features/auth/pages/AccountPage.jsx`، `src/features/auth/components/ChangePasswordForm.jsx` |
 | بعد از ورود به کجا برود | `from` در `LoginPage.jsx` (پیش‌فرض `ROUTES.DASHBOARD`) |
 
 ## سؤال‌های باز / بدهی
@@ -135,5 +143,5 @@ const { isSuccess, isError, error } = useQuery({
 - در شاخه‌ی ۲ِ شکستِ refresh، `window.location.href` (نه `leaveSession`) استفاده می‌شود و `queryClient.clear()` صدا زده نمی‌شود؛ بارگذاریِ کامل حافظه را پاک می‌کند، پس اثرِ عملی ندارد، ولی دو مسیرِ خروج یکسان نیستند.
 - `src/shared/services/api/axios.js` (لایه‌ی shared) مستقیم از `@/features/auth/store/authStore` import می‌کند — مرزِ لایه (فایل ۰۲ و ۱۴).
 - کلیدهای `VITE_ACCESS_TOKEN_KEY`، `VITE_REFRESH_TOKEN_KEY`، `VITE_TOKEN_REFRESH_ENDPOINT` در `.env.example` استفاده نمی‌شوند (فایل ۰۱).
-- `unit-label-template` بعد از خروج می‌ماند. UNCLEAR: عمدی است یا نه؛ کامنتی در `unitFilterStore.js` درباره‌ی خروج پیدا نشد.
+- `unit-label-template` بعد از خروج می‌ماند. UNCLEAR: عمدی است یا نه؛ کامنتی در `labelTemplateStore.js` درباره‌ی خروج پیدا نشد.
 - توکن‌ها در `localStorage` هستند (در دسترسِ هر اسکریپتِ هم‌دامنه)؛ این تصمیمِ موجود است، نه پیشنهاد.

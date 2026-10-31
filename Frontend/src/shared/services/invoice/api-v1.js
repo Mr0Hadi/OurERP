@@ -61,3 +61,32 @@ export const getSaleReturnCreditNotePdf = (saleReturnId) =>
  */
 export const getPurchaseReturnPdf = (purchaseReturnId) =>
   fetchPdf("/Invoice/GetPurchaseReturnPdf", { purchaseReturnId });
+
+/**
+ * داده‌ی سندِ چاپی (JSON) — همان `InvoiceDocumentModel`ی که PDFِ رسمی از آن ساخته می‌شود، تا فرانت همان
+ * سند را با کاغذ و چیدمانِ انتخابیِ کاربر در مرورگر چاپ کند (`InvoicePrintStudio`). شکلِ پاسخ:
+ * `{ title, isProforma, documentNumber, documentDate, paymentDueDate, statusText, description, notes[],
+ * company, counterpartyLabel, counterparty, lines[], subTotal, totalDiscount, totalTax, grandTotal,
+ * installmentChargeAmount, payableAmount, paidAmount, balance }`.
+ *
+ * بکند بندِ ۲۷ را دارد (frontend-requests.fa.md)؛ سروری که هنوز به‌روز نشده ۴۰۴ می‌دهد و `InvoicePrintStudio` به PDFِ رسمی برمی‌گردد.
+ */
+const DOCUMENT_ENDPOINTS = Object.freeze({
+  sale: { url: "/Invoice/GetSaleInvoiceDocument", param: "saleId" },
+  saleReturn: { url: "/Invoice/GetSaleReturnCreditNoteDocument", param: "saleReturnId" },
+  purchaseReturn: { url: "/Invoice/GetPurchaseReturnDocument", param: "purchaseReturnId" },
+});
+
+/** سندهایی که سرور داده‌ی چاپی‌شان را می‌دهد — همان `documentKind`ِ `InvoiceDocumentSection`. */
+export const hasPrintableDocument = (documentKind) => Boolean(DOCUMENT_ENDPOINTS[documentKind]);
+
+/**
+ * @param documentKind `"sale"` / `"saleReturn"` / `"purchaseReturn"`
+ * @param documentId   شناسه‌ی سندِ ذخیره‌شده
+ */
+export async function getInvoiceDocument(documentKind, documentId) {
+  const endpoint = DOCUMENT_ENDPOINTS[documentKind];
+  if (!endpoint) throw new Error(`سندِ چاپیِ «${documentKind}» تعریف نشده است.`);
+  const { data } = await axiosInstance.get(endpoint.url, { params: { [endpoint.param]: documentId } });
+  return data;
+}

@@ -1,48 +1,30 @@
 import { Controller, useWatch } from "react-hook-form";
 import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import { PriceInput } from "@/shared/components/ui/price-input";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import AmountInWords from "@/shared/components/forms/AmountInWords";
+import FormField from "@/shared/components/forms/FormField";
+import FormPriceField from "@/shared/components/forms/FormPriceField";
 
 /**
- * یک قیمت با `PriceInput` و مبلغ به حروف.
- *
  * `required`: سرور کالای تازه‌ی کامل را با قیمتِ صفر رد می‌کند
  * (`CreateProductCommand`)؛ پیش‌تر کاربر این را فقط بعد از «ذخیره» و با پیامِ
  * سرور می‌فهمید.
  */
-function PriceField({ name, label, control, errors, required }) {
-  const value = useWatch({ control, name });
+function PriceField({ name, label, control, error, required }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={name}>
-        {label} {required && <span className="text-destructive">*</span>}
-      </Label>
-      <Controller
-        name={name}
-        control={control}
-        rules={{
-          validate: (raw) => !required || Number(raw) > 0 || "قیمت باید بیشتر از صفر باشد",
-        }}
-        render={({ field }) => (
-          <PriceInput
-            id={name}
-            min={0}
-            value={field.value === "" || field.value == null ? null : Number(field.value)}
-            onValueChange={(next) => field.onChange(next ?? "")}
-          />
-        )}
-      />
-      {errors[name] && <span className="text-xs text-destructive">{errors[name].message}</span>}
-      <AmountInWords rial={value} />
-    </div>
+    <FormPriceField
+      name={name}
+      label={label}
+      control={control}
+      required={required}
+      error={error}
+      rules={{ validate: (raw) => !required || Number(raw) > 0 || "قیمت باید بیشتر از صفر باشد" }}
+    />
   );
 }
 
@@ -69,8 +51,15 @@ export default function ProductPricingForm({
         <CardTitle className="text-lg">موجودی و قیمت‌گذاری</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="stock">{isNew ? "موجودی اولیه" : "موجودی"}</Label>
+        <FormField
+          label={isNew ? "موجودی اولیه" : "موجودی"}
+          htmlFor="stock"
+          error={errors.stock}
+          hint={
+            !isNew &&
+            "تغییرِ این عدد اصلاحِ دستیِ موجودی ثبت می‌کند و دانه‌ها را به همان اندازه اضافه یا کم می‌کند."
+          }
+        >
           <Input
             type="number"
             id="stock"
@@ -80,31 +69,12 @@ export default function ProductPricingForm({
             min="0"
             placeholder="0"
           />
-          {errors.stock && <span className="text-xs text-destructive">{errors.stock.message}</span>}
-          {!isNew && (
-            <span className="block text-[11px] text-muted-foreground">
-              تغییرِ این عدد اصلاحِ دستیِ موجودی ثبت می‌کند و دانه‌ها را به همان اندازه اضافه یا کم
-              می‌کند.
-            </span>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="lowStockThreshold">آستانه هشدار کمبود موجودی</Label>
-          <Input
-            type="number"
-            id="lowStockThreshold"
-            {...register("lowStockThreshold")}
-            min="0"
-            placeholder="مثال: 10"
-          />
-        </div>
+        </FormField>
 
         {/* سرور مالیاتِ هر قلمِ فاکتور را از همین دو فیلد حساب می‌کند؛ کالای
             معاف صفر مالیات می‌گیرد. فاکتورهای صادرشده نرخِ خودشان را نگه
             می‌دارند و با تغییرِ این‌جا عوض نمی‌شوند. */}
-        <div className="space-y-2">
-          <Label htmlFor="tax">مالیات بر ارزش افزوده (درصد %)</Label>
+        <FormField label="مالیات بر ارزش افزوده (درصد %)" htmlFor="tax" error={errors.tax}>
           <Input
             type="number"
             id="tax"
@@ -117,7 +87,6 @@ export default function ProductPricingForm({
             placeholder="0"
             disabled={Boolean(taxExempt)}
           />
-          {errors.tax && <span className="text-xs text-destructive">{errors.tax.message}</span>}
           <Controller
             name="taxExempt"
             control={control}
@@ -131,27 +100,27 @@ export default function ProductPricingForm({
               </label>
             )}
           />
-        </div>
+        </FormField>
 
         <PriceField
           name="purchasePrice"
           label="قیمت خرید (ریال)"
           control={control}
-          errors={errors}
+          error={errors.purchasePrice}
           required={requirePrices}
         />
         <PriceField
           name="retailPrice"
           label="قیمت فروش خرده (ریال)"
           control={control}
-          errors={errors}
+          error={errors.retailPrice}
           required={requirePrices}
         />
         <PriceField
           name="wholeSalePrice"
           label="قیمت فروش همکار/عمده (ریال)"
           control={control}
-          errors={errors}
+          error={errors.wholeSalePrice}
           required={requirePrices}
         />
       </CardContent>

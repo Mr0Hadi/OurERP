@@ -32,6 +32,12 @@ namespace Application.Features.PurchaseReturn.Commands
 
         /// <summary>Replaces the effect's reference (cheque number, transfer id) when sent.</summary>
         public string? Reference { get; set; }
+
+        /// <summary>
+        /// CASH/TRANSFER effects: the cash box or bank account the money went through, replacing the one named at the decision.
+        /// A MIXED effect keeps the accounts its parts named. See MoneyEffectDto.BankAccountId.
+        /// </summary>
+        public int? BankAccountId { get; set; }
     }
 
     public class ExecuteMoneyEffectCommandValidator : AbstractValidator<ExecuteMoneyEffectCommand>
@@ -89,6 +95,10 @@ namespace Application.Features.PurchaseReturn.Commands
             effect.AppliedAt = paidAt;
             if (!string.IsNullOrWhiteSpace(request.Reference))
                 effect.Reference = request.Reference;
+            if (request.BankAccountId.HasValue)
+                effect.BankAccountId = request.BankAccountId;
+            await ReturnMoneyAccounts.EnsureAsync(_context, ReturnMoneyAccounts.Of(effect.Method, effect.BankAccountId, applied: true,
+                effect.MoneyParts.Select(p => (p.Method, p.BankAccountId))).ToList(), cancellationToken);
 
             await _inventoryCostingService.RecordPurchaseReturnMoneyAsync(claim.Product!, effect.Direction, effect.Amount!.Value, claim.Id, paidAt, cancellationToken);
             await PartyLedger.PurchaseReturnMoneyAsync(_context, purchaseReturn.Purchase!, purchaseReturn.ReturnNumber, claim.Id, effect, reversal: false, paidAt, cancellationToken);

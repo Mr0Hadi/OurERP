@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import {
@@ -8,12 +7,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/shared/components/ui/dialog";
 import {
   useCreateProductCategoryMutation,
   useUpdateProductCategoryMutation,
 } from "../services/mutations";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 /**
  * بدنه‌ی فرم — جدا از دیالوگ تا با `key={category?.id ?? "new"}` روی هر
@@ -71,14 +70,7 @@ function CategoryFormFields({ category, onClose, onSaved }) {
         )}
       </div>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose} disabled={isPending}>
-          انصراف
-        </Button>
-        <Button type="submit" disabled={isPending}>
-          {isPending ? "در حال ثبت..." : isEdit ? "ذخیره" : "افزودن"}
-        </Button>
-      </DialogFooter>
+      <DialogActions onCancel={onClose} isPending={isPending} submitLabel={isEdit ? "ذخیره" : "افزودن"} />
     </form>
   );
 }

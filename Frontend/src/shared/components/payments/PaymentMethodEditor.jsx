@@ -5,20 +5,16 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import AmountInWords from "@/shared/components/forms/AmountInWords";
+import BankAccountSelect from "./BankAccountSelect";
+import ChequeFields from "./ChequeFields";
 import {
   PAYMENT_REFERENCE_FIELDS,
   PAYMENT_TYPE_LABELS,
   PaymentTypeEnum,
 } from "@/shared/domain/enums/paymentType";
+import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
 import {
   ROW_PAYMENT_TYPES,
   addMixedRow,
@@ -33,11 +29,14 @@ import {
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+
+const ROW_TYPE_OPTIONS = ROW_PAYMENT_TYPES.map((type) => ({ value: type, label: PAYMENT_TYPE_LABELS[type] }));
 
 /**
  * روش و مبلغِ یک پرداخت (فرمِ «ثبت پرداخت»ِ `PaymentsCard`): نقدی، انتقال بانکی،
  * چک یا **ترکیبی** — یعنی مبلغ بینِ چند روش تقسیم شود و هر تکه مرجعِ خودش را
- * داشته باشد.
+ * داشته باشد. نقدی و انتقال صندوق/حسابِ خودشان را هم می‌گیرند (`BankAccountSelect`).
  *
  * مبلغ با باقیمانده پیش‌پر است (`payable`)؛ در ترکیبی آخرین تکه خودکار
  * «باقیمانده» را می‌گیرد.
@@ -87,7 +86,7 @@ export default function PaymentMethodEditor({
   );
 }
 
-/** روشِ تکی: مبلغ، تاریخ و (برای چک/انتقال) شماره‌ی پیگیری. */
+/** روشِ تکی: مبلغ، تاریخ، (برای چک/انتقال) شماره‌ی پیگیری، (چک) سررسید/بانک/صاحب حساب و (نقدی/انتقال) صندوق/حساب. */
 function SingleRow({ row, payable, onChange }) {
   const reference = PAYMENT_REFERENCE_FIELDS[row.type];
   const full = Math.max(0, Number(payable) || 0);
@@ -137,6 +136,19 @@ function SingleRow({ row, payable, onChange }) {
           />
         </div>
       )}
+      {row.type === PaymentTypeEnum.CHECK && (
+        <ChequeFields value={row} onChange={onChange} idPrefix={`cheque-${row.id}`} />
+      )}
+      {takesBankAccount(row.type) && (
+        <div className="space-y-1.5">
+          <Label className="text-xs">صندوق / حساب</Label>
+          <BankAccountSelect
+            value={row.bankAccountId}
+            onChange={(bankAccountId) => onChange({ bankAccountId })}
+            paymentType={row.type}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -154,21 +166,14 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
           return (
             <li key={row.id} className="rounded-lg border border-border bg-muted/20 p-2.5">
               <div className="grid grid-cols-[1fr_auto] gap-2 @lg/pay:grid-cols-[9rem_1fr_auto]">
-                <Select
-                  value={String(row.type)}
-                  onValueChange={(next) => onChange(row.id, { type: Number(next) })}
-                >
-                  <SelectTrigger className="h-9! w-full" aria-label={`روشِ تکه‌ی ${formatNumber(index + 1)}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROW_PAYMENT_TYPES.map((type) => (
-                      <SelectItem key={type} value={String(type)}>
-                        {PAYMENT_TYPE_LABELS[type]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OptionSelect
+                  value={row.type}
+                  onChange={(type) => onChange(row.id, { type })}
+                  numeric
+                  aria-label={`روشِ تکه‌ی ${formatNumber(index + 1)}`}
+                  className="h-9! w-full"
+                  options={ROW_TYPE_OPTIONS}
+                />
                 <Button
                   type="button"
                   size="icon"
@@ -210,6 +215,22 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
                   onChange={(isoDate) => onChange(row.id, { paidAt: isoDate || "" })}
                   placeholder="تاریخ: امروز"
                 />
+                {row.type === PaymentTypeEnum.CHECK && (
+                  <ChequeFields
+                    value={row}
+                    onChange={(patch) => onChange(row.id, patch)}
+                    idPrefix={`cheque-${row.id}`}
+                    compact
+                  />
+                )}
+                {takesBankAccount(row.type) && (
+                  <BankAccountSelect
+                    value={row.bankAccountId}
+                    onChange={(bankAccountId) => onChange(row.id, { bankAccountId })}
+                    paymentType={row.type}
+                    aria-label={`صندوق/حسابِ تکه‌ی ${formatNumber(index + 1)}`}
+                  />
+                )}
               </div>
             </li>
           );

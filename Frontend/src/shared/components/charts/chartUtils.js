@@ -221,8 +221,11 @@ const UNITS = [
 export function formatCompact(value) {
   const n = Number(value ?? 0);
   const abs = Math.abs(n);
-  const unit = UNITS.find((u) => abs >= u.limit);
-  if (!unit) return formatNumber(n);
+  let index = UNITS.findIndex((u) => abs >= u.limit);
+  if (index < 0) return formatNumber(n);
+  // گرد کردن ممکن است به واحدِ بزرگ‌تر برسد: ۹۹۹٬۹۵۰ «۱٬۰۰۰ هزار» نشان داده می‌شد نه «۱ میلیون».
+  if (index > 0 && Math.round(abs / UNITS[index].divisor) >= 1000) index -= 1;
+  const unit = UNITS[index];
 
   const scaled = n / unit.divisor;
   const digits = Math.abs(scaled) < 10 ? 1 : 0;

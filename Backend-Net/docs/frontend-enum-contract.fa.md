@@ -2,7 +2,7 @@
 
 **تاریخ:** ۱۴۰۵/۰۶/۰۳ (۲۰۲۶-۰۸-۲۵) · **وضعیت فرانت:** انجام‌شده، روی برنچ `feat/frontend-numeric-enums`
 
-> ⚠️ **به‌روزرسانی ۲۰۲۶-۰۹-۱۳:** این سند یک درخواست تاریخی است. هر توصیفی از «بکند» در بخش ۳ (`PurchaseReturnItem`/`…Decision`، `DecisionType`، `PurchaseReturnStatusEnum`/`SaleReturnStatusEnum`، `PENDING_INSPECTION`) مدل پیش از ۲۰۲۶-۰۸-۲۸ است و **دیگر وجود ندارد**. قرارداد فعلی enum ها: بخش ۱۵ [`api-guide.fa.md`](./api-guide.fa.md)؛ قرارداد فعلی مرجوعی: بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) و [`return-frontend-migration.fa.md`](./return-frontend-migration.fa.md).
+> ⚠️ **به‌روزرسانی ۲۰۲۶-۰۹-۱۳:** این سند یک درخواست تاریخی است. هر توصیفی از «بکند» در بخش ۳ (`PurchaseReturnItem`/`…Decision`، `DecisionType`، `PurchaseReturnStatusEnum`/`SaleReturnStatusEnum`، `PENDING_INSPECTION`) مدل پیش از ۲۰۲۶-۰۸-۲۸ است و **دیگر وجود ندارد**. قرارداد فعلی enum ها: بخش ۱۵ [`api-guide.fa.md`](./api-guide.fa.md)؛ قرارداد فعلی مرجوعی: بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md).
 
 ## چرا این سند
 
@@ -153,14 +153,14 @@ returnDoc → claims[] → resolutions[] → effects[]
 
 ### ۳.۳ تصمیمی که باید گرفته شود
 
-> **✅ SOLVED (۲۰۲۶-۰۸-۲۸، مستندشده در `docs/returns-effects-and-org-structure-summary.fa.md`):**
+> **✅ SOLVED (۲۰۲۶-۰۸-۲۸):**
 > **راه اول** انتخاب و کامل پیاده‌سازی شد — بکند مدل ترکیبی «اثرها»ی فرانت را عیناً پذیرفت.
 > هر دو مرجوعی خرید و فروش حالا `…Return → …Claim → …Resolution → …Effect` هستند، دقیقاً منطبق
 > با `returnDoc → claims[] → resolutions[] → effects[]` فرانت. enum بسته‌ی `DecisionType` قدیمی
 > (و enum های `PurchaseReturnStatusEnum`/`SaleReturnStatusEnum`/`PurchaseIssueTypeEnum`/
 > `SalesReturnReasonEnum`/`SalesReturnIssueTypeEnum` قدیمی) به‌طور کامل از کد حذف شده‌اند؛ هیچ
 > جای دیگری در این سند (بخش‌های زیر) دیگر معتبر نیست مگر جایی که صراحتاً SOLVED علامت خورده. برای
-> جزئیات کامل مدل جدید، `docs/returns-effects-and-org-structure-summary.fa.md` و `docs/api-guide.fa.md`
+> جزئیات کامل مدل جدید، `docs/api-guide.fa.md`
 > (بخش «enum های مشترک مرجوعی خرید/فروش») را ببینید.
 
 

@@ -121,6 +121,12 @@ function releaseKeyIfSettled(config, status) {
   releaseIdempotencyKey(key);
 }
 
+function mustChangePasswordIn(body) {
+  if (!isEnvelope(body)) return false;
+  const data = unwrapEnvelope(body);
+  return !!(data?.mustChangePassword ?? data?.MustChangePassword);
+}
+
 function attachUserMessage(error) {
   error.serverMessage = extractServerMessage(error?.response?.data);
   error.message = getErrorMessage(error);
@@ -234,6 +240,13 @@ axiosInstance.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // ۴۰۳ با `mustChangePassword`: مدیر رمز را بازنشانی کرده و سرور تا تغییرِ رمز هر
+    // درخواستی را رد می‌کند (refresh هم کمکی نمی‌کند). پرچم را بگذار؛ `AppLayout` کاربر را
+    // به صفحه‌ی تغییرِ رمز می‌برد.
+    if (status === 403 && mustChangePasswordIn(error.response?.data)) {
+      useAuthStore.getState().setMustChangePassword(true);
     }
 
     // ۴۲۲ یعنی یک Idempotency-Key برای دو درخواستِ متفاوت به کار رفته — در

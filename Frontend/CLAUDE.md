@@ -35,17 +35,21 @@ pnpm knip
 ```
 
 ```bash
+pnpm test
+```
+
+```bash
 node scripts/check-docs-paths.mjs
 ```
 
-تست و type-check وجود ندارد؛ قبل از commit: `pnpm lint` بدونِ خطا و `pnpm build` موفق. آدرسِ API از `VITE_API_BASE_URL` در `.env` (الگو: `.env.example`).
+تستِ واحد با Vitest برای منطقِ خالص (`src/**/domain/`، `src/shared/lib/`، storeها، `tools/`)؛ تست کنارِ فایل است (`x.js` → `x.test.js`)، راهنما در `docs/architecture/13-recipes.md` (بخشِ ۱۵). تست‌های قرارداد enumها را با بکند، نام‌های دسترسی را با `PermissionEnum` و منو را با routeها می‌سنجند؛ enumِ تازه را به `COMPLETE_MAPS`ِ `labelsContract.test.js` اضافه کنید. type-check وجود ندارد. قبل از commit: `pnpm lint` بدونِ خطا، `pnpm test` سبز و `pnpm build` موفق. منطقِ خالصِ تازه یا تغییرِ قاعده‌ی مالی/مرجوعی بی تست نماند. آدرسِ API از `VITE_API_BASE_URL` در `.env` (الگو: `.env.example`).
 
 ## ساختار
 
 - `src/app/` — فقط سیم‌کشی: providerها، پوسته‌ها (`AppLayout`، `AuthLayout`)، روتر، `protectedLoader`، `PermissionGate`.
 - `src/features/<f>/` — یک حوزه‌ی کسب‌وکار: `routes.jsx`، `pages/`، `components/`، `hooks/`، `services/` (`api-v1.js`، `queryKeys.js`، `queries.js`، `mutations.js`)، `store/`، `domain/`. فیچرهای بزرگ زیرماژول دارند (`sales/orders`، `warehouse/receiving`، …).
 - `src/shared/` — بی‌مالک و چندبارمصرف: `components/`، `domain/` (enum و منطقِ خالص)، `services/`، `hooks/`، `lib/`، `store/`، `constants/` (`routes.js`، `navigationData.js`).
-- import با aliasِ `@/` (= `src/`). `shared/` نباید از `features/` import کند (۹ استثنای فعلی در `docs/architecture/14-dependency-graph-and-health.md`).
+- import با aliasِ `@/` (= `src/`). `shared/` نباید از `features/` import کند (۶ استثنای فعلی در `docs/architecture/14-dependency-graph-and-health.md`).
 
 جای کدِ تازه: `docs/architecture/02-folder-structure.md`. فهرستِ فیچرها: `docs/architecture/12-features/README.md`.
 
@@ -62,7 +66,7 @@ node scripts/check-docs-paths.mjs
 - پیامِ خطا همیشه با `getErrorMessage(error, "متنِ فارسیِ عملیات")` (`src/shared/lib/errorMessage.js`).
 
 **مسیر و مجوز**
-- مسیرِ تازه: `ROUTES` در `src/shared/constants/routes.js` → `routes.jsx`ِ فیچر با `lazy()` و `handle: { permission }` → (فیچرِ تازه) `src/app/routes/routers.jsx` → منو در `navigationData.js` → breadcrumb در `src/shared/components/layout/AppBreadcrumb.jsx`.
+- مسیرِ تازه: `ROUTES` در `src/shared/constants/routes.js` → `routes.jsx`ِ فیچر با `lazy()` و `handle: { permission }` → (فیچرِ تازه) `src/app/routes/routers.jsx` → منو در `navigationData.js` → breadcrumb در `src/app/layouts/AppBreadcrumb.jsx`.
 - نامِ مجوز عضوِ `PermissionEnum` در `../Backend-Net/Domain/Enums/PermissionEnum.cs` است؛ آرایه یعنی «هر کدام کافی است».
 - دکمه‌ها: `const { allows } = usePermission()` از `@/features/auth/hooks/usePermission`. همه‌ی بررسی‌های فرانت فقط UX است.
 - هویتِ کاربر در store نیست؛ `useCurrentUser()` / `useUserInfoQuery()`.
@@ -75,6 +79,7 @@ node scripts/check-docs-paths.mjs
 - دکمه کنارِ عنوانِ هدر: `PageHeaderActions`؛ تاریخچه‌ی یک سند/رکورد: `AuditHistoryButton` از `src/features/audit/components/` (خودش `AuditLogView` را می‌سنجد).
 - قبل از ساختنِ کامپوننت `docs/architecture/10-shared-components-catalog.md` را ببینید. فایل‌های `src/shared/components/ui/` تولیدِ shadcn هستند.
 - راهنمای زنده: `pnpm dev` → `/dev/ui`.
+- از صفحه به کد (`tools/dev-inspector/`، فقط dev): **Alt + کلیک** جایی که المان ساخته می‌شود را روی همان خط باز می‌کند، **Alt + Shift + کلیک** جایی که همین صفحه آن را گذاشته؛ **Alt + کلیکِ راست** پنلِ لایه‌ها، جاهای استفاده، سندهای مرتبط و «کپی برای Claude Code» ([01](docs/architecture/01-tech-stack-and-tooling.md)).
 
 **کدنویسی**
 - کامنت‌ها فارسی؛ JSDocِ کوتاهِ «چه و چرا» برای exportها. نام‌ها: کامپوننت `PascalCase.jsx`، هوک `useX.js`، store `use<X>Store` در `<x>Store.js`.
@@ -94,4 +99,4 @@ node scripts/check-docs-paths.mjs
 | enumها و منطقِ مرجوعی/پرداخت | `docs/architecture/11-domain-layer.md` |
 | بدهی‌ها و باگ‌های شناخته‌شده | `docs/architecture/14-dependency-graph-and-health.md` |
 
-`REFACTOR.md` تاریخچه‌ی ریفکتور است و `FEATURE-GAPS.fa.md` کمبودهای فیچری.
+`FEATURE-GAPS.fa.md` کمبودهای فیچری و جدولِ پیگیریِ آن‌هاست.

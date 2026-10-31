@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, PackageCheck } from "lucide-react";
 
 import { Badge } from "@/shared/components/ui/badge";
 import ProductThumb from "@/shared/components/forms/ProductThumb";
@@ -14,6 +14,9 @@ import { formatNumber } from "@/shared/lib/numberFormat";
  *
  * بخشِ «بیشتر» برای کالای ردیابی‌پذیر یا وقتی مازاد ثبت شده باز است؛ در
  * حالتِ پرتکرار (کالای فله، بدون مازاد) کارت فقط یک شمارنده است.
+ *
+ * ردیفی که در بررسیِ انبارِ پیش‌فاکتور رزرو شده، دانه‌هایش را نشان می‌دهد و اسکنِ «ارسالی» ندارد:
+ * سرور همان دانه‌های رزرو را می‌فرستد.
  */
 export default function ShippingItemCard({
   item,
@@ -24,6 +27,7 @@ export default function ShippingItemCard({
   onBarcodesChange,
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const reserved = Number(item.reservedQuantity) || 0;
   const shipped = Number(item.shippedQuantity) || 0;
   const excess = Number(item.excessQuantity) || 0;
   const isFullyShipped = item.remainingQuantity === 0;
@@ -32,9 +36,11 @@ export default function ShippingItemCard({
   const StatusIcon = config.icon;
   const canExcess = allowExcess || excess > 0;
   // بدون مازاد، بخشِ «بیشتر» فقط اسکنِ دانه‌های همین دور است.
+  // ردیفِ رزروشده اسکنِ «ارسالی» ندارد؛ بخشِ «بیشتر» فقط برای مازاد است.
+  const scanShipped = reserved === 0 && shipped > 0;
   const showExtras = canExcess
-    ? isExpanded || isTracked || excess > 0
-    : (isExpanded || isTracked) && shipped > 0;
+    ? isExpanded || (isTracked && reserved === 0) || excess > 0
+    : (isExpanded || isTracked) && scanShipped;
 
   return (
     <div
@@ -75,14 +81,32 @@ export default function ShippingItemCard({
           </span>
           <QuantityStepper
             value={item.shippedQuantity}
-            max={item.remainingQuantity}
+            max={item.shippableQuantity}
             onChange={(next) => onItemChange(item.saleItemId, next)}
             size="sm"
           />
         </div>
       )}
 
-      {!isTracked && excess === 0 && (canExcess || !isFullyShipped) && (
+      {reserved > 0 && !isFullyShipped && (
+        <div className="space-y-1.5 rounded-md bg-muted/50 p-2.5">
+          <p className="flex items-center gap-1.5 text-xs font-medium">
+            <PackageCheck className="size-3.5 text-primary" />
+            {formatNumber(reserved)} دانه در بررسیِ انبار اسکن و رزرو شده؛ همان‌ها ارسال می‌شوند و اسکنِ دوباره لازم نیست.
+          </p>
+          {item.reservedBarcodes?.length > 0 && (
+            <ul className="flex flex-wrap gap-1" aria-label="دانه‌های رزروشده">
+              {item.reservedBarcodes.map((code) => (
+                <li key={code} dir="ltr" className="rounded border bg-background px-1.5 py-0.5 font-mono text-[11px]">
+                  {code}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {(!isTracked || reserved > 0) && excess === 0 && (canExcess || (!isFullyShipped && reserved === 0)) && (
         <button
           type="button"
           className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-card-foreground"
@@ -91,13 +115,17 @@ export default function ShippingItemCard({
           <ChevronDown
             className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
           />
-          {canExcess ? "اسکن دانه‌ها / ثبت ارسالِ اشتباهِ بیش از فاکتور" : "اسکن دانه‌ها"}
+          {canExcess
+            ? reserved > 0
+              ? "ثبت ارسالِ اشتباهِ بیش از فاکتور"
+              : "اسکن دانه‌ها / ثبت ارسالِ اشتباهِ بیش از فاکتور"
+            : "اسکن دانه‌ها"}
         </button>
       )}
 
       {showExtras && (
         <div className="space-y-3 rounded-md border border-dashed border-border p-2.5">
-          {shipped > 0 && (
+          {scanShipped && (
             <UnitBarcodeScanList
               productId={item.productId}
               barcodes={item.productUnitBarcodes}

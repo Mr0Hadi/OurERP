@@ -117,6 +117,7 @@ export default function PurchaseIssuedView({ purchase }) {
             <PaymentsCard
               draft={draft.payments}
               side={PURCHASE_PAYMENT_SIDE}
+              allocations={purchase.paymentAllocations}
               total={purchase.totalAmount}
               payable={purchase.payableAmount}
               canManage={allows("PurchasePayment")}

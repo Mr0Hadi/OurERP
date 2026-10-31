@@ -180,16 +180,6 @@ export default function UnitsPage() {
     [],
   );
 
-  const toggleSelectAll = useCallback(
-    (rows, shouldSelect) =>
-      setSelectedById((prev) => {
-        const next = new Map(prev);
-        rows.forEach((row) => (shouldSelect ? next.set(row.id, row) : next.delete(row.id)));
-        return next;
-      }),
-    [],
-  );
-
   const selectAllResults = async () => {
     setIsFetchingAll(true);
     try {
@@ -394,9 +384,9 @@ export default function UnitsPage() {
                   onPaginationChange={store.setPagination}
                   sorting={sorting}
                   onSortingChange={store.setSorting}
+                  refresh={unitsQuery}
                   selectedIds={selectedIds}
                   onToggleSelect={toggleSelect}
-                  onToggleSelectAll={toggleSelectAll}
                   onOpenUnit={setActiveUnit}
                 />
               </FetchingOverlay>

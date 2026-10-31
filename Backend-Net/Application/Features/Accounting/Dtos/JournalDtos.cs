@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Features.Accounting.Dtos
 {
@@ -123,6 +123,47 @@ namespace Application.Features.Accounting.Dtos
     }
 
     public class SaleLineJournalSummaryDto
+    {
+        public int Count { get; set; }
+        public int Quantity { get; set; }
+        public decimal GrossAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal NetAmount { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+    }
+
+    public class PurchaseLineJournalRowDto
+    {
+        public int Id { get; set; }
+        public int PurchaseId { get; set; }
+        public string InvoiceNumber { get; set; } = string.Empty;
+        public DateTime? InvoiceDate { get; set; }
+        public PurchaseStatusEnum Status { get; set; }
+        public int SupplierId { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
+        public int ProductId { get; set; }
+        public string ProductCode { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public int ProductCategoryId { get; set; }
+        public string ProductCategoryName { get; set; } = string.Empty;
+        public ProductUnitEnum Unit { get; set; }
+        public int Quantity { get; set; }
+        public int ReceivedQuantity { get; set; }
+        public decimal UnitPrice { get; set; }
+
+        /// <summary>Line discount, percent.</summary>
+        public int DiscountPercent { get; set; }
+        public decimal GrossAmount { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal NetAmount { get; set; }
+        public TaxCategoryEnum TaxCategory { get; set; }
+        public int TaxPercent { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal TotalAmount { get; set; }
+    }
+
+    public class PurchaseLineJournalSummaryDto
     {
         public int Count { get; set; }
         public int Quantity { get; set; }

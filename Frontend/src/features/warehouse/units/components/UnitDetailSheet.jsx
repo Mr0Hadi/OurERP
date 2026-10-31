@@ -31,15 +31,7 @@ import UnitStatusBadge from "./UnitStatusBadge";
 import { UnitWhereabouts } from "./UnitCells";
 import { unitOperationsFor } from "./unitOperations";
 import { useProductUnitHistoryQuery } from "../services/queries";
-
-function Row({ label, children }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-2">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm text-end">{children}</span>
-    </div>
-  );
-}
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 function DocumentLink({ kind, id, number }) {
   const to = documentRouteOf(kind, id);
@@ -283,12 +275,12 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
 
           <section className="space-y-1">
             <SectionTitle icon={Info}>مشخصات</SectionTitle>
-            <div className="divide-y divide-border">
-              <Row label="کجاست">
+            <InfoList className="space-y-0 divide-y divide-border text-sm [&>div]:items-start [&>div]:gap-4 [&>div]:py-2">
+              <InfoRow label="کجاست">
                 <UnitWhereabouts unit={unit} stacked />
-              </Row>
+              </InfoRow>
               {canLocate(unit) && (
-                <Row label="قفسه">
+                <InfoRow label="قفسه">
                   {unit.binLocation ? (
                     <span className="font-mono text-xs" dir="ltr">
                       {unit.binLocation}
@@ -296,15 +288,15 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                   ) : (
                     <span className="text-xs text-muted-foreground">ثبت نشده</span>
                   )}
-                </Row>
+                </InfoRow>
               )}
-              <Row label="کد کالا">
+              <InfoRow label="کد کالا">
                 <span className="font-mono text-xs">{unit.productCode ?? "—"}</span>
-              </Row>
-              <Row label="ورود به انبار">
+              </InfoRow>
+              <InfoRow label="ورود به انبار">
                 <span className="tabular-nums">{formatDate(unit.createdAt)}</span>
-              </Row>
-              <Row label="منشأ">
+              </InfoRow>
+              <InfoRow label="منشأ">
                 {unit.purchaseId ? (
                   <>
                     <DocumentLink
@@ -319,22 +311,22 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                 ) : (
                   <span className="text-xs text-muted-foreground">موجودی اولیه / اصلاح</span>
                 )}
-              </Row>
+              </InfoRow>
               {unit.saleId && unit.status !== UNIT_STATUSES.SOLD && (
-                <Row label="فروش">
+                <InfoRow label="فروش">
                   <DocumentLink kind={DocumentKindEnum.SALE} id={unit.saleId} number={unit.saleInvoiceNumber} />
                   {unit.customerName && (
                     <span className="block text-[11px] text-muted-foreground">{unit.customerName}</span>
                   )}
-                </Row>
+                </InfoRow>
               )}
               {unit.soldAt && (
-                <Row label="تاریخ فروش">
+                <InfoRow label="تاریخ فروش">
                   <span className="tabular-nums">{formatDate(unit.soldAt)}</span>
-                </Row>
+                </InfoRow>
               )}
               {unit.quarantinedAt && (
-                <Row label="در قرنطینه از">
+                <InfoRow label="در قرنطینه از">
                   <span className="tabular-nums">
                     {formatDate(unit.quarantinedAt)}
                     {quarantineDays != null && ` (${formatNumber(quarantineDays)} روز)`}
@@ -348,14 +340,14 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                       />
                     </span>
                   )}
-                </Row>
+                </InfoRow>
               )}
               {unit.quarantineCost != null && (
-                <Row label="ارزشِ نگه‌داشته">
+                <InfoRow label="ارزشِ نگه‌داشته">
                   <span className="tabular-nums">{formatRial(unit.quarantineCost)}</span>
-                </Row>
+                </InfoRow>
               )}
-              <Row label="برچسب">
+              <InfoRow label="برچسب">
                 {unit.printCount > 0 ? (
                   <span className="text-xs">
                     {formatNumber(unit.printCount)} بار، آخرین {formatDate(unit.lastPrintedAt)}
@@ -370,8 +362,8 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                 ) : (
                   <span className="text-xs text-muted-foreground">چاپی ثبت نشده</span>
                 )}
-              </Row>
-            </div>
+              </InfoRow>
+            </InfoList>
           </section>
 
           <Separator />

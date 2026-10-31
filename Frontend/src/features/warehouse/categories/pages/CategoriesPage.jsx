@@ -36,11 +36,12 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useCategoryProductsQuery, useProductCategoriesQuery } from "../services/queries";
 import { useDeleteProductCategoryMutation } from "../services/mutations";
 import CategoryFormDialog from "../components/CategoryFormDialog";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 const PAGE_SIZE = 20;
 const detailPath = (id) => routeWithId(ROUTES.WAREHOUSE_CATEGORIES_DETAIL, id);
 
-function CategoryList({ selectedId, className, canManage, onCreate, onRename, onDelete, categories, isLoading, isError }) {
+function CategoryList({ refresh, selectedId, className, canManage, onCreate, onRename, onDelete, categories, isLoading, isError }) {
   const [search, setSearch] = useState("");
   const term = search.trim().toLowerCase();
   // دسته‌ها یک‌جا گرفته شده‌اند؛ جست‌وجو همین‌جا فیلتر می‌کند.
@@ -49,6 +50,7 @@ function CategoryList({ selectedId, className, canManage, onCreate, onRename, on
   return (
     <MasterListPane
       className={className}
+      refresh={refresh}
       header={
         canManage && (
           <Button onClick={onCreate} size="icon" className="size-9 shrink-0" aria-label="دسته‌بندی جدید" title="دسته‌بندی جدید">
@@ -289,6 +291,7 @@ export default function CategoriesPage() {
   return (
     <div className="grid w-full min-w-0 grid-cols-1 gap-4 lg:h-[calc(100svh-6.5rem)] lg:grid-cols-[19rem_minmax(0,1fr)]">
       <CategoryList
+        refresh={categoriesQuery}
         selectedId={id}
         className={id ? "hidden lg:flex" : "flex h-[calc(100svh-7rem)] lg:h-auto"}
         canManage={canManage}
@@ -302,13 +305,16 @@ export default function CategoriesPage() {
 
       <main className={id ? "flex min-h-[calc(100svh-7rem)] min-w-0 flex-col lg:min-h-0" : "hidden min-h-0 min-w-0 lg:flex"}>
         {categoryMissing ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <Tags className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">این دسته‌بندی پیدا نشد یا حذف شده است.</p>
-            <Button asChild variant="outline" size="sm">
-              <Link to={ROUTES.WAREHOUSE_CATEGORIES}>بازگشت به فهرست</Link>
-            </Button>
-          </div>
+          <EmptyState
+            fill
+            icon={Tags}
+            title="این دسته‌بندی پیدا نشد یا حذف شده است."
+            action={
+              <Button asChild variant="outline" size="sm">
+                <Link to={ROUTES.WAREHOUSE_CATEGORIES}>بازگشت به فهرست</Link>
+              </Button>
+            }
+          />
         ) : id ? (
           <CategoryDetail
             key={id}
@@ -319,13 +325,12 @@ export default function CategoriesPage() {
             onDelete={() => setDeleteTarget(category)}
           />
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border p-8 text-center">
-            <Tags className="size-8 text-muted-foreground/60" />
-            <p className="font-medium">یک دسته‌بندی را از فهرست انتخاب کنید</p>
-            <p className="max-w-sm text-sm leading-6 text-muted-foreground">
-              هر کالا دقیقاً در یک دسته‌بندی است و دسته‌ی کالا از فرمِ خودِ کالا تغییر می‌کند.
-            </p>
-          </div>
+          <EmptyState
+            fill
+            icon={Tags}
+            title="یک دسته‌بندی را از فهرست انتخاب کنید"
+            description="هر کالا دقیقاً در یک دسته‌بندی است و دسته‌ی کالا از فرمِ خودِ کالا تغییر می‌کند."
+          />
         )}
       </main>
 

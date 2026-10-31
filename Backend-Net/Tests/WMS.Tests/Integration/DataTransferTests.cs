@@ -133,7 +133,7 @@ namespace WMS.Tests.Integration
             Assert.True(result.Committed);
             Assert.Equal(2, result.ImportedRows);
             using var verify = db.NewContext();
-            var products = await verify.Products.OrderBy(p => p.Id).ToListAsync();
+            var products = await verify.Products.OrderBy(p => p.Id).ToListAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(new[] { "فیلتر روغن", "شمع" }, products.Select(p => p.Name));
             Assert.All(products, p => Assert.Equal(category.Id, p.ProductCategoryId));
             Assert.All(products, p => Assert.True(p.IsActive));
@@ -180,7 +180,7 @@ namespace WMS.Tests.Integration
             Assert.Equal(1, result.ImportedRows);
             Assert.Equal(1, result.DuplicateRows);
             using var verify = db.NewContext();
-            Assert.Equal(2, await verify.Products.CountAsync());
+            Assert.Equal(2, await verify.Products.CountAsync(cancellationToken: TestContext.Current.CancellationToken));
         }
 
         [Fact]
@@ -190,7 +190,7 @@ namespace WMS.Tests.Integration
             using var scope = db.NewScope();
             scope.Context.Customers.Add(Seed.Customer());
             scope.Context.SaveChanges();
-            var existingPhone = (await scope.Context.Customers.FirstAsync()).PhoneNumber;
+            var existingPhone = (await scope.Context.Customers.FirstAsync(cancellationToken: TestContext.Current.CancellationToken)).PhoneNumber;
 
             var sheet = Csv("نام,نام خانوادگی,شماره تماس,آدرس,نوع مانده\n" +
                             "مریم,احمدی,۰۹۱۲۳۴۵۶۷۸۹,تهران,بدهکار\n" +
@@ -208,7 +208,7 @@ namespace WMS.Tests.Integration
 
             Assert.Equal(1, result.ImportedRows);
             using var verify = db.NewContext();
-            var imported = await verify.Customers.SingleAsync(c => c.FirstName == "مریم");
+            var imported = await verify.Customers.SingleAsync(c => c.FirstName == "مریم", cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal("09123456789", imported.PhoneNumber);
             Assert.Equal(Domain.Enums.BalanceTypeEnum.Debtor, imported.BalanceType);
             Assert.True(imported.IsActive);

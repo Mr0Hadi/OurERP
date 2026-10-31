@@ -85,6 +85,13 @@ export const SALE_STATUS_TONES = Object.freeze({
 - سایدبار: `<AppSidebar side="right" />` در `src/app/layouts/AppLayout.jsx`.
 - در موبایل سایدبار داخلِ `Sheet` باز می‌شود؛ `AppSidebar` با هر تغییرِ `pathname` (`useLocation`) `setOpenMobile(false)` می‌زند، پس با رفتن به هر صفحه دراور خودکار بسته می‌شود (برای همهٔ لینک‌های `Nav*`، بدون دست‌زدن به تک‌تک آن‌ها).
 - toastها `direction: "rtl"` در `src/app/providers/ToastProvider.jsx`.
+
+### پوسته روی موبایل
+
+- **هدرِ جمع‌شونده:** هدرِ `AppLayout` (`src/app/layouts/AppLayout.jsx`) `sticky` است و با `useHideOnScroll` (`src/shared/hooks/useHideOnScroll.js`) مثلِ نوارِ کروم رفتار می‌کند: با اسکرول به پایین کنار می‌رود و با کمی اسکرول به بالا برمی‌گردد؛ ۶۴ پیکسلِ اولِ صفحه همیشه پیداست. اسکرول روی `window` است، نه یک ظرفِ داخلی.
+- **`--app-header-offset`:** روی `SidebarInset` ارتفاعِ پیدای هدر را دارد (`4rem` یا `0px`). هر چیزِ `sticky` بالای صفحه باید `top-(--app-header-offset)` بگیرد تا زیرِ هدر بچسبد نه پشتش (نمونه: `src/features/settings/components/SettingGroupNav.jsx`).
+- **`*:min-w-0` روی ظرفِ صفحه:** صفحه آیتمِ فلکس است؛ بدونِ آن `min-width:auto` می‌گذاشت جدولِ عریض (مثلاً `min-w-[560px]`ِ گردش حساب در جزئیاتِ مشتری/تامین‌کننده) کلِ صفحه را پهن کند و کروم صفحه را کوچک‌نمایی می‌کرد. جدولِ عریض حالا داخلِ `overflow-x-auto`ِ خودش اسکرول می‌شود.
+- **دکمه‌ی متن‌دار در ستونِ موبایل** (`flex-col sm:flex-row` با `flex-1`): ارتفاعِ ثابت (`h-7`/`h-8`) نگذارید؛ `ACTION_BUTTON_CLASS` (`src/shared/components/returns/actionButtonClass.js`) ارتفاع را حداقلی و متن را شکستنی می‌کند. مصرف‌کننده‌ها: صفحه‌های مرجوعی و `ReceivingUnlistedItemsSection`.
 - کلاس‌های جهت: کدِ فعلی بیشتر کلاسِ فیزیکی (`ml-*`، `mr-*`) دارد تا منطقی (`ms-*`، `me-*`)؛ قراردادِ واحدی نیست (پایین). برای کدِ تازه کلاسِ منطقی امن‌تر است.
 
 ### فارسی‌سازیِ داده
@@ -128,5 +135,4 @@ export const SALE_STATUS_TONES = Object.freeze({
 - `--font-mono: "Fira Code"` تعریف شده ولی فونت import یا بارگذاری نمی‌شود (جست‌وجوی `Fira` فقط همین خط را پیدا کرد).
 - ۱۰۱ استفاده از کلاس‌های فیزیکیِ جهت (`ml-*`، `mr-*`، `pl-*`، `pr-*`، `left-*`، `right-*`) بیرون از `src/shared/components/ui/` در برابرِ ۱۶ استفاده از کلاس‌های منطقی (`ms-*`، `me-*`، …) در همان محدوده (grep). یعنی در عمل کلاس‌های فیزیکی رایج‌ترند. در RTLِ ثابت درست کار می‌کنند ولی قراردادِ واحدی نیست.
 - `ActivityRankList.jsx` و `plate-input.jsx` رنگِ پالت دارند (فهرستِ بالا).
-- `MATERIAL_THEMES` در `themeClasses.js` export شده ولی طبقِ knip بی‌استفاده است.
 - منطقِ تم دو نسخه است (`index.html` و `themeClasses.js`).

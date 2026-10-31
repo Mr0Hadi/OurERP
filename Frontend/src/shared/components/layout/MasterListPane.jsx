@@ -12,6 +12,7 @@ import { Input } from "@/shared/components/ui/input";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { cn } from "@/shared/lib/utils";
 import { initialsOf } from "@/shared/lib/initialsOf";
+import RefreshButton from "@/shared/components/table/RefreshButton";
 
 /**
  * ستونِ فهرستِ صفحه‌های فهرست/جزئیات (دسترسی کارمندان، خودروها): جست‌وجو،
@@ -22,10 +23,12 @@ import { initialsOf } from "@/shared/lib/initialsOf";
  *                `menu` (`[{ label, icon, onSelect, destructive? }]`) منوی سه‌نقطه.
  * @param header  اختیاری؛ کنارِ ورودیِ جست‌وجو (مثلاً دکمه‌ی افزودن).
  * @param pinned  اختیاری؛ ردیف‌هایی بالای فهرست که با جست‌وجو فیلتر نمی‌شوند.
+ * @param refresh اختیاری؛ کوئریِ فهرست — دکمه‌ی «تازه‌سازی» کنارِ جست‌وجو.
  */
 export default function MasterListPane({
   header = null,
   pinned = [],
+  refresh,
   search,
   onSearchChange,
   searchPlaceholder,
@@ -116,6 +119,7 @@ export default function MasterListPane({
               className="h-9 pr-8"
             />
           </div>
+          {refresh && <RefreshButton query={refresh} />}
           {header}
         </div>
         {filters}

@@ -27,6 +27,15 @@ namespace Application.Features.SaleInstallment.Mappings
             var graceDays = await SystemSettingValues.GetIntegerAsync(context, SystemSettingCatalog.InstallmentOverdueGraceDays, cancellationToken);
             var today = DateTime.Now;
 
+            // What SettleSaleInstallmentPlan would charge if paid now - the same calculation, nothing saved.
+            var unpaid = plan.Installments.Where(InstallmentRules.IsUnpaid).ToList();
+            SettlementQuote? quote = null;
+            if (plan.Status == Domain.Enums.SaleInstallmentPlanStatusEnum.ACTIVE && plan.IsActive && unpaid.Count > 0)
+            {
+                var discountPercentage = await SystemSettingValues.GetIntegerAsync(context, SystemSettingCatalog.InstallmentEarlySettlementDiscountPercentage, cancellationToken);
+                quote = InstallmentRules.QuoteSettlement(plan, unpaid, today, graceDays, discountPercentage);
+            }
+
             var paymentDetails = await context.PaymentDetails.AsNoTracking()
                 .Where(x => x.SaleId == plan.SaleId)
                 .OrderBy(x => x.PaidAt)
@@ -89,6 +98,8 @@ namespace Application.Features.SaleInstallment.Mappings
                     ? plan.Installments.Where(InstallmentRules.IsUnpaid).Aggregate(0UL, (sum, i) => sum + InstallmentRules.PenaltyDue(plan, i, today, graceDays))
                     : 0UL,
                 EarlySettlementDiscountAmount = plan.EarlySettlementDiscountAmount,
+                EarlySettlementDiscountPreview = quote?.TotalDiscount,
+                SettlementAmountToday = quote?.Amount,
                 ReturnCreditAmount = plan.ReturnCreditAmount,
                 LastPaymentDate = plan.LastPaymentDate,
                 NextDueDate = plan.NextDueDate,

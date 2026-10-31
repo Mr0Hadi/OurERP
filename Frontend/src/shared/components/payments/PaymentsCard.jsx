@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Plus, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -6,11 +7,13 @@ import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import PaymentForm from "./PaymentForm";
 import PaymentRow from "./PaymentRow";
-import { isNormalPayment } from "@/shared/domain/payments/paymentRows";
+import { isChequeSettled, isNormalPayment } from "@/shared/domain/payments/paymentRows";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
+import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
+import { ROUTES, routeWithId } from "@/shared/constants/routes";
+import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatNumber } from "@/shared/lib/numberFormat";
-import { toneText } from "@/shared/lib/tone";
-import { cn } from "@/shared/lib/utils";
+import StatGrid from "@/shared/components/data/StatGrid";
 
 /**
  * پرداخت‌های یک سندِ خرید/فروش — یک کارت برای فاکتورِ تازه، پیش‌فاکتوری که
@@ -31,6 +34,9 @@ import { cn } from "@/shared/lib/utils";
  * @param allowRefund `false` برای سندِ تازه
  * @param refundOnly  سندِ لغوشده: فقط پولِ برگشتی
  * @param emptyText   متنِ «هنوز پرداختی نیست» (پیش‌فرض: مانده نسیه می‌ماند)
+ * @param allocations `paymentAllocations`ِ سند — بخش‌هایی از دریافت/پرداخت‌های علی‌الحساب که به این فاکتور
+ *                    زده شده‌اند. سرور آن‌ها را در `paidAmount` حساب می‌کند؛ اینجا هم جزوِ «پرداخت‌شده»اند و
+ *                    فقط نمایش داده می‌شوند (برداشتن از صفحه‌ی همان علی‌الحساب).
  * @param posPayment  دریافت با کارتخوان روی ردیفِ «انتقال بانکی»؛ بدونِ آن پنلی نیست. برخلافِ بقیه‌ی
  *                    دریافت‌ها همان لحظه روی سرور ثبت می‌شود، نه در پیش‌نویس (کارت‌کشیدن برگشت‌ناپذیر است):
  *   - `record(result, { terminal, amount, reference, row, rows })` ثبتِ پرداخت؛ `row` تکه‌ی
@@ -54,12 +60,15 @@ export default function PaymentsCard({
   posPayment,
   notice,
   emptyText = "پرداختی ثبت نشده؛ مانده به‌صورت نسیه می‌ماند.",
+  allocations = [],
 }) {
   // { mode: "pay" | "refund" | "edit", row? }
   const [form, setForm] = useState(null);
 
   const due = Number(payable ?? total) || 0;
-  const paid = draft.netPaid;
+  const liveAllocations = allocations.filter((allocation) => !allocation.voidedAt);
+  const allocated = liveAllocations.reduce((sum, allocation) => sum + (Number(allocation.amount) || 0), 0);
+  const paid = draft.netPaid + allocated;
   const remaining = due - paid;
   const refundDirection =
     side.direction === PaymentDirectionEnum.IN ? PaymentDirectionEnum.OUT : PaymentDirectionEnum.IN;
@@ -105,16 +114,19 @@ export default function PaymentsCard({
         </>
       }
     >
-      <dl className="grid grid-cols-3 divide-x divide-x-reverse divide-border rounded-lg border border-border text-center">
-        <Stat label={payable != null && Number(payable) !== Number(total) ? "قابل پرداخت" : "مبلغ فاکتور"} value={formatNumber(due)} />
-        <Stat label="پرداخت‌شده" value={formatNumber(paid)} />
-        <Stat
-          label={remaining < 0 ? "اضافه‌پرداخت" : "مانده"}
-          // سندِ بی‌مبلغ (هنوز کالایی نیست) «تسویه» نیست.
-          value={due === 0 && paid === 0 ? "—" : remaining === 0 ? "تسویه" : formatNumber(Math.abs(remaining))}
-          className={toneText(remaining > 0 ? "warning" : remaining < 0 ? "info" : "success")}
-        />
-      </dl>
+      <StatGrid
+        className="grid-cols-3 text-center"
+        items={[
+          { label: payable != null && Number(payable) !== Number(total) ? "قابل پرداخت" : "مبلغ فاکتور", value: due },
+          { label: "پرداخت‌شده", value: paid },
+          {
+            label: remaining < 0 ? "اضافه‌پرداخت" : "مانده",
+            // سندِ بی‌مبلغ (هنوز کالایی نیست) «تسویه» نیست.
+            value: due === 0 && paid === 0 ? "—" : remaining === 0 ? "تسویه" : Math.abs(remaining),
+            tone: remaining > 0 ? "warning" : remaining < 0 ? "info" : "success",
+          },
+        ]}
+      />
 
       {form && (
         <PaymentForm
@@ -123,11 +135,42 @@ export default function PaymentsCard({
           title={formTitle}
           row={form.row}
           remaining={remaining}
-          paid={paid}
+          // پولِ برگشتی فقط از پرداخت‌های همین سند؛ تخصیص از صفحه‌ی علی‌الحساب برداشته می‌شود.
+          paid={draft.netPaid}
           posPayment={posPayment}
           onCancel={() => setForm(null)}
           onSubmit={(moneyRows) => submit(form, moneyRows)}
         />
+      )}
+
+      {liveAllocations.length > 0 && (
+        <ul className="divide-y divide-border rounded-lg border border-dashed border-border">
+          {liveAllocations.map((allocation) => (
+            <li key={allocation.id} className="flex items-center gap-2 px-3 py-2.5 text-sm">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="flex flex-wrap items-center gap-1.5">
+                  <span className="font-semibold tabular-nums">{formatNumber(allocation.amount)}</span>
+                  <StatusBadge tone="special" size="sm">از علی‌الحساب</StatusBadge>
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {[
+                    PAYMENT_TYPE_LABELS[allocation.paymentType],
+                    allocation.paymentPaidAt && gregorianToPersian(allocation.paymentPaidAt),
+                    allocation.bankAccountTitle,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </div>
+              <Link
+                to={routeWithId(ROUTES.TREASURY_PARTY_PAYMENTS_DETAIL, allocation.paymentDetailId)}
+                className="shrink-0 text-xs text-primary hover:underline"
+              >
+                مشاهده
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
 
       {rows.length > 0 ? (
@@ -137,7 +180,7 @@ export default function PaymentsCard({
               key={row.id}
               row={row}
               isRefund={row.direction === refundDirection}
-              manageable={canManage && !row.voidedAt && isNormalPayment(row)}
+              manageable={canManage && !row.voidedAt && isNormalPayment(row) && !isChequeSettled(row)}
               onEdit={() => setForm({ mode: "edit", row })}
               onVoid={() => draft.void(row.id)}
               onUndo={() => draft.undo(row.id)}
@@ -145,7 +188,8 @@ export default function PaymentsCard({
           ))}
         </ul>
       ) : (
-        !form && (
+        !form &&
+        liveAllocations.length === 0 && (
           <p className="py-2 text-center text-xs text-muted-foreground">
             {refundOnly ? "پرداختی ثبت نشده است." : emptyText}
           </p>
@@ -170,14 +214,3 @@ export default function PaymentsCard({
   );
 }
 
-function Stat({ label, value, className }) {
-  return (
-    <div className="min-w-0 px-1.5 py-2 sm:px-2">
-      <dt className="text-[11px] text-muted-foreground">{label}</dt>
-      {/* مبلغِ میلیاردی در ستونِ یک‌سومِ موبایل جا نمی‌شد و از کادر بیرون می‌زد. */}
-      <dd className={cn("text-[13px] font-semibold tabular-nums [overflow-wrap:anywhere] sm:text-sm", className)}>
-        {value}
-      </dd>
-    </div>
-  );
-}

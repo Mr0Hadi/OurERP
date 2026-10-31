@@ -6,7 +6,6 @@ import { objectKeyOf, toDisplayableUrl } from "@/shared/services/files/objectKey
 import { validateImageFile } from "@/shared/services/files/fileConstraints";
 import { useImageUrlQuery, useSeedImageUrl } from "@/shared/services/files/queries";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-import { UPLOADING_REASON, useUpdateGuard } from "@/shared/services/updateSafety";
 
 /**
  * تکْ‌تصویرِ یک موجودیت (محصول، مشتری، تامین‌کننده، …) — همان گردش‌کارِ
@@ -204,7 +203,6 @@ export function useImageUpload({
   }, [baselineKey, deleteOrphans]);
 
   const isUploading = status === "uploading";
-  useUpdateGuard({ busy: isUploading, reason: UPLOADING_REASON });
 
   /**
    * موجودیت ممکن است فقط `imageKey` بدهد، یا (در داده‌ی قدیمی) کلیدِ خام

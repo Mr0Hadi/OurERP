@@ -59,6 +59,13 @@ namespace Application.Common.Contracts.Context
         DbSet<BankAccountTransfer> BankAccountTransfers { get; }
         DbSet<PaymentAllocation> PaymentAllocations { get; }
         DbSet<SaleInstallmentReturnCredit> SaleInstallmentReturnCredits { get; }
+        DbSet<Warehouse> Warehouses { get; }
+        DbSet<StockTransfer> StockTransfers { get; }
+        DbSet<StockTransferUnit> StockTransferUnits { get; }
+        DbSet<Stocktake> Stocktakes { get; }
+        DbSet<StocktakeLine> StocktakeLines { get; }
+        DbSet<StocktakeScan> StocktakeScans { get; }
+        DbSet<StocktakeSnapshotUnit> StocktakeSnapshotUnits { get; }
 
         DbSet<T> Set<T>() where T : class;
 
@@ -72,5 +79,12 @@ namespace Application.Common.Contracts.Context
         Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
 
         Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Increments the named counter and returns the new value, in one locked statement (DocumentNumberCounter). Runs in
+        /// the caller's transaction when there is one, so a rolled-back request gives its number back; otherwise the number
+        /// is spent even if the save after it fails. Use through Application.Common.Documents.DocumentNumbers.
+        /// </summary>
+        Task<int> NextDocumentNumberAsync(string key, CancellationToken cancellationToken);
     }
 }

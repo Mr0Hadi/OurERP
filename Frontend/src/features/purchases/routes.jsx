@@ -4,6 +4,7 @@ import { ROUTES } from "@/shared/constants/routes";
 const PurchasesPage = lazy(() => import("./orders/pages/PurchasesPage"));
 const PurchasesNewPage = lazy(() => import("./orders/pages/PurchasesNewPage"));
 const PurchaseDetailPage = lazy(() => import("./orders/pages/PurchaseDetailPage"));
+const ReorderPage = lazy(() => import("./reorder/pages/ReorderPage"));
 const PurchaseReturnNewPage = lazy(() => import("./returns/pages/PurchaseReturnNewPage"));
 const PurchaseReturnsListPage = lazy(() => import("./returns/pages/PurchaseReturnsListPage"));
 const PurchaseReturnDetailPage = lazy(() => import("./returns/pages/PurchaseReturnDetailPage"));
@@ -18,6 +19,11 @@ export const purchasesRoutes = [
     path: ROUTES.PURCHASES_NEW,
     handle: { permission: "PurchaseCreate" },
     element: <PurchasesNewPage />,
+  },
+  {
+    path: ROUTES.PURCHASES_REORDER,
+    handle: { permission: "ReorderSuggestionView" },
+    element: <ReorderPage />,
   },
   {
     path: ROUTES.PURCHASES_DETAIL,

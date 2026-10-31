@@ -5,6 +5,7 @@ import GroupedBarChart from "@/shared/components/charts/GroupedBarChart";
 import DateRangeToolbar from "@/shared/components/filters/DateRangeToolbar";
 import FetchingOverlay from "@/shared/components/feedback/FetchingOverlay";
 import QueryErrorState from "@/shared/components/feedback/QueryErrorState";
+import RefreshButton from "@/shared/components/table/RefreshButton";
 import TableLoadingSkeleton from "@/shared/components/table/TableLoadingSkeleton";
 import { TWELVE_MONTH_RANGE_PRESETS } from "@/shared/lib/dateRanges";
 import AccountingPageLayout from "../components/AccountingPageLayout";
@@ -60,6 +61,7 @@ export default function TaxReportPage() {
       title="مالیات ارزش افزوده"
       icon={Percent}
       description="مالیاتِ فروش در برابرِ مالیاتِ خرید، به تفکیکِ دوره، از فاکتورهای صادرشده با تاریخِ فاکتور."
+      actions={<RefreshButton query={query} />}
     >
       <DateRangeToolbar
         fromDate={fromDate}

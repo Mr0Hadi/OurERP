@@ -13,6 +13,7 @@ import {
   invoiceLineAmounts,
   invoiceTotals,
 } from "@/shared/domain/invoice/lineMath";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 /**
  * انتخاب کالا + فهرست اقلام انتخاب‌شده — یک‌جا و مشترک.
@@ -112,12 +113,19 @@ export default function ProductPicker({
       return true;
     }
     if (pendingRef.current.has(product.id)) {
-      pendingRef.current.get(product.id).quantity += 1;
+      const pending = pendingRef.current.get(product.id);
+      // اسکنرِ پشتِ‌سرِهم پیش از رسیدنِ جزئیات: دانه‌ی دوم هم باید بماند، نه فقط تعداد.
+      if (unitCode && pending.unitCodes.includes(unitCode)) {
+        toast.error("این دانه قبلاً اسکن شده است");
+        return false;
+      }
+      pending.quantity += 1;
+      if (unitCode) pending.unitCodes.push(unitCode);
       return true;
     }
 
     // قلمِ تازه: قیمت، واحد و مالیات فقط در جزئیاتِ کالا هست، نه در ردیفِ لیست.
-    const pending = { quantity: 1 };
+    const pending = { quantity: 1, unitCodes: unitCode ? [unitCode] : [] };
     pendingRef.current.set(product.id, pending);
     setPending(product.id, true);
     loadProductDetail(product.id)
@@ -134,7 +142,7 @@ export default function ProductPicker({
           lineFromProduct(source, {
             unitPrice: priceOf(source),
             quantity: pending.quantity,
-            productUnitBarcodes: unitCode ? [unitCode] : undefined,
+            productUnitBarcodes: pending.unitCodes.length > 0 ? pending.unitCodes : undefined,
           }),
         ]);
       });
@@ -264,10 +272,7 @@ export default function ProductPicker({
       {searchPanel}
       {selectedItems}
       {items.length === 0 && (
-        <div className="flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-border py-8 text-center">
-          <PackageOpen className="size-6 text-muted-foreground/60" aria-hidden />
-          <p className="text-sm text-muted-foreground">{emptyText}</p>
-        </div>
+        <EmptyState size="sm" icon={PackageOpen} title={emptyText} />
       )}
     </div>
   );

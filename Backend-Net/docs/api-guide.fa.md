@@ -36,6 +36,9 @@
 22. [تنظیمات سامانه (Setting)](#22-تنظیمات-سامانه-setting)
 23. [صندوق و بانک، دریافت و پرداخت علی‌الحساب (BankAccount، PartyAccount)](#23-صندوق-و-بانک-دریافت-و-پرداخت-علیالحساب-bankaccount-partyaccount)
 24. [چک (Check)](#24-چک-check)
+25. [انبارها و حواله‌ی بین انبار (Warehouse)](#25-انبارها-و-حواله‌ی-بین-انبار-warehouse)
+26. [انبارگردانی (Stocktake)](#26-انبارگردانی-stocktake)
+27. [نقطه‌ی سفارش و پیشنهاد خرید (Reorder)](#27-نقطه‌ی-سفارش-و-پیشنهاد-خرید-reorder)
 
 ---
 
@@ -258,7 +261,7 @@ Authorization: Bearer {accessToken}
 | تلاش‌های ورود زیاد از یک IP (بیش از ۶۰ در دقیقه) | **۴۲۹** | پیام فارسی + هدر `Retry-After` (ثانیه)؛ `data: { "remainingSeconds": 30 }` |
 | کاربر غیرفعال | ۴۰۰ | `"کاربر مورد نظر فعال نمی باشد"` |
 
-عددهای قفل و سقف هر IP در `appsettings.json` → `LoginSecurity` قابل تنظیم‌اند.
+از ۲۰۲۶-۱۰-۲۰ تعداد تلاش و مدت قفل در صفحه‌ی تنظیمات سامانه‌اند (`Security.MaxFailedLoginAttempts`، `Security.LockoutMinutes`، بخش ۲۲)؛ فقط سقف درخواست هر IP در `appsettings.json` → `LoginSecurity:RateLimitPerMinutePerIp` مانده است.
 
 ### `POST api/Account/RefreshToken`
 
@@ -661,6 +664,15 @@ Authorization: Bearer {accessToken}
 | | `CreateProduct` / `UpdateProduct` / `DeleteProduct` | `ProductCreate` / `ProductUpdate` / `ProductDelete` |
 | | `GetProductUnitList`، `GetProductUnitHistory`، `GetProductUnitSummary`، `MarkProductUnitsPrinted` | `ProductUnitView` |
 | | `ApplyProductUnitAction`، `SetProductUnitLocation` | `ProductUnitManage` |
+| انبار | `Warehouse/GetWarehouseList` | بدون دسترسی خاص (هر کاربر واردشده؛ برای انتخابگرها) |
+| | `Warehouse/GetProductWarehouseStock` | `ProductView` یا `ProductUnitView` یا `WarehouseManage` |
+| | `Create/Update/DeleteWarehouse` | `WarehouseManage` |
+| | `GetStockTransferList/Detail` / `Create,Receive,CancelStockTransfer` | `StockTransferView` یا `StockTransferManage` / `StockTransferManage` |
+| انبارگردانی | `Stocktake/GetStocktakeList/Detail` | `StocktakeView` یا `StocktakeCount` یا `StocktakeApprove` |
+| | `CreateStocktake`، `ScanStocktakeUnits`، `RemoveStocktakeScan`، `CountStocktakeLine`، `SubmitStocktake` | `StocktakeCount` |
+| | `ReopenStocktake`، `ApproveStocktake`، `CancelStocktake` | `StocktakeApprove` |
+| پیشنهاد خرید | `Reorder/GetReorderSuggestionList` / `CreatePurchaseDraftsFromReorder` | `ReorderSuggestionView` / `PurchaseCreate` |
+| تنظیمات | `Setting/GetFeatureFlags` | بدون دسترسی خاص (هر کاربر واردشده) |
 | | `EnsureProductCodes`، `EnsureInventoryCostLedger` | `InventoryMaintenance` |
 | دسته‌بندی | `GetProductCategoryList/Detail` / بقیه | `ProductCategoryView` / `ProductCategoryManage` |
 | مشتری، تامین‌کننده | مثل کالا، چهار دسترسی View/Create/Update/Delete | `CustomerX` / `SupplierX` |
@@ -674,7 +686,8 @@ Authorization: Bearer {accessToken}
 | فروش | `GetSaleList/Detail` | `SaleView` **یا** `SaleWarehouseCheck` (انبار پیش‌فاکتورِ صفش را می‌بیند) |
 | | `CreateSale` / `UpdateSale` / `DeleteSale` | `SaleCreate` / `SaleUpdate` / `SaleDelete` |
 | | `ShipSale`، `Shipment/DispatchShipment` | `SaleShip` |
-| | `CompleteInPersonSale` | `SaleInPerson` |
+| | `CompleteInPersonSale`، `CreateInPersonProforma` | `SaleInPerson` |
+| | `ReleaseSaleReservation` | `SaleUpdate` **یا** `SaleWarehouseCheck` |
 | | `ApproveSaleProforma` | `SaleUpdate` |
 | | `CheckSaleWarehouse` | `SaleWarehouseCheck` |
 | | `GetSaleWarehouseIssueList` / `ResolveSaleWarehouseIssue` | `AccountingView` یا `SaleWarehouseIssueResolve` / `SaleWarehouseIssueResolve` |
@@ -1054,6 +1067,7 @@ append-only است: ردیفی ویرایش یا حذف نمی‌شود، و ه�
 اگر `stock` بزرگ‌تر از صفر فرستاده شود، همان تعداد دانه (`ProductUnit`) به‌صورت خودکار برای محصول ساخته می‌شود.
 
 - `requiresUnitTracking` (bool، پیش‌فرض `false`): برای این کالا اسکن تک‌تک دانه‌ها لازم است. کالای فله `false` می‌ماند. اجبار روی **هر خروج کالا** اعمال می‌شود: `ShipSale` (ارسال و مازاد)، `GOODS_OUT` مرجوعی فروش و `GOODS_OUT` مرجوعی خرید — بدون بارکد ۴۰۰. ورود کالا (دریافت، جایگزین) دانه‌ی تازه می‌سازد و اسکن ندارد؛ آزادسازی/اسقاط قرنطینه جابه‌جایی داخلی است و اجباری نیست.
+- **نقطه‌ی سفارش (از ۲۰۲۶-۱۰-۲۰، اختیاری، روی Create و Update):** `lowStockThreshold` همان نقطه‌ی سفارش است؛ `targetStock` (سقف موجودی که سفارش تا آن پر می‌کند، `≥ lowStockThreshold`)، `leadTimeDays` (۰–۳۶۵)، `preferredSupplierId` (تامین‌کننده‌ی فعال)، `minOrderQuantity` (`> 0`، سفارش مضربی از آن). در جزئیات کالا به‌علاوه‌ی `preferredSupplierName`. بخش ۲۷.
 - **ساخت سریع در انبار** (کالای خارج از سند که در کاتالوگ نیست): همین endpoint با `"isIncomplete": true`. در این حالت فقط `name`، `unit` و `productCategoryId` الزامی‌اند؛ `brand` می‌تواند خالی و قیمت‌ها صفر باشند، و `stock` **باید صفر** باشد (کالا از راه `ReceivePurchase` → `unlistedItems` وارد می‌شود). کد و بارکد مثل هر کالای دیگری ساخته می‌شوند. کالا با `isIncomplete: true` می‌ماند تا واحد خرید کاملش کند.
 
 ### `PUT api/Product/UpdateProduct`
@@ -1549,6 +1563,7 @@ data: سند کامل. دسترسی: `PurchaseUpdate`.
 }
 ```
 - `purchaseItemId` باید از `items[].id` در `GetPurchaseDetail` یا `GetPurchaseReceivingInfo` گرفته شود.
+- `warehouseId` (اختیاری، از ۲۰۲۶-۱۰-۲۰): انباری که کالا در آن می‌نشیند. فقط وقتی تنظیم `Warehouse.MultiWarehouseEnabled` روشن است خوانده می‌شود؛ خاموش یا نفرستاده ⇒ انبار پیش‌فرض. انبار ناموجود/غیرفعال (وقتی روشن است) ۴۰۰. بخش ۲۵.
 - `driverPhoneNumber` باید فرمت موبایل ایران را داشته باشد (همان قاعده‌ی `IsMobileNumber`).
 - `driverFullName`/`driverPhoneNumber`/`vehiclePlate`/`receivingNote` همگی اختیاری‌اند و هرکدام مستقل از بقیه ذخیره می‌شوند (یعنی می‌توانید فقط یکی را بفرستید) — هر نوبت `ReceivePurchase` که این فیلدها را داشته باشد یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`receivingNotes[]` در `GetPurchaseDetail`، بالا)، نه بازنویسی نوبت قبلی.
 - `items[].arrivedQuantity`: کل تعدادی که از این قلم رسید (سالم و خراب). **بیشتر از باقیمانده‌ی قلم هم مجاز است** — رسیدنِ ۲۵ عدد در برابر ۲۰ سفارش خطا نیست، واقعیت است و ثبت می‌شود.
@@ -1916,6 +1931,11 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - `moneyIn.paidAt`/`moneyOut.paidAt` (اختیاری): زمانی که پول واقعاً جابه‌جا شد.
   - **فرستاده شود:** اثر مالی همان لحظه `APPLIED` است (`appliedAt = paidAt`) و ردیف دفترش با همان تاریخ نوشته می‌شود.
   - **فرستاده نشود:** اثر یک **وعده** است — `PENDING` می‌ماند، هیچ ردیفی در دفتر نمی‌نویسد، مرجوعی را `IN_PROGRESS` نگه می‌دارد و چرخه‌ی عمر را قفل نمی‌کند. وقتی پول رسید با `ExecuteMoneyEffect` (پایین) اجرا می‌شود.
+- `moneyIn.bankAccountId`/`moneyOut.bankAccountId` و `parts[].bankAccountId` (اختیاری، از ۲۰۲۶-۱۰-۲۴، هر دو سمتِ مرجوعی): صندوق/حسابی که پول از آن
+  گذشت. **فقط برای `CASH` (۰) و `TRANSFER` (۳)**؛ روی `ON_ACCOUNT`، `CHECK` و خودِ اثرِ `MIXED` ۴۰۰ (در `MIXED` روی هر بخش). حسابِ ناموجود/غیرفعال ۴۰۰.
+  پولِ `APPLIED` با `appliedAt` در مانده و گردشِ همان حساب می‌آید (ردیفِ `RETURN_MONEY` = ۴ در `GetBankAccountStatement`، با `purchaseReturnId`/
+  `saleReturnId`، `returnNumber`، `returnEffectId`). با تنظیمِ `Payment.RequireBankAccount` روشن، پولِ نقد/انتقالیِ `APPLIED` بی حساب ۴۰۰؛ وعده‌ی `PENDING`
+  هنگامِ `ExecuteMoneyEffect` سنجیده می‌شود. چکِ مرجوعی چرخه‌ی وصول ندارد و در مانده‌ی هیچ حسابی نیست.
 
 - `goodsRelease`/`goodsScrap` (**فقط مرجوعی خرید**): فهرستی از `{ "quantity": 2, "productId": null }` برای دانه‌های **قرنطینه** — آزادسازی به موجودی قابل فروش، یا اسقاط. جابه‌جایی داخلی است و طرف مقابل ندارد، پس `unitPrice` ندارد. **بها هم از کلاینت خوانده نمی‌شود** (از ۲۰۲۶-۰۹-۲۱): هر دانه با همان ارزشی خارج می‌شود که با آن وارد قرنطینه شده (`ProductUnit.QuarantineCost`) — خرابِ سهم سفارش با قیمت خالص قلم (بعد از تخفیف)، مازاد و کالای خارج از سفارش با صفر، جایگزینِ آسیب‌دیده با بهای ورودش. فیلد `unitCost` اگر فرستاده شود نادیده گرفته می‌شود. `goodsScrap` می‌تواند `source` بگیرد: `9` (پیش‌فرض، قرنطینه) یا `1` (کالای معیوبی که روی قفسه پیدا شده). `goodsRelease` همیشه از قرنطینه است. **هر اثری که از قرنطینه برمی‌دارد موقع ثبت تصمیم چک و رزرو می‌شود** (مثل `goodsOut` با `source = 9`)؛ کمبود ۴۰۰ است. روی مرجوعی فروش ۴۰۰.
 - **رزرو قرنطینه (از ۲۰۲۶-۰۹-۲۷)، یک تعریف برای همه‌جا:** دانه‌های آزاد یک گروهِ قرنطینه = دانه‌های آن گروه منهای رزروها. رزرو دو جور است: (۱) ادعای EXCESS/UNLISTED از لحظه‌ی ساخته شدن مقدارِ باقی‌مانده‌اش را رزرو می‌کند و اثرهای زیرِ خودش از همان رزرو برمی‌دارند؛ (۲) هر اثرِ معلقِ دیگری که از قرنطینه برمی‌دارد (`goodsOut`/`goodsScrap` با منبع `9`، و هر `goodsRelease`) به‌اندازه‌ی اجرانشده‌اش رزرو می‌کند. اثرهای عودتی که پیش از این تاریخ بی‌منبع ثبت شده‌اند محتاطانه رزرو قرنطینه حساب می‌شوند. گروهِ ادعای ON_ORDER روی یک قلم = دانه‌های قرنطینه‌ی آن قلم با علت `ON_ORDER`، `CUSTOMER_RETURN` یا `WAREHOUSE_HOLD` (همه کالای پرداخت‌شده‌ی همان قلم). همین عدد سقفِ ادعای مازاد/خارج از سند، `AcceptPurchaseExcess`، و «آزاد»های `GetPurchaseReceivingInfo` است.
@@ -2034,6 +2054,8 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
 - `effectId`: شناسه‌ی اثر مالی (`effects[].id` در جزئیات مرجوعی).
 - `paidAt` اختیاری است؛ پیش‌فرض همین لحظه.
 - `reference` اختیاری است؛ اگر فرستاده شود جایگزین مرجع ثبت‌شده روی اثر می‌شود.
+- `bankAccountId` اختیاری (از ۲۰۲۶-۱۰-۲۴، مرجوعی فروش هم): صندوق/حسابی که پول واقعاً از آن گذشت، جایگزینِ حسابِ تصمیم؛ همان قاعده‌های
+  `moneyIn.bankAccountId` (بالا). اثرِ `MIXED` حساب‌های بخش‌هایش را نگه می‌دارد.
 
 **رفتار:** اثر `APPLIED` می‌شود (`appliedAt = paidAt`)، ردیف دفتر بهای تمام‌شده با تاریخ `paidAt` نوشته می‌شود (همان رویدادهای بخش «مدل اثرها»)، و اگر این آخرین اثر معلق تصمیم بود، مقدار تصمیم روی قلم خرید تسویه می‌شود و وضعیت مرجوعی دوباره محاسبه می‌شود (معمولاً `SETTLED`). از این پس مرجوعی اثر مالیِ اجراشده دارد و تا حذف آن تصمیم قابل لغو/رد/حذف نیست.
 
@@ -2297,7 +2319,50 @@ PurchaseReturn (یک درخواست مرجوعی، صراحتاً و جدا از
     `reservationExpiresAt` (پیش‌فرض ۱۰ دقیقه؛ بالای همین بخش). ردیف‌هایی که از قبل رزرو بودند هم با همین بررسی مهلت تازه می‌گیرند.
   - هر ردیفی کم ⇒ **کسری**: هیچ دانه‌ای رزرو نمی‌شود، مرحله ⇒ `DRAFT` با رویداد `WAREHOUSE_SHORTAGE` که `note` آن کسری هر ردیف را می‌گوید
     (««نام کالا»: ۱ از ۲»). فروش با مشتری اصلاح می‌شود و دوباره چرخه را طی می‌کند. گزارش‌های `issues` در هر دو حالت ثبت می‌مانند.
+- **`adjustments` (اختیاری، از ۲۰۲۶-۱۰-۲۴):** انبار تعدادِ ردیف را کم می‌کند و باقی را **همان‌جا تأیید** می‌کند، به‌جای برگرداندنِ پیش‌فاکتور:
+  ```json
+  { "adjustments": [ { "saleItemId": 501, "quantity": 1 } ], "note": "یک عدد سالم بیشتر نبود" }
+  ```
+  - `quantity` فقط کمتر از تعدادِ فعلی (`0` = حذفِ ردیف؛ دست‌کم یک ردیف بماند)؛ قیمت/تخفیف/مالیاتِ ردیف دست نمی‌خورد. **`note` الزامی.**
+  - در همان تراکنش: رزروِ قبلیِ ردیف‌های تغییرکرده آزاد، تعدادها و جمع‌ها دوباره حساب، `revision` یکی بالا؛ بعد `lines` با تعدادهای تازه
+    سنجیده می‌شود. ردیفِ حذف‌شده در `lines` نمی‌آید.
+  - با `adjustments` **کسری ثبت نمی‌شود**: هر ردیفِ باقی‌مانده باید کامل اسکن شود (وگرنه ۴۰۰ و هیچ چیز عوض نمی‌شود).
+  - یک رویداد `WAREHOUSE_ADJUSTED` (۶) با نامِ انباردار و `note` = «تغییر انبار - «نام کالا»: ۳ به ۱. دلیل»؛ مرحله مستقیم `WAREHOUSE_CHECKED`.
+  - `issues` پیش از اصلاح سنجیده می‌شوند، پس دانه‌ی معیوبِ همان ردیفی که کم یا حذف می‌شود گزارش‌شدنی است.
+  - پیش‌فاکتورِ دارای قرارداد اقساط: اگر جمع عوض شود ۴۰۰ (مثلِ `UpdateSale`).
+  - دسترسی همان `SaleWarehouseCheck`؛ `SaleUpdate` لازم نیست.
 - **data خروجی:** جزئیات کامل فروش.
+
+### `POST api/Sale/ReleaseSaleReservation` (از ۲۰۲۶-۱۰-۲۴)
+
+آزادکردنِ دستیِ رزرو پیش از پایانِ مهلت — همان کارِ سرویسِ انقضا، ولی دستی. دسترسی: `SaleUpdate` **یا** `SaleWarehouseCheck`.
+
+```json
+{ "saleId": 200, "revision": 2, "note": null }
+```
+- فقط پیش‌فاکتور، با `revision` جاری؛ وقتی هیچ دانه‌ای رزرو نیست ۴۰۰.
+- همه‌ی دانه‌های رزروِ همه‌ی ردیف‌ها به `IN_STOCK` و `stock` برمی‌گردند؛ ردیف‌ها و شناسه‌هایشان **عوض نمی‌شوند**؛ `reservationExpiresAt` خالی.
+- `WAREHOUSE_CHECKED` ⇒ `CUSTOMER_APPROVED` (تأیید مشتری سر جایش، انبار باید دوباره بررسی کند)؛ رویداد `RESERVATION_RELEASED` (۷) با نامِ کاربر و
+  `note` (پیش‌فرض: «N دانه به موجودی آزاد برگشت.»).
+- **data خروجی:** جزئیات کامل فروش.
+
+### `POST api/Sale/CreateInPersonProforma` (از ۲۰۲۶-۱۰-۲۴)
+
+فروشِ حضوری، گامِ اول، **اتمیک**: `CreateSale` ⇒ `ApproveSaleProforma` ⇒ `CheckSaleWarehouse` در یک تراکنش، با دانه‌هایی که جلوی مشتری اسکن
+شده؛ فروش `isInPerson: true` می‌گیرد. دسترسی: `SaleInPerson`. بعد پرداخت با `CompleteInPersonSale` (همان‌جا یا در صندوق).
+
+```json
+{
+  "customerId": 12, "paymentType": 0, "invoiceDate": null, "paymentDate": null, "description": null,
+  "items": [ { "productId": 7, "quantity": 2, "unitPrice": 4500000, "discount": 0,
+               "productUnitBarcodes": ["14050608-10-1", "14050608-10-2"] } ],
+  "attachments": []
+}
+```
+- هر ردیف دقیقاً به اندازه‌ی `quantity` بارکد؛ کسری ممکن نیست (صفِ انباری نیست که برگردد) ⇒ ۴۰۰.
+- همه‌ی قاعده‌های سه دستورِ داخلی برقرار است (موجودیِ آزاد، دانه‌ی `IN_STOCK` همان کالا، ...). خطا در هر گام ⇒ هیچ چیز ثبت نمی‌شود.
+- **data خروجی:** جزئیات کامل فروش (`proformaStage = 2`، مهلتِ رزرو از همین لحظه).
+- زنجیره‌ی سه‌دستوریِ قبلی هم کار می‌کند، فقط پرچمِ `isInPerson` نمی‌گیرد.
 
 ### `GET api/Sale/GetSaleWarehouseIssueList` (از ۲۰۲۶-۱۰-۱۶)
 
@@ -2419,9 +2484,12 @@ data: سند کامل. دسترسی: `SaleUpdate`.
   "saleId": 200,
   "payments": [ { "type": 0, "amount": 25000000 } ],
   "installmentPlan": null,
-  "shippingNote": "تحویل حضوری به مشتری"
+  "shippingNote": "تحویل حضوری به مشتری",
+  "invoiceDate": null
 }
 ```
+- `invoiceDate` (اختیاری، از ۲۰۲۶-۱۰-۲۴): تاریخِ فاکتورِ رسمی — مثلِ `AddSalePayment` (پایین‌تر). برای اقساطی به `installmentPlan.invoiceDate` می‌رود
+  مگر خودش پر باشد. پس از همه‌ی پرداخت‌ها `paymentType` از روش‌های پرداخت نشانده می‌شود (یک روش ⇒ همان، چند روش ⇒ `MIXED`).
 - فقط پیش‌فاکتور در `WAREHOUSE_CHECKED`، وگرنه ۴۰۰.
 - **فروش غیر اقساطی:** جمع `payments[].amount` باید **دقیقاً** برابر `totalAmount` باشد (۴۰۰ در غیر این صورت). هر ردیف همان شکلِ بدنه‌ی
   `AddSalePayment` (کارت‌خوان هم).
@@ -2457,6 +2525,7 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 }
 ```
 - `saleItemId`: از `items[].id` در `GetSaleDetail`.
+- `warehouseId` (اختیاری، از ۲۰۲۶-۱۰-۲۰): انباری که کالا از آن برداشته می‌شود (فقط برای ردیف‌هایی که رزرو ندارند؛ دانه‌های رزروشده همان‌جا که هستند). فقط وقتی `Warehouse.MultiWarehouseEnabled` روشن است خوانده می‌شود؛ خاموش یا نفرستاده ⇒ از هر انباری. بخش ۲۵.
 - `driverPhoneNumber` باید فرمت موبایل ایران را داشته باشد (همان قاعده‌ی `IsMobileNumber`).
 - `driverFullName`/`driverPhoneNumber`/`vehiclePlate`/`shippingNote` همگی اختیاری‌اند، هرکدام مستقل ذخیره می‌شوند، و مثل `ReceivePurchase` هر نوبت یک ردیف تاریخچه‌ی تازه می‌سازد (`drivers[]`/`shippingNotes[]` در `GetSaleDetail`، بالا).
 - `shippedQuantity`: نباید از باقیمانده‌ی قابل‌ارسال آن قلم (`quantity - shippedQuantity` فعلی) یا از موجودی فعلی محصول بیشتر باشد.
@@ -2640,6 +2709,11 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 
 `lastPaymentDate`: آخرین `paidAt` بین سطرهای `PAID`؛ اگر هیچ قسطی پرداخت نشده باشد، تاریخ پیش‌پرداخت. `nextDueDate`: کمترین `dueDate` بین سطرهای پرداخت‌نشده؛ پس از تسویه `null`.
 
+**پیش‌نمایشِ تسویه (از ۲۰۲۶-۱۰-۲۴):** روی پلنِ جاریِ دارای قسطِ پرداخت‌نشده، `earlySettlementDiscountPreview` (تخفیفی که تسویه‌ی امروز می‌بخشد) و
+`settlementAmountToday` (مبلغِ همان پرداخت = `remainingAmount − earlySettlementDiscountPreview + penaltyDueAmount`). هر دو از **همان محاسبه‌ی**
+`SettleSaleInstallmentPlan` با `paidAt = اکنون` می‌آیند و چیزی ذخیره نمی‌شود؛ روی پلنِ تسویه‌شده/ابطال‌شده `null`. اگر تسویه با `paidAt` دیگری
+ثبت شود، عدد بر اساسِ همان تاریخ حساب می‌شود.
+
 ### `GET api/SaleInstallment/GetSaleInstallmentPlanList`
 
 **Query:** `page`, `take`, `customerId`, `saleId`, `status`, `fromNextDueDate`, `toNextDueDate`, `fromCreatedAt`, `toCreatedAt`.
@@ -2672,6 +2746,11 @@ data: سند کامل. دسترسی: `SaleUpdate`.
 - **پرداخت‌های پیش‌رو:** `status=0` و `fromDueDate=امروز` (و در صورت نیاز `toDueDate=امروز+۳۰ روز`)
 
 **Query:** `page`, `take`, `customerId`, `saleId`, `planId`, `status`, `fromDueDate`, `toDueDate`, `fromPaidAt`, `toPaidAt`. مرتب‌سازی پیش‌فرض بر اساس `dueDate`.
+از ۲۰۲۶-۱۰-۲۴: `statuses` (چندتایی، `?statuses=0&statuses=2`) و `unpaidOnly=true` (= `PENDING` یا `OVERDUE`). با `status` و `statuses` هر دو، هر دو شرط اعمال می‌شود.
+
+هر ردیف از ۲۰۲۶-۱۰-۲۴ این‌ها را هم دارد (همان عددهای `GetSaleInstallmentPlanDetail`): `latePenaltyPercentage` (نرخِ ماهانه‌ی پلن)،
+`penaltyAmount` (جریمه‌ی گرفته‌شده — فقط ردیفِ پرداخت‌شده)، و برای ردیفِ پرداخت‌نشده `daysLate`، `penaltyDue` (جریمه‌ی پرداختِ امروز، بخشودگی
+کم‌شده) و `penaltyWaivedAmount`.
 
 **data.saleInstallmentList[]:**
 ```json
@@ -3032,9 +3111,10 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 «برگه مرجوعی به تامین‌کننده» — برای **هر** مرجوعیِ خرید ساخته می‌شود (برخلافِ برگه‌ی طلبکاری، شرطِ اثرِ پولی ندارد؛ برگه همراهِ کالا می‌رود). همان قالبِ فاکتور:
 
-- سربرگ: شماره و تاریخِ مرجوعی، وضعیت، تامین‌کننده؛ شماره‌ی فاکتورِ خریدِ منشأ در توضیحات.
+- سربرگ: شماره و تاریخِ مرجوعی، وضعیت، تامین‌کننده؛ شماره‌ی فاکتورِ خریدِ منشأ در یادداشت‌ها.
 - ردیف‌ها: **یک ردیف برای هر ادعا** — کالا (با عنوانِ فارسیِ مشکل)، کد، تعداد، قیمتِ واحدِ ادعا، جمع.
-- توضیحات: خلاصه‌ی تصمیم‌ها، یک جمله برای هر نوعِ اثر (عودت، جایگزین، آزادسازی، اسقاط: «انجام‌شده از کل»؛ دریافت/پرداختِ وجه: انجام‌شده و در انتظار، با روش).
+- یادداشت‌ها: خلاصه‌ی تصمیم‌ها، یک خط برای هر نوعِ اثر (عودت، جایگزین، آزادسازی، اسقاط: «انجام‌شده از کل»؛ دریافت/پرداختِ وجه: انجام‌شده و در انتظار، با روش).
+  از ۲۰۲۶-۱۰-۲۴ «توضیحات» توضیحِ خودِ مرجوعی است (قبلاً خلاصه جای آن را می‌گرفت و توضیحِ مرجوعی چاپ نمی‌شد).
 - «پرداخت شده» = وجهی که تامین‌کننده برگردانده (`MONEY_IN` اعمال‌شده) و «مانده» = وجهی که هنوز منتظرش هستیم (`MONEY_IN` معلق). قالبِ Excel این دو خانه را ندارد و آن‌ها فقط در توضیحات می‌آیند.
 
 دسترسی `InvoicePrint` (مثلِ بقیه‌ی `Invoice/*`). مرجوعیِ ناموجود یا حذف‌شده ۴۰۴.
@@ -3042,6 +3122,48 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ### `GET api/Invoice/GetSaleReturnCreditNotePdf?saleReturnId=80`
 
 برگه‌ی اعتباری مرجوعی — **فقط اثرهای مالی از نوع `MONEY_OUT`** (پولی که به مشتری برگردانده شده، بخش ۱۲) را نشان می‌دهد؛ یک ردیف چاپی به ازای هر اثر، نه هر محصول. اگر مرجوعی هیچ اثر `MONEY_OUT` ثبت‌شده‌ای نداشته باشد (مثلاً فقط `GOODS_IN`/`GOODS_OUT` دارد)، این API خطای ۴۰۰ می‌دهد. یعنی دکمه‌ی «چاپ برگه اعتباری» را فقط وقتی نشان دهید که حداقل یک تصمیم شامل اثر `MONEY_OUT` روی مرجوعی ثبت شده باشد.
+
+### داده‌ی چاپی (JSON) همان سه سند — از ۲۰۲۶-۱۰-۲۴
+
+برای استودیوی چاپِ مرورگر. هر کدام **همان سازنده‌ای** را صدا می‌زند که PDFِ هم‌نامش رندر می‌کند (`InvoiceDocumentBuilder`)، پس داده و PDF هرگز با هم
+فرق نمی‌کنند. پاسخ در پوششِ معمولِ `ResponseDto` (`data`)، دسترسی `InvoicePrint`، همان خطاها (۴۰۴ سندِ ناموجود، ۴۰۰ برگه‌ی اعتباریِ بی‌استرداد). PDFها
+بی‌تغییر می‌مانند.
+
+| endpoint | پارامتر | معادلِ PDF |
+|---|---|---|
+| `GET api/Invoice/GetSaleInvoiceDocument` | `saleId` | `GetSaleInvoicePdf` |
+| `GET api/Invoice/GetSaleReturnCreditNoteDocument` | `saleReturnId` | `GetSaleReturnCreditNotePdf` |
+| `GET api/Invoice/GetPurchaseReturnDocument` | `purchaseReturnId` | `GetPurchaseReturnPdf` |
+
+**data (`InvoiceDocumentDto`):**
+```json
+{
+  "title": "پیش‌فاکتور فروش", "isProforma": true, "documentNumber": null,
+  "documentDate": "2026-10-20T10:15:00", "paymentDueDate": "2026-11-20T00:00:00",
+  "statusText": "پیش‌فاکتور", "description": "توضیحاتِ سند",
+  "notes": ["سود اقساط: ۱٬۲۰۰٬۰۰۰ ریال - جمع قابل پرداخت: ۱۰٬۶۰۵٬۰۰۰ ریال", "مهلت پرداخت: ۱۴۰۵/۰۸/۲۹"],
+  "company": { "name": "…", "nationalId": null, "economicCode": "…", "registrationNumber": null, "address": "…",
+               "phoneNumber": "…", "postalCode": null, "province": "…", "city": "…", "currency": "ریال" },
+  "counterpartyLabel": "خریدار",
+  "counterparty": { "name": "…", "nationalId": null, "economicCode": null, "registrationNumber": null, "address": "…",
+                    "phoneNumber": "…", "postalCode": null, "province": null, "city": null, "currency": null },
+  "lines": [ { "rowNumber": 1, "productCode": "14050608-10", "productName": "لنت ترمز جلو", "unit": "عدد", "quantity": 2,
+               "unitPrice": 4500000, "grossAmount": 9000000, "discountAmount": 450000, "netAmount": 8550000,
+               "taxPercent": 10, "taxAmount": 855000, "lineTotal": 9405000 } ],
+  "subTotal": 9000000, "totalDiscount": 450000, "totalTax": 855000, "grandTotal": 9405000,
+  "installmentChargeAmount": 1200000, "payableAmount": 10605000, "paidAmount": 0, "balance": 10605000
+}
+```
+- `title`: پیش‌فاکتور «پیش‌فاکتور فروش»، فاکتورِ صادرشده «فاکتور فروش»، و «برگه اعتباری مرجوعی» / «برگه مرجوعی به تامین‌کننده». `isProforma` روی دو برگه‌ی
+  مرجوعی همیشه `false`.
+- `statusText`: برچسبِ فارسیِ وضعیت.
+- `notes`: **دقیقاً** همان خط‌هایی که PDF در خانه‌ی توضیحات می‌گذارد، به همین ترتیب: سود اقساط و جمع قابل پرداخت (فروشِ اقساطی)، مهلت پرداخت، بعد یادداشت‌های
+  خودِ سند (برگه‌ی اعتباری: فاکتورِ فروشِ منشأ؛ برگه‌ی مرجوعی خرید: فاکتورِ خریدِ منشأ و خلاصه‌ی تصمیم‌ها). `description` (توضیحِ خودِ سند) جدا است و در `notes` نیست.
+- `lines[]`: مبالغِ ذخیره‌شده‌ی هر قلم؛ `unit` برچسبِ فارسیِ واحدِ کالا. روی دو برگه‌ی مرجوعی `grossAmount = netAmount = lineTotal`، تخفیف و مالیات صفر.
+- مبالغ عددِ صحیحِ ریالی، تاریخ‌ها ISO؛ قالب‌بندیِ فارسی کارِ فرانت است. هر متنِ خالی `null` است، نه رشته‌ی خالی.
+
+**همراه با این تغییر در PDFها هم:** عنوانِ پیش‌فاکتور «پیش‌فاکتور فروش» شد (قبلاً «فاکتور فروش»)، وضعیت با برچسبِ فارسی چاپ می‌شود (قبلاً نامِ انگلیسیِ
+عضوِ enum، مثلِ `PROFORMA`)، ستونِ واحد برچسبِ واقعیِ کالا است (قبلاً همیشه «عدد»)، و توضیحِ خودِ مرجوعی کنارِ یادداشت‌ها چاپ می‌شود.
 
 ---
 
@@ -3186,6 +3308,13 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 170 | ProductUnitView | مشاهده واحدهای کالا و تاریخچه آن‌ها |
 | 171 | InventoryMaintenance | عملیات نگهداشت انبار |
 | 172 | ProductUnitManage | مدیریت دانه‌ها: قرنطینه، آزادسازی و اسقاط |
+| 173 | WarehouseManage | مدیریت انبارها |
+| 174 | StockTransferView | مشاهده حواله‌های بین انبار |
+| 175 | StockTransferManage | ثبت، تحویل و لغو حواله‌ی بین انبار |
+| 176 | StocktakeView | مشاهده انبارگردانی |
+| 177 | StocktakeCount | انجام انبارگردانی (ساخت، اسکن، شمارش، پایان شمارش) |
+| 178 | StocktakeApprove | تأیید انبارگردانی و اعمال اختلاف (و بازگشایی/لغو) |
+| 179 | ReorderSuggestionView | مشاهده پیشنهاد خرید (نقطه‌ی سفارش) |
 | 190 | FileUpload | بارگذاری فایل و تصویر |
 | 191 | FileDelete | حذف فایل و تصویر |
 | 192 | InvoicePrint | چاپ فاکتور |
@@ -3274,6 +3403,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 7 | برگشت (REVERSAL) — `reversalOfEntryId` ردیف اصلی را نشان می‌دهد |
 | 8 | بستن قلم خرید با کسری (PURCHASE_SHORT_CLOSE) |
 | 9 | جریمه‌ی دیرکرد قسط (LATE_PENALTY) — از ۲۰۲۶-۱۰-۱۹؛ بدهکار، همراه پرداخت همان قسط |
+| 10 | مانده‌ی اول دوره (OPENING_BALANCE) — از ۲۰۲۶-۱۰-۳۰؛ مانده‌ی دستیِ مشتری/تامین‌کننده (بدهکار برای `Debtor`، بستانکار برای `Creditor`)؛ ویرایشِ بعدی تفاوت را با همین نوع می‌نویسد |
 
 ### `PaymentSourceEnum` (منبع پرداخت کارتخوان — روی `paymentDetails[]`، از ۲۰۲۶-۱۰-۰۵)
 | مقدار | معنی |
@@ -3329,6 +3459,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 4 | اسکرپ‌شده/غیرقابل‌فروش (SCRAPPED) |
 | 9 | قرنطینه (QUARANTINED) — فیزیکاً در انبار ولی غیرقابل فروش و خارج از `stock`، منتظر تصمیم مرجوعی (۵ تا ۸ عمداً خالی مانده‌اند) |
 | 10 | رزرو پیش‌فاکتور (RESERVED) — از ۲۰۲۶-۱۰-۱۶: انبار آن را برای یک ردیف فروش اسکن کرده (`CheckSaleWarehouse`). روی قفسه و دارایی ماست (در ارزش موجودی هست) ولی خارج از `stock`؛ `ShipSale` همین را می‌فرستد |
+| 11 | در راه بین انبارها (IN_TRANSIT) — از ۲۰۲۶-۱۰-۲۰: روی حواله‌ی بین انبار، از قفسه‌ی مبدأ خارج و هنوز به مقصد نرسیده. خارج از `stock`، ولی دارایی ماست (`inTransitQuantity` در ارزش موجودی) |
 
 ### `UnitCustodyReasonEnum` (علت نگهداری دانه نسبت به سندش)
 | مقدار | معنی |
@@ -3383,6 +3514,11 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 14 | انتقال به قرنطینه (STOCK_QUARANTINED) — `ApplyProductUnitAction`، و گزارشِ `CheckSaleWarehouse` |
 | 15 | رزرو برای پیش‌فاکتور (SALE_RESERVED) — `CheckSaleWarehouse` |
 | 16 | آزادسازی رزرو پیش‌فاکتور (SALE_RESERVATION_RELEASED) — ویرایش ردیف، لغو یا حذف پیش‌فاکتور |
+| 17 | ارسال حواله‌ی بین انبار (STOCK_TRANSFER_DISPATCHED) |
+| 18 | دریافت حواله‌ی بین انبار (STOCK_TRANSFER_RECEIVED) |
+| 19 | لغو حواله‌ی بین انبار (STOCK_TRANSFER_CANCELLED) |
+| 20 | تعدیل انبارگردانی (STOCKTAKE_ADJUSTMENT) — دانه‌ی مفقود (اسقاط) یا مازادِ شمرده‌شده (ساخت دانه) |
+| 21 | جابه‌جایی در انبارگردانی (STOCKTAKE_RELOCATED) — دانه در انبار دیگری پیدا شد؛ فقط انبارش عوض شد |
 
 ### `DocumentKindEnum` (نوع سند — پیوست‌ها و حرکت دانه‌ها)
 | مقدار | معنی |
@@ -3426,6 +3562,8 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 3 | کسری در انبار (WAREHOUSE_SHORTAGE) — `note` کسری هر ردیف را دارد |
 | 4 | بازگشت به پیش‌نویس به‌خاطر ویرایش (RESET_BY_EDIT) |
 | 5 | پایان مهلت رزرو (RESERVATION_EXPIRED) — از ۲۰۲۶-۱۰-۱۷؛ دانه‌ها آزاد شدند، `WAREHOUSE_CHECKED` ⇒ `CUSTOMER_APPROVED`؛ `userId` خالی (سرویس پس‌زمینه) |
+| 6 | اصلاح و تأیید انبار (WAREHOUSE_ADJUSTED) — از ۲۰۲۶-۱۰-۲۴؛ `adjustments`ِ `CheckSaleWarehouse`، `note` تعدادِ قبل و بعد و دلیل را دارد |
+| 7 | آزادسازی دستی رزرو (RESERVATION_RELEASED) — از ۲۰۲۶-۱۰-۲۴؛ `ReleaseSaleReservation` |
 
 ### `SaleWarehouseIssueResolutionEnum` (تصمیم حسابداری روی گزارش انبار)
 | مقدار | معنی |
@@ -3587,6 +3725,121 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
 
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۳۰ (بقیه‌ی درخواست‌های فرانت: بخش‌های ۶.۳، ۷، ۸، ۹، ۱۵، ۱۷، ۱۹، ۲۰، ۲۱، ۲۳، ۲۸، ۲۹)
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `CreateUser` | `fisrtName` | **`firstName`** (شکستنی) |
+| `CreateCustomer`/`UpdateCustomer`/`CustomerDto`، ورود/خروجِ مشتری | `refferalCode` | **`referralCode`** (شکستنی؛ ستون هم تغییر نام داد) |
+| `claims[]` در جزئیاتِ هر دو مرجوعی | فقط `purchaseItemId`/`saleItemId` | به‌علاوه‌ی `orderLineId` (همان مقدار) |
+| همه‌ی تاریخ‌های اختیاری | `0001-01-01` ممکن بود ذخیره شود | هنگامِ ذخیره `null` می‌شود؛ ردیف‌های موجود هم در migration اصلاح شد |
+| زمان‌های ورودی با `Z` | ساعتِ UTC همان‌طور ذخیره می‌شد | به وقتِ محلیِ سرور تبدیل می‌شود (offset صریح از قبل تبدیل می‌شد) |
+| `ScanBarcode` → `data.unit` | چند فیلد خالی (`purchaseId`، `custodyReason`، `createdAt`، …) | همان شکلِ کاملِ `GetProductUnitList` |
+| `CreateCustomer`، `CreateSupplier` | `data` خالی | `data = { id }` |
+| `CreateProductCategory` | `data` خالی | `data = { id, name }` |
+| `ProductListDto` | — | `purchasePrice`، `unit`، `tax`، `taxCategory` |
+| ردیفِ پرداخت با `type = CREDIT` (۱) | پذیرفته و «پرداخت‌شده» حساب می‌شد | **۴۰۰** در همه‌ی دستورهای پرداخت، دریافت/پرداختِ مستقل و اقساط. ردیف‌های قبلی دست نخوردند |
+| پیامِ `AcceptPurchaseExcess` | «… وارد موجودی شد» | «… کالا تا بازگشت به موجودی در قرنطینه می‌ماند» |
+| `GetPurchaseReceivingInfo` → `items[]` | — | `supplementOfPurchaseItemId`، `totalAmount`، `requiresUnitTracking`، `brand`، `imageKey`، `imageUrl` (این چهار تا روی `unlistedItems[]` هم) |
+| `SaleItemDto`، `pendingEffects[]` هر دو سمت، `effects[]` جزئیاتِ هر دو مرجوعی | — | `requiresUnitTracking`، `brand`، `imageKey`، `imageUrl` |
+| شماره‌ی فاکتورِ فروش، مرجوعی‌ها، حواله و انبارگردانی | «تعدادِ ردیف + ۱» (تکراری می‌شد) | شمارنده‌ی قفل‌دار (`DocumentNumberCounters`) + unique index؛ قالب همان `INV-سال-0001`. تکراری‌های موجود در migration شماره‌ی تازه گرفتند (کمترین `Id` شماره‌اش را نگه داشت) |
+| سهمیه‌ی ادعا (`claimableQuantity`) | جایگزینِ رسیده/ارسال‌شده حساب نمی‌شد؛ تصمیمِ ثبت‌شده با اثرِ معلق آزاد حساب می‌شد | `دریافت/ارسال + جایگزین − تسویه − ادعاهای باز (تسویه‌نشده)` |
+| `ChangeSaleStatus` | فقط `DELIVERED`/`CANCELLED` | به‌علاوه‌ی **`PROCESSING`** با `invoiceDate` اختیاری: صدورِ فاکتورِ نسیه بی‌پرداخت، فقط برای پیش‌فاکتورِ `WAREHOUSE_CHECKED` با رزروِ معتبر و غیراقساطی |
+| `GetCustomerList.fullName`، `GetSupplierList.companyNameOrContactName` | یک عبارت روی نام یا نام خانوادگی | هر کلمه جدا (AND) روی نام، نام خانوادگی و **تلفن** (تامین‌کننده: شرکت، نامِ مسئول، تلفن) |
+| `GET api/Product/GetBrandList?search=` | — | تازه: `[{ brand, productCount }]` برای کالاهای فعال (`ProductView`) |
+| `DeleteProduct` | همیشه حذف می‌شد | ۴۰۰ وقتی موجودی/رزرو/قرنطینه/در راه دارد یا روی خرید، فروش یا مرجوعیِ باز است |
+| `CreateSaleInstallmentPlan` | پیش‌پرداختِ ۰ پذیرفته می‌شد؛ قراردادِ دوم کلِ فاکتور را دوباره بدهکار می‌کرد | `downPaymentAmount > 0` الزامی (و فقط بعد از `WAREHOUSE_CHECKED`)؛ فروشی که پرداخت دارد قراردادِ تازه نمی‌گیرد (مانده با «دریافت از مشتری») |
+| `paymentType` در `CreateSaleInstallmentPlan`، `PaySaleInstallment`، `SettleSaleInstallmentPlan` | هر مقداری | فقط `CASH`/`CHECK`/`TRANSFER` |
+| `POST api/SaleInstallment/PreviewSaleInstallmentPlan` | — | تازه: یکی از `saleId` یا `items` + شرایطِ قرارداد ⇒ همان `SaleInstallmentPlanDto` بی‌ذخیره (`SaleCreate` یا `SaleInstallmentManage`) |
+| `GetProductUnitList` | `search` قفسه را نمی‌دید؛ فیلترِ `binLocation` «شروع‌با» بود | `search` روی قفسه هم می‌گردد؛ `binLocation` بخش‌به‌بخش: `A-5` یعنی `A-5` و `A-5-…`، نه `A-50` |
+| ذخیره‌ی قفسه (`SetProductUnitLocation`) | `A-05` همان‌طور | صفرِ چپِ بخش‌های عددی حذف می‌شود (`A-05-2` ⇒ `A-5-2`)؛ مقادیرِ موجود در migration یکدست شد |
+| `GET api/Health` | — | تازه، بی‌احراز هویت: `200 {status:"ok"}` یا `503` وقتی دیتابیس در دسترس نیست. برای ping جلوگیری از خوابیدنِ app pool |
+| IPِ کلاینت پشتِ Cloudflare | IPِ لبه‌ی Cloudflare | `X-Forwarded-For` فقط از بازه‌های Cloudflare (`ForwardedHeaders:KnownNetworks` در appsettings) |
+| مانده‌ی دستیِ مشتری/تامین‌کننده | بیرون از دفتر | ردیفِ `OPENING_BALANCE = 10` در دفتر؛ ویرایشِ مانده تفاوت را می‌نویسد. پس `ledgerBalance` و `GetPartyStatement` آن را دارند و **فرانت دیگر نباید مانده‌ی دستی را جمع بزند** |
+| خروجی‌های حسابداری | — | `tax-report` (دوره‌ها + ردیفِ جمع)، `trade-breakdown` (بدونِ درصدِ سهم)، `purchase-lines` |
+| `GET api/Accounting/GetPurchaseLineJournal` | — | تازه: قرینه‌ی `GetSaleLineJournal` (`supplierId`، `productId`، `productCategoryId`، `taxCategory`، بازه، `summary`) |
+| `GET api/User/GetUserOptions?includeInactive=` | — | تازه، برای هر کاربرِ واردشده: `[{ id, fullName, isActive }]` |
+| `GET api/User/GetMyDashboardLayout`، `PUT api/User/SaveMyDashboardLayout` | — | تازه: رشته‌ی JSONِ چیدمان (حداکثر ۴۰۰۰ نویسه)، فقط برای خودِ کاربر |
+| `GetPurchaseReturnDetail`، `GetPurchaseReceivingInfo`، `GetPurchaseReturnPendingEffects` | `PurchaseReturnView` | `PurchaseReturnView` **یا** `PurchaseReturnExecute` |
+| `GetSaleReturnDetail`، `GetSaleReturnPendingEffects` | `SaleReturnView` | `SaleReturnView` **یا** `SaleReturnExecute` |
+| `GetReorderSuggestionList` | کالایی که تا نقطه‌ی سفارش سفارش داده شده بود دوباره با «۱» می‌آمد | کالایی که سفارشِ در راه دارد و با آن به هدف (`targetStock ?? reorderPoint`) رسیده برنمی‌گردد |
+| `CheckSaleWarehouse` | همه‌ی ردیف‌ها اسکنِ کامل می‌خواستند | ردیفِ کالای **بدون** `requiresUnitTracking` می‌تواند بی‌بارکد بیاید: سرور قدیمی‌ترین دانه‌های آزاد (FIFO بر اساس سریال) را رزرو می‌کند، یا اگر کم بود «کسری» ثبت می‌شود. این FIFO فقط انتخابِ دانه است؛ بهای تمام‌شده همان میانگینِ موزون می‌ماند |
+| `AuditActionEnum` | — | `27 SaveMyDashboardLayout` |
+
+**ساخته نشد (عمداً):** ۱۷.۱ (`installmentPlan` روی `CreateSale`): با خطِ تأییدِ پیش‌فاکتور، قرارداد با پیش‌پرداخت فقط بعد از تأییدِ انبار ممکن است، پس
+روی `CreateSale` جایی ندارد؛ قرارداد در مرحله‌ی پرداخت (یا `CompleteInPersonSale`) ثبت می‌شود و `PreviewSaleInstallmentPlan` شرایط را از قبل نشان می‌دهد.
+۹.۸ تصمیم گرفته شد: ارزشِ ادعای مرجوعی فقط بهای کالاست، **بدونِ مالیات بر ارزش افزوده** (همان رفتارِ فعلی؛ ممکن است بعداً بازبینی شود). ۹.۹ منتظرِ پاسخ است. بخش‌های ۱۱، ۱۲ (کارتخوان)، ۱۳، ۱۴ و ۴.۶ در این دور نبودند.
+
+Migration: `20261030102630_frontend-requests-backlog`. ساخته شده، **اعمال نشده**؛ روی پایگاه‌داده‌ی آزمایشیِ تازه از صفر و با داده‌ی تکراری بررسی شد.
+بندِ یکدست‌کردنِ قفسه از `STRING_SPLIT(..., 1)` استفاده می‌کند و SQL Server 2022 یا بالاتر می‌خواهد.
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۴ (بخش ۲۴ درخواست‌های فرانت: انبار و صدورِ فاکتور)
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `CheckSaleWarehouse` | تعداد را عوض نمی‌کرد | `adjustments` + `note`: کم‌کردن/حذفِ ردیف و تأیید در یک گام، رویداد `WAREHOUSE_ADJUSTED = 6` (بخش ۱۱) |
+| `SaleDto`، `SaleListDto` | — | `updatedAt`، `isInPerson` |
+| `AddSalePayment`، `CreateSaleInstallmentPlan`، `CompleteInPersonSale` | تاریخِ فاکتور همیشه «اکنون» | `invoiceDate` اختیاری (نه بعد از امروز)؛ فقط وقتی همین درخواست فاکتور را صادر می‌کند خوانده می‌شود. بی آن: تاریخی که روی پیش‌فاکتور ثبت شده (اگر آینده نباشد)، وگرنه اکنون (**تغییر رفتار**: قبلاً تاریخِ ثبت‌شده روی پیش‌فاکتور هنگام صدور دور ریخته می‌شد). مهلتِ پرداختِ قبل از تاریخِ فاکتور ⇒ ۴۰۰ |
+| صدورِ فاکتور (اولین پرداخت) | `paymentType` همان انتخابِ پیش‌فاکتور | اگر صدور با پرداختِ **کامل** باشد: روشِ ردیف‌های پرداخت (یک روش ⇒ همان، چند ⇒ `MIXED`). پرداختِ ناقص و اقساطی دست نمی‌خورند |
+| `POST api/Sale/CreateInPersonProforma` | — | تازه: ثبت + تأیید + اسکن و رزرو حضوری، اتمیک (`SaleInPerson`) |
+| `POST api/Sale/ReleaseSaleReservation` | — | تازه: آزادکردنِ دستیِ رزرو (`SaleUpdate` یا `SaleWarehouseCheck`)، رویداد `RESERVATION_RELEASED = 7` |
+| `AuditActionEnum` | — | `415 CreateInPersonProforma`، `416 ReleaseSaleReservation` |
+
+**عمداً ساخته نشد:** `UpdateSaleInvoiceDate` برای فاکتورِ **صادرشده**. ردیفِ فاکتور در دفترِ حسابِ مشتری و دوره‌ی مالیاتی با همان تاریخ نوشته شده‌اند و
+دفتر فقط‌افزودنی است؛ تغییرِ بعدیِ تاریخ آن‌ها را از سند جدا می‌کرد. تاریخ را هنگامِ صدور بدهید.
+
+Migration: `sale-in-person-flag` (ستونِ `Sales.IsInPerson`). ساخته شده، اعمال نشده.
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۴ (بخش ۲۵ درخواست‌های فرانت: اقساط) — افزودنی
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `GetSaleInstallmentList` | فقط `status` تک‌مقداری | + `statuses` (چندتایی) و `unpaidOnly` |
+| ردیفِ `GetSaleInstallmentList` | — | `latePenaltyPercentage`، `penaltyAmount`، `daysLate`، `penaltyDue`، `penaltyWaivedAmount` |
+| `GetSaleInstallmentPlanDetail` (و هر پاسخی که همین سند است) | — | `earlySettlementDiscountPreview`، `settlementAmountToday` |
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۴ (بخش ۲۶ درخواست‌های فرانت: صندوق و بانک)
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `moneyIn`/`moneyOut` و `parts[]` در `AddClaimResolution` (هر دو سمت) | حساب نداشت | `bankAccountId` اختیاری، فقط `CASH`/`TRANSFER` (بخش ۱۰) |
+| `ExecuteMoneyEffect` (هر دو سمت) | — | `bankAccountId` اختیاری |
+| مانده و گردشِ صندوق/حساب | پولِ مرجوعی در آن نبود | پولِ `APPLIED`ِ مرجوعیِ دارای حساب شمرده می‌شود؛ ردیفِ تازه‌ی `RETURN_MONEY = 4` (`BankAccountMovementKindEnum`) |
+| `Payment.RequireBankAccount` | فقط پرداخت‌ها | پولِ نقد/انتقالیِ اجراشده‌ی مرجوعی هم (**تغییر رفتار** وقتی تنظیم روشن است) |
+| `ChequeDto` (`GetCheckList`، پاسخِ دستورهای چک) | — | `voidedAt` |
+
+Migration: `return-money-bank-account` (ستونِ `BankAccountId` روی چهار جدولِ اثر/بخشِ پولیِ مرجوعی). ساخته شده، اعمال نشده.
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۴ (بخش ۲۷ درخواست‌های فرانت: داده‌ی سندهای چاپی)
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `GET api/Invoice/GetSaleInvoiceDocument`، `GetSaleReturnCreditNoteDocument`، `GetPurchaseReturnDocument` | — | تازه: داده‌ی چاپیِ JSON همان سه PDF (بخش ۱۳) |
+| PDFِ پیش‌فاکتورِ فروش | عنوان «فاکتور فروش»، وضعیت `PROFORMA` | «پیش‌فاکتور فروش»، وضعیتِ فارسی |
+| PDFِ برگه‌ی اعتباری و مرجوعی خرید | وضعیت انگلیسی (اعتباری)؛ خلاصه به‌جای توضیحِ مرجوعی | وضعیتِ فارسی؛ توضیحِ مرجوعی + یادداشت‌ها جدا |
+| ستونِ «واحد» در هر سه PDF | همیشه «عدد» | برچسبِ واحدِ کالا |
+پولِ مرجوعی‌های قدیمی حساب ندارد و مثلِ قبل در هیچ مانده‌ای نیست؛ در `unassignedNet` هم شمرده نمی‌شود.
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۰ (انبارگردانی، نقطه‌ی سفارش، چند انبار، صفحه‌ی تنظیمات) — افزودنی
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `api/Warehouse/*` | — | تازه: انبارها و حواله‌ی بین انبار (بخش ۲۵) |
+| `api/Stocktake/*` | — | تازه: انبارگردانی (بخش ۲۶) |
+| `api/Reorder/*` | — | تازه: پیشنهاد خرید و ساخت پیش‌فاکتور خرید از آن (بخش ۲۷) |
+| `Setting/GetFeatureFlags` | — | تازه: سوییچ قابلیت‌ها برای هر کاربر واردشده (بخش ۲۲) |
+| `GetSystemSettings` | — | هر تنظیم: `maxLength` (متن)، `isPublic`. گروه‌های تازه `WAREHOUSE = 4`، `COMPANY = 5`، `SECURITY = 6` |
+| تنظیمات | — | `Warehouse.MultiWarehouseEnabled`، `Stocktake.BlindCount`، `Company.*` (ده کلید)، `Security.MaxFailedLoginAttempts`، `Security.LockoutMinutes` |
+| مشخصات شرکت در PDF، سیاست قفل حساب | از `appsettings.json` | از صفحه‌ی تنظیمات. migration نام و نشانی شرکتِ قبلی را ذخیره می‌کند؛ بقیه‌ی فیلدها را از صفحه پر کنید |
+| `ReceivePurchase`، `ShipSale`، `ExecuteGoodsRound` (هر دو سمت مرجوعی) | — | `warehouseId` اختیاری؛ فقط با چند انبارِ روشن خوانده می‌شود |
+| `Create/UpdateProduct`، جزئیات کالا | — | `targetStock`، `leadTimeDays`، `preferredSupplierId`، `minOrderQuantity` (اختیاری)؛ جزئیات: `preferredSupplierName` |
+| فهرست دانه‌ها (`GetProductUnitList`) | — | `warehouseId`، `warehouseName` روی هر ردیف؛ فیلتر `warehouseId` |
+| `GetInventoryValuation` | `ledgerQuantity == stock + reservedQuantity` | ستون و جمع تازه‌ی `inTransitQuantity`؛ `ledgerQuantity == stock + reservedQuantity + inTransitQuantity` |
+| `ProductUnitStatusEnum` / `ProductUnitMovementReasonEnum` | — | `IN_TRANSIT = 11` / `17`–`21` |
+| `PermissionEnum` | — | `173`–`179` (گروه «انبار») |
+| `AuditActionEnum` | — | `805`–`819` |
+| enum تازه | — | `StockTransferStatusEnum`، `StocktakeStatusEnum`، `StocktakeCountModeEnum` (بخش‌های ۲۵ و ۲۶) |
+
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۱۹ (چرخه‌ی چک، تکمیل فروش اقساطی) — افزودنی، با دو تغییر رفتار
 
 | کجا | قبل | بعد |
@@ -3705,7 +3958,6 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۰۴ (امنیت حساب‌ها) — **شکننده**
 
-کارهایی که فرانت باید بکند، قدم‌به‌قدم: `account-security-frontend-guide.fa.md`.
 
 | کجا | قبل | بعد | چرا |
 |---|---|---|---|
@@ -3771,7 +4023,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (مبالغ و مالیات فاکتور روی سرور، سود اقساط جدا) — **شکننده**
 
-قاعده و مثال گرد کردن در ابتدای بخش ۹. راهنمای فرانت: `docs/proforma-lock-frontend-guide.fa.md` بخش ۱۰.
+قاعده و مثال گرد کردن در ابتدای بخش ۹.
 
 | کجا | قبل | بعد | چرا |
 |---|---|---|---|
@@ -3789,7 +4041,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 ### تغییرات قرارداد — ۲۰۲۶-۰۹-۲۴ (قفل پیش‌فاکتور، پرداخت‌های جدا، قلم ضمیمه) — **شکننده**
 
-قاعده‌ی کلی در ابتدای بخش ۹. راهنمای مهاجرت فرانت: `docs/proforma-lock-frontend-guide.fa.md`.
+قاعده‌ی کلی در ابتدای بخش ۹.
 
 | کجا | قبل | بعد | چرا |
 |---|---|---|---|
@@ -4001,7 +4253,7 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 
 ### ⚠️ تغییرات شکسته‌ی قرارداد — ۲۰۲۶-۰۹-۱۳ (مدل اثرهای مرجوعی)
 
-راهنمای مهاجرت فرانت: `docs/return-frontend-migration.fa.md`. مدل کامل: بخش ۱۰، «مدل اثرها».
+مدل کامل: بخش ۱۰، «مدل اثرها».
 
 | کجا | قبل | بعد | چرا |
 |---|---|---|---|
@@ -4088,7 +4340,7 @@ migration: `quarantine-unit-cost` (ستون `ProductUnits.QuarantineCost`، `dec
 - چیزی که در دیتابیس ذخیره می‌شود **کلید شیء (ObjectKey)** است، مثلاً `shelf.jpg` — نه یک URL.
 - **آدرس تصویر به خودِ همین API اشاره می‌کند** (`api/File/GetImage`)، نه به باکت. دلیلش این است که
   لبهٔ لیارا به هر درخواستی با `User-Agent` مرورگری پاسخ `404 page not found` می‌دهد، پس آدرس باکت
-  در `<img src>` هیچ‌وقت باز نمی‌شود. شرحِ کامل در `image-serving-guide.fa.md`.
+  در `<img src>` هیچ‌وقت باز نمی‌شود.
 - این آدرس **منقضی نمی‌شود**، ولی همچنان بهتر است ذخیره نشود: میزبانِ داخلِ آن با محیط عوض می‌شود.
   مقدارِ پایداری که باید نگه دارید `imageKey` است.
 
@@ -4690,6 +4942,8 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 412 | `CheckSaleWarehouse` | تأیید انبار و رزرو کالای پیش‌فاکتور |
 | 413 | `ResolveSaleWarehouseIssue` | رسیدگی به گزارش انبار |
 | 414 | `ReleaseExpiredSaleReservation` | پایان مهلت رزرو پیش‌فاکتور (سرویس پس‌زمینه؛ `userId` خالی) |
+| 415 | `CreateInPersonProforma` | ثبت پیش‌فاکتور حضوری و رزرو کالا |
+| 416 | `ReleaseSaleReservation` | آزادسازی دستی رزرو پیش‌فاکتور |
 | 500 | `CreateSaleInstallmentPlan` | ایجاد طرح اقساط |
 | 501 | `UpdateSaleInstallmentPlan` | ویرایش طرح اقساط |
 | 502 | `DeleteSaleInstallmentPlan` | حذف طرح اقساط |
@@ -4714,6 +4968,21 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 802 | `SetProductUnitLocation` | تعیین محل قفسه |
 | 803 | `EnsureProductCodes` | تکمیل کد کالاها |
 | 804 | `EnsureInventoryCostLedger` | تکمیل دفتر بهای موجودی |
+| 805 | `CreateWarehouse` | ایجاد انبار |
+| 806 | `UpdateWarehouse` | ویرایش انبار |
+| 807 | `DeleteWarehouse` | حذف انبار |
+| 808 | `CreateStockTransfer` | ثبت حواله‌ی بین انبار |
+| 809 | `ReceiveStockTransfer` | تحویل حواله‌ی بین انبار |
+| 810 | `CancelStockTransfer` | لغو حواله‌ی بین انبار |
+| 811 | `CreateStocktake` | ایجاد انبارگردانی |
+| 812 | `CountStocktakeLine` | ثبت شمارش دستی انبارگردانی |
+| 813 | `ScanStocktakeUnits` | اسکن انبارگردانی |
+| 814 | `RemoveStocktakeScan` | حذف اسکن انبارگردانی |
+| 815 | `SubmitStocktake` | پایان شمارش انبارگردانی |
+| 816 | `ReopenStocktake` | بازگشایی شمارش انبارگردانی |
+| 817 | `ApproveStocktake` | تأیید انبارگردانی |
+| 818 | `CancelStocktake` | لغو انبارگردانی |
+| 819 | `CreatePurchaseDraftsFromReorder` | ساخت پیش‌فاکتور خرید از پیشنهاد خرید |
 | 900 | `ChargePos` | پرداخت با کارت‌خوان |
 | 901 | `CreatePosTerminal` | ایجاد کارت‌خوان |
 | 902 | `UpdatePosTerminal` | ویرایش کارت‌خوان |
@@ -4736,20 +5005,45 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 
 ## 22. تنظیمات سامانه (Setting)
 
-> از ۲۰۲۶-۱۰-۱۷. کنترلر: `api/Setting`. دسترسی خواندن: `SettingView` **یا** `SettingManage`؛ ویرایش: `SettingManage`.
+> از ۲۰۲۶-۱۰-۱۷؛ بازنویسی ۲۰۲۶-۱۰-۲۰. کنترلر: `api/Setting`. دسترسی خواندن: `SettingView` **یا** `SettingManage`؛ ویرایش: `SettingManage`.
+> **این یک صفحه‌ی کامل در سایت است** (مثل فهرست کالا)، نه بخشی از تنظیمات سرور.
 
-فهرستِ تنظیم‌ها در کد تعریف شده است (کلید، نوع، مقدار پیش‌فرض، حد پایین/بالا، عنوان و توضیح فارسی)؛ از صفحه نمی‌شود تنظیم تازه‌ای ساخت،
-فقط مقدارِ تنظیم‌های موجود را عوض کرد. صفحه را **از روی پاسخ سرور بسازید** (گروه‌ها، عنوان، توضیح، نوع، حدود، واحد) تا تنظیمِ تازه‌ای که بعداً
-اضافه می‌شود بدون تغییر فرانت ظاهر شود. هر تغییر در تاریخچه تغییرات (بخش ۲۱) هم ثبت می‌شود.
+هر چیزی که خود شرکت درباره‌ی کارکرد سامانه تصمیم می‌گیرد اینجاست: روشن/خاموش کردن قابلیت‌ها، مهلت‌ها، درصدها، مشخصات شرکت و
+سیاست قفل حساب. `appsettings.json` فقط چیزهای فنیِ سرور را نگه می‌دارد (رشته‌ی اتصال، کلیدها، آدرس‌ها، محدودیت‌های فنی).
 
-**تنظیم‌های موجود:**
+فهرستِ تنظیم‌ها در کد تعریف شده است (کلید، نوع، مقدار پیش‌فرض، حد پایین/بالا، حداکثر طول، عنوان و توضیح فارسی). از صفحه نمی‌شود تنظیم
+تازه‌ای ساخت، فقط مقدارِ تنظیم‌های موجود را عوض کرد. صفحه را **از روی پاسخ سرور بسازید** (گروه‌ها، عنوان، توضیح، نوع، حدود، واحد) تا
+تنظیمِ تازه‌ای که بعداً اضافه می‌شود بدون تغییر فرانت ظاهر شود. هر تغییر در تاریخچه تغییرات (بخش ۲۱) هم ثبت می‌شود.
 
-| کلید | نوع | پیش‌فرض | حدود | معنی |
-|---|---|---|---|---|
-| `Sale.ReservationMinutes` | INTEGER | `10` | `0`–`10080` دقیقه | مهلت رزرو کالای پیش‌فاکتور پس از تأیید انبار (بخش ۱۱)؛ `0` = بدون انقضا؛ فقط روی رزروهای بعدی اثر دارد |
-| `Payment.RequireBankAccount` | BOOLEAN | `false` | — | از ۲۰۲۶-۱۰-۱۷: روشن ⇒ هر دریافت/پرداخت تازه باید صندوق یا حساب بانکی داشته باشد (بخش ۲۳)؛ ردیف نسیه (`CREDIT`) و چک دریافتی (حسابش موقع وصول تعیین می‌شود) معاف‌اند |
-| `Installment.OverdueGraceDays` | INTEGER | `0` | `0`–`60` روز | از ۲۰۲۶-۱۰-۱۹: چند روز پس از سررسید، قسط دیرکرد حساب می‌شود (`OVERDUE` و شروع جریمه) |
-| `Installment.EarlySettlementDiscountPercentage` | INTEGER | `100` | `0`–`100` درصد | از ۲۰۲۶-۱۰-۱۹: چه درصدی از سود اقساطِ قسط‌های هنوز سررسیدنشده در تسویه‌ی زودهنگام بخشیده شود |
+**قاعده‌ی سوییچ‌ها (همه‌ی سوییچ‌های امروز و آینده):** خاموش کردن هیچ داده‌ای را پاک یا عوض نمی‌کند و فقط جلوی کار *تازه* در آن قابلیت را
+می‌گیرد. داده همیشه به شکل «روشن» ذخیره می‌شود (مثلاً هر دانه همیشه انبار دارد). داده‌ی قبل از قابلیت، زمان روشن و زمان خاموش با هم کار
+می‌کنند، و کار نیمه‌کاره (مثل حواله‌ی در راه) پس از خاموش کردن هم تمام‌کردنی یا لغوکردنی است.
+
+**تنظیم‌های موجود** (★ = `isPublic`، سوییچ قابلیت):
+
+| گروه | کلید | نوع | پیش‌فرض | حدود | معنی |
+|---|---|---|---|---|---|
+| ۱ فروش | `Sale.ReservationMinutes` | INTEGER | `10` | `0`–`10080` دقیقه | مهلت رزرو کالای پیش‌فاکتور پس از تأیید انبار (بخش ۱۱)؛ `0` = بدون انقضا؛ فقط روی رزروهای بعدی اثر دارد |
+| ۲ دریافت و پرداخت | `Payment.RequireBankAccount` | BOOLEAN | `false` | — | روشن ⇒ هر دریافت/پرداخت تازه باید صندوق یا حساب بانکی داشته باشد (بخش ۲۳)؛ ردیف نسیه (`CREDIT`) و چک دریافتی معاف‌اند |
+| ۳ اقساط | `Installment.OverdueGraceDays` | INTEGER | `0` | `0`–`60` روز | چند روز پس از سررسید، قسط دیرکرد حساب می‌شود |
+| ۳ اقساط | `Installment.EarlySettlementDiscountPercentage` | INTEGER | `100` | `0`–`100` درصد | چه درصدی از سود اقساطِ قسط‌های هنوز سررسیدنشده در تسویه‌ی زودهنگام بخشیده شود |
+| ۴ انبار | `Warehouse.MultiWarehouseEnabled` ★ | BOOLEAN | `false` | — | از ۲۰۲۶-۱۰-۲۰: چند انبار و حواله‌ی بین انبار (بخش ۲۵) |
+| ۴ انبار | `Stocktake.BlindCount` ★ | BOOLEAN | `true` | — | از ۲۰۲۶-۱۰-۲۰: شمارش کور؛ تا پایان شمارش موجودی سیستم و مغایرت به کسی داده نمی‌شود (بخش ۲۶) |
+| ۵ مشخصات شرکت | `Company.Name`، `Company.NationalId`، `Company.EconomicCode`، `Company.RegistrationNumber`، `Company.Address`، `Company.PhoneNumber`، `Company.PostalCode`، `Company.Province`، `Company.City` | TEXT | خالی | `maxLength` | از ۲۰۲۶-۱۰-۲۰ (قبلاً بخش `Company` در `appsettings.json`): سربرگ فاکتورها و اسناد PDF |
+| ۵ مشخصات شرکت | `Company.Currency` | TEXT | `ریال` | ۲۰ نویسه | واحدی که کنار مبلغ‌ها در اسناد چاپی نوشته می‌شود (مبلغ‌ها همیشه ریال ذخیره می‌شوند) |
+| ۶ امنیت | `Security.MaxFailedLoginAttempts` | INTEGER | `10` | `3`–`100` بار | از ۲۰۲۶-۱۰-۲۰ (قبلاً `LoginSecurity` در `appsettings.json`): رمز اشتباه پشت‌سرهم تا قفل حساب (بخش ۲) |
+| ۶ امنیت | `Security.LockoutMinutes` | INTEGER | `5` | `1`–`1440` دقیقه | مدت قفل حساب |
+
+### `GET api/Setting/GetFeatureFlags`
+
+> از ۲۰۲۶-۱۰-۲۰. **هر کاربر واردشده**، بدون دسترسی خاص.
+
+فقط تنظیم‌های `isPublic`، به‌صورت شیء کلید → مقدارِ **تایپ‌شده**:
+```json
+{ "Warehouse.MultiWarehouseEnabled": false, "Stocktake.BlindCount": true }
+```
+بعد از ورود بخوانید و کش کنید، و بعد از هر `UpdateSystemSettings` دوباره بخوانید. با آن منوها و فیلدهای قابلیت‌های خاموش را پنهان کنید.
+سرور جدا از این هم ورودی‌های قابلیت خاموش را نادیده می‌گیرد یا رد می‌کند.
 
 ### `GET api/Setting/GetSystemSettings`
 
@@ -4781,7 +5075,8 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 ```
 - `value` و `defaultValue` همیشه **رشته**اند (فرمت invariant: `"10"`، `"true"`)؛ بر اساس `type` تبدیلشان کنید.
 - `isDefault = true` یعنی چیزی ذخیره نشده و مقدارِ پیش‌فرض اعمال است؛ `updatedAt`/`updatedByName` فقط برای مقدارِ ذخیره‌شده پر است.
-- `minValue`/`maxValue` فقط برای `INTEGER`.
+- `minValue`/`maxValue` فقط برای `INTEGER`؛ `maxLength` فقط برای `TEXT` (از ۲۰۲۶-۱۰-۲۰).
+- `isPublic` (از ۲۰۲۶-۱۰-۲۰): سوییچ قابلیت است و از `GetFeatureFlags` هم خوانده می‌شود.
 
 ### `PUT api/Setting/UpdateSystemSettings`
 
@@ -4790,7 +5085,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 ```
 - فقط تنظیم‌های فرستاده‌شده عوض می‌شوند؛ بقیه دست نمی‌خورند.
 - `value` خالی یا `null` ⇒ **بازگشت به پیش‌فرض**.
-- همه یا هیچ: کلید ناشناخته، مقدارِ غیرعددی برای `INTEGER`، بیرون از حدود، یا کلیدِ تکراری ⇒ ۴۰۰ و هیچ چیزی ذخیره نمی‌شود.
+- همه یا هیچ: کلید ناشناخته، مقدارِ غیرعددی برای `INTEGER`، بیرون از حدود، متن بلندتر از `maxLength`، یا کلیدِ تکراری ⇒ ۴۰۰ و هیچ چیزی ذخیره نمی‌شود.
 - **data خروجی:** همان شکلِ `GetSystemSettings` (همه‌ی گروه‌ها، با مقدارهای تازه).
 - اثرِ تغییر بلافاصله است (کش سرور با ذخیره پاک می‌شود).
 
@@ -4807,6 +5102,9 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 1 | فروش (SALE) |
 | 2 | دریافت و پرداخت (PAYMENT) |
 | 3 | اقساط (INSTALLMENT) |
+| 4 | انبار (WAREHOUSE) |
+| 5 | مشخصات شرکت (COMPANY) |
+| 6 | امنیت (SECURITY) |
 
 ---
 
@@ -5014,6 +5312,9 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 صاحب حساب، بانک، نام طرف، شماره فاکتور)، `sortBy` (`CheckListSortEnum`: `DUE_DATE = 0` پیش‌فرض و **صعودی** — نزدیک‌ترین سررسید اول، `AMOUNT = 1`،
 `PAID_AT = 2`، `PARTY_NAME = 3`)، `sortDirection`.
 
+از ۲۰۲۶-۱۰-۲۴ هر ردیف `voidedAt` دارد: چکی که ردیفِ پرداختش ابطال شده (فقط با `includeVoided=true` می‌آید) وضعیتش را نگه می‌دارد ولی مرده است —
+وصول، برگشت و خرج رویش ۴۰۰ می‌دهد؛ دکمه‌ها را با `voidedAt != null` پنهان کنید.
+
 ```json
 {
   "checkList": [
@@ -5064,3 +5365,205 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 2 | وصول‌شده (CASHED) |
 | 3 | برگشتی (BOUNCED) |
 | 4 | خرج‌شده (ENDORSED) |
+
+---
+
+## 25. انبارها و حواله‌ی بین انبار (Warehouse)
+
+> از ۲۰۲۶-۱۰-۲۰. کنترلر: `api/Warehouse`. سوییچ: `Warehouse.MultiWarehouseEnabled` (بخش ۲۲، پیش‌فرض خاموش).
+
+**مدل.** هر دانه‌ی کالا **همیشه** در یک انبار است (`warehouseId` روی دانه). انبار پیش‌فرض «انبار اصلی» (`MAIN`، `id = 1`) را
+migration می‌سازد و همه‌ی دانه‌های موجود در آن قرار می‌گیرند. `stock` کالا همچنان **کل** موجودی آزاد همه‌ی انبارهاست. سهم هر انبار از
+شمردن دانه‌ها به دست می‌آید (`GetProductWarehouseStock`).
+
+| | سوییچ خاموش | سوییچ روشن |
+|---|---|---|
+| دریافت خرید، مرجوعی (کالای ورودی) | `warehouseId` نادیده گرفته می‌شود؛ دانه در انبار پیش‌فرض | دانه در `warehouseId` (نفرستاده ⇒ پیش‌فرض) |
+| ارسال فروش، مرجوعی (کالای خروجی) | برداشت از هر انباری | برداشت فقط از `warehouseId` (نفرستاده ⇒ هر انباری) |
+| حواله‌ی تازه | ۴۰۰ | مجاز |
+| تحویل/لغو حواله‌ی در راه | **مجاز** (کار نیمه‌کاره گیر نمی‌کند) | مجاز |
+| تعریف و ویرایش انبار | مجاز (اطلاعات پایه است) | مجاز |
+| دانه‌هایی که در انبارهای دیگرند | سر جایشان می‌مانند و فروختنی‌اند | — |
+
+خاموش کردن سوییچ هیچ دانه‌ای را جابه‌جا نمی‌کند و هیچ سابقه‌ای را تغییر نمی‌دهد.
+
+### `GET api/Warehouse/GetWarehouseList`
+هر کاربر واردشده (برای انتخابگرها). پارامتر: `includeInactive` (پیش‌فرض `false`). **data:** آرایه‌ای از
+```json
+{ "id": 1, "code": "MAIN", "name": "انبار اصلی", "address": null, "description": null, "isDefault": true, "isActive": true,
+  "inStockUnits": 120, "quarantinedUnits": 3, "reservedUnits": 4, "outgoingInTransitUnits": 0 }
+```
+
+### `GET api/Warehouse/GetProductWarehouseStock?productId=12`
+موجودی یک کالا به تفکیک انبار: آرایه‌ای از `{ warehouseId, warehouseName, isDefault, inStock, quarantined, reserved, outgoingInTransit }`.
+
+### `POST api/Warehouse/CreateWarehouse` / `PUT api/Warehouse/UpdateWarehouse`
+```json
+{ "id": 2, "code": "B2", "name": "انبار شعبه ۲", "address": "...", "description": null, "isDefault": false }
+```
+- `id` فقط در Update. `code` یکتاست و با حروف بزرگ ذخیره می‌شود؛ کد تکراری ۴۰۰ می‌گیرد.
+- `isDefault: true` انبار را پیش‌فرض می‌کند و پیش‌فرض قبلی را برمی‌دارد (همیشه دقیقاً یک پیش‌فرض هست). انبار پیش‌فرض را نمی‌شود با
+  `isDefault: false` از پیش‌فرض بودن درآورد؛ باید انبار دیگری را پیش‌فرض کنید.
+- **data:** همان شکل ردیف فهرست.
+
+### `DELETE api/Warehouse/DeleteWarehouse?id=2`
+غیرفعال‌سازی. برای انبار پیش‌فرض ۴۰۰ می‌دهد. همچنین برای انباری که هنوز دانه دارد (روی قفسه، در قرنطینه، رزرو، یا در راه به آن یا از
+آن) یا انبارگردانی باز دارد. **data:** `{ "id": 2 }`.
+
+### حواله‌ی بین انبار
+
+جریان: `CreateStockTransfer` دانه‌ها را از قفسه‌ی مبدأ خارج می‌کند (`IN_TRANSIT`، خارج از `stock`). بعد یا `ReceiveStockTransfer` آن‌ها را
+روی قفسه‌ی مقصد می‌گذارد و دوباره در `stock` حساب می‌شوند، یا `CancelStockTransfer` آن‌ها را به قفسه‌ی مبدأ برمی‌گرداند. حواله ردیف دفتر
+بهای موجودی نمی‌سازد، چون کالا مال ماست. در ارزش موجودی، دانه‌ی در راه در `inTransitQuantity` دیده می‌شود.
+
+#### `POST api/Warehouse/CreateStockTransfer`
+```json
+{ "fromWarehouseId": 1, "toWarehouseId": 2, "description": "تأمین شعبه",
+  "lines": [ { "productId": 12, "quantity": 5, "productUnitBarcodes": null } ] }
+```
+- فقط وقتی سوییچ روشن است. مبدأ و مقصد باید فعال و متفاوت باشند.
+- `productUnitBarcodes` اختیاری است (دقیقاً به تعداد `quantity`، و باید روی قفسه‌ی مبدأ باشند). اگر نفرستید، قدیمی‌ترین دانه‌های قفسه‌ی
+  مبدأ برداشته می‌شوند. برای کالای `requiresUnitTracking` الزامی است.
+- کمبود موجودی در مبدأ ۴۰۰ می‌دهد. شماره: `ST-{سال}-{ترتیب}`.
+
+#### `POST api/Warehouse/ReceiveStockTransfer` / `CancelStockTransfer`
+`{ "id": 7 }`. فقط برای حواله‌ی `IN_TRANSIT`، و مستقل از وضعیت سوییچ.
+
+#### `GET api/Warehouse/GetStockTransferList`
+پارامترها: `page`، `take`، `statuses` (چندتایی)، `fromWarehouseId`، `toWarehouseId`، `fromDate`/`toDate` (روی تاریخ ارسال)، `search` (شماره)،
+`sortBy` (`StockTransferListSortEnum`: `DISPATCHED_AT = 0` که پیش‌فرض و نزولی است، `TRANSFER_NUMBER = 1`، `STATUS = 2`) و `sortDirection`.
+ردیف‌ها شکل `StockTransferDto` را دارند، بدون `products`.
+
+#### `GET api/Warehouse/GetStockTransferDetail?id=7`
+همین شکل پاسخ هر سه کامند حواله هم هست:
+```json
+{ "id": 7, "transferNumber": "ST-2026-0007", "fromWarehouseId": 1, "fromWarehouseName": "انبار اصلی", "toWarehouseId": 2,
+  "toWarehouseName": "انبار شعبه ۲", "status": 1, "statusTitle": "در راه", "description": "تأمین شعبه",
+  "dispatchedAt": "...", "dispatchedByUserId": 3, "receivedAt": null, "receivedByUserId": null, "cancelledAt": null, "totalUnits": 5,
+  "products": [ { "productId": 12, "productCode": "...", "productName": "...", "quantity": 5, "barcodes": ["..."] } ] }
+```
+
+### `StockTransferStatusEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | در راه (IN_TRANSIT) |
+| 2 | تحویل‌شده (RECEIVED) |
+| 3 | لغوشده (CANCELLED) |
+
+---
+
+## 26. انبارگردانی (Stocktake)
+
+> از ۲۰۲۶-۱۰-۲۰. کنترلر: `api/Stocktake`. دسترسی‌ها: دیدن با `StocktakeView`/`StocktakeCount`/`StocktakeApprove`؛ ساخت، اسکن، شمارش و پایان
+> شمارش با `StocktakeCount`؛ بازگشایی، تأیید و لغو با `StocktakeApprove`. تنظیم مرتبط: `Stocktake.BlindCount`.
+
+**جریان:** `CreateStocktake` (عکس فوری از قفسه) → `ScanStocktakeUnits` / `CountStocktakeLine` (در وضعیت `COUNTING`) → `SubmitStocktake`
+(`SUBMITTED`؛ مغایرت‌ها دیده می‌شوند) → `ApproveStocktake` (`APPROVED`، نهایی)، یا `ReopenStocktake` برای برگشت به شمارش. `CancelStocktake`
+پیش از تأیید هر وقت ممکن است و هیچ اثری ندارد.
+
+- **فروش و دریافت متوقف نمی‌شود.** مقایسه با عکسی است که هنگام ساخت گرفته شد. دانه‌ای که پس از عکس فروخته یا جابه‌جا شده «مفقود» حساب
+  نمی‌شود، چون حرکت خودش نشان می‌دهد کجا رفته.
+- **شمارش با اسکن** (کالای برچسب‌دار): هر دانه‌ای که اسکن شد شمرده می‌شود. اسکن تکراری بی‌اثر است. اسکنِ دانه‌ی کالایی که بیرون از دامنه
+  است، آن کالا را با موجودی سیستم صفر به انبارگردانی اضافه می‌کند. بارکد ناشناخته در `unknownBarcodes` می‌آید و هیچ اثری ندارد.
+- **شمارش دستی** (کالای بی‌برچسب): `CountStocktakeLine` با عدد. `null` آن را پاک می‌کند. وقتی حتی یک دانه از آن کالا اسکن شده باشد،
+  اسکن‌ها ملاک شمارش‌اند و عدد دستی نادیده گرفته می‌شود.
+- **شمارش کور** (`Stocktake.BlindCount` روشن، که پیش‌فرض است): تا وقتی وضعیت `COUNTING` است، `isBlind = true` است؛ `systemQuantity`،
+  `difference`، `missingCount`، `relocatedCount`، `differenceValue` و جمع‌ها `null` هستند و `missingBarcodes` خالی است. بعد از
+  `SubmitStocktake` همه دیده می‌شوند.
+- **آنچه تأیید اعمال می‌کند** (دقیقاً همان که جزئیات نشان داد):
+  - شمارش با اسکن:
+    - دانه‌ای که روی قفسه بود و پیدا نشد اسقاط می‌شود (حرکت `STOCKTAKE_ADJUSTMENT`)، `stock` کم می‌شود و با میانگین بها از دفتر خارج می‌شود.
+    - دانه‌ای که این‌جا پیدا شد ولی سیستم آن را در انبار دیگری داشت، فقط انبارش عوض می‌شود (`STOCKTAKE_RELOCATED`)؛ موجودی و ارزش ثابت می‌ماند.
+    - دانه‌ای که اسکن شد ولی روی قفسه نیست (فروخته، اسقاط، رزرو و ...) فقط گزارش می‌شود (`unexpectedBarcodes`).
+  - شمارش دستی: کسری تازه‌ترین دانه‌های قفسه‌ی همین انبار را اسقاط می‌کند. مازاد دانه‌ی تازه می‌سازد که با قیمت خرید کالا وارد دفتر بها می‌شود.
+  - کالای شمرده‌نشده: هیچ تغییری نمی‌کند.
+- اگر انبارگردانی باز دیگری در همان انبار کالای مشترک داشته باشد، ساخت ۴۰۰ می‌دهد.
+
+### `POST api/Stocktake/CreateStocktake`
+```json
+{ "title": "انبارگردانی پاییز", "warehouseId": null, "productCategoryId": 4, "brand": null, "binLocationPrefix": null,
+  "productIds": null, "note": null }
+```
+دامنه یکی از این‌هاست: `productIds`، یا همه‌ی کالاهای فعالِ یک دسته و/یا برند، یا کالاهایی که دانه‌ای در قفسه‌ای با پیشوند
+`binLocationPrefix` دارند. `warehouseId` فقط وقتی چند انبار روشن است خوانده می‌شود؛ وگرنه انبار پیش‌فرض است. دامنه‌ی خالی ۴۰۰ می‌دهد.
+شماره: `STK-{سال}-{ترتیب}`.
+
+### بقیه‌ی کامندها
+| endpoint | بدنه |
+|---|---|
+| `ScanStocktakeUnits` | `{ "stocktakeId": 3, "barcodes": ["...", "..."] }` (دسته‌ای از اسکنر) |
+| `RemoveStocktakeScan` | `{ "stocktakeId": 3, "barcode": "..." }` |
+| `CountStocktakeLine` | `{ "stocktakeId": 3, "productId": 12, "quantity": 40 }` |
+| `SubmitStocktake`، `ReopenStocktake`، `ApproveStocktake`، `CancelStocktake` | `{ "id": 3 }` |
+
+همه‌ی این کامندها (و `GetStocktakeDetail?id=3`) سند کامل را برمی‌گردانند:
+```json
+{ "id": 3, "number": "STK-2026-0003", "title": "...", "warehouseId": 1, "warehouseName": "انبار اصلی", "productCategoryId": 4,
+  "brand": null, "binLocationPrefix": null, "status": 2, "statusTitle": "...", "snapshotAt": "...", "note": null,
+  "createdAt": "...", "createdByUserId": 3, "submittedAt": "...", "approvedAt": null, "approvedByUserId": null, "cancelledAt": null,
+  "lineCount": 25, "countedLineCount": 24, "isBlind": false,
+  "lines": [ { "id": 1, "productId": 12, "productCode": "...", "productName": "...", "systemQuantity": 10, "scannedCount": 9,
+               "manualCount": null, "countMode": 1, "countedQuantity": 9, "difference": -1, "missingCount": 1, "relocatedCount": 0,
+               "unexpectedCount": 0, "missingBarcodes": ["..."], "unexpectedBarcodes": [], "differenceValue": -700000,
+               "appliedMissing": null, "appliedFound": null } ],
+  "unknownBarcodes": [], "totalMissing": 1, "totalSurplus": 0, "totalDifferenceValue": -700000 }
+```
+`differenceValue` = اختلاف × میانگین بهای فعلی کالا. `appliedMissing`/`appliedFound` پس از تأیید پر می‌شوند.
+
+### `GET api/Stocktake/GetStocktakeList`
+پارامترها: `page`، `take`، `statuses`، `warehouseId`، `fromDate`/`toDate` (روی تاریخ ساخت)، `search` (شماره یا عنوان)، `sortBy`
+(`StocktakeListSortEnum`: `CREATED_AT = 0` که پیش‌فرض و نزولی است، `NUMBER = 1`، `STATUS = 2`) و `sortDirection`. ردیف‌ها `lines` ندارند.
+
+### `StocktakeStatusEnum`
+| مقدار | معنی |
+|---|---|
+| 1 | در حال شمارش (COUNTING) |
+| 2 | پایان شمارش، منتظر تأیید (SUBMITTED) |
+| 3 | تأییدشده و اعمال‌شده (APPROVED) |
+| 4 | لغوشده (CANCELLED) |
+
+### `StocktakeCountModeEnum` (روی هر ردیف)
+| مقدار | معنی |
+|---|---|
+| 0 | شمرده نشده (NONE)؛ در تأیید نادیده گرفته می‌شود |
+| 1 | با اسکن (SCAN) |
+| 2 | عدد دستی (MANUAL) |
+
+---
+
+## 27. نقطه‌ی سفارش و پیشنهاد خرید (Reorder)
+
+> از ۲۰۲۶-۱۰-۲۰. کنترلر: `api/Reorder`.
+
+فیلدهای مرتبط روی کالا (بخش ۷):
+- `lowStockThreshold` = **نقطه‌ی سفارش**. مقدار بالاتر از صفر یعنی کالا در پیشنهاد خرید شرکت می‌کند.
+- `targetStock`: سقفی که سفارش موجودی را تا آن پر می‌کند.
+- `minOrderQuantity`، `leadTimeDays` و `preferredSupplierId`.
+
+### `GET api/Reorder/GetReorderSuggestionList`
+دسترسی `ReorderSuggestionView`. پارامترها: `supplierId`، `productCategoryId`، `search` (نام، کد یا برند). صفحه‌بندی ندارد، چون فهرست کار
+یک خریدار است. ترتیب: اول تامین‌کننده، بعد نام کالا.
+
+کالایی در فهرست می‌آید که `stock + onOrder ≤ lowStockThreshold` باشد:
+- `stock` = موجودی آزاد (رزرو و قرنطینه بیرون از آن‌اند).
+- `onOrder` = باقیمانده‌ی خریدهای باز (پیش‌فاکتور، در انتظار، ارسال‌شده، دریافت ناقص)، بدون مقداری که با کسری بسته شده. **پیش‌فاکتور هم
+  حساب می‌شود**؛ پس کالایی که از این صفحه برایش پیش‌فاکتور ساخته شد، دیگر پیشنهاد نمی‌شود.
+- `suggestedQuantity` = `max(هدف − (stock + onOrder), minOrderQuantity)`، رو به بالا گرد شده به مضرب `minOrderQuantity`. هدف همان
+  `targetStock` است، و اگر خالی باشد `lowStockThreshold`.
+- تامین‌کننده: اول تامین‌کننده‌ی ترجیحی (`isPreferredSupplier: true`)، اگر نبود تامین‌کننده‌ی آخرین خرید، وگرنه `null`.
+- `lastUnitPrice` = قیمت آخرین قلم خرید؛ اگر نبود، قیمت خرید کالا.
+
+```json
+[ { "productId": 12, "productCode": "...", "productName": "...", "brand": "...", "productCategoryId": 4, "productCategoryName": "...",
+    "stock": 2, "onOrder": 0, "reorderPoint": 5, "targetStock": 20, "minOrderQuantity": 6, "leadTimeDays": 7,
+    "suggestedQuantity": 18, "supplierId": 9, "supplierName": "...", "isPreferredSupplier": true, "lastUnitPrice": 700000 } ]
+```
+
+### `POST api/Reorder/CreatePurchaseDraftsFromReorder`
+دسترسی `PurchaseCreate`. ردیف‌های انتخاب‌شده (و احتمالاً ویرایش‌شده) را به **پیش‌فاکتور خرید** تبدیل می‌کند: برای هر تامین‌کننده یکی، از
+همان مسیر `CreatePurchase` (با همان اعتبارسنجی و محاسبه‌ی مبالغ و مالیات). همه یا هیچ.
+```json
+{ "lines": [ { "productId": 12, "supplierId": 9, "quantity": 18, "unitPrice": 700000 } ] }
+```
+- هر جفت `(supplierId, productId)` فقط یک‌بار. `supplierId` و `quantity > 0` الزامی‌اند.
+- **data:** `[ { "supplierId": 9, "purchaseId": 140 } ]`. این پیش‌فاکتورها مثل هر پیش‌فاکتور خرید دیگری قابل ویرایش‌اند (بخش ۹).

@@ -4,16 +4,6 @@ import { useWatch } from "react-hook-form";
 import { Save, X, LogOut, KeyRound } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { useFormDraft } from "@/shared/hooks/useFormDraft";
@@ -35,6 +25,7 @@ import EmployeeAccessSummaryCard from "@/features/permissions/components/Employe
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 import UserActivityButton from "@/features/audit/components/UserActivityButton";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 const fullNameOf = (employee) =>
   `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim() ||
@@ -59,6 +50,9 @@ function mergeDraft(draft, state) {
 }
 
 function EmployeeDetailForm({ employee }) {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useCurrentUser();
@@ -237,28 +231,16 @@ function EmployeeDetailForm({ employee }) {
         </div>
       </form>
 
-      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>خروج اجباری</AlertDialogTitle>
-            <AlertDialogDescription>
-              تمام نشست‌های فعال {displayName} بسته می‌شود و برای ادامه‌ی کار
-              باید دوباره وارد شود. حساب کاربری او فعال باقی می‌ماند.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={logoutMutation.isPending}>
-              انصراف
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleForceLogout}
-              disabled={logoutMutation.isPending}
-            >
-              {logoutMutation.isPending ? "در حال انجام..." : "خروج اجباری"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        title="خروج اجباری"
+        description={`تمام نشست‌های فعال ${displayName} بسته می‌شود و برای ادامه‌ی کار باید دوباره وارد شود. حساب کاربری او فعال باقی می‌ماند.`}
+        confirmLabel="خروج اجباری"
+        destructive={false}
+        isPending={logoutMutation.isPending}
+        onConfirm={handleForceLogout}
+      />
 
       {canResetPassword && (
         <ResetPasswordDialog

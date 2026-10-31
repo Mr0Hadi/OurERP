@@ -99,7 +99,7 @@ All projects target `net10.0`, `Nullable=enable`, `ImplicitUsings=enable`. Solut
 - Add a migration (DbContext is in `Infrastructure`, host in `WMS`):
   `dotnet ef migrations add <Name> --project Infrastructure --startup-project WMS`
 - Run: `dotnet run --project WMS` (SQL Server connection string in `WMS/appsettings.json` → `ConnectionStrings:SqlServer`).
-- Tests: `dotnet test Tests/WMS.Tests` (xUnit; integration tests create throwaway `WMS_Test_{guid}` databases on the local SQL Server `Server=.`).
+- Tests: `dotnet test --project Tests/WMS.Tests` (xunit.v3 on Microsoft.Testing.Platform, opted in by `global.json`; integration tests create throwaway `WMS_Test_{guid}` databases on the local SQL Server `Server=.`).
 
 ## 5. Folder structure
 
@@ -142,6 +142,9 @@ Backend-Net/
 │   │   ├── Setting/     # Commands/, Queries/, Dtos/ (system settings, 2026-10-17; catalogue in Common/Settings)
 │   │   ├── Treasury/    # Commands/, Queries/, Dtos/ (cash boxes, bank accounts, transfers, statements - 2026-10-17)
 │   │   ├── Cheque/      # Commands/ (Cash/Bounce/EndorseCheck), Queries/ (GetCheckList) - route api/Check, 2026-10-19
+│   │   ├── Warehousing/ # Commands/, Queries/, Dtos/ (warehouses + stock transfers, route api/Warehouse - 2026-10-20)
+│   │   ├── Stocktaking/ # Commands/, Queries/, Dtos/, StocktakeVariance (route api/Stocktake - 2026-10-20)
+│   │   ├── Reorder/     # Queries/ (suggestions), Commands/ (purchase drafts) - route api/Reorder, 2026-10-20
 │   │   ├── Customer/    # Commands/, Queries/, Dtos/
 │   │   ├── FileStorage/ # Commands/ (UploadImage, DeleteImage), Queries/ (GetImageUrl)
 │   │   │                # (named FileStorage, not File, to avoid System.IO.File shadowing;
@@ -188,6 +191,13 @@ Backend-Net/
 **DI registration pattern.** Each project has a static `Ioc/<X>ServiceRegistration.cs` extension method (`AddApplicationServices`, `AddInfrastructureServices(connectionString)`, `AddEndPointServiceRegistration`), called from `WMS/Program.cs:54-56`. Repositories, the UnitOfWork, the `IWMSDbContext` → `WMSDbContext` forwarding, and services are all registered here as `Scoped`. Handlers/validators/mediator/AutoMapper are picked up via `AddMediatR(...RegisterServicesFromAssembly(typeof(ApplicationServiceRegistration).Assembly))` and `AddValidatorsFromAssembly(...)`.
 
 ## 6. Current state
+
+> **Deleted docs (2026-10-28).** The frontend migration guides, request/answer pairs and superseded design docs that the dated
+> entries below point at (`return-frontend-migration`, `proforma-lock-frontend-guide`, `permission-frontend-guide`,
+> `settings-dashboard`, `image-serving-guide`, `purchase-frontend-sync-requests`, `frontend-sync-followup`, the three old return
+> guides, `returns-effects-and-org-structure-summary`, `return-offscopekind-and-inflight-ledger-fix`, ...) were all implemented
+> and have been removed. The current contract is `docs/api-guide.fa.md`; read an old doc with
+> `git log --diff-filter=D -- Backend-Net/docs/<file>` and `git show <commit>^:Backend-Net/docs/<file>`.
 
 **Implemented**: JWT auth + account flows (login with lockout, single-session logout, refresh token; forget password removed 2026-10-04 in favour of manager reset + forced change); full CRUD for Customer, Product, ProductCategory, Supplier; create/update + list/detail for Purchase and Sale; user create/update/info; purchase receiving + returns (below). OpenAPI via Scalar (`/scalar`). **IsActive** exists on every entity and each entity feature folder has a soft-delete command (`DeleteCustomerCommand`, `DeleteProductCommand`, `DeleteProductCategoryCommand`, `DeletePurchaseCommand`, `DeleteSaleCommand`, `DeleteSupplierCommand`, `DeleteUserCommand`), all setting `IsActive = false` and throwing `NotFoundCustomException` when the row is missing. Each controller exposes a matching `[HttpDelete("DeleteX")]` action that `Send`s the command (`DeleteCustomer`, `DeleteProduct`, `DeleteProductCategory`, `DeletePurchase`, `DeleteSale`, `DeleteSupplier`, `DeleteUser`), taking the command via `[FromQuery]`. Create mappings default `IsActive = true` (existing rows default to active via the migration's column default). Schema change shipped as EF migration `20260802123347_add-isactive` (see `Infrastructure/Migrations`).
 
@@ -2204,6 +2214,127 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
   `SaleInstallmentTests.SettlePlan_...` now asserts the early-settlement discount. **Verified:** suite 1004/1007 - the 3 documented
   environmental failures; the migration chain applies from scratch to a throwaway database (dropped).
 
+**Stocktake (GAP-01), reorder point (GAP-04), multi-warehouse (GAP-08) and the settings page (2026-10-20).** API:
+`docs/api-guide.fa.md` sections 22 (rewritten), 25, 26, 27 and the 2026-10-20 table in section 16; frontend page spec:
+`docs/settings-dashboard.fa.md`. The standing rule this work introduced is section 6b.
+
+- **Settings page.** `SystemSettingDefinition` gained `MaxLength` and `IsPublic`; `GetSystemSettings` sends both. New groups
+  `WAREHOUSE = 4`, `COMPANY = 5`, `SECURITY = 6`. `GET api/Setting/GetFeatureFlags` (no permission, in the coverage test's
+  AuthenticatedOnly list) returns the public settings typed, key -> value. **Moved out of `appsettings.json`:** the `Company` section
+  (now `Company.*`, read by the three PDF queries through `SystemSettingValues.CompanyAsync`; their `IConfiguration` parameter is gone)
+  and the two lockout numbers (`Security.MaxFailedLoginAttempts`/`LockoutMinutes`, read by `LoginUserCommand` through
+  `ISystemSettingService`, its last constructor parameter). `LoginSecurity:RateLimitPerMinutePerIp` stays in appsettings (wired at startup).
+- **Warehouses.** `Warehouse` (unique `Code`, exactly one `IsDefault` via a filtered unique index, seeded `Id = 1` `MAIN`).
+  **`ProductUnit.WarehouseId` is always set** (column default 1) - the on-model; `ProductUnitMovement.WarehouseId` snapshots it.
+  `Product.Stock` stays global; per-warehouse stock is counted from units. Switch `Warehouse.MultiWarehouseEnabled` (default off,
+  public). `Application/Common/Warehouses/WarehouseScope.ResolveAsync` is the one rule: off or nothing requested -> null, so arrivals mint
+  into the default warehouse (`ProductUnitService.DefaultWarehouseIdAsync`) and departures pick from any warehouse. `warehouseId` is an
+  optional field on `ReceivePurchase`, `ShipSale` and both `ExecuteGoodsRound`s, passed through `UnitMovementContext.WarehouseId`.
+- **Stock transfers** (`StockTransfer` + `StockTransferUnit`, `ST-{year}-{seq}`): create needs the switch on; receive and cancel always
+  work (nothing gets stuck). Units go `IN_TRANSIT = 11` (out of Stock, still in inventory value - `GetInventoryValuation.InTransitQuantity`);
+  **no cost-ledger row**. Delete warehouse is refused for the default one and while it holds units, transfers or an open stocktake.
+- **Stocktake** (`Stocktake`, `StocktakeLine`, `StocktakeScan`, `StocktakeSnapshotUnit`; `STK-{year}-{seq}`): COUNTING -> SUBMITTED ->
+  APPROVED, plus reopen and cancel. Creation snapshots the shelf; sales go on meanwhile. **`StocktakeVariance` is the one definition of
+  the differences**, used by the detail reader and by approval. Scan mode: missing = snapshot units not scanned and still IN_STOCK here
+  (-> SCRAPPED + `MANUAL_ADJUSTMENT_OUT`); relocated = scanned units IN_STOCK elsewhere (warehouse changes only); unexpected = reported only.
+  Manual mode: difference vs the snapshot; shortage takes the newest units, surplus mints at purchase price. `Stocktake.BlindCount`
+  (default on) hides system quantities and differences from everyone while COUNTING. Overlapping open stocktakes in one warehouse are refused.
+  Movement reasons 17-21.
+- **Reorder.** `Product.TargetStock`/`LeadTimeDays`/`PreferredSupplierId` (Restrict)/`MinOrderQuantity`; `LowStockThreshold` is the
+  reorder point. `GetReorderSuggestionList` (not paged): stock + on order (PROFORMA drafts included, short-closed excluded) <= reorder point;
+  quantity = max(target - position, MOQ) rounded up to MOQ; supplier = preferred, else latest purchase. `CreatePurchaseDraftsFromReorder`
+  sends one `CreatePurchaseCommand` (PROFORMA) per supplier inside one transaction.
+- Permissions 173-179 (group Warehouse), audit actions 805-819.
+- Migration `20261019201102_warehouses-stocktake-reorder-settings`: tables, columns, default warehouse inserted before the FK, and
+  seed rows for `Company.Name/Address/Province/City` (the values that were in appsettings) where not already present. **Generated, not
+  applied**; the whole chain applies from scratch to a throwaway database (dropped).
+- Tests: `Integration/WarehouseStocktakeReorderTests.cs` (9), two `ListSortingTests` cases. `ProformaFlow` registers
+  `scope.PurchaseRepository`. **Verified:** suite 1013/1016 - the 3 documented environmental failures.
+
+**Frontend requests 24-27 (2026-10-24).** `docs/frontend-requests.fa.md` sections 24-27, each answered under its section. API:
+`docs/api-guide.fa.md` sections 10, 11, 11b, 13, 24 and the four 2026-10-24 tables in section 16.
+
+- **24 - proforma follow-ups.** `CheckSaleWarehouse.Adjustments` (+ required `Note`): the warehouse lowers or removes lines and approves
+  the rest in one step - reservations of the changed lines released, `InvoiceLineMath.Recompute` (the line keeps its tax snapshot),
+  revision bumped, one `WAREHOUSE_ADJUSTED = 6` event; with adjustments every remaining line must be fully scanned (no shortage path).
+  Issues are resolved before adjusting. `SaleInvoiceFinalizer.FinalizeAsync` now takes `DateTime? invoiceDate` (from `AddSalePayment`,
+  `CreateSaleInstallmentPlan`, `CompleteInPersonSale`; not after today) and otherwise **keeps a non-future date already on the proforma**
+  (it used to overwrite it with now); it also calls `ApplyPaymentType` (full payment -> the rows' one method, or MIXED; installment and
+  partial payment untouched). No "edit an issued invoice's date": the ledger and tax period are dated by it. `Sale.IsInPerson` +
+  `CreateInPersonProformaCommand` (CreateSale + Approve + Check via IMediator in one transaction, `SaleInPerson`);
+  `ReleaseSaleReservationCommand` (manual release, `RESERVATION_RELEASED = 7`); `updatedAt`/`isInPerson` on the sale DTOs. Audit 415/416.
+  Migration `sale-in-person-flag`.
+- **25 - installments.** `GetSaleInstallmentList.Statuses`/`UnpaidOnly`; penalty fields on the list row (computed after paging);
+  `InstallmentRules.QuoteSettlement` is now the one settlement calculation - `SettleSaleInstallmentPlan` and the plan detail's
+  `earlySettlementDiscountPreview`/`settlementAmountToday` both call it.
+- **26 - treasury.** `BankAccountId` on `{Purchase,Sale}ReturnEffect` and both `...EffectMoneyPart`s, sent as `bankAccountId` on money
+  effects/parts and on `ExecuteMoneyEffect`. `Application/Common/Returns/ReturnMoneyAccounts` is the rule (static, reads settings through
+  `SystemSettingValues`, so no handler constructor changed): CASH/TRANSFER only, active account, `Payment.RequireBankAccount` for applied
+  money. `BankAccountLedger` counts applied return money (four small queries read separately - a union then group does not translate)
+  and lists it as `RETURN_MONEY = 4`. Return cheques have no clearing lifecycle and take no account. `ChequeDto.VoidedAt`.
+  Migration `return-money-bank-account`.
+- **27 - print data.** `Application/Features/Invoice/Documents/InvoiceDocumentBuilder` builds all three official documents; the PDF
+  queries render it and `GetSaleInvoiceDocument`/`GetSaleReturnCreditNoteDocument`/`GetPurchaseReturnDocument` return it as
+  `InvoiceDocumentDto` (nulls, never empty strings). `InvoiceDocumentModel` gained `IsProforma`, `Notes` and per-line
+  `Unit`/`GrossAmount`/`NetAmount`/`TaxPercent`; `Application/Common/Documents/InvoiceDocumentNotes.For` is the one notes list (the Excel
+  renderer writes it into AE29; QuestPDF prints only `model.Notes`, since it shows the charge and due date in their own places). PDF
+  fixes on the way: proforma title, Persian status, real unit label, and the return sheets print the return's own description with the
+  summary as notes.
+- **Not verified against SQL Server**: the local instance hung during this pass (an orphaned `CREATE DATABASE` stuck in
+  `PARALLEL_REDO_WORKER_SYNC`, its KILL rollback stuck too) and needs a service restart. Before the hang: build clean, 24's 6 tests pass,
+  full suite 1016/1022 (3 environmental + 3 SQL timeouts). After: 27's SQL-free unit tests pass; 25's 2, 26's 5 and 27's 4 integration
+  tests are written and not yet run. Neither migration is applied.
+
+**Frontend requests backlog (2026-10-30, branch `feat/frontend-requests-backlog`).** Everything open in
+`docs/frontend-requests.fa.md` except 4.6 (data), 11/12/17.6 (card reader), 13, 14, and the money decision 9.9. **9.8 decided by the
+user:** VAT goes to the government, so a return claim is valued at the goods' price only, never with tax (the existing behaviour:
+claim `UnitPrice` is the line's untaxed unit price). Provisional - the user may revisit it. API:
+`docs/api-guide.fa.md` section 16, table "2026-10-30".
+
+- **Document numbers (9.10/17.8).** `DocumentNumberCounter` (string key, `LastValue`) + `IWMSDbContext.NextDocumentNumberAsync` - one
+  `MERGE ... WITH (HOLDLOCK) ... OUTPUT` that increments and returns, never through the change tracker (so not audited). Used through
+  `Application/Common/Documents/DocumentNumbers` for sale invoices, both returns, stock transfers and stocktakes; formats unchanged.
+  Unique indexes on `Sales.InvoiceNumber` (filtered `<> ''`) and both `ReturnNumber`s; the columns became `nvarchar(50)`. Inside a caller's
+  transaction a rollback gives the number back; outside one a failed save after the draw leaves a gap - accepted.
+- **Replacement quota (9.1).** `PurchaseItem.ReplacementReceivedQuantity` / `SaleItem.ReplacementShippedQuantity`, bumped only by the
+  goods rounds (purchase GOODS_IN / sale GOODS_OUT of the claim's own product on its line). Claimable = received/shipped + replacement -
+  settled - outstanding, and `GetOpenClaimQuantity` now counts *outstanding* (claim quantity minus completed resolutions), which closes the
+  old gap where a decided-but-pending resolution freed its units.
+- **Credit invoice (9.11).** `ChangeSaleStatus` accepts PROCESSING (+ optional `InvoiceDate`) on a WAREHOUSE_CHECKED, non-installment
+  proforma with a live reservation (`EnsureReadyForPayment`) and calls `SaleInvoiceFinalizer`.
+- **Payments.** `DocumentPayments.IsRowMethod` no longer accepts CREDIT (9.4); installment commands validate `PaymentType` with it
+  (17.3). `CreateSaleInstallmentPlan` requires `DownPaymentAmount > 0` (so always after the warehouse check) and refuses a sale with
+  `PaidAmount > 0` (17.5/17.7). `PreviewSaleInstallmentPlanQuery` (17.2) computes the same plan unsaved from `SaleId` or `Items`.
+- **Party ledger opening balance (21.1).** `PartyLedgerEntryTypeEnum.OPENING_BALANCE = 10`; `PartyLedger.OpeningBalanceChangedAsync`
+  writes the signed difference from Create/Update Customer/Supplier and both imports (handler constructors gained `IWMSDbContext`, last).
+  The migration posts existing typed balances. The typed `Balance`/`BalanceType` fields stay as the input.
+- **Warehouse check (29.1).** A line of a product with `RequiresUnitTracking == false` sent without barcodes is reserved FIFO by serial
+  (`IProductUnitService.ReserveAsync` now takes a count and optional barcodes) or becomes a shortage. FIFO here picks the physical unit
+  only; cost stays the running average (no ledger row at reservation).
+- **Smaller ones:** renames `CreateUserCommand.FirstName`, `Customer.ReferralCode` (column renamed); `OrderLineId` on both claim DTOs;
+  `WMSDbContext.ClearEmptyDates` turns any `DateTime?` equal to `MinValue` into null on save (7.4); `WMS/Serialization/LocalDateTimeJsonConverter`
+  converts incoming UTC body times to local (9.6); `ScanBarcode` uses `ProductUnitProjection` (8); create Customer/Supplier/Category return
+  ids (9.2/15.4); `ProductListDto` price/unit/tax (9.3); product identification fields on receiving info, sale items, pending effects and
+  return effects (9.7/15.1 - the return mappings now take `IObjectStorageService`); `GetBrandList` (15.2); `DeleteProduct` guard (15.5,
+  constructor gained `IWMSDbContext`); word-by-word customer/supplier search incl. phone (9.12); `BinLocations.Normalize` drops leading
+  zeros per numeric segment and the unit-list shelf filter matches whole segments (19); `GET api/Health` + `DatabaseWarmUpService` (20.1);
+  `ForwardedHeadersRegistration` trusts X-Forwarded-For only from `ForwardedHeaders:KnownNetworks` (Cloudflare ranges in appsettings,
+  20.3); `ExportSpec.Rows` for in-memory exports and the `tax-report`/`trade-breakdown`/`purchase-lines` resources, `GetPurchaseLineJournal`
+  (21.2/21.3); `GetUserOptions` (21.4); dashboard layout on `User.DashboardLayout`, not audited (6.3, `AuditActionEnum.SaveMyDashboardLayout = 27`);
+  five return reads open to `*ReturnExecute` (23); reorder skips products already ordered up to target (28.1).
+- **Migration `20261030102630_frontend-requests-backlog`** with data steps (renumber duplicates, seed counters, MinValue dates to NULL,
+  opening-balance rows, shelf normalisation via `STRING_SPLIT(..., 1)` - SQL Server 2022+). Checked from scratch on a throwaway database
+  seeded with duplicates (dropped). **Not applied anywhere.**
+- **Environment note:** `csc` crashed intermittently on this machine ("Internal CLR error 0x80131506"); `dotnet build-server shutdown` and
+  `-p:UseSharedCompilation=false` got builds through. Not a code problem.
+- **20.4 still open:** `WMS/appsettings.json` again carries the remote DB password and JWT keys; left to the user, as before.
+- **Also fixed:** `SalesStatusEnum` had no `[Description]`s, so the 2026-10-24 print document showed `"SHIPPED"`; Persian labels added
+  (its `InvoiceDocumentTests` case had never run before this pass).
+- **Tests:** `Integration/FrontendRequestsBacklogTests.cs` (16), `Unit/ReplacementQuotaTests.cs` (3); two existing tests adjusted to the
+  new rules (PROCESSING is now a valid manual status; the adjustment-refusal test uses a tracked product). **Verified:** build clean, suite
+  1051/1054 - the 3 documented environmental failures (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder). This also
+  ran the 10-24 tests left unrun by the SQL hang; they pass.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
@@ -2241,6 +2372,30 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
 - **Seed data available**: `scripts/seed-mock-data.sql` loads the frontend's mock fixtures (products, customers, suppliers, purchases, sales, and a coherent set of both kinds of return) into a migrated DB. It refuses to run against non-empty tables unless `@ResetExisting = 1`. Validated end-to-end against a throwaway migrated database.
 - **`SalesStatusEnum.RETURNED` is now reachable** (unlike its still-dead `PurchaseStatusEnum.RETURNED` counterpart) — `RecomputeSaleStatus` sets it once every shipped unit of a sale is settled through return decisions.
 
+## 6b. System settings and feature toggles - the standing rule
+
+Agreed with the user 2026-10-19; applies to every setting and every feature switch added from now on.
+
+- **Business configuration lives on the in-app settings page, never in `appsettings.json`.** Anything the company decides for itself
+  (feature on/off, durations, percentages, company letterhead, login lockout policy) is a `SystemSettingCatalog` entry, stored in
+  `SystemSettings`, edited through `api/Setting` by a user holding `SettingManage` - a real page in the website, like the product list.
+  `appsettings.json` keeps only what a programmer or the host owns: connection strings, keys and secrets, hosts and URLs, CORS, request
+  and upload limits, rate limits wired at startup, background-job technical knobs. When moving a value, remove it from
+  `appsettings.json` and seed its current value in the migration.
+- **A switch never deletes or rewrites data.** Turning a feature off only stops *new* work from entering its flows (the UI hides them,
+  the API ignores the feature's inputs or refuses to start the feature's own operations). Everything already stored stays exactly
+  as it is and stays readable.
+- **The data model is always the "on" model.** Records are written so the "on" flows can read them whatever the switch was at the
+  time: e.g. every unit always has a `WarehouseId` (the default warehouse while multi-warehouse is off), so turning it on later needs
+  no conversion. The migration that introduces a feature backfills these defaults.
+- **Off-mode inputs are valid "on" data, and "on" data stays usable when off.** New flows must accept data from all three periods
+  (before the feature, while it was on, while it was off) together. While off, operations that would otherwise depend on the feature
+  fall back to a neutral behaviour (pick from any warehouse, mint into the default one) instead of failing on old "on" data.
+- **Nothing gets stuck.** Work the feature started while on (an in-transit stock transfer) can still be finished or cancelled after
+  it is switched off.
+- **Toggles are public.** A feature switch is `IsPublic = true` in the catalogue, so every signed-in user can read it through
+  `GET api/Setting/GetFeatureFlags` and the frontend can hide menus; the settings page itself needs `SettingView`/`SettingManage`.
+
 ## 7. Conventions to avoid
 
 - **Don't add `tbl`-prefixed entities** — that is the smshub2 reference style; this project uses plain `Customer`, `Product`, etc.
@@ -2250,6 +2405,7 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
 - **Don't add a global `IsActive` query filter** — soft delete is an explicit `IsActive = false` write; filtering is done per-query.
 - **Don't add repository interfaces beyond the thin per-entity ones.** Tests go in the existing `Tests/WMS.Tests` project, not a second one.
 - **Don't rename the intentional typos** (`Paggination.cs`, `PurchaceStatusEnum`) without asking — they are part of the codebase's existing naming.
+- **Don't put business configuration in `appsettings.json`, and don't let a feature switch delete, rewrite or strand data** - see 6b.
 - **Don't add a synchronous database call.** No `SaveChanges()`, no `ToList()`/`FirstOrDefault()`/`Count()`/`Any()` on an EF `IQueryable` — use the `...Async(cancellationToken)` counterpart. And never block on a `Task` (`.Result`, `.Wait()`, `.GetAwaiter().GetResult()`); it burns a request thread and can deadlock.
 - **Don't drop the `CancellationToken`.** A handler's token must reach the EF call. Calling `GetByIdAsync(request.Id)` and letting the parameter default is a bug, not a shortcut.
 - **Don't fake-async CPU work** — no `Task.Run` around in-memory math, and no `async` on a method with no `await`. See the async-design rule in §3.

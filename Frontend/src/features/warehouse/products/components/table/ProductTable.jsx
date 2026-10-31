@@ -16,8 +16,14 @@ const COLUMNS = [
     accessorKey: "code",
     meta: { mobile: "subtitle" },
     header: "کد کالا",
+    // کدِ کالا معمولاً کوتاه است (`14050803-85`)؛ کدهای بلندِ قدیمی (۳۲ نویسه) ستون را پهن می‌کردند و جدول از
+    // قاب بیرون می‌زد. سقفِ عرض + «…»، کدِ کامل در راهنما.
     cell: (info) => (
-      <span className="font-mono text-xs text-muted-foreground">
+      <span
+        dir="ltr"
+        title={info.getValue()}
+        className="mx-auto block max-w-20 truncate xl:max-w-28 font-mono text-xs text-muted-foreground"
+      >
         {info.getValue()}
       </span>
     ),
@@ -27,8 +33,9 @@ const COLUMNS = [
     meta: { mobile: "title" },
     header: "نام قطعه",
     cell: (info) => (
-      <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
-        <span className="font-light">{info.getValue()}</span>
+      // نامِ بلند دو خط می‌شود، نه یک خطِ پهن که جدول را از قاب بیرون می‌برد.
+      <span className="mx-auto inline-flex min-w-28 max-w-56 flex-wrap items-center justify-center gap-1.5 whitespace-normal">
+        <span className="font-light leading-6">{info.getValue()}</span>
         {info.row.original.isIncomplete && (
           <StatusBadge tone="warning" size="sm">
             ناقص

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { useState } from "react";
 import { CircleAlert, CircleCheck, CircleX, RotateCcw, ScanLine, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
@@ -7,16 +7,10 @@ import { Label } from "@/shared/components/ui/label";
 import { Spinner } from "@/shared/components/ui/spinner";
 import Notice from "@/shared/components/feedback/Notice";
 import { PosStatus, normalizeRrn } from "@/shared/domain/pos/posSession";
+import LazyBankLogo from "@/shared/components/payments/LazyBankLogo";
 import { getIranianBankByCardNumber } from "@/shared/lib/iranian-bank";
 import { formatRial } from "@/shared/lib/numberFormat";
-
-/**
- * لوگوی بانک فقط وقتی رسیدی با کارتِ ماسک‌شده هست بار می‌شود: `bank-input` همه‌ی
- * آیکن‌های بانک (~۴۳۰KB) را دارد و بدونِ lazy در باندلِ هر فرمِ خرید و فروش می‌نشست.
- */
-const BankLogo = lazy(() =>
-  import("@/shared/components/ui/bank-input").then((module) => ({ default: module.BankLogo })),
-);
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
  * نمای نتیجه‌های پنلِ کارتخوان: تلاشِ ناموفق (رد/لغو/خطا)، ثبت‌شده، ثبت‌نشده با پولِ
@@ -185,9 +179,7 @@ function ReceiptDetails({ result }) {
       label: "کارت",
       value: (
         <span className="inline-flex items-center gap-1.5" dir="ltr">
-          <Suspense fallback={null}>
-            <BankLogo bank={bank} />
-          </Suspense>
+          <LazyBankLogo bank={bank} />
           {result.maskedCardNumber}
         </span>
       ),
@@ -200,13 +192,10 @@ function ReceiptDetails({ result }) {
   if (rows.length === 0) return null;
 
   return (
-    <dl className="divide-y divide-border rounded-lg border border-border text-xs">
+    <InfoList variant="divided" className="text-xs">
       {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between gap-2 px-2.5 py-1.5">
-          <dt className="text-muted-foreground">{row.label}</dt>
-          <dd className="font-medium tabular-nums">{row.value}</dd>
-        </div>
+        <InfoRow key={row.label} label={row.label} value={row.value} valueClassName="font-medium" />
       ))}
-    </dl>
+    </InfoList>
   );
 }

@@ -25,9 +25,9 @@ export const INSTALLMENT_PLAN_STATUS_TONES = Object.freeze({
 /**
  * وضعیتِ یک سطرِ قسط.
  *
- * ⚠️ `OVERDUE` را هیچ کدی در سرور نمی‌نویسد؛ سند می‌گوید تشخیصِ دیرکرد از روی
- * `dueDate` کارِ فرانت است (`installmentDisplayStatus`). عضو اینجا هست تا اگر روزی
- * سرور آن را نوشت، همین نمایش بی‌تغییر کار کند.
+ * `OVERDUE` را سرویسِ پس‌زمینه‌ی سرور هر ساعت می‌نویسد (از ۲۰۲۶-۱۰-۱۹): قسطِ پرداخت‌نشده‌ای که
+ * سررسیدش به‌اضافه‌ی مهلتِ ارفاق (`Installment.OverdueGraceDays`) گذشته. فرانت آن را از روی
+ * تاریخ حدس نمی‌زند؛ مهلتِ ارفاق را فقط سرور می‌داند.
  */
 export const SaleInstallmentStatusEnum = Object.freeze({
   PENDING: 0,
@@ -50,20 +50,7 @@ export const INSTALLMENT_STATUS_TONES = Object.freeze({
   [SaleInstallmentStatusEnum.CANCELLED]: "neutral",
 });
 
-/** پرداخت‌نشده از دیدِ سرور: `PENDING`، یا `OVERDUE` اگر روزی نوشته شود. */
+/** پرداخت‌نشده از دیدِ سرور: `PENDING` یا `OVERDUE`. */
 export const isInstallmentUnpaid = (status) =>
   Number(status) === SaleInstallmentStatusEnum.PENDING ||
   Number(status) === SaleInstallmentStatusEnum.OVERDUE;
-
-/**
- * وضعیتِ نمایشیِ یک قسط: پرداخت‌نشده‌ای که سررسیدش (پیش از امروز) گذشته
- * «سررسید گذشته» است. قسطی که سررسیدش امروز است هنوز دیرکرد نیست.
- *
- * @param today "YYYY-MM-DD"ِ محلی (`todayIso()`)
- */
-export function installmentDisplayStatus(installment, today) {
-  const status = Number(installment.status);
-  if (!isInstallmentUnpaid(status)) return status;
-  const due = String(installment.dueDate ?? "").slice(0, 10);
-  return due && due < today ? SaleInstallmentStatusEnum.OVERDUE : SaleInstallmentStatusEnum.PENDING;
-}

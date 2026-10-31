@@ -15,7 +15,7 @@ namespace Application.Features.User.Command
     [AuditAction(AuditActionEnum.CreateUser)]
     public class CreateUserCommand : IRequest<ResponseDto>
     {
-        public string FisrtName { get; set; }
+        public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
@@ -28,7 +28,7 @@ namespace Application.Features.User.Command
         public CreateUserCommandValidator()
         {
 
-            RuleFor(x => x.FisrtName)
+            RuleFor(x => x.FirstName)
                 .Must(Validation.IsNotNullOrEmpty).WithMessage(Validation.RequiredMessage("نام"))
                 .Must(Validation.IsPersianText).WithMessage("نام فقط باید حروف فارسی باشد");
 

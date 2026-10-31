@@ -11,7 +11,7 @@
 | فایل | export |
 | --- | --- |
 | `src/shared/store/createFilterStore.js` | `createFilterStore({ filters, defaultSorting, defaultPageSize, actions })` |
-| `src/shared/store/createDocumentFormStore.js` | `createDocumentFormStore({ emptyForm, formFromDocument })`، `isDocumentFormChanged` |
+| `src/shared/store/createDocumentFormStore.js` | `createDocumentFormStore({ emptyForm, formFromDocument })` |
 | `src/shared/store/formDraftStore.js` | `useFormDraftStore` (پیش‌نویسِ یک‌بارمصرف) |
 | `src/shared/store/headerStore.js` | `useHeaderStore` (`title`، `showBack`، `onBack`، `actionsSlot` — گرهِ DOMِ جای دکمه‌های صفحه در هدر) |
 | `src/shared/hooks/useDebouncedFilters.js` | `useDebouncedFilters(useStore, { text, instant })` |
@@ -25,12 +25,12 @@
 
 | نوع | فایل‌ها |
 | --- | --- |
-| سراسری | `src/features/auth/store/authStore.js` (persist، [04](04-auth-and-session.md))، `src/shared/store/headerStore.js`، `src/shared/store/formDraftStore.js` |
+| سراسری | `src/features/auth/store/authStore.js` (persist، [04](04-auth-and-session.md))، `src/shared/store/headerStore.js`، `src/shared/store/formDraftStore.js`، `src/shared/store/printSettingsStore.js` (persist) |
 | فیلترِ لیست (`createFilterStore`) | `*FilterStore.js` در `customers`، `suppliers`، `employees`، `organization/departments`، `organization/teams`، `purchases/orders`، `purchases/returns`، `sales/orders`، `sales/returns`، `sales/installments`، `warehouse/products`، `warehouse/receiving`، `warehouse/shipping`، `warehouse/units`، `accounting/activity`؛ و بخشی از `src/features/accounting/store/accountingFilterStores.js` |
 | فیلترِ بدونِ factory (`create` + `devtools`) | `src/features/dashboard/store/dashboardFilterStore.js` (طبقِ کامنتش چون صفحه‌بندی ندارد) و یک store در انتهای `accountingFilterStores.js` |
 | فرمِ سند (`createDocumentFormStore`) | `src/features/purchases/orders/store/purchaseFormStore.js`، `src/features/sales/orders/store/saleFormStore.js` |
 | فرمِ دستی (`create` مستقیم) | `src/features/purchases/returns/store/purchaseReturnFormStore.js`، `src/features/sales/returns/store/salesReturnFormStore.js`، `src/features/warehouse/receiving/store/receivingFormStore.js`، `src/features/warehouse/shipping/store/shippingFormStore.js` |
-| persist در localStorage | `authStore` (`auth-storage`)، `src/features/dashboard/store/dashboardLayoutStore.js` (`dashboard-layout`)، `src/features/warehouse/units/store/unitFilterStore.js` (`unit-label-template`) |
+| persist در localStorage | `authStore` (`auth-storage`)، `src/features/dashboard/store/dashboardLayoutStore.js` (`dashboard-layout`)، `src/features/warehouse/units/store/labelTemplateStore.js` (`unit-label-template`)، `src/shared/store/printSettingsStore.js` (`print-settings`؛ تنظیماتِ چاپِ هر نوع برگه، فقط تغییرها) |
 
 ## چطور کار می‌کند
 
@@ -77,13 +77,17 @@ storeِ فیلتر در حافظه است: رفتن به صفحه‌ی جزئی�
 3. سندِ تازه → اگر کاربر از صفحه‌ی فرعی برنگشته (`useSubPageNavigation().cameBack`)، `resetForm()`؛ بعد `initializeForNew()`.
 4. `ready = initializedForId === version` — تا `ready` نشده فرم را رندر نکنید.
 
-`isDocumentFormChanged` (سلکتور) فرم را با `baseline` مقایسه می‌کند؛ `src/features/sales/orders/pages/SaleForm.jsx` و `src/features/purchases/orders/pages/PurchaseForm.jsx` آن را به `useUpdateGuard({ dirty, busy, reason })` از `src/shared/services/updateSafety.js` می‌دهند تا بروزرسانیِ برنامه فرمِ نیمه‌کاره را از بین نبرد.
+`baseline` فرم در لحظه‌ی پر شدن است؛ سلکتورهای `src/features/sales/orders/store/saleFormStore.js` (`isSaleCoreChanged`، …) تغییرِ کاربر را با آن می‌سنجند.
 
 **نکته‌ی `updatedAt`:** سرور برای خرید `updatedAt` نمی‌دهد؛ `src/features/purchases/orders/services/api-v1.js` با `documentVersion(purchase)` از `contract.js` آن را می‌سازد و `src/features/sales/orders/services/api-v1.js` هم اگر نبود. سندی که این کار را نکند `version`ِ ثابتِ `"id:undefined"` می‌گیرد و فرم بعد از تغییرِ سرور دوباره پر نمی‌شود.
 
 ### ۳. فرم‌های کوچک: react-hook-form + پیش‌نویسِ یک‌بارمصرف
 
-فرم‌های موجودیت‌های ساده با `react-hook-form` هستند و منطقشان در یک هوکِ `use<X>Form`: `src/features/customers/hooks/useCustomerForm.js`، `src/features/suppliers/hooks/useSupplierForm.js`، `src/features/employees/hooks/useEmployeeForm.js`، `src/features/warehouse/products/hooks/useProductForm.js`، `src/features/organization/departments/hooks/useDepartmentForm.js`، `src/features/organization/teams/hooks/useTeamForm.js`. فیلدها: `src/shared/components/forms/FormField.jsx`، `FormSelectField.jsx`؛ قواعد: `src/shared/lib/validationRules.js`.
+فرم‌های موجودیت‌های ساده با `react-hook-form` هستند و منطقشان در یک هوکِ `use<X>Form`: `src/features/customers/hooks/useCustomerForm.js`، `src/features/suppliers/hooks/useSupplierForm.js`، `src/features/employees/hooks/useEmployeeForm.js`، `src/features/warehouse/products/hooks/useProductForm.js`، `src/features/organization/departments/hooks/useDepartmentForm.js`، `src/features/organization/teams/hooks/useTeamForm.js`. فیلدها: `src/shared/components/forms/FormField.jsx`، `FormSelectField.jsx`، `FormPriceField.jsx`؛ قواعد: `src/shared/lib/validationRules.js`.
+
+**React Compiler و `errors`:** react-hook-form خطاها را درجا در همان شیءِ `formState.errors` می‌نویسد. Compiler عنصرِ `<XForm errors={errors} … />` را با propsِ هم‌مرجع از کش برمی‌گرداند و کارتِ فرم پس از «ذخیره» دوباره رندر نمی‌شد — خطا دیده نمی‌شد (فرمِ کالا). دو قاعده:
+- کامپوننتی که `useForm`/`formState.errors` را می‌خواند و `errors` را به کارت‌های فرم می‌دهد با `"use no memo"` شروع شود (صفحه‌های جدید/جزئیاتِ مشتری، تامین‌کننده، کارمند، کالا، واحد، تیم). صفحه‌ای که `watch()` صدا می‌زند را Compiler خودش رها می‌کند، ولی روی آن حساب نکنید.
+- درونِ کارت‌ها خطای همان فیلد (`error={errors.name}`) را پاس بدهید، نه کلِ `errors` را به زیرکامپوننتِ دیگر (`ProductPricingForm` → `PriceField`)؛ خواندنِ `errors[name]` با کلیدِ متغیر هم همان مشکل را دارد.
 
 برای رفت‌وبرگشت (مثلاً از فرمِ واحد به «کارمندِ جدید»): `useFormDraft(key)` (`src/shared/hooks/useFormDraft.js`):
 
@@ -130,7 +134,6 @@ usePageHeader({ title, showBack: true, onBack: () => {...} });
 
 ## سؤال‌های باز / بدهی
 
-- `useUpdateGuard` هنوز در فرم‌ها صدا زده می‌شود، ولی سیستمِ بروزرسانی غیرفعال است (`src/shared/services/appUpdate.js` طبقِ knip بی‌استفاده) و `getUpdateBlocker` در `updateSafety.js` هم بی‌استفاده؛ یعنی این گارد الان هیچ مصرف‌کننده‌ای ندارد.
 - `useDocumentFormDraft` نسخه را از `doc.updatedAt` می‌سازد و به اینکه `api-v1` آن را پر کرده باشد تکیه دارد؛ بهتر است مستقیم `documentVersion(doc)` را صدا بزند.
 - چهار store فرمِ مرجوعی/انبار factoryِ مشترک ندارند؛ این فقط توصیف است، نه پیشنهاد — منطقِ هر کدام متفاوت است.
 - `unit-label-template` بعد از خروج می‌ماند (فایل ۰۴).

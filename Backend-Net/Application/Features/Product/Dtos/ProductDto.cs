@@ -23,6 +23,13 @@ namespace Application.Features.Product.Dtos
         /// <summary>Units the warehouse reserved for proformas - still on the shelf and still ours, but not free to sell, so not part of Stock.</summary>
         public int ReservedCount { get; set; }
         public int LowStockThreshold { get; set; }
+
+        /// <summary>Reorder (GAP-04): order back up to this level when stock falls to LowStockThreshold (the reorder point). Null = up to the reorder point.</summary>
+        public int? TargetStock { get; set; }
+        public int? LeadTimeDays { get; set; }
+        public int? PreferredSupplierId { get; set; }
+        public int? MinOrderQuantity { get; set; }
+        public string? PreferredSupplierName { get; set; }
         /// <summary>The stable bucket object key - send this back on update to keep the image.</summary>
         public string? ImageKey { get; set; }
 

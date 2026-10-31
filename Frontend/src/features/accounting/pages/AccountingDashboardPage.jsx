@@ -149,7 +149,7 @@ export default function AccountingDashboardPage() {
                 hint="اقساطِ پرداخت‌نشده‌ی قراردادهای زنده، با هر سررسیدی."
                 value={data?.installments?.outstandingAmount}
                 isLoading={isLoading}
-                to={withFilters(ROUTES.SALES_INSTALLMENTS, { view: "unpaid" })}
+                to={withFilters(ROUTES.TREASURY_INSTALLMENTS, { view: "unpaid" })}
                 sub={
                   <>
                     <p>

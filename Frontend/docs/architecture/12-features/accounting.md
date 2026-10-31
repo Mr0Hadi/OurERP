@@ -14,6 +14,7 @@
 | `ACCOUNTING_SALES` / `ACCOUNTING_PURCHASES` | `/accounting/sales`، `/accounting/purchases` | `AccountingView` | `src/features/accounting/pages/InvoiceJournalPage.jsx` با `side={DocumentSideEnum.SALE \| PURCHASE}` و `key` جدا |
 | `ACCOUNTING_SALE_LINES` | `/accounting/sale-lines` | `AccountingView` | `src/features/accounting/pages/SaleLineJournalPage.jsx` |
 | `ACCOUNTING_PAYMENTS` | `/accounting/payments` | `AccountingView` | `src/features/accounting/pages/PaymentJournalPage.jsx` |
+| `ACCOUNTING_WAREHOUSE_ISSUES` | `/accounting/warehouse-issues` | `["AccountingView", "SaleWarehouseIssueResolve"]` | `src/features/accounting/pages/WarehouseIssuesPage.jsx` (صفِ دانه‌های معیوب/مفقودِ بررسیِ انبار؛ تصمیم با `WarehouseIssueResolveDialog`) |
 | `ACCOUNTING_TAX` | `/accounting/tax` | `AccountingView` | `src/features/accounting/pages/TaxReportPage.jsx` |
 | `ACCOUNTING_INVENTORY` | `/accounting/inventory` | `AccountingView` | `src/features/accounting/pages/InventoryValuationPage.jsx` |
 | `ACCOUNTING_BREAKDOWN` | `/accounting/breakdown` | `AccountingView` | `src/features/accounting/pages/TradeBreakdownPage.jsx` |
@@ -41,7 +42,7 @@
 
 ## importهای بیرونی
 
-`auth` (`usePermission`)؛ فیلترها: `organization` (واحد/تیم در `EmployeeScopeFilter.jsx`)، `warehouse/categories` (`CategoryFilterSelect.jsx`)، `customers`/`suppliers` (`PartyFilterSelect.jsx`)، `employees` (`src/features/employees/components/UserFilterSelect.jsx`؛ پیش‌تر در `accounting/components/filters/`).
+`auth` (`usePermission`)؛ فیلترها: `organization` (واحد/تیم در `EmployeeScopeFilter.jsx`)، `warehouse/categories` (`CategorySelect`)، `partyAccount` (`PartySelect`)، `employees` (`src/features/employees/components/UserFilterSelect.jsx`؛ پیش‌تر در `accounting/components/filters/`).
 
 ## نکته‌ها و بدهی
 

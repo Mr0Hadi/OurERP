@@ -1,3 +1,4 @@
+﻿using Application.Common.Warehouses;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -34,6 +35,12 @@ namespace Application.Features.SaleReturn.Commands
         public string? PartyPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public string? Note { get; set; }
+
+        /// <summary>
+        /// GAP-08: the warehouse the goods of a GOODS_IN line arrive in, or a GOODS_OUT line leave from. Used only while the Warehouse.MultiWarehouseEnabled setting is on; ignored while
+        /// off (default warehouse / any warehouse) - see WarehouseScope.
+        /// </summary>
+        public int? WarehouseId { get; set; }
     }
 
     public class ExecuteGoodsRoundCommandValidator : AbstractValidator<ExecuteGoodsRoundCommand>
@@ -174,6 +181,7 @@ namespace Application.Features.SaleReturn.Commands
             // units and leaves the pool at the running average. The only refusals left are
             // ProductUnitService's own DB-state checks, which throw before SaveChanges.
             var now = request.Date ?? DateTime.Now;
+            var warehouseId = await WarehouseScope.ResolveAsync(_context, request.WarehouseId, cancellationToken);
 
             foreach (var (line, claim, effect, healthy) in plan)
             {
@@ -214,7 +222,7 @@ namespace Application.Features.SaleReturn.Commands
 
                 var movement = new UnitMovementContext(
                     isGoodsIn ? ProductUnitMovementReasonEnum.SALE_RETURN_RECEIVED : ProductUnitMovementReasonEnum.SALE_RETURN_SHIPPED,
-                    now, DocumentKindEnum.SALE_RETURN, saleReturn.Id, CustomerId: saleReturn.Sale!.CustomerId, Note: request.Note);
+                    now, DocumentKindEnum.SALE_RETURN, saleReturn.Id, CustomerId: saleReturn.Sale!.CustomerId, Note: request.Note, WarehouseId: warehouseId);
 
                 if (isGoodsIn)
                 {
@@ -253,6 +261,11 @@ namespace Application.Features.SaleReturn.Commands
                     product.Stock -= line.Quantity;
                     await _productUnitService.ConsumeAsync(product, line.Quantity, unitLine, unitLine.HasValue ? UnitCustodyReasonEnum.ON_ORDER : null, line.ProductUnitBarcodes, movement, cancellationToken);
                     await _inventoryCostingService.RecordReplacementShippedToCustomerAsync(product, line.Quantity, unitLine, now, cancellationToken);
+
+                    // A replacement shipped on the claim's line is in the customer's hands and can be claimed again
+                    // (frontend-requests 9.1).
+                    if (unitLine is int replacedLineId)
+                        saleReturn.Sale!.Items.First(x => x.Id == replacedLineId).ReplacementShippedQuantity += line.Quantity;
                 }
 
                 if (effect.AppliedQuantity >= effect.Quantity)

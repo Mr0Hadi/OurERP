@@ -7,7 +7,7 @@
 ۱. **کد محصول و بارکد** — تولید خودکار با یک الگوی مشخص، قابل چاپ و قابل خواندن با اسکنر.
 ۲. **فاکتور** — تولید PDF در بک‌اند و تحویل آن به فرانت.
 
-سند فقط بک‌اند را پوشش می‌دهد. مثل `docs/purchase-return-guide.fa.md` و `docs/sale-return-guide.fa.md` نوشته شده و از همان قراردادهای معماری پروژه (`CLAUDE.md`) پیروی می‌کند.
+سند فقط بک‌اند را پوشش می‌دهد. از همان قراردادهای معماری پروژه (`CLAUDE.md`) پیروی می‌کند.
 
 > وضعیت: **طراحی، هنوز پیاده‌سازی نشده.** هیچ کدی از این سند هنوز نوشته نشده است.
 
@@ -195,7 +195,7 @@ Product.Stock  ==  COUNT(ProductUnit WHERE ProductId = p AND Status = IN_STOCK)
   - **ب)** آشتی‌دهی: اگر عدد جدید بیشتر بود Mint کن، اگر کمتر بود از بزرگ‌ترین سریال‌ها `SCRAPPED` کن.
   - **پیشنهاد: ب**، چون رفتار فعلی فرانت را نمی‌شکند و انبار واقعاً به «اصلاح دستی موجودی» نیاز دارد.
 
-> ⚠️ **به‌روزرسانی ۲۰۲۶-۰۹-۱۳ — بخش مرجوعی این جدول منسوخ است.** `ConfirmReplacementShipmentCommand` و `ConfirmReturnInspectionCommand` از ۲۰۲۶-۰۸-۲۸ حذف شده‌اند. جای هر دو، و جای مرجوعی خرید، `ExecuteGoodsRoundCommand` (هر دو طرف) است: اثر `GOODS_IN` موجودی را به اندازه‌ی مقدار سالم زیاد می‌کند و دانه **Mint** می‌کند (در فروش، برای کالای همان قلمِ یک ادعای ON_ORDER، دانه‌های `SOLD` همان قلم **Restore** می‌شوند: سالم `IN_STOCK`، معیوب `SCRAPPED`)؛ اثر `GOODS_OUT` موجودی را کم می‌کند و دانه‌ها را **Consume** (فروش) یا `RETURNED_TO_SUPPLIER` (خرید) می‌کند. این قاعده برای هر ادعا یکسان است، پس دو بند بالا درباره‌ی `EXCESS` («دانه نمی‌سازد») و «تصمیم‌های `PurchaseReturn` به `Stock` دست نمی‌زنند» **دیگر درست نیستند**. جزئیات: بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md) و [`return-frontend-migration.fa.md`](./return-frontend-migration.fa.md).
+> ⚠️ **به‌روزرسانی ۲۰۲۶-۰۹-۱۳ — بخش مرجوعی این جدول منسوخ است.** `ConfirmReplacementShipmentCommand` و `ConfirmReturnInspectionCommand` از ۲۰۲۶-۰۸-۲۸ حذف شده‌اند. جای هر دو، و جای مرجوعی خرید، `ExecuteGoodsRoundCommand` (هر دو طرف) است: اثر `GOODS_IN` موجودی را به اندازه‌ی مقدار سالم زیاد می‌کند و دانه **Mint** می‌کند (در فروش، برای کالای همان قلمِ یک ادعای ON_ORDER، دانه‌های `SOLD` همان قلم **Restore** می‌شوند: سالم `IN_STOCK`، معیوب `SCRAPPED`)؛ اثر `GOODS_OUT` موجودی را کم می‌کند و دانه‌ها را **Consume** (فروش) یا `RETURNED_TO_SUPPLIER` (خرید) می‌کند. این قاعده برای هر ادعا یکسان است، پس دو بند بالا درباره‌ی `EXCESS` («دانه نمی‌سازد») و «تصمیم‌های `PurchaseReturn` به `Stock` دست نمی‌زنند» **دیگر درست نیستند**. جزئیات: بخش‌های ۱۰ و ۱۲ [`api-guide.fa.md`](./api-guide.fa.md).
 
 ### ۱.۷ تخصیص سریال و همزمانی
 
@@ -375,7 +375,7 @@ public class BarcodeRenderOptions
 
 | نیاز | راه‌حل |
 |---|---|
-| اطلاعات فروشنده (نام شرکت، کد اقتصادی، شناسه ملی، آدرس، تلفن، لوگو) | بخش `Company` در `appsettings.json` |
+| اطلاعات فروشنده (نام شرکت، کد اقتصادی، شناسه ملی، آدرس، تلفن، لوگو) | صفحه‌ی تنظیمات سامانه، گروه «مشخصات شرکت» (`Company.*`؛ تا ۲۰۲۶-۱۰-۲۰ بخش `Company` در `appsettings.json`) |
 | تاریخ شمسی | `Common/Extensions/PersianDate.cs` روی `PersianCalendar` توکار |
 | مبلغ به حروف | `Common/Extensions/NumberToPersianWords.cs` |
 | ارقام فارسی | اکستنشن `ToPersianDigits()` |

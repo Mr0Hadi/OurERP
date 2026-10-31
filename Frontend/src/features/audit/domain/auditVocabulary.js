@@ -1,6 +1,6 @@
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { DOCUMENT_KIND_LABELS, documentRouteOf } from "@/shared/domain/enums/documentKind";
-import { PAYMENT_PURPOSE_LABELS } from "@/shared/domain/enums/paymentDirection";
+import { PAYMENT_PURPOSE_LABELS, PaymentPurposeEnum } from "@/shared/domain/enums/paymentDirection";
 import { PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
 import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
@@ -222,6 +222,11 @@ export const AUDIT_FIELD_LABELS = Object.freeze({
   FirstDueDate: "اولین سررسید",
   InstallmentCount: "تعداد اقساط",
   LatePenaltyPercentage: "درصد جریمه‌ی تأخیر",
+  PenaltyAmount: "جریمه‌ی دیرکرد",
+  PenaltyWaivedAmount: "جریمه‌ی بخشوده",
+  PenaltyWaiveReason: "دلیل بخشودگی",
+  EarlySettlementDiscountAmount: "تخفیف تسویه‌ی زودهنگام",
+  ReturnCreditAmount: "اعتبار مرجوعی",
   ReturnNumber: "شماره مرجوعی",
   ReturnDate: "تاریخ مرجوعی",
   SerialNumber: "سریال",
@@ -256,7 +261,8 @@ const ENUM_LABELS = {
   "SaleInstallment.Status": INSTALLMENT_STATUS_LABELS,
   "SaleInstallmentPlan.Status": INSTALLMENT_PLAN_STATUS_LABELS,
   "PaymentDetail.Type": PAYMENT_TYPE_LABELS,
-  "PaymentDetail.Purpose": PAYMENT_PURPOSE_LABELS,
+  // واژگانِ مشترک «عادی» را برچسب نمی‌زند؛ بی آن، تاریخچه‌ی هر پرداختِ عادی «۰» نشان می‌داد.
+  "PaymentDetail.Purpose": { [PaymentPurposeEnum.NORMAL]: "عادی", ...PAYMENT_PURPOSE_LABELS },
   "*.PaymentType": PAYMENT_TYPE_LABELS,
   "*.TaxCategory": TAX_CATEGORY_LABELS,
   "Product.Unit": PRODUCT_UNIT_LABELS,

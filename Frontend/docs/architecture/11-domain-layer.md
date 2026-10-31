@@ -8,7 +8,7 @@
 
 | مسیر | محتوا |
 | --- | --- |
-| `src/shared/domain/enums/` | ۱۶ فایل enum (`purchaseStatus.js`، `saleStatus.js`، `paymentType.js`، `unitStatus.js`، `saleInstallment.js`، `documentKind.js`، …) |
+| `src/shared/domain/enums/` | ۱۹ فایل enum (`purchaseStatus.js`، `saleStatus.js`، `paymentType.js`، `unitStatus.js`، `saleInstallment.js`، `bankAccount.js`، `chequeStatus.js`، `documentKind.js`، …) |
 | `src/shared/domain/returns/` | مدلِ مرجوعیِ مشترکِ خرید/فروش (۱۲ فایل) |
 | `src/shared/domain/payments/` | `paymentRows.js`، `paymentSplit.js` |
 | `src/shared/domain/invoice/` | `lineMath.js`، `lineFromProduct.js` |
@@ -47,7 +47,7 @@ enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً ک�
 
 - `src/features/sales/orders/domain/saleRules.js` — `canCancelSale`، `saleStatusOptions`، `RETURNABLE_SALE_STATUSES`، `missingSaleInvoiceFields`، `saleFormProblem`، `hasAnythingShipped`، `scannedBarcodesOf`
 - `src/features/purchases/orders/domain/purchaseRules.js` — `canCancelPurchase`، `purchaseStatusTargets`، `canClosePurchaseItem`، `canReopenPurchaseItem`، `stillOwedOf`
-- `src/features/sales/installments/domain/installmentPlan.js` — `previewInstallmentPlan`، `planDraftErrors`، `EMPTY_PLAN_DRAFT`
+- `src/features/sales/installments/domain/installmentPlan.js` — `previewInstallmentPlan`، `planDraftErrors`، `EMPTY_PLAN_DRAFT`، `overdueOf`، `installmentPayableToday`، `grossPenaltyOf`، `penaltyWaiveErrors`
 - `src/features/warehouse/receiving/domain/receivingVocabulary.js`، `src/features/warehouse/shipping/domain/shippingVocabulary.js` — کدام وضعیت‌ها در صفِ دریافت/ارسال‌اند
 - `src/features/warehouse/units/domain/unitVocabulary.js`، `labelTemplate.js` — بخش‌بندیِ دانه‌ها و قالبِ برچسب
 - `src/features/dashboard/domain/widgetRegistry.js` — `WIDGETS`، `defaultLayout`، `resolveLayout` (معماریِ ویجتِ داشبورد؛ [12-features](12-features/README.md))
@@ -62,7 +62,7 @@ enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً ک�
 ### ۴. پرداخت
 
 - `src/shared/domain/payments/paymentSplit.js` — فرمِ «ثبت پرداخت»: `{ method, rows }`؛ `amount: null` یعنی «باقیمانده». `newPaymentRow`، `addMixedRow`، `switchMethod`، `resolvedRows`، `rowsTotal`.
-- `src/shared/domain/payments/paymentRows.js` — پیش‌نویسِ پرداخت‌های سند (`EMPTY_PAYMENT_DRAFT`) و تبدیل به payload (`toPaymentPayload`، `toApiPaymentRows`). مصرف: `usePaymentDraft` (`src/shared/hooks/usePaymentDraft.js`)، `PaymentsCard`، `runDocumentChanges`.
+- `src/shared/domain/payments/paymentRows.js` — پیش‌نویسِ پرداخت‌های سند (`EMPTY_PAYMENT_DRAFT`) و تبدیل به payload (`toPaymentPayload`، `toApiPaymentRows`؛ `bankAccountId` فقط برای روش‌های `takesBankAccount`، فیلدهای چک با `toApiChequeFields`، `isChequeSettled`). مصرف: `usePaymentDraft` (`src/shared/hooks/usePaymentDraft.js`)، `PaymentsCard`، `runDocumentChanges`.
 - جهتِ هر سند: `SALE_PAYMENT_SIDE` (`src/features/sales/orders/domain/salePayments.js`) و `PURCHASE_PAYMENT_SIDE` (`src/features/purchases/orders/domain/purchasePayments.js`).
 - کارتخوان: `posSessionReducer` و `PosStatus` در `src/shared/domain/pos/posSession.js`؛ `isPosBusy`، `holdsMoney`، `canStartPos`.
 
@@ -91,7 +91,7 @@ flowchart LR
 
 واژگانِ مخصوصِ هر سمت در فیچر: `src/features/sales/returns/domain/salesReturnVocabulary.js`، `src/features/purchases/returns/domain/purchaseReturnVocabulary.js`. mutationهای مشترک: `src/shared/services/returns/createReturnMutations.js`.
 
-مراجعِ بکند: `../Backend-Net/docs/return-frontend-migration.fa.md`، `return-scenarios-guide.fa.md`، `purchase-return-guide.fa.md`.
+مرجعِ بکند: `../Backend-Net/docs/api-guide.fa.md` بخش‌های ۱۰ و ۱۲.
 
 ## قراردادها و نکته‌ها
 

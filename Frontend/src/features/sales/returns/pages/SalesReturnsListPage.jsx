@@ -6,12 +6,12 @@ import ReturnFilters from "@/shared/components/returns/ReturnFilters";
 import { ROUTES } from "@/shared/constants/routes";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 
 import SalesReturnTable from "../components/table/SalesReturnTable";
 import { useSalesReturnListFilters, useSalesReturnsQuery } from "../services/queries";
 import { useSalesReturnFilterStore } from "../store/salesReturnFilterStore";
 import { SALES_RETURN_PROBLEM_LABELS } from "../domain/salesReturnVocabulary";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
 
@@ -19,7 +19,6 @@ export default function SalesReturnsListPage() {
   const listState = useSalesReturnFilterStore();
   const filters = useSalesReturnListFilters();
   const query = useSalesReturnsQuery(filters, listState.pagination, listState.sorting);
-  const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 
   usePageHeader({ title: "مرجوعی از فروش" });
 
@@ -32,13 +31,10 @@ export default function SalesReturnsListPage() {
     >
       <ReturnFilters
         useFilterStore={useSalesReturnFilterStore}
-        party={{
-          key: "customerId",
-          label: "مشتری",
-          emptyText: "مشتری‌ای یافت نشد",
-          items: customers,
-          isLoading: isCustomersLoading,
-        }}
+        partyLabel="مشتری"
+        partySelect={
+          <PartySelect side="customer" value={listState.customerId} onSelect={listState.setCustomerId} />
+        }
         side={SALES_SIDE}
         problemLabels={SALES_RETURN_PROBLEM_LABELS}
       />

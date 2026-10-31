@@ -12,6 +12,7 @@ export default function TeamTable({
   currentPage,
   pageSize,
   onPaginationChange,
+  refresh,
 }) {
 
   const columns = useMemo(
@@ -75,6 +76,7 @@ export default function TeamTable({
       currentPage={currentPage}
       pageSize={pageSize}
       onPaginationChange={onPaginationChange}
+      refresh={refresh}
       // `GetTeamList` هیچ پارامترِ مرتب‌سازی نمی‌گیرد؛ ترتیب را سرور می‌دهد.
       sortable={false}
       emptyMessage="تیمی یافت نشد."

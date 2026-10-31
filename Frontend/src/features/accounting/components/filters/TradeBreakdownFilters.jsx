@@ -1,17 +1,17 @@
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
-import CategoryFilterSelect from "./CategoryFilterSelect";
-import PartyFilterSelect from "./PartyFilterSelect";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 import {
-  AccountingPartyTypeEnum,
   DOCUMENT_SIDE_LABELS,
   DocumentSideEnum,
   tradeBreakdownGroupLabels,
 } from "../../domain/accountingEnums";
 import { useTradeBreakdownFilterStore } from "../../store/accountingFilterStores";
+import { optionsFromLabels } from "@/shared/lib/options";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const SIDE_OPTIONS = Object.entries(DOCUMENT_SIDE_LABELS).map(([value, label]) => ({ value: Number(value), label }));
+const SIDE_OPTIONS = optionsFromLabels(DOCUMENT_SIDE_LABELS, { numeric: true });
 
 /**
  * کنترل‌های تفکیک: «چه چیزی» (فروش/خرید) و «بر اساسِ چه» (کالا، دسته، طرف‌حساب، کاربر) دو
@@ -23,8 +23,7 @@ export default function TradeBreakdownFilters() {
     value: Number(value),
     label,
   }));
-  const partyType =
-    state.side === DocumentSideEnum.PURCHASE ? AccountingPartyTypeEnum.SUPPLIER : AccountingPartyTypeEnum.CUSTOMER;
+  const partySide = state.side === DocumentSideEnum.PURCHASE ? "supplier" : "customer";
 
   return (
     <div className="space-y-3">
@@ -46,8 +45,8 @@ export default function TradeBreakdownFilters() {
           />
         }
       >
-        <PartyFilterSelect partyType={partyType} value={state.partyId} onSelect={state.setPartyId} />
-        <CategoryFilterSelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
+        <PartySelect side={partySide} value={state.partyId} onSelect={state.setPartyId} />
+        <CategorySelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
       </FilterPanel>
     </div>
   );

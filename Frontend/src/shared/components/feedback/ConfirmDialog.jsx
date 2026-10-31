@@ -8,7 +8,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { cn } from "@/shared/lib/utils";
 
 /**
  * دیالوگِ تأییدِ یک کارِ برگشت‌ناپذیر (حذف، ابطال، لغو، …).
@@ -59,12 +58,11 @@ export default function ConfirmDialog({
         {children}
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>{cancelLabel}</AlertDialogCancel>
+          {/* واریانتِ خودِ Button: کلاسِ `bg-destructive` کنارِ `bg-primary`ِ پیش‌فرض می‌نشست و
+              ترتیبِ CSS رنگِ اصلی را برنده می‌کرد — دکمه‌ی حذف هیچ‌وقت قرمز نبود. */}
           <AlertDialogAction
             disabled={isPending}
-            className={cn(
-              destructive &&
-                "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-            )}
+            variant={destructive ? "destructive" : "default"}
             onClick={(event) => {
               event.preventDefault();
               onConfirm();

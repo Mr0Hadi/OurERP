@@ -11,14 +11,17 @@ import {
   getPurchaseReturnPdf,
   getSaleInvoicePdf,
   getSaleReturnCreditNotePdf,
+  hasPrintableDocument,
 } from "@/shared/services/invoice/api-v1";
 import {
   attachmentDocuments,
   downloadDocuments,
-  printDocuments,
+  printPdfDocuments,
   serverDocument,
 } from "@/shared/services/invoice/documentOutput";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
+import DocumentPrintStudio from "./DocumentPrintStudio";
+import InvoicePrintStudio from "./print/InvoicePrintStudio";
 
 /**
  * سند فاکتور/پیش‌فاکتورِ یک سفارش: چاپ و دانلود، و ضمیمه‌کردنِ برگه‌ی
@@ -35,7 +38,13 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  * - **مرجوعی خرید:** «برگه‌ی مرجوعی به تامین‌کننده» را بکند می‌سازد.
  *
  * کاربر انتخاب می‌کند کدام سندها چاپ/دانلود شوند؛ سندِ تازه پیش‌فرض
- * انتخاب‌شده است (فقط کنارگذاشته‌ها نگه داشته می‌شوند).
+ * انتخاب‌شده است (فقط کنارگذاشته‌ها نگه داشته می‌شوند). اگر میانِ انتخاب‌ها
+ * تصویری باشد، چاپ در `DocumentPrintStudio` (پوسته‌ی مشترکِ چاپ، با کاغذ و
+ * چیدمان) باز می‌شود؛ PDFِ تنها مستقیم چاپ می‌شود.
+ *
+ * سندی که سرور می‌سازد و داده‌ی چاپی دارد فقط یک دکمه‌ی «چاپ و دانلود» دارد که `InvoicePrintStudio` را باز
+ * می‌کند: کاغذ و چیدمان را آنجا انتخاب می‌کند و PDFِ رسمی هم از همان‌جا دانلود می‌شود. پس آن سند در فهرستِ
+ * انتخابِ پایین نمی‌آید و دکمه‌های چاپ/دانلودِ آن فهرست فقط برای ضمیمه‌هاست.
  *
  * وقتی هیچ سندی وجود ندارد دکمه‌ها غیرفعال‌اند — و نباید به‌جایش یک
  * جدولِ HTML از روی داده‌ی فرم ساخته شود: آن برگه فاکتور نیست و
@@ -55,6 +64,9 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  *   که *سرور* می‌سازد و کنارِ ضمیمه‌ها چاپ/دانلود می‌شود. خرید آن را
  *   ندارد: سندش فقط همان چیزی است که کاربر ضمیمه کرده.
  * @param documentId   شناسه‌ی همان سندِ ذخیره‌شده.
+ * @param localPrints  برگه‌هایی که از داده‌ی همین صفحه ساخته و چاپ می‌شوند، نه سند — مثلِ «لیست
+ *   قیمت‌ها»ی فروش برای مشتری پیش از ثبت: `[{ key, label, hint?, onPrint, disabled? }]`. کنارِ سندها
+ *   می‌آیند تا همه‌ی چاپ‌های یک سفارش یک‌جا باشد؛ عنوانشان نباید «فاکتور» باشد (بالا را ببینید).
  */
 export default function InvoiceDocumentSection({
   title,
@@ -67,9 +79,13 @@ export default function InvoiceDocumentSection({
   emptyHint,
   // نامِ فایلِ سندی که سرور می‌سازد؛ پیش‌فرض شماره‌ی سند.
   serverDocumentName,
+  localPrints = [],
 }) {
   const [isBusy, setIsBusy] = useState(false);
   const [excluded, setExcluded] = useState(() => new Set());
+  // سندهایی که در پوسته‌ی چاپ باز شده‌اند؛ تصویرِ ثابت از همان لحظه تا فایل‌ها یک بار گرفته شوند.
+  const [studioDocuments, setStudioDocuments] = useState(null);
+  const [isDesignerOpen, setIsDesignerOpen] = useState(false);
 
   /** سندی که سرور می‌سازد — فقط وقتی سند ذخیره شده باشد. */
   const serverPdfFetcher = documentId
@@ -115,10 +131,23 @@ export default function InvoiceDocumentSection({
     }
   };
 
-  const selected = documents.filter((document_) => !excluded.has(document_.id));
-  const hasDocuments = documents.length > 0;
+  const serverDoc = documents.find((document_) => document_.id === "server-pdf");
+  // فقط سندی که سرور می‌سازد داده‌ی چاپی دارد؛ ضمیمه همان فایلی است که هست.
+  const canDesign = Boolean(serverDoc) && hasPrintableDocument(documentKind);
+
+  // سندی که پوسته‌ی چاپ دارد از همان‌جا چاپ و دانلود می‌شود، نه از این فهرست.
+  const listedDocuments = canDesign
+    ? documents.filter((document_) => document_ !== serverDoc)
+    : documents;
+  const selected = listedDocuments.filter((document_) => !excluded.has(document_.id));
+  const hasDocuments = listedDocuments.length > 0;
   // بدون سندِ انتخاب‌شده، دکمه‌ها کاری ندارند که انجام دهند.
   const canRun = !isBusy && selected.length > 0;
+
+  const handlePrint = () => {
+    if (selected.some((document_) => !document_.isPdf)) setStudioDocuments(selected);
+    else run(printPdfDocuments);
+  };
 
   const toggle = (id, include) =>
     setExcluded((previous) => {
@@ -156,7 +185,7 @@ export default function InvoiceDocumentSection({
           <div className="space-y-2 border-t border-border pt-3">
             <fieldset className="space-y-1">
               <legend className="mb-1 text-xs text-muted-foreground">سندهای چاپ و دانلود</legend>
-              {documents.map((document_) => (
+              {listedDocuments.map((document_) => (
                 <label
                   key={document_.id}
                   className="flex min-h-9 cursor-pointer items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm transition-colors hover:bg-muted/50 has-[[data-state=checked]]:border-primary/40 has-[[data-state=checked]]:bg-primary/5"
@@ -183,7 +212,7 @@ export default function InvoiceDocumentSection({
                 variant="outline"
                 size="sm"
                 className="flex-1 gap-1.5"
-                onClick={() => run(printDocuments)}
+                onClick={handlePrint}
                 disabled={!canRun}
               >
                 {isBusy ? <Spinner /> : <Printer className="h-4 w-4" />}
@@ -203,11 +232,74 @@ export default function InvoiceDocumentSection({
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            {emptyHint ?? "با افزودنِ فایل، چاپ و دانلود فعال می‌شود."}
-          </p>
+          !canDesign && (
+            <p className="text-xs text-muted-foreground">
+              {emptyHint ?? "با افزودنِ فایل، چاپ و دانلود فعال می‌شود."}
+            </p>
+          )
+        )}
+
+        {canDesign && (
+          <div className="border-t border-border pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 w-full gap-2"
+              onClick={() => setIsDesignerOpen(true)}
+            >
+              <Printer className="h-4 w-4" />
+              چاپ و دانلودِ {title}
+            </Button>
+          </div>
+        )}
+
+        {localPrints.length > 0 && (
+          <div className="space-y-1 border-t border-border pt-3">
+            {localPrints.map((item) => (
+              <div
+                key={item.key}
+                className="flex min-h-9 items-center gap-2 rounded-md border border-border px-2.5 py-1.5 text-sm"
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate">{item.label}</p>
+                  {item.hint && <p className="text-[11px] leading-4 text-muted-foreground">{item.hint}</p>}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
+                  onClick={item.onPrint}
+                  disabled={item.disabled}
+                >
+                  <Printer className="h-4 w-4" />
+                  چاپ
+                </Button>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
+
+      {isDesignerOpen && (
+        <InvoicePrintStudio
+          documentKind={documentKind}
+          documentId={documentId}
+          title={title}
+          onDownloadOfficial={() => run(() => downloadDocuments([serverDoc]))}
+          onPrintOfficial={() => run(() => printPdfDocuments([serverDoc]))}
+          onClose={() => setIsDesignerOpen(false)}
+        />
+      )}
+
+      {studioDocuments && (
+        <DocumentPrintStudio
+          title={title}
+          documents={studioDocuments}
+          onClose={() => setStudioDocuments(null)}
+        />
+      )}
     </Card>
   );
 }

@@ -5,11 +5,14 @@ import { useCreateCustomerMutation } from "../services/mutations";
 import { useCustomerForm } from "../hooks/useCustomerForm";
 import { Button } from "@/shared/components/ui/button";
 import CustomerIdentityForm from "../components/forms/CustomerIdentityForm";
-import CustomerFinanceForm from "../components/forms/CustomerFinanceForm";
+import PartyFinanceForm from "@/features/partyAccount/components/PartyFinanceForm";
 import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function CustomerNewPage() {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   // از فرمِ خرید/فروش آمده باشیم (`state.returnTo`) به همان‌جا برمی‌گردیم و شناسه‌ی
   // رکوردِ تازه را می‌فرستیم تا همان‌جا انتخاب شود؛ وگرنه به لیستِ خودش. برگشتِ ساده در
   // تاریخچه به هر صفحه‌ای که قبلاً باز بود می‌رفت و شناسه را گم می‌کرد.
@@ -75,8 +78,8 @@ export default function CustomerNewPage() {
               imageUpload={imageUpload}
             />
 
-            <CustomerFinanceForm
-              register={register}
+            <PartyFinanceForm
+              side="customer"
               errors={errors}
               balanceType={balanceType}
               control={control}

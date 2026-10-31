@@ -2,9 +2,8 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { useProductCategoriesQuery } from "@/features/warehouse/categories/services/queries";
 import CategoryFormDialog from "@/features/warehouse/categories/components/CategoryFormDialog";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 
 /**
  * انتخابِ دسته‌بندیِ کالا (با `productCategoryId`، نه نام) با جست‌وجوی تایپی،
@@ -14,18 +13,15 @@ import CategoryFormDialog from "@/features/warehouse/categories/components/Categ
  */
 export default function CategoryManager({ value, onChange }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const { data: categories = [], isLoading } = useProductCategoriesQuery();
 
   return (
     <div className="flex items-center gap-2">
       <div className="min-w-0 flex-1">
-        <EntitySelect
+        <CategorySelect
+          label={null}
           placeholder="انتخاب کنید"
-          emptyText="دسته‌بندی‌ای یافت نشد"
-          items={categories}
-          value={value ? String(value) : ""}
+          value={value || ""}
           onSelect={onChange}
-          isLoading={isLoading}
           allowClear={false}
         />
       </div>

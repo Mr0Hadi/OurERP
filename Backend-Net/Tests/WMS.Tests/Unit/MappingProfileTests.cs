@@ -18,11 +18,11 @@ namespace WMS.Tests.Unit
     public class MappingProfileTests
     {
         [Fact]
-        public void CreateUserCommand_ToUser_MapsFisrtNameToFirstName()
+        public void CreateUserCommand_ToUser_MapsFirstNameToFirstName()
         {
             var command = new CreateUserCommand
             {
-                FisrtName = "کاربر",
+                FirstName = "کاربر",
                 LastName = "تست",
                 Username = "u",
                 Password = "Test@1234",

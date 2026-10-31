@@ -70,7 +70,7 @@ namespace WMS.Tests.Unit
                 Description = "توضیحات تست",
             };
 
-            var bytes = await service.RenderInvoiceAsync(model);
+            var bytes = await service.RenderInvoiceAsync(model, TestContext.Current.CancellationToken);
 
             Assert.NotEmpty(bytes);
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
@@ -98,7 +98,7 @@ namespace WMS.Tests.Unit
                 Balance = 12_000_000,
             };
 
-            var bytes = await service.RenderInvoiceAsync(model);
+            var bytes = await service.RenderInvoiceAsync(model, TestContext.Current.CancellationToken);
 
             Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(bytes, 0, 4));
         }

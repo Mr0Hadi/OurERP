@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
  * چیدمانِ صفحه‌ی سندِ خرید/فروش: ستونِ اصلی (کارِ کاربر، به ترتیب) و ستونِ
@@ -18,9 +19,11 @@ import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
  * `payments` (کارتِ پرداخت‌ها) در دسکتاپ آخرِ ستونِ اصلی است؛ در موبایل بین «سند
  * فاکتور/پیش‌فاکتور» و کارتِ جمع و ثبت (آخرین فرزندِ `aside`) می‌نشیند.
  *
+ * `below` (اختیاری) زیرِ هر دو ستون و تمام‌عرض است — جزئیاتی که جای ستون ندارند (مثلاً تب‌های صندوق).
+ *
  * کلِ صفحه یک `<form>` است؛ دکمه‌ی اصلیِ `OrderSummaryCard` آن را می‌فرستد.
  */
-export default function DocumentFormLayout({ main, payments, aside, onSubmit }) {
+export default function DocumentFormLayout({ main, payments, aside, below, onSubmit }) {
   // submitِ فرمِ یک دیالوگ از portal در درختِ React تا اینجا بالا می‌آید؛
   // فقط submitِ خودِ همین فرم سند را ذخیره می‌کند.
   const handleSubmit = (event) => {
@@ -46,6 +49,7 @@ export default function DocumentFormLayout({ main, payments, aside, onSubmit }) 
           {aside}
         </aside>
       </div>
+      {below && <div className="min-w-0">{below}</div>}
     </form>
   );
 }
@@ -90,19 +94,16 @@ export function OrderSummaryCard({
         {badge && <CardAction>{badge}</CardAction>}
       </CardHeader>
       <CardContent className="space-y-4">
-        <dl className="space-y-2 text-sm">
-          <Row label={`اقلام (${formatNumber(itemCount)})`} value={formatNumber(totals.netAmount)} />
-          {totals.taxAmount > 0 && <Row label="مالیات" value={formatNumber(totals.taxAmount)} />}
-          <div className="flex items-baseline justify-between gap-2 border-t border-border pt-2">
-            <dt className="font-medium">جمع کل</dt>
-            <dd className="text-base font-bold tabular-nums">{formatRial(totals.totalAmount)}</dd>
-          </div>
+        <InfoList className="space-y-2 text-sm">
+          <InfoRow label={`اقلام (${formatNumber(itemCount)})`} value={formatNumber(totals.netAmount)} />
+          {totals.taxAmount > 0 && <InfoRow label="مالیات" value={formatNumber(totals.taxAmount)} />}
+          <InfoRow total label="جمع کل" value={formatRial(totals.totalAmount)} />
           {totals.taxUnknown && (
             <p className="text-[11px] leading-5 text-muted-foreground">
               مالیاتِ کالاهای تازه را سرور هنگامِ ثبت حساب می‌کند.
             </p>
           )}
-        </dl>
+        </InfoList>
 
         {canSubmit && (
           <div className="flex gap-2">
@@ -129,11 +130,3 @@ export function OrderSummaryCard({
   );
 }
 
-function Row({ label, value }) {
-  return (
-    <div className="flex items-baseline justify-between gap-2">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums">{value}</dd>
-    </div>
-  );
-}

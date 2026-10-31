@@ -20,6 +20,12 @@ namespace Application.Features.Cheque.Dtos
         public DateTime? StatusChangedAt { get; set; }
         public string? StatusNote { get; set; }
 
+        /// <summary>
+        /// Set when the payment row itself was voided (recorded by mistake) - only listed with includeVoided=true. Such a cheque
+        /// keeps the status it had (usually PENDING) but is dead: no cash, bounce or endorse.
+        /// </summary>
+        public DateTime? VoidedAt { get; set; }
+
         /// <summary>Days until the date on the cheque (negative = past due). Null without a due date.</summary>
         public int? DaysToDue { get; set; }
 

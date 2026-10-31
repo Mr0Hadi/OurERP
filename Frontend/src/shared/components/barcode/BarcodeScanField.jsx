@@ -60,6 +60,10 @@ export default function BarcodeScanField({
         className={`flex-1 font-mono placeholder:font-sans input-rtl-placeholder ${inputClassName}`}
         autoComplete="off"
         spellCheck={false}
+        // بی این، کیبوردِ اندروید وقتی فیلدِ دیگری بعد از این هست دکمه‌ی «بعدی» نشان
+        // می‌دهد و فوکوس را به فیلدِ بعدی (مثلاً تعدادِ ردیفِ بعد) می‌برد، بی‌آن‌که
+        // Enter بفرستد؛ با `enter` همان کلیدِ Enter می‌آید و کد ثبت می‌شود.
+        enterKeyHint="enter"
       />
       <CameraScanButton className="shrink-0" onDetected={submit} />
     </div>

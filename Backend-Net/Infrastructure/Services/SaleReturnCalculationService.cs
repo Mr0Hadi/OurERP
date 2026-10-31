@@ -72,12 +72,14 @@ namespace Infrastructure.Services
                 .Where(r => r.IsActive && !IsTerminal(r.Status))
                 .SelectMany(r => r.Claims)
                 .Where(c => c.OnOrderSaleItemId == saleItemId)
-                .Sum(c => c.RemainingQuantity);
+                // Outstanding, not just undecided: a decided resolution whose effects are still pending has not reached
+                // SettledQuantity yet, and would otherwise free its units for a second claim.
+                .Sum(c => Math.Max(0, c.Quantity - c.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity)));
         }
 
         public int GetClaimableQuantity(SaleItem item, List<SaleReturn> activeReturns)
         {
-            var budget = item.ShippedQuantity - item.SettledQuantity;
+            var budget = item.ShippedQuantity + item.ReplacementShippedQuantity - item.SettledQuantity;
             var openClaim = GetOpenClaimQuantity(item.Id, activeReturns);
             return Math.Max(0, budget - openClaim);
         }
@@ -141,6 +143,7 @@ namespace Infrastructure.Services
                     Amount = money.Amount,
                     Method = money.Method,
                     Reference = money.Reference,
+                    BankAccountId = money.BankAccountId,
                     Status = money.PaidAt.HasValue ? ReturnEffectStatusEnum.APPLIED : ReturnEffectStatusEnum.PENDING,
                     CreatedAt = now,
                     AppliedAt = money.PaidAt,
@@ -154,6 +157,7 @@ namespace Infrastructure.Services
                         Amount = p.Amount,
                         CheckNumber = p.CheckNumber,
                         TransferRef = p.TransferRef,
+                        BankAccountId = p.BankAccountId,
                     }).ToList();
                 }
 

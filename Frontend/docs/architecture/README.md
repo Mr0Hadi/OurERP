@@ -11,6 +11,7 @@
 | سؤالِ شما | فایل |
 | --- | --- |
 | چه ابزارها و کتابخانه‌هایی؟ چطور اجرا/build کنم؟ | [01-tech-stack-and-tooling.md](01-tech-stack-and-tooling.md) |
+| کدِ این دکمه/فیلد/دیالوگِ روی صفحه کجاست؟ کجاهای دیگر استفاده شده؟ | در `pnpm dev`: Alt + کلیک (باز کردن) یا Alt + کلیکِ راست (پنل) — [01 «از صفحه به کد»](01-tech-stack-and-tooling.md) |
 | فایلِ جدید را کجا بگذارم؟ | [02-folder-structure.md](02-folder-structure.md) |
 | صفحه/مسیرِ جدید اضافه کنم | [03-bootstrap-and-routing.md](03-bootstrap-and-routing.md) |
 | ورود، توکن، refresh | [04-auth-and-session.md](04-auth-and-session.md) |
@@ -63,7 +64,6 @@ flowchart TD
 
 ## اسنادِ دیگرِ این مخزن
 
-- `REFACTOR.md` — سندِ پیگیریِ ریفکتور (تاریخچه‌ی فازها). مرجعِ معماری نیست.
 - `FEATURE-GAPS.fa.md` — فهرستِ کمبودهای فیچری نسبت به بکند.
 - `README.md`ِ انگلیسیِ قدیمیِ `Frontend/` حذف شد (2026-10-16)؛ پر از ادعای نادرست بود (بکندِ Go، `services/api.js`، aliasِ `#/*`، …). راه‌اندازیِ عمومی در `CLAUDE.md` و فایلِ [01](01-tech-stack-and-tooling.md) است.
 - `Backend-Net/docs/frontend-requests.fa.md` — درخواست‌های فرانت از بکند (فرانت کدِ بکند را تغییر نمی‌دهد).

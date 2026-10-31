@@ -52,6 +52,8 @@ namespace Application.Features.Product.Mappings
                 FirstPrintedAt = x.FirstPrintedAt,
                 LastPrintedAt = x.LastPrintedAt,
                 BinLocation = x.BinLocation,
+                WarehouseId = x.WarehouseId,
+                WarehouseName = x.Warehouse.Name,
                 LastPrintedByName = context.Users.Where(u => u.Id == x.LastPrintedByUserId).Select(u => u.FirstName + " " + u.LastName).FirstOrDefault(),
             });
     }

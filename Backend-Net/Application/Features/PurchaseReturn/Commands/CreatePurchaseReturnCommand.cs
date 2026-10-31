@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
@@ -192,12 +192,10 @@ namespace Application.Features.PurchaseReturn.Commands
 
             var now = DateTime.Now;
             var returnDate = request.ReturnDate ?? now;
-            // Deliberately counts soft-deleted returns too, so a deleted return never frees up its number.
-            var returnCount = await _context.PurchaseReturns.CountAsync(cancellationToken);
 
             var purchaseReturn = new Domain.Entities.PurchaseReturn
             {
-                ReturnNumber = Generator.GenerateReturnNumber(returnCount + 1),
+                ReturnNumber = await Application.Common.Documents.DocumentNumbers.NextPurchaseReturnAsync(_context, cancellationToken),
                 PurchaseId = request.PurchaseId,
                 ReturnDate = returnDate,
                 Status = ReturnStatusEnum.OPEN,

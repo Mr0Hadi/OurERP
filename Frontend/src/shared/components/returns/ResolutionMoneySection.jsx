@@ -2,13 +2,6 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { PriceInput } from "@/shared/components/ui/price-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import MixedPaymentList from "@/shared/components/forms/MixedPaymentList";
 import {
   MONEY_DIRECTIONS,
@@ -22,6 +15,7 @@ import {
   PAYMENT_REFERENCE_FIELDS,
   RETURN_PAYMENT_METHODS,
 } from "@/shared/domain/enums/paymentType";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
 const EMPTY_PART = {
   method: PaymentTypeEnum.CASH,
@@ -46,6 +40,11 @@ const EMPTY_PART = {
  * برچسبِ جهت‌ها از side می‌آید («... از مشتری» یا «... از تامین‌کننده»)
  * تا همین کامپوننت هر دو سمت را بدهد.
  */
+const METHOD_OPTIONS = RETURN_PAYMENT_METHODS.map((value) => ({
+  value,
+  label: PAYMENT_TYPE_LABELS[value],
+}));
+
 export default function ResolutionMoneySection({
   moneyIn,
   moneyOut,
@@ -119,11 +118,12 @@ export default function ResolutionMoneySection({
       <div className="space-y-2.5">
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground sm:text-[11px]">روش</Label>
-          {/* روش پرداخت enum عددی است؛ Radix فقط رشته می‌شناسد. */}
-          <Select
-            value={String(active.method)}
-            onValueChange={(raw) => {
-              const nextMethod = Number(raw);
+          <OptionSelect
+            value={active.method}
+            numeric
+            className="h-10 w-full text-sm sm:h-8 sm:text-xs"
+            options={METHOD_OPTIONS}
+            onChange={(nextMethod) => {
               patchActive({
                 method: nextMethod,
                 reference: "",
@@ -133,18 +133,7 @@ export default function ResolutionMoneySection({
                     : parts,
               });
             }}
-          >
-            <SelectTrigger className="h-10 w-full text-sm sm:h-8 sm:text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {RETURN_PAYMENT_METHODS.map((value) => (
-                <SelectItem key={value} value={String(value)}>
-                  {PAYMENT_TYPE_LABELS[value]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </div>
 
         {isMixed ? (
@@ -221,17 +210,12 @@ export default function ResolutionMoneySection({
 
 function DirectionSelect({ direction, onChange, options }) {
   return (
-    <Select value={String(direction)} onValueChange={(raw) => onChange(Number(raw))}>
-      <SelectTrigger className="h-10 w-full text-sm sm:h-8 sm:text-xs">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map(([value, label]) => (
-          <SelectItem key={value} value={String(value)}>
-            {label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <OptionSelect
+      value={direction}
+      onChange={onChange}
+      numeric
+      className="h-10 w-full text-sm sm:h-8 sm:text-xs"
+      options={options.map(([value, label]) => ({ value, label }))}
+    />
   );
 }

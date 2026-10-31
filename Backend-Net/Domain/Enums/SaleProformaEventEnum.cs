@@ -19,5 +19,13 @@ namespace Domain.Enums
 
         [Description("پایان مهلت رزرو")]
         RESERVATION_EXPIRED = 5,
+
+        /// <summary>The warehouse lowered (or removed) lines and approved the rest in one step; the note names before and after.</summary>
+        [Description("اصلاح و تأیید انبار")]
+        WAREHOUSE_ADJUSTED = 6,
+
+        /// <summary>A user put the reserved units back on the shelf before the deadline (ReleaseSaleReservation).</summary>
+        [Description("آزادسازی دستی رزرو")]
+        RESERVATION_RELEASED = 7,
     }
 }

@@ -1,7 +1,7 @@
 import { Controller, useWatch } from "react-hook-form";
 
 import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
+import FormField from "@/shared/components/forms/FormField";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
@@ -10,18 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import CategoryManager from "./CategoryManager";
 import VehicleMultiSelect from "@/features/warehouse/vehicles/components/VehicleMultiSelect";
-import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
+import { PRODUCT_UNIT_OPTIONS } from "@/shared/domain/enums/productUnit";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
 /**
  * کد کالا و بارکد **ورودیِ کاربر نیستند**.
@@ -34,8 +28,12 @@ import { PRODUCT_UNIT_LABELS } from "@/shared/domain/enums/productUnit";
  */
 function ReadOnlyCodeField({ id, label, value, emptyHint }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
+    <FormField
+      label={label}
+      htmlFor={id}
+      hint="این مقدار را سرور هنگام ثبت کالا می‌سازد و قابل ویرایش نیست."
+      className="space-y-2"
+    >
       <Input
         id={id}
         value={value || ""}
@@ -44,10 +42,7 @@ function ReadOnlyCodeField({ id, label, value, emptyHint }) {
         placeholder={emptyHint}
         className="font-mono text-start"
       />
-      <span className="text-[11px] text-muted-foreground">
-        این مقدار را سرور هنگام ثبت کالا می‌سازد و قابل ویرایش نیست.
-      </span>
-    </div>
+    </FormField>
   );
 }
 
@@ -72,10 +67,13 @@ export default function ProductBasicInfoForm({
         )}
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="name">
-            نام کالا <span className="text-destructive">*</span>
-          </Label>
+        <FormField
+          label="نام کالا"
+          htmlFor="name"
+          required
+          error={errors.name}
+          className="space-y-2 md:col-span-2"
+        >
           <Input
             id="name"
             placeholder="مثال: لنت ترمز جلو پراید"
@@ -84,13 +82,14 @@ export default function ProductBasicInfoForm({
             })}
             className={errors.name ? "border-destructive/50" : ""}
           />
-          {errors.name && (
-            <span className="text-xs text-destructive">{errors.name.message}</span>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="englishName">نام انگلیسی</Label>
+        <FormField
+          label="نام انگلیسی"
+          htmlFor="englishName"
+          error={errors.englishName}
+          className="space-y-2 md:col-span-2"
+        >
           <Input
             id="englishName"
             dir="ltr"
@@ -98,12 +97,7 @@ export default function ProductBasicInfoForm({
             {...register("englishName")}
             className={errors.englishName ? "border-destructive/50" : ""}
           />
-          {errors.englishName && (
-            <span className="text-xs text-destructive">
-              {errors.englishName.message}
-            </span>
-          )}
-        </div>
+        </FormField>
 
         {showGeneratedCodes && (
           <>
@@ -123,10 +117,13 @@ export default function ProductBasicInfoForm({
           </>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="productCategoryId">
-            دسته‌بندی <span className="text-destructive">*</span>
-          </Label>
+        <FormField
+          label="دسته‌بندی"
+          htmlFor="productCategoryId"
+          required
+          error={errors.productCategoryId}
+          className="space-y-2"
+        >
           <Controller
             name="productCategoryId"
             control={control}
@@ -135,17 +132,15 @@ export default function ProductBasicInfoForm({
               <CategoryManager value={field.value} onChange={field.onChange} />
             )}
           />
-          {errors.productCategoryId && (
-            <span className="text-xs text-destructive">
-              {errors.productCategoryId.message}
-            </span>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-2">
-          <Label htmlFor="brand">
-            برند {!isIncomplete && <span className="text-destructive">*</span>}
-          </Label>
+        <FormField
+          label="برند"
+          htmlFor="brand"
+          required={!isIncomplete}
+          error={errors.brand}
+          className="space-y-2"
+        >
           <Input
             id="brand"
             placeholder="مثال: ایساکو"
@@ -154,52 +149,43 @@ export default function ProductBasicInfoForm({
             })}
             className={errors.brand ? "border-destructive/50" : ""}
           />
-          {errors.brand && (
-            <span className="text-xs text-destructive">{errors.brand.message}</span>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="unit">
-            واحد شمارش <span className="text-destructive">*</span>
-          </Label>
+        <FormField
+          label="واحد شمارش"
+          htmlFor="unit"
+          required
+          error={errors.unit}
+          className="space-y-2 md:col-span-2"
+        >
           <Controller
             name="unit"
             control={control}
             rules={{ required: "انتخاب واحد شمارش الزامی است" }}
             render={({ field }) => (
-              <Select
-                value={field.value === "" || field.value == null ? "" : String(field.value)}
-                onValueChange={(value) => field.onChange(Number(value))}
-              >
-                <SelectTrigger dir="rtl">
-                  <SelectValue placeholder="انتخاب واحد" />
-                </SelectTrigger>
-                <SelectContent dir="rtl">
-                  {Object.entries(PRODUCT_UNIT_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OptionSelect
+                id="unit"
+                dir="rtl"
+                value={field.value}
+                onChange={field.onChange}
+                options={PRODUCT_UNIT_OPTIONS}
+                numeric
+                placeholder="انتخاب واحد"
+                className="w-fit"
+              />
             )}
           />
-          {errors.unit && (
-            <span className="text-xs text-destructive">{errors.unit.message}</span>
-          )}
-        </div>
+        </FormField>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label>خودروها</Label>
+        <FormField label="خودروها" className="space-y-2 md:col-span-2">
           <Controller
             name="vehicleIds"
             control={control}
             render={({ field }) => (
-<VehicleMultiSelect value={field.value ?? []} onChange={field.onChange} />
+              <VehicleMultiSelect value={field.value ?? []} onChange={field.onChange} />
             )}
           />
-        </div>
+        </FormField>
 
         <div className="md:col-span-2">
           <Controller
@@ -224,15 +210,14 @@ export default function ProductBasicInfoForm({
           />
         </div>
 
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="description">توضیحات</Label>
+        <FormField label="توضیحات" htmlFor="description" className="space-y-2 md:col-span-2">
           <Textarea
             id="description"
             placeholder="یادداشت یا توضیحات مربوط به کالا..."
             className="min-h-[90px] resize-y"
             {...register("description")}
           />
-        </div>
+        </FormField>
       </CardContent>
     </Card>
   );

@@ -13,13 +13,15 @@ import { clampQuantity } from "@/shared/lib/quantityUtils";
  * value    - مقدار فعلی
  * max      - سقف مجاز
  * onChange - (nextValue) => void
+ * min      - کف (پیش‌فرض صفر)؛ مثلاً ۱ وقتی ردیفِ انتخاب‌شده بی‌تعداد معنا ندارد
  */
-export default function QuantityStepper({ value, max, onChange, size = "md" }) {
+export default function QuantityStepper({ value, max, onChange, size = "md", min = 0 }) {
   const current = value || 0;
   const dims = size === "sm" ? "h-7 w-7" : "h-8 w-8";
   const inputWidth = size === "sm" ? "w-12" : "w-14";
 
-  const handleStep = (delta) => onChange(clampQuantity(current + delta, max));
+  const clamp = (next) => Math.max(min, clampQuantity(next, max));
+  const handleStep = (delta) => onChange(clamp(current + delta));
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -28,7 +30,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
         size="icon"
         variant="outline"
         className={`${dims} shrink-0`}
-        disabled={current <= 0}
+        disabled={current <= min}
         onClick={() => handleStep(-1)}
         aria-label="یکی کمتر"
       >
@@ -36,10 +38,10 @@ export default function QuantityStepper({ value, max, onChange, size = "md" }) {
       </Button>
       <Input
         type="number"
-        min={0}
+        min={min}
         max={max}
         value={current}
-        onChange={(e) => onChange(clampQuantity(e.target.value, max))}
+        onChange={(e) => onChange(clamp(e.target.value))}
         aria-label="تعداد"
         className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
       />

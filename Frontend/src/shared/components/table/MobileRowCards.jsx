@@ -1,14 +1,10 @@
 import { flexRender } from "@tanstack/react-table";
-import { ArrowDownUp, ChevronLeft } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/shared/components/ui/select";
 import { cn } from "@/shared/lib/utils";
+import RefreshButton from "./RefreshButton";
+import SortSelect from "./SortSelect";
 
 /** ستون‌هایی که برچسبِ متنی ندارند (جزئیات، دکمه‌ها) در پایینِ کارت می‌نشینند. */
 const isActionColumn = (column) =>
@@ -17,55 +13,25 @@ const isActionColumn = (column) =>
 const slotOf = (column) => column.columnDef.meta?.mobile;
 const render = (cell) => flexRender(cell.column.columnDef.cell, cell.getContext());
 
-const NO_SORT = "__none__";
-
 /**
- * انتخابِ مرتب‌سازی به‌جای سرتیترهای کلیک‌خورِ جدول.
+ * مرتب‌سازیِ موبایل از روی ستون‌های جدول.
  *
  * `sorting` جدا از `table` می‌آید: نمونه‌ی `useReactTable` در همه‌ی رندرها همان شیء
  * است و React Compiler این کامپوننت را با همان `table` دوباره رندر نمی‌کرد؛ خواندنِ
  * `table.getState().sorting` همیشه مقدارِ اولیه را نشان می‌داد و انتخاب «پیش‌فرض» می‌ماند.
  */
 function MobileSortSelect({ table, sorting }) {
-  const sortable = table.getAllLeafColumns().filter((c) => c.getCanSort() && !isActionColumn(c));
-  if (sortable.length === 0) return null;
-
-  const current = sorting[0];
-  const value = current ? `${current.id}:${current.desc ? "desc" : "asc"}` : NO_SORT;
-
-  const handleChange = (next) => {
-    if (next === NO_SORT) return table.setSorting([]);
-    const [id, dir] = next.split(":");
-    table.setSorting([{ id, desc: dir === "desc" }]);
-  };
-
-  const currentLabel = current
-    ? `${sortable.find((c) => c.id === current.id)?.columnDef.header ?? ""} ${current.desc ? "↓" : "↑"}`
-    : "پیش‌فرض";
+  const options = table
+    .getAllLeafColumns()
+    .filter((c) => c.getCanSort() && !isActionColumn(c))
+    .map((c) => ({ id: c.id, label: c.columnDef.header }));
 
   return (
-    <Select value={value} onValueChange={handleChange}>
-      <SelectTrigger
-        size="sm"
-        className="h-8 w-auto max-w-[65%] gap-1.5 rounded-full bg-muted/40 px-3 text-xs"
-        aria-label="مرتب‌سازی"
-      >
-        <ArrowDownUp className="size-3.5 text-muted-foreground" />
-        <span className="text-muted-foreground">مرتب‌سازی:</span>
-        <span className="truncate font-medium">{currentLabel}</span>
-      </SelectTrigger>
-      <SelectContent position="popper" align="end">
-        <SelectItem value={NO_SORT}>پیش‌فرض</SelectItem>
-        {sortable.flatMap((column) => [
-          <SelectItem key={`${column.id}:desc`} value={`${column.id}:desc`}>
-            {column.columnDef.header} — نزولی
-          </SelectItem>,
-          <SelectItem key={`${column.id}:asc`} value={`${column.id}:asc`}>
-            {column.columnDef.header} — صعودی
-          </SelectItem>,
-        ])}
-      </SelectContent>
-    </Select>
+    <SortSelect
+      options={options}
+      sorting={sorting[0] ?? null}
+      onChange={(next) => table.setSorting(next ? [next] : [])}
+    />
   );
 }
 
@@ -76,8 +42,12 @@ function RowCard({ row, rowClassName }) {
   const linkCell = cells.find((cell) => cell.column.columnDef.meta?.rowLink);
   const to = linkCell?.column.columnDef.meta.rowLink(row.original);
 
-  const actions = cells.filter((cell) => isActionColumn(cell.column) && cell !== linkCell);
-  const fields = cells.filter((cell) => !isActionColumn(cell.column));
+  // «leading» (مثلاً چک‌باکسِ انتخاب) کنارِ عنوان می‌نشیند، مثلِ کارتِ دانه‌ها؛ نه در فوتر.
+  const leading = cells.filter((cell) => slotOf(cell.column) === "leading");
+  const actions = cells.filter(
+    (cell) => isActionColumn(cell.column) && cell !== linkCell && !leading.includes(cell),
+  );
+  const fields = cells.filter((cell) => !isActionColumn(cell.column) && !leading.includes(cell));
 
   const bySlot = (slot) => fields.filter((cell) => slotOf(cell.column) === slot);
   let [title] = bySlot("title");
@@ -91,6 +61,11 @@ function RowCard({ row, rowClassName }) {
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
+        {leading.map((cell) => (
+          <div key={cell.id} className="-ms-1 -mt-1 shrink-0">
+            {render(cell)}
+          </div>
+        ))}
         <div className="min-w-0 flex-1 space-y-0.5 [&_*]:justify-start [&_*]:text-start">
           {title && <div className="truncate text-sm font-semibold">{render(title)}</div>}
           {subtitles.length > 0 && (
@@ -166,11 +141,12 @@ function RowCard({ row, rowClassName }) {
  *   "subtitle"  خطِ کم‌رنگِ زیرِ عنوان، بدونِ برچسب (کد، شماره، تاریخ)
  *   "badge"     گوشه‌ی کارت (وضعیت، موجودی)
  *   "highlight" عددِ اصلی در نوارِ پایینِ کارت (مبلغ، مانده)
+ *   "leading"   کنارِ عنوان، پیش از آن (چک‌باکسِ انتخاب)
  *   "hidden"    در کارت نمی‌آید
  * بقیه‌ی ستون‌ها شبکه‌ی دوستونه‌ی «برچسب/مقدار» می‌شوند؛ `detailsColumn` کلِ کارت را لینک
  * می‌کند و ستون‌های بی‌برچسبِ دیگر (دکمه‌ها) فوترِ کارت‌اند.
  */
-export default function MobileRowCards({ table, sorting, rows, emptyMessage, rowClassName, getRowKey, totalCount }) {
+export default function MobileRowCards({ table, sorting, rows, emptyMessage, rowClassName, getRowKey, totalCount, refresh }) {
   return (
     <div className="space-y-2">
       <div className="flex min-h-8 items-center justify-between gap-2">
@@ -184,7 +160,10 @@ export default function MobileRowCards({ table, sorting, rows, emptyMessage, row
         ) : (
           <span />
         )}
-        <MobileSortSelect table={table} sorting={sorting} />
+        <div className="flex min-w-0 max-w-[75%] items-center justify-end gap-1.5">
+          <MobileSortSelect table={table} sorting={sorting} />
+          {refresh && <RefreshButton query={refresh} variant="pill" />}
+        </div>
       </div>
 
       {rows.length === 0 ? (

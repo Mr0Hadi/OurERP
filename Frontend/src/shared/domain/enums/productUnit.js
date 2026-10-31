@@ -1,3 +1,5 @@
+import { optionsFromLabels } from "@/shared/lib/options";
+
 /**
  * `ProductUnitEnum` — واحد شمارش محصول (بخش ۱۵ سند api-guide.fa.md).
  * مقادیر باید دقیقاً با اعداد بکند یکی بمانند؛ روی سیم همیشه عدد است.
@@ -23,6 +25,9 @@ export const PRODUCT_UNIT_LABELS = Object.freeze({
   [ProductUnitEnum.PACKAGE]: "بسته",
   [ProductUnitEnum.PAIR]: "جفت",
 });
+
+/** گزینه‌های انتخابگرِ واحدِ شمارشِ کالا. */
+export const PRODUCT_UNIT_OPTIONS = optionsFromLabels(PRODUCT_UNIT_LABELS);
 
 /**
  * واحدِ یک *خط سند* (قلم خرید/فروش/مرجوعی) — نه واحدِ خودِ کالا.

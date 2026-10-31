@@ -87,6 +87,25 @@ export const usernameRules = (fieldName = "نام کاربری") => ({
     isEnglishText(value?.trim()) || `${fieldName} وارد شده معتبر نیست`,
 });
 
+/**
+ * شرط‌های رمز، تک‌تک — برای فهرستِ زنده‌ی زیرِ فیلد («۸ کاراکتر ✓»)؛ همان شرط‌های
+ * `isValidPassword`. نویسه‌ی غیرمجاز (فارسی، فاصله) جدا گزارش می‌شود.
+ */
+export function passwordChecks(value) {
+  const password = value ?? "";
+  return [
+    { key: "length", label: "حداقل ۸ کاراکتر", ok: password.length >= 8 },
+    { key: "letter", label: "حرف انگلیسی", ok: /[a-zA-Z]/.test(password) },
+    { key: "digit", label: "عدد", ok: /\d/.test(password) },
+    { key: "special", label: "یک نویسه‌ی خاص (مثل ! @ #)", ok: PASSWORD_SPECIAL.test(password) },
+    {
+      key: "allowed",
+      label: "فقط حروف و نویسه‌های انگلیسی، بی فاصله",
+      ok: password === "" || PASSWORD_ALLOWED.test(password),
+    },
+  ];
+}
+
 export const passwordRules = (fieldName = "رمز عبور") => ({
   required: requiredMessage(fieldName),
   validate: (value) => isValidPassword(value) || PASSWORD_RULE_MESSAGE,

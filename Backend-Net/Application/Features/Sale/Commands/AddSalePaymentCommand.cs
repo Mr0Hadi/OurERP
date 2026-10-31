@@ -31,6 +31,12 @@ namespace Application.Features.Sale.Commands
 
         /// <summary>IN (default) = the customer pays us; OUT = we refund the customer.</summary>
         public PaymentDirectionEnum? Direction { get; set; }
+
+        /// <summary>
+        /// Only read when this payment issues the invoice (the proforma's first payment): the official invoice date, not after
+        /// today. Omitted = the date on the proforma, else now. Ignored on an invoice already issued.
+        /// </summary>
+        public DateTime? InvoiceDate { get; set; }
     }
 
     public class AddSalePaymentCommandValidator : AbstractValidator<AddSalePaymentCommand>
@@ -40,6 +46,7 @@ namespace Application.Features.Sale.Commands
             Include(new PaymentInputValidator());
             RuleFor(x => x.SaleId).GreaterThan(0).WithMessage("فروش نامعتبر است.");
             RuleFor(x => x.Direction).IsInEnum().When(x => x.Direction.HasValue).WithMessage("جهت پرداخت نامعتبر است.");
+            RuleFor(x => x.InvoiceDate).Must(SaleInvoiceFinalizer.IsValidInvoiceDate).WithMessage(SaleInvoiceFinalizer.InvoiceDateMessage);
         }
     }
 
@@ -92,7 +99,7 @@ namespace Application.Features.Sale.Commands
             sale.UpdatedAt = DateTime.Now;
 
             if (sale.Status == SalesStatusEnum.PROFORMA && sale.PaidAmount > 0)
-                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, cancellationToken);
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, request.InvoiceDate, cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

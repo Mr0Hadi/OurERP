@@ -3,19 +3,18 @@ import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterSwitch from "@/shared/components/filters/FilterSwitch";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
 import { PAYMENT_TYPE_LABELS, PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
-import PartyFilterSelect from "./PartyFilterSelect";
 import UserFilterSelect from "@/features/employees/components/UserFilterSelect";
 import {
-  AccountingPartyTypeEnum,
   DOCUMENT_SIDE_LABELS,
   DocumentSideEnum,
 } from "../../domain/accountingEnums";
 import { PAYMENT_PURPOSE_FILTER_LABELS } from "../../domain/paymentPurpose";
 import { usePaymentJournalFilterStore } from "../../store/accountingFilterStores";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 const DIRECTION_OPTIONS = [
   { value: "", label: "همه" },
@@ -28,8 +27,8 @@ const TYPE_OPTIONS = [PaymentTypeEnum.CASH, PaymentTypeEnum.CHECK, PaymentTypeEn
   (value) => ({ value, label: PAYMENT_TYPE_LABELS[value] }),
 );
 
-const SIDE_OPTIONS = toFilterOptions(DOCUMENT_SIDE_LABELS);
-const PURPOSE_OPTIONS = toFilterOptions(PAYMENT_PURPOSE_FILTER_LABELS);
+const SIDE_OPTIONS = optionsFromLabels(DOCUMENT_SIDE_LABELS);
+const PURPOSE_OPTIONS = optionsFromLabels(PAYMENT_PURPOSE_FILTER_LABELS);
 
 /**
  * فیلترهای دفترِ دریافت و پرداخت (`GetPaymentJournal`). طرف‌حساب بعد از انتخابِ «سند»
@@ -75,8 +74,8 @@ export default function PaymentJournalFilters() {
       >
         <FilterSelect label="سند" value={side} onChange={state.setDocumentSide} options={SIDE_OPTIONS} numeric />
         {side === DocumentSideEnum.SALE || side === DocumentSideEnum.PURCHASE ? (
-          <PartyFilterSelect
-            partyType={side === DocumentSideEnum.SALE ? AccountingPartyTypeEnum.CUSTOMER : AccountingPartyTypeEnum.SUPPLIER}
+          <PartySelect
+            side={side === DocumentSideEnum.SALE ? "customer" : "supplier"}
             value={side === DocumentSideEnum.SALE ? state.customerId : state.supplierId}
             onSelect={side === DocumentSideEnum.SALE ? state.setCustomerId : state.setSupplierId}
           />

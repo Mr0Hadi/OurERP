@@ -116,7 +116,7 @@ export const WORK_QUEUES = [
     title: "اقساطِ سررسیدگذشته",
     hint: "اقساطِ پرداخت‌نشده‌ای که سررسیدشان گذشته است",
     icon: CalendarClock,
-    url: `${ROUTES.SALES_INSTALLMENTS}?view=overdue`,
+    url: `${ROUTES.TREASURY_INSTALLMENTS}?view=overdue`,
     permissions: ["SaleInstallmentView"],
     source: "saleInstallment",
     // «امروز» هنگامِ شمارش حساب می‌شود، نه هنگامِ بارِ ماژول (صفحه‌ای که از دیروز باز مانده).

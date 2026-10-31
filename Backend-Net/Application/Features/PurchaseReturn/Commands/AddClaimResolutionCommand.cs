@@ -179,6 +179,9 @@ namespace Application.Features.PurchaseReturn.Commands
 
             var now = DateTime.Now;
             var effects = _purchaseReturnCalculationService.ExpandComposition(request.Composition, now);
+            await ReturnMoneyAccounts.EnsureAsync(_context, effects.Where(e => ReturnEffectDirections.IsMoney(e.Direction))
+                .SelectMany(e => ReturnMoneyAccounts.Of(e.Method, e.BankAccountId, e.Status == ReturnEffectStatusEnum.APPLIED, e.MoneyParts.Select(p => (p.Method, p.BankAccountId))))
+                .ToList(), cancellationToken);
 
             // ProductId defaults to the claim's own product and is resolved once, here, so every
             // later reader (ExecuteGoodsRound, the read DTOs) sees a non-null value and none of them

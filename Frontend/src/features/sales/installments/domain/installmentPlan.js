@@ -1,10 +1,7 @@
 import { PaymentTypeEnum, PAYMENT_REFERENCE_FIELDS } from "@/shared/domain/enums/paymentType";
 import { ROW_PAYMENT_TYPES } from "@/shared/domain/payments/paymentSplit";
-import {
-  installmentDisplayStatus,
-  isInstallmentUnpaid,
-  SaleInstallmentStatusEnum,
-} from "@/shared/domain/enums/saleInstallment";
+import { EMPTY_CHEQUE_FIELDS, takesBankAccount, toApiChequeFields } from "@/shared/domain/payments/paymentRows";
+import { isInstallmentUnpaid, SaleInstallmentStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { todayIso } from "@/shared/lib/dateUtils";
 
 /**
@@ -23,12 +20,14 @@ export const INSTALLMENT_PAYMENT_TYPES = ROW_PAYMENT_TYPES;
  */
 export const INSTALLMENT_COUNT_PRESETS = Object.freeze([3, 6, 12, 18, 24]);
 
-/** فیلدهای پرداختِ یک قسط/پیش‌پرداخت (`paymentType` + مرجع + تاریخ). */
+/** فیلدهای پرداختِ یک قسط/پیش‌پرداخت (`paymentType` + مرجع + تاریخ + صندوق/حساب + فیلدهای چک). */
 export const EMPTY_INSTALLMENT_PAYMENT = Object.freeze({
   paymentType: PaymentTypeEnum.CASH,
   checkNumber: "",
   transferRef: "",
   paidAt: "",
+  bankAccountId: null,
+  ...EMPTY_CHEQUE_FIELDS,
 });
 
 /** پیش‌نویسِ فرمِ قرارداد (همان نام‌های `CreateSaleInstallmentPlanCommand`). */
@@ -153,7 +152,9 @@ export function planDraftErrors(draft, { payable, withDownPayment = false } = {}
   return errors;
 }
 
-/** فیلدهای پرداخت برای بدنه‌ی API؛ مرجعِ چک/حواله فقط برای همان روش، تاریخِ خالی یعنی «الان». */
+/**
+ * فیلدهای پرداخت برای بدنه‌ی API؛ مرجعِ چک/حواله و صندوق/حساب فقط برای همان روش‌ها، تاریخِ خالی یعنی «الان».
+ */
 export function toApiInstallmentPayment(payment) {
   const reference = PAYMENT_REFERENCE_FIELDS[payment.paymentType];
   return {
@@ -161,6 +162,8 @@ export function toApiInstallmentPayment(payment) {
     checkNumber: reference?.field === "checkNumber" ? payment.checkNumber || null : null,
     transferRef: reference?.field === "transferRef" ? payment.transferRef || null : null,
     paidAt: payment.paidAt || null,
+    bankAccountId: takesBankAccount(payment.paymentType) ? payment.bankAccountId || null : null,
+    ...toApiChequeFields(payment, payment.paymentType),
   };
 }
 
@@ -199,16 +202,40 @@ export function toApiUpdatePlan(planId, draft) {
 }
 
 /**
- * شمارش‌های نمایشیِ جدولِ اقساطِ یک قرارداد (پرداخت‌شده/مانده را خودِ سرور می‌دهد؛
- * اینجا فقط «چند قسط سررسیدش گذشته» و مبلغشان، که سرور ندارد).
+ * قسط‌های سررسیدگذشته‌ی یک قرارداد (`OVERDUE`ِ سرور) و جمعِ مبلغشان — سرور شمارش و مبلغِ
+ * دیرکرد را روی پلن نمی‌دهد. جریمه‌ی امروزشان جدا روی پلن هست (`penaltyDueAmount`).
  */
-export function overdueOf(installments = [], today = todayIso()) {
-  const overdue = installments.filter(
-    (row) => installmentDisplayStatus(row, today) === SaleInstallmentStatusEnum.OVERDUE,
-  );
+export function overdueOf(installments = []) {
+  const overdue = installments.filter((row) => Number(row.status) === SaleInstallmentStatusEnum.OVERDUE);
   return { count: overdue.length, amount: overdue.reduce((sum, row) => sum + (Number(row.amount) || 0), 0) };
 }
+
+/**
+ * مبلغی که پرداختِ امروزِ یک قسط می‌گیرد: خودِ قسط + جریمه‌ی دیرکردِ امروز (`penaltyDue`، بخشودگی
+ * از آن کم شده). همان قاعده‌ی `PaySaleInstallment`؛ عددها از سرورند، اینجا فقط جمع.
+ */
+export const installmentPayableToday = (row) => (Number(row.amount) || 0) + (Number(row.penaltyDue) || 0);
 
 /** اقساطی که هنوز پرداخت نشده‌اند (برای تسویه‌ی کامل). */
 export const unpaidInstallments = (installments = []) =>
   installments.filter((row) => isInstallmentUnpaid(row.status));
+
+/**
+ * جریمه‌ی کاملِ امروزِ یک قسطِ پرداخت‌نشده، پیش از بخشودگی. `penaltyDue`ِ سرور بخشودگی را کم
+ * کرده، پس برای نمایشِ «از چند ریال» برگردانده می‌شود.
+ */
+export const grossPenaltyOf = (row) => (Number(row.penaltyDue) || 0) + (Number(row.penaltyWaivedAmount) || 0);
+
+/**
+ * خطاهای فرمِ بخشودگی (`WaiveSaleInstallmentPenalty`)، همان قاعده‌ی سرور: مبلغ عددِ صحیحِ نامنفی؛
+ * برای مبلغِ بیش از صفر دلیل الزامی و حداکثر ۵۰۰ نویسه.
+ *
+ * @param draft `{ amount: number|null, reason: string }`
+ */
+export function penaltyWaiveErrors({ amount, reason }) {
+  const errors = {};
+  if (amount == null || !Number.isInteger(amount) || amount < 0) errors.amount = "مبلغ را وارد کنید";
+  if (amount > 0 && !reason.trim()) errors.reason = "دلیلِ بخشودگی را بنویسید";
+  else if (reason.trim().length > 500) errors.reason = "دلیل حداکثر ۵۰۰ نویسه است";
+  return errors;
+}

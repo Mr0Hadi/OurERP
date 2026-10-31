@@ -1,7 +1,7 @@
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSwitch from "@/shared/components/filters/FilterSwitch";
-import CategoryFilterSelect from "./CategoryFilterSelect";
+import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 import { useInventoryValuationFilterStore } from "../../store/accountingFilterStores";
 
 /** فیلترهای ارزشِ موجودی (`GetInventoryValuation`). */
@@ -22,7 +22,7 @@ export default function InventoryValuationFilters() {
         />
       }
     >
-      <CategoryFilterSelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
+      <CategorySelect value={state.productCategoryId} onSelect={state.setProductCategoryId} />
       <FilterSwitch label="فقط کالاهای دارای ارزش" checked={state.onlyWithValue} onChange={state.setOnlyWithValue} />
     </FilterPanel>
   );

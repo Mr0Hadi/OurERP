@@ -1,3 +1,4 @@
+﻿using Application.Common.Warehouses;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -33,6 +34,12 @@ namespace Application.Features.PurchaseReturn.Commands
         public string? PartyPhoneNumber { get; set; }
         public string? VehiclePlate { get; set; }
         public string? Note { get; set; }
+
+        /// <summary>
+        /// GAP-08: the warehouse the goods of a GOODS_IN line arrive in, or a GOODS_OUT/scrap line leave from. Used only while the Warehouse.MultiWarehouseEnabled setting is on; ignored while
+        /// off (default warehouse / any warehouse) - see WarehouseScope.
+        /// </summary>
+        public int? WarehouseId { get; set; }
     }
 
     public class ExecuteGoodsRoundCommandValidator : AbstractValidator<ExecuteGoodsRoundCommand>
@@ -216,6 +223,7 @@ namespace Application.Features.PurchaseReturn.Commands
             // decision: each unit carries the value it entered with (ProductUnit.QuarantineCost). The only refusals left are
             // ProductUnitService's own unit-state checks, which throw before SaveChanges.
             var now = request.Date ?? DateTime.Now;
+            var warehouseId = await WarehouseScope.ResolveAsync(_context, request.WarehouseId, cancellationToken);
             var supplierId = purchaseReturn.Purchase!.SupplierId;
 
             foreach (var (line, claim, effect, healthy) in plan)
@@ -255,7 +263,7 @@ namespace Application.Features.PurchaseReturn.Commands
                 var quarantine = PurchaseReturnQuarantine.For(claim, sameProduct, purchaseReturn.PurchaseId);
 
                 UnitMovementContext Movement(ProductUnitMovementReasonEnum reason) =>
-                    new(reason, now, DocumentKindEnum.PURCHASE_RETURN, purchaseReturn.Id, SupplierId: supplierId, Note: request.Note);
+                    new(reason, now, DocumentKindEnum.PURCHASE_RETURN, purchaseReturn.Id, SupplierId: supplierId, Note: request.Note, WarehouseId: warehouseId);
 
                 switch (effect.Direction)
                 {
@@ -265,7 +273,11 @@ namespace Application.Features.PurchaseReturn.Commands
                         product.Stock += healthy;
                         effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + healthy;
 
-                        // Goods arriving through a return never touch PurchaseItem.ReceivedQuantity.
+                        // Goods arriving through a return never touch PurchaseItem.ReceivedQuantity. Arriving on the claim's line
+                        // (a replacement), they are that line's goods again and can be claimed once more (frontend-requests 9.1).
+                        if (unitLine is int replacedLineId)
+                            purchaseReturn.Purchase!.Items.First(x => x.Id == replacedLineId).ReplacementReceivedQuantity += line.Quantity;
+
                         await _productUnitService.MintAsync(product, healthy,
                             new UnitOrigin(purchaseReturn.PurchaseId, unitLine, unitLine.HasValue ? UnitCustodyReasonEnum.ON_ORDER : null),
                             Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_RECEIVED), cancellationToken);

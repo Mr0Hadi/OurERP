@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { useIsMobile } from "@/shared/hooks/useIsMobile";
 import { useActiveFilterCount } from "@/shared/hooks/useActiveFilterCount";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import FilterCollapse from "./FilterCollapse";
 
 /**
  * پوسته‌ی واکنش‌گرای فیلترها.
@@ -51,7 +52,7 @@ export function ResponsiveFilters({ primary, secondary, store, onReset, children
           {formatNumber(activeCount)}
         </span>
       )}
-      <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      <ChevronDown className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
     </Button>
   );
 
@@ -69,21 +70,19 @@ export function ResponsiveFilters({ primary, secondary, store, onReset, children
         {toggle}
       </div>
 
-      {open && (
-        <div className="space-y-4 rounded-xl border border-border bg-muted/30 p-3">
-          {children}
-          {onReset && (
-            <div className="flex gap-2 border-t border-border pt-3">
-              <Button type="button" variant="outline" className="flex-1" onClick={onReset} disabled={!activeCount}>
-                حذف فیلترها
-              </Button>
-              <Button type="button" variant="ghost" className="flex-1" onClick={() => setOpen(false)}>
-                بستن
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
+      <FilterCollapse open={open} className="space-y-4 rounded-xl border border-border bg-muted/30 p-3">
+        {children}
+        {onReset && (
+          <div className="flex gap-2 border-t border-border pt-3">
+            <Button type="button" variant="outline" className="flex-1" onClick={onReset} disabled={!activeCount}>
+              حذف فیلترها
+            </Button>
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => setOpen(false)}>
+              بستن
+            </Button>
+          </div>
+        )}
+      </FilterCollapse>
     </div>
   );
 }
@@ -92,7 +91,8 @@ export function ResponsiveFilters({ primary, secondary, store, onReset, children
  * پوسته‌ی مشترک نوار فیلترها.
  *
  * children  - ردیف اول (جست‌وجو، انتخاب‌ها)
- * dateRow   - ردیف دوم (بازه‌ی تاریخ)؛ دکمه‌ی ریست خودکار به انتهای آن اضافه می‌شود
+ * dateRow   - ردیف دوم (بازه‌ی تاریخ)؛ دکمه‌ی ریست خودکار به انتهای آن اضافه می‌شود. چیدمانِ پیش‌فرض برای
+ *             دو تاریخ است (هر کدام یک‌چهارمِ ردیف، ریست در نیمه‌ی دیگر)؛ ردیفِ دیگر کلاسِ خودش را بدهد.
  * onReset   - پاک کردن همه‌ی فیلترها
  * primary/store - رفتارِ موبایل (`ResponsiveFilters`)
  */
@@ -103,9 +103,9 @@ export default function FilterPanel({
   primary,
   store,
   firstRowClassName = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4",
-  dateRowClassName = "grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-4 pt-3 border-t border-border",
-  resetWrapperClassName = "flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end",
-  resetButtonClassName = "w-full px-4",
+  dateRowClassName = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border",
+  resetWrapperClassName = "flex items-end sm:col-span-2 lg:col-span-2 lg:justify-end",
+  resetButtonClassName = "w-full lg:w-auto px-4",
 }) {
   const isMobile = useIsMobile();
 

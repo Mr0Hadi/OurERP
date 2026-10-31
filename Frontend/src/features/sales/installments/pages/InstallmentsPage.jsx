@@ -4,7 +4,6 @@ import { CalendarClock } from "lucide-react";
 
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import ServerTable from "@/shared/components/table/ServerTable";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 import InstallmentFilters from "../components/table/InstallmentFilters";
@@ -15,7 +14,7 @@ import { useInstallmentFilterStore } from "../store/installmentFilterStore";
 import { INSTALLMENT_VIEWS, installmentListParams } from "../domain/installmentViews";
 
 /**
- * «اقساط» — همه‌ی اقساطِ فروش‌های اقساطی، با نماهای پرداخت‌نشده / سررسیدگذشته / پیش‌رو و
+ * «اقساط» — همه‌ی اقساطِ فروش‌های اقساطی، با نماهای سررسیدگذشته / در انتظار / پیش‌رو و
  * دریافتِ مستقیمِ هر قسط. فیلتر و صفحه‌بندی سمتِ سرور (`GetSaleInstallmentList`).
  *
  * `?view=overdue&customerId=5` (از داشبورد و صفحه‌ی مشتری) یک‌بار هنگامِ ورود اعمال می‌شود.
@@ -42,20 +41,19 @@ export default function InstallmentsPage() {
     instant: ["view", "customerId", "fromDueDate", "toDueDate"],
   });
   const query = useInstallmentsQuery(installmentListParams(filters), listState.pagination, listState.sorting);
-  const { customers, isLoading: isCustomersLoading } = useCustomersOptionsQuery();
 
   return (
     <ListPageLayout
       title="اقساط فروش"
       icon={CalendarClock}
-      description="اقساطِ قراردادهای فروشِ اقساطی؛ هر قسط یکجا و به مبلغِ کامل دریافت می‌شود."
+      description="اقساطِ قراردادهای فروشِ اقساطی؛ هر قسط یکجا و به مبلغِ کامل، همراهِ جریمه‌ی دیرکرد، دریافت می‌شود."
     >
-      <InstallmentFilters customers={customers} isCustomersLoading={isCustomersLoading} />
+      <InstallmentFilters />
       <ServerTable
         query={query}
         listState={listState}
         table={InstallmentTable}
-        onPay={allows("SaleInstallmentPay") ? (row) => setPayTarget({ kind: "pay", installment: row, invoiceNumber: row.invoiceNumber, customerName: row.customerName }) : undefined}
+        onPay={allows("SaleInstallmentPay") ? (row) => setPayTarget({ kind: "pay", saleId: row.saleId, installment: row, invoiceNumber: row.invoiceNumber, customerName: row.customerName }) : undefined}
       />
       <InstallmentPaymentDialog target={payTarget} onOpenChange={(open) => !open && setPayTarget(null)} />
     </ListPageLayout>

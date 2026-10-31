@@ -5,3 +5,9 @@ export const saleKeys = {
   details: () => [...saleKeys.all, 'detail'],
   detail: (id) => [...saleKeys.details(), String(id)],
 };
+
+export const warehouseIssueKeys = {
+  all: ['saleWarehouseIssues'],
+  lists: () => [...warehouseIssueKeys.all, 'list'],
+  list: (params) => [...warehouseIssueKeys.lists(), params],
+};

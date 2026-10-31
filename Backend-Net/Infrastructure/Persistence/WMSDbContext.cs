@@ -61,6 +61,8 @@ namespace Infrastructure.Persistence
                 }
             }
 
+            ClearEmptyDates();
+
             var recorder = AuditRecorder.Capture(this);
 
             // Without accepting, the saved rows stay Added/Modified and the audit save would write them a second time.
@@ -131,6 +133,25 @@ namespace Infrastructure.Persistence
         private int? CurrentUserId() =>
             int.TryParse(_userContextService?.GetUserId(), out var id) && id > 0 ? id : null;
 
+        /// <summary>
+        /// An optional date that arrives as 0001-01-01 (a client's "no date", or an unset DateTime copied across) is stored
+        /// as null, for every nullable date column, so the API never hands that value back (frontend-requests 7.4).
+        /// </summary>
+        private void ClearEmptyDates()
+        {
+            foreach (var entry in ChangeTracker.Entries())
+            {
+                if (entry.State is not (EntityState.Added or EntityState.Modified))
+                    continue;
+
+                foreach (var property in entry.Properties)
+                {
+                    if (property.Metadata.ClrType == typeof(DateTime?) && property.CurrentValue is DateTime value && value == DateTime.MinValue)
+                        property.CurrentValue = null;
+                }
+            }
+        }
+
         public DbSet<User> Users => Set<User>();
         public DbSet<Team> Teams => Set<Team>();
         public DbSet<Supplier> Suppliers => Set<Supplier>();
@@ -180,10 +201,18 @@ namespace Infrastructure.Persistence
         public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
         public DbSet<AuditEntityChange> AuditEntityChanges => Set<AuditEntityChange>();
         public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+        public DbSet<DocumentNumberCounter> DocumentNumberCounters => Set<DocumentNumberCounter>();
         public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
         public DbSet<BankAccountTransfer> BankAccountTransfers => Set<BankAccountTransfer>();
         public DbSet<PaymentAllocation> PaymentAllocations => Set<PaymentAllocation>();
         public DbSet<SaleInstallmentReturnCredit> SaleInstallmentReturnCredits => Set<SaleInstallmentReturnCredit>();
+        public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+        public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+        public DbSet<StockTransferUnit> StockTransferUnits => Set<StockTransferUnit>();
+        public DbSet<Stocktake> Stocktakes => Set<Stocktake>();
+        public DbSet<StocktakeLine> StocktakeLines => Set<StocktakeLine>();
+        public DbSet<StocktakeScan> StocktakeScans => Set<StocktakeScan>();
+        public DbSet<StocktakeSnapshotUnit> StocktakeSnapshotUnits => Set<StocktakeSnapshotUnit>();
 
         public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
@@ -193,6 +222,23 @@ namespace Infrastructure.Persistence
         public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {
             return await this.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+        }
+
+        public async Task<int> NextDocumentNumberAsync(string key, CancellationToken cancellationToken)
+        {
+            // MERGE ... HOLDLOCK: the first draw of a key creates its row, two concurrent first draws cannot both insert,
+            // and every later draw is a locked increment. Not composed (ToListAsync with no operator), since a MERGE
+            // cannot sit inside a SELECT.
+            var values = await Database.SqlQueryRaw<int>(
+                """
+                MERGE [DocumentNumberCounters] WITH (HOLDLOCK) AS t
+                USING (SELECT {0} AS [Key]) AS s ON t.[Key] = s.[Key]
+                WHEN MATCHED THEN UPDATE SET [LastValue] = t.[LastValue] + 1
+                WHEN NOT MATCHED THEN INSERT ([Key], [LastValue]) VALUES (s.[Key], 1)
+                OUTPUT inserted.[LastValue] AS [Value];
+                """, key).ToListAsync(cancellationToken);
+
+            return values[0];
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -626,12 +672,30 @@ namespace Infrastructure.Persistence
                 .Property(x => x.Note)
                 .HasMaxLength(1000);
 
+            // Official document numbers are unique (frontend-requests 9.10); the counter that issues them
+            // (DocumentNumberCounter) is the real guarantee, the index is the backstop. A proforma has no number yet ('').
+            modelBuilder.Entity<Sale>().Property(x => x.InvoiceNumber).HasMaxLength(50);
+            modelBuilder.Entity<Sale>()
+                .HasIndex(x => x.InvoiceNumber)
+                .IsUnique()
+                .HasFilter("[InvoiceNumber] <> ''");
+            modelBuilder.Entity<PurchaseReturn>().Property(x => x.ReturnNumber).HasMaxLength(50);
+            modelBuilder.Entity<PurchaseReturn>().HasIndex(x => x.ReturnNumber).IsUnique();
+            modelBuilder.Entity<SaleReturn>().Property(x => x.ReturnNumber).HasMaxLength(50);
+            modelBuilder.Entity<SaleReturn>().HasIndex(x => x.ReturnNumber).IsUnique();
+
             // The background sweep looks for proformas whose reservation has run out.
             modelBuilder.Entity<Sale>()
                 .HasIndex(x => x.ReservationExpiresAt)
                 .HasFilter("[ReservationExpiresAt] IS NOT NULL");
 
             // System settings: the catalogue is in code (SystemSettingCatalog); a row is a value that differs from its default.
+            modelBuilder.Entity<DocumentNumberCounter>(entry =>
+            {
+                entry.HasKey(x => x.Key);
+                entry.Property(x => x.Key).HasMaxLength(50);
+            });
+
             modelBuilder.Entity<SystemSetting>(entry =>
             {
                 entry.HasKey(x => x.Key);
@@ -843,6 +907,90 @@ namespace Infrastructure.Persistence
                 entry.Property(x => x.CheckStatusNote).HasMaxLength(500);
                 entry.HasIndex(x => new { x.CheckStatus, x.CheckDueDate }).HasFilter("[CheckStatus] IS NOT NULL");
             });
+
+            // Warehouses, transfers (GAP-08), stocktake (GAP-01). Restrict everywhere a row points at a warehouse, unit or
+            // product: those are only ever deactivated. A session's own lines/scans/snapshot go with it.
+            modelBuilder.Entity<Warehouse>(entry =>
+            {
+                entry.Property(x => x.Code).HasMaxLength(30).IsRequired();
+                entry.Property(x => x.Name).HasMaxLength(100).IsRequired();
+                entry.Property(x => x.Address).HasMaxLength(500);
+                entry.Property(x => x.Description).HasMaxLength(500);
+                entry.HasIndex(x => x.Code).IsUnique();
+                entry.HasIndex(x => x.IsDefault).IsUnique().HasFilter("[IsDefault] = 1");
+                // The default warehouse exists from the first migration on (and in every test database), so every unit always
+                // has one - multi-warehouse off or on (CLAUDE.md 6b).
+                entry.HasData(new Warehouse
+                {
+                    Id = 1,
+                    Code = "MAIN",
+                    Name = "انبار اصلی",
+                    IsDefault = true,
+                    IsActive = true,
+                    CreatedAt = new DateTime(2026, 10, 19),
+                    UpdatedAt = new DateTime(2026, 10, 19),
+                });
+            });
+
+            modelBuilder.Entity<ProductUnit>(entry =>
+            {
+                entry.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+                // Existing rows (and any insert that leaves it unset) land in the seeded default warehouse.
+                entry.Property(x => x.WarehouseId).HasDefaultValue(1);
+                entry.HasIndex(x => new { x.WarehouseId, x.ProductId, x.Status });
+            });
+
+            modelBuilder.Entity<StockTransfer>(entry =>
+            {
+                entry.Property(x => x.TransferNumber).HasMaxLength(30).IsRequired();
+                entry.HasIndex(x => x.TransferNumber).IsUnique();
+                entry.Property(x => x.Description).HasMaxLength(500);
+                entry.HasOne(x => x.FromWarehouse).WithMany().HasForeignKey(x => x.FromWarehouseId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasOne(x => x.ToWarehouse).WithMany().HasForeignKey(x => x.ToWarehouseId).OnDelete(DeleteBehavior.Restrict);
+                entry.ToTable(t => t.HasCheckConstraint("CK_StockTransfers_TwoWarehouses", "[FromWarehouseId] <> [ToWarehouseId]"));
+            });
+
+            modelBuilder.Entity<StockTransferUnit>(entry =>
+            {
+                entry.HasOne(x => x.StockTransfer).WithMany(x => x.Units).HasForeignKey(x => x.StockTransferId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasOne(x => x.ProductUnit).WithMany().HasForeignKey(x => x.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasIndex(x => x.ProductUnitId);
+            });
+
+            modelBuilder.Entity<Stocktake>(entry =>
+            {
+                entry.Property(x => x.Number).HasMaxLength(30).IsRequired();
+                entry.HasIndex(x => x.Number).IsUnique();
+                entry.Property(x => x.Title).HasMaxLength(200).IsRequired();
+                entry.Property(x => x.Brand).HasMaxLength(100);
+                entry.Property(x => x.BinLocationPrefix).HasMaxLength(50);
+                entry.Property(x => x.Note).HasMaxLength(1000);
+                entry.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<StocktakeLine>(entry =>
+            {
+                entry.HasOne(x => x.Stocktake).WithMany(x => x.Lines).HasForeignKey(x => x.StocktakeId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entry.HasIndex(x => new { x.StocktakeId, x.ProductId }).IsUnique();
+            });
+
+            modelBuilder.Entity<StocktakeScan>(entry =>
+            {
+                entry.HasOne(x => x.Stocktake).WithMany(x => x.Scans).HasForeignKey(x => x.StocktakeId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasOne(x => x.ProductUnit).WithMany().HasForeignKey(x => x.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
+                entry.Property(x => x.Barcode).HasMaxLength(100).IsRequired();
+                entry.HasIndex(x => new { x.StocktakeId, x.ProductUnitId });
+            });
+
+            modelBuilder.Entity<StocktakeSnapshotUnit>(entry =>
+            {
+                entry.HasOne(x => x.Stocktake).WithMany(x => x.SnapshotUnits).HasForeignKey(x => x.StocktakeId).OnDelete(DeleteBehavior.Cascade);
+                entry.HasIndex(x => new { x.StocktakeId, x.ProductUnitId }).IsUnique();
+            });
+
+            modelBuilder.Entity<Product>()
+                .HasOne(x => x.PreferredSupplier).WithMany().HasForeignKey(x => x.PreferredSupplierId).OnDelete(DeleteBehavior.Restrict);
 
             // Return refunds applied to an installment plan (GAP-26). Goes with the plan.
             modelBuilder.Entity<SaleInstallmentReturnCredit>(entry =>

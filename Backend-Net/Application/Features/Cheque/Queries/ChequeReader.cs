@@ -28,6 +28,7 @@ namespace Application.Features.Cheque.Queries
             Status = x.CheckStatus!.Value,
             StatusChangedAt = x.CheckStatusChangedAt,
             StatusNote = x.CheckStatusNote,
+            VoidedAt = x.VoidedAt,
             PaidAt = x.PaidAt,
             Purpose = x.Purpose,
             IsCustomer = x.SaleId != null || x.CustomerId != null,

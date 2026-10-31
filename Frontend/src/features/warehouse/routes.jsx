@@ -1,5 +1,7 @@
 import { lazy } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+
+import RedirectKeepingSearch from "@/shared/components/layout/RedirectKeepingSearch";
 import { ROUTES } from "@/shared/constants/routes";
 
 const ProductsPage = lazy(() => import("./products/pages/ProductsPage"));
@@ -13,13 +15,10 @@ const VehiclesPage = lazy(() => import("./vehicles/pages/VehiclesPage"));
 const ShippingListPage = lazy(() => import("./shipping/pages/ShippingListPage"));
 const ShippingDetailPage = lazy(() => import("./shipping/pages/ShippingDetailPage"));
 const ReceivingReturnDetailPage = lazy(() => import("./receiving/pages/ReceivingReturnDetailPage"));
+const SaleCheckListPage = lazy(() => import("./saleCheck/pages/SaleCheckListPage"));
+const SaleCheckPage = lazy(() => import("./saleCheck/pages/SaleCheckPage"));
 const SupplierReturnDetailPage = lazy(() => import("./shipping/pages/SupplierReturnDetailPage"));
 
-/** نشانیِ قدیمی → نشانیِ تازه، با همان پارامترها (`?unit=`، `?productId=`). */
-function RedirectKeepingSearch({ to }) {
-  const { search } = useLocation();
-  return <Navigate to={{ pathname: to, search }} replace />;
-}
 
 export const warehouseRoutes = [
   // «انبار» در سایدبار به این مسیر لینک می‌دهد ولی صفحه‌ی مرورِ کلی
@@ -90,6 +89,16 @@ export const warehouseRoutes = [
     path: ROUTES.WAREHOUSE_SHIPPING,
     handle: { permission: "SaleShip" },
     element: <ShippingListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SALE_CHECK,
+    handle: { permission: "SaleWarehouseCheck" },
+    element: <SaleCheckListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_SALE_CHECK_DETAIL,
+    handle: { permission: "SaleWarehouseCheck" },
+    element: <SaleCheckPage />,
   },
   {
     path: ROUTES.WAREHOUSE_SHIPPING_DETAIL,

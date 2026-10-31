@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
@@ -36,6 +36,8 @@ namespace Infrastructure.Services
                 throw new InvalidOperationException("Units minted QUARANTINED must state their QuarantineCost.");
 
             var nextSerial = await GetNextSerialAsync(product.Id, cancellationToken);
+            // Always a warehouse: the one the movement names (multi-warehouse on), otherwise the default one (CLAUDE.md 6b).
+            var warehouseId = movement.WarehouseId ?? await DefaultWarehouseIdAsync(cancellationToken);
 
             for (var i = 0; i < count; i++)
             {
@@ -49,6 +51,7 @@ namespace Infrastructure.Services
                     Barcode = barcode,
                     BarcodePayload = _productCodeService.ToPayload(barcode),
                     Status = origin.Status,
+                    WarehouseId = warehouseId,
                     PurchaseId = origin.PurchaseId,
                     PurchaseItemId = origin.PurchaseItemId,
                     CustodyReason = origin.CustodyReason,
@@ -86,7 +89,8 @@ namespace Infrastructure.Services
                     saved => saved.OrderBy(x => x.SerialNumber),
                     tracked => tracked.OrderBy(x => x.SerialNumber),
                     count,
-                    cancellationToken);
+                    cancellationToken,
+                    movement.WarehouseId);
 
                 if (units.Count < count)
                     throw new ValidationCustomException($"تعداد کافی از دانه‌های موجود «{product.Name}» در انبار برای ثبت این خروج وجود ندارد.");
@@ -105,18 +109,35 @@ namespace Infrastructure.Services
             return units;
         }
 
-        public async Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, List<string> barcodes, UnitMovementContext movement, CancellationToken cancellationToken)
+        public async Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, int count, List<string>? barcodes, UnitMovementContext movement, CancellationToken cancellationToken)
         {
-            if (barcodes.Count == 0)
+            if (count <= 0)
                 return new();
 
-            var units = await ResolveScannedAsync(product.Id, barcodes, barcodes.Count,
-                unit => unit.Status == ProductUnitStatusEnum.IN_STOCK,
-                unit => unit.Status == ProductUnitStatusEnum.RESERVED
-                    ? $"بارکد «{unit.Barcode}» برای پیش‌فاکتور دیگری رزرو شده است."
-                    : $"بارکد «{unit.Barcode}» در انبار موجود نیست.",
-                "تعداد بارکدهای اسکن‌شده با تعداد این قلم مطابقت ندارد.",
-                cancellationToken);
+            List<Domain.Entities.ProductUnit> units;
+            if (barcodes is { Count: > 0 })
+            {
+                units = await ResolveScannedAsync(product.Id, barcodes, count,
+                    unit => unit.Status == ProductUnitStatusEnum.IN_STOCK,
+                    unit => unit.Status == ProductUnitStatusEnum.RESERVED
+                        ? $"بارکد «{unit.Barcode}» برای پیش‌فاکتور دیگری رزرو شده است."
+                        : $"بارکد «{unit.Barcode}» در انبار موجود نیست.",
+                    "تعداد بارکدهای اسکن‌شده با تعداد این قلم مطابقت ندارد.",
+                    cancellationToken);
+            }
+            else
+            {
+                units = await SelectUnitsAsync(
+                    x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK,
+                    saved => saved.OrderBy(x => x.SerialNumber),
+                    tracked => tracked.OrderBy(x => x.SerialNumber),
+                    count,
+                    cancellationToken,
+                    movement.WarehouseId);
+
+                if (units.Count < count)
+                    throw new ValidationCustomException($"تعداد کافی از دانه‌های موجود «{product.Name}» در انبار برای رزرو وجود ندارد.");
+            }
 
             foreach (var unit in units)
             {
@@ -359,7 +380,8 @@ namespace Infrastructure.Services
                     saved => saved.OrderBy(x => x.SerialNumber),
                     tracked => tracked.OrderBy(x => x.SerialNumber),
                     count,
-                    cancellationToken);
+                    cancellationToken,
+                    movement.WarehouseId);
 
                 if (units.Count < count)
                     throw new ValidationCustomException(inQuarantine
@@ -462,11 +484,109 @@ namespace Infrastructure.Services
             return units;
         }
 
+        public async Task<List<Domain.Entities.ProductUnit>> DispatchToTransferAsync(Domain.Entities.Product product, int count, int fromWarehouseId, List<string>? explicitBarcodes, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            List<Domain.Entities.ProductUnit> units;
+            if (explicitBarcodes is { Count: > 0 })
+            {
+                units = await ResolveScannedAsync(product.Id, explicitBarcodes, count,
+                    unit => unit.Status == ProductUnitStatusEnum.IN_STOCK && unit.WarehouseId == fromWarehouseId,
+                    unit => $"بارکد «{unit.Barcode}» در موجودی انبار مبدأ نیست.",
+                    "تعداد بارکدهای اسکن‌شده با مقدار حواله مطابقت ندارد.",
+                    cancellationToken);
+            }
+            else
+            {
+                units = await SelectUnitsAsync(
+                    x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK,
+                    saved => saved.OrderBy(x => x.SerialNumber),
+                    tracked => tracked.OrderBy(x => x.SerialNumber),
+                    count,
+                    cancellationToken,
+                    fromWarehouseId);
+                if (units.Count < count)
+                    throw new ValidationCustomException($"موجودی «{product.Name}» در انبار مبدأ برای این حواله کافی نیست.");
+            }
+
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                unit.Status = ProductUnitStatusEnum.IN_TRANSIT;
+                await RecordAsync(unit, from, movement, cancellationToken);
+            }
+            return units;
+        }
+
+        public async Task PlaceInStockAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, int warehouseId, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                if (from is not (ProductUnitStatusEnum.IN_TRANSIT or ProductUnitStatusEnum.IN_STOCK))
+                    throw new InvalidOperationException($"Only IN_TRANSIT or IN_STOCK units are placed on a shelf, not {from}.");
+                if (unit.WarehouseId != warehouseId)
+                    unit.BinLocation = null;
+                unit.Status = ProductUnitStatusEnum.IN_STOCK;
+                unit.WarehouseId = warehouseId;
+                await RecordAsync(unit, from, movement, cancellationToken);
+            }
+        }
+
+        public async Task MarkMissingAsync(IReadOnlyCollection<Domain.Entities.ProductUnit> units, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            foreach (var unit in units)
+            {
+                var from = unit.Status;
+                if (from != ProductUnitStatusEnum.IN_STOCK)
+                    throw new InvalidOperationException($"Only IN_STOCK units are found missing, not {from}.");
+                unit.Status = ProductUnitStatusEnum.SCRAPPED;
+                await RecordAsync(unit, from, movement, cancellationToken);
+            }
+        }
+
+        public async Task<List<Domain.Entities.ProductUnit>> TakeFromStockAsync(Domain.Entities.Product product, int count, int warehouseId, UnitMovementContext movement, CancellationToken cancellationToken)
+        {
+            var units = await SelectUnitsAsync(
+                x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK,
+                saved => saved.OrderByDescending(x => x.SerialNumber),
+                tracked => tracked.OrderByDescending(x => x.SerialNumber),
+                count,
+                cancellationToken,
+                warehouseId);
+            if (units.Count < count)
+                throw new ValidationCustomException($"در انبار به تعداد کسری «{product.Name}» دانه‌ی موجود نیست.");
+            await MarkMissingAsync(units, movement, cancellationToken);
+            return units;
+        }
+
+        /// <summary>The default warehouse - the one that holds everything while multi-warehouse is off. Read once per request.</summary>
+        public async Task<int> DefaultWarehouseIdAsync(CancellationToken cancellationToken)
+        {
+            if (_defaultWarehouseId.HasValue)
+                return _defaultWarehouseId.Value;
+            _defaultWarehouseId = await _context.Warehouses.Where(x => x.IsDefault).Select(x => (int?)x.Id).FirstOrDefaultAsync(cancellationToken)
+                ?? throw new InvalidOperationException("No default warehouse exists.");
+            return _defaultWarehouseId.Value;
+        }
+
+        private int? _defaultWarehouseId;
+
         private async Task RecordAsync(Domain.Entities.ProductUnit unit, ProductUnitStatusEnum? fromStatus, UnitMovementContext movement, CancellationToken cancellationToken)
         {
             // A shelf only means something while the unit is here.
             if (unit.Status is not (ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED))
                 unit.BinLocation = null;
+
+            // A unit arriving on a shelf (a return, a release) lands in the warehouse the movement names; with none named it
+            // stays where it last was. A departure's WarehouseId was only the source filter - nothing to change.
+            if (movement.WarehouseId.HasValue && fromStatus != null && fromStatus != unit.Status
+                && unit.Status is ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED
+                && fromStatus is not (ProductUnitStatusEnum.IN_STOCK or ProductUnitStatusEnum.QUARANTINED))
+            {
+                if (unit.WarehouseId != movement.WarehouseId.Value)
+                    unit.BinLocation = null;
+                unit.WarehouseId = movement.WarehouseId.Value;
+            }
 
             // Entering quarantine (not moving within it - AcceptExcess keeps the original entry): stamp when and by which document.
             if (unit.Status == ProductUnitStatusEnum.QUARANTINED && fromStatus != ProductUnitStatusEnum.QUARANTINED)
@@ -481,6 +601,7 @@ namespace Infrastructure.Services
                 // The navigation, not the id: a unit minted in this request has no id until SaveChanges.
                 ProductUnit = unit,
                 ProductId = unit.ProductId,
+                WarehouseId = unit.WarehouseId == 0 ? null : unit.WarehouseId,
                 FromStatus = fromStatus,
                 ToStatus = unit.Status,
                 Reason = movement.Reason,
@@ -534,17 +655,20 @@ namespace Infrastructure.Services
             Func<IQueryable<Domain.Entities.ProductUnit>, IOrderedQueryable<Domain.Entities.ProductUnit>> orderSaved,
             Func<IEnumerable<Domain.Entities.ProductUnit>, IOrderedEnumerable<Domain.Entities.ProductUnit>> orderTracked,
             int count,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            int? warehouseId = null)
         {
             var tracked = TrackedUnits();
             var trackedIds = tracked.Where(u => u.Id > 0).Select(u => u.Id).ToList();
 
-            var saved = await orderSaved(_context.ProductUnits.Where(filter).Where(x => !trackedIds.Contains(x.Id)))
+            // A departure from a named warehouse (multi-warehouse on) picks only there; otherwise from any warehouse.
+            var saved = await orderSaved(_context.ProductUnits.Where(filter).Where(x => !trackedIds.Contains(x.Id))
+                    .Where(x => warehouseId == null || x.WarehouseId == warehouseId))
                 .Take(count)
                 .ToListAsync(cancellationToken);
 
             var matches = filter.Compile();
-            return orderTracked(saved.Concat(tracked.Where(matches))).Take(count).ToList();
+            return orderTracked(saved.Concat(tracked.Where(matches).Where(u => warehouseId == null || u.WarehouseId == warehouseId))).Take(count).ToList();
         }
 
         /// <summary>The count counterpart of <see cref="SelectUnitsAsync"/>, with the same view of the request.</summary>

@@ -6,11 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/shared/components/ui/dialog";
 import FormField from "@/shared/components/forms/FormField";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { Button } from "@/shared/components/ui/button";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 /** همان سقفی که سرور روی `reason` چک می‌کند (`ReturnStatusReason.MaxLength`). */
 const RETURN_STATUS_REASON_MAX_LENGTH = 500;
@@ -76,19 +75,7 @@ export default function ReturnStatusReasonDialog({
             </FormField>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={close}
-              disabled={isPending}
-            >
-              انصراف
-            </Button>
-            <Button type="submit" variant="destructive" disabled={isPending}>
-              {isPending ? "در حال ثبت..." : confirmLabel}
-            </Button>
-          </DialogFooter>
+          <DialogActions onCancel={close} isPending={isPending} variant="destructive" submitLabel={confirmLabel} />
         </form>
       </DialogContent>
     </Dialog>

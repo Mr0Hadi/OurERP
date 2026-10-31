@@ -1,5 +1,6 @@
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { PaymentPurposeEnum } from "@/shared/domain/enums/paymentDirection";
+import { ChequeStatusEnum } from "@/shared/domain/enums/chequeStatus";
 import { nowLocalIso } from "@/shared/lib/dateUtils";
 
 /**
@@ -11,8 +12,37 @@ import { nowLocalIso } from "@/shared/lib/dateUtils";
 /** پیش‌نویسِ خالیِ پرداخت‌ها: `{ changes: { [paymentId]: … }, added: [{ id, values }] }`. */
 export const EMPTY_PAYMENT_DRAFT = Object.freeze({ changes: {}, added: [] });
 
+/** فیلدهای تکمیلیِ چک روی هر ثبتِ پول (`api-guide` بخش ۲۴)؛ شماره‌ی چک جدا، در `checkNumber`. */
+export const EMPTY_CHEQUE_FIELDS = Object.freeze({ checkDueDate: "", checkBankName: "", checkDrawerName: "" });
+
 /**
- * بدنه‌ی API برای یک ردیفِ پرداخت؛ مرجعِ چک/حواله فقط برای همان روش.
+ * فیلدهای تکمیلیِ چک برای بدنه‌ی API — فقط برای `CHECK` (برای روش‌های دیگر سرور ۴۰۰ می‌دهد)؛ خالی‌ها فرستاده
+ * نمی‌شوند. تاریخِ خالی یعنی «همان روز».
+ */
+export function toApiChequeFields(values, type = values.type ?? values.paymentType) {
+  if (type !== PaymentTypeEnum.CHECK) return {};
+  return {
+    checkDueDate: values.checkDueDate || undefined,
+    checkBankName: values.checkBankName?.trim() || undefined,
+    checkDrawerName: values.checkDrawerName?.trim() || undefined,
+  };
+}
+
+/** فیلدهای چکِ یک ردیفِ سرور برای پیش‌نویسِ فرم (اصلاح). */
+export const chequeFieldsOf = (row) => ({
+  checkDueDate: String(row?.checkDueDate ?? "").slice(0, 10),
+  checkBankName: row?.checkBankName ?? "",
+  checkDrawerName: row?.checkDrawerName ?? "",
+});
+
+/**
+ * روش‌هایی که همان لحظه پول را از صندوق/حسابی جابه‌جا می‌کنند و `bankAccountId` می‌گیرند. نسیه پولی
+ * جابه‌جا نمی‌کند و چک هنگامِ وصول حساب می‌گیرد (`api-guide` بخش‌های ۲۳ و ۲۴).
+ */
+export const takesBankAccount = (type) => type === PaymentTypeEnum.CASH || type === PaymentTypeEnum.TRANSFER;
+
+/**
+ * بدنه‌ی API برای یک ردیفِ پرداخت؛ مرجعِ چک/حواله و صندوق/حساب فقط برای همان روش‌ها.
  * `withDirection: false` برای جایی که سرور جهت را خودش می‌گذارد (ثبتِ سند،
  * اصلاحِ پرداخت).
  */
@@ -25,6 +55,8 @@ export function toPaymentPayload(values, { withDirection = true } = {}) {
     checkNumber: values.type === PaymentTypeEnum.CHECK ? values.checkNumber || undefined : undefined,
     transferRef:
       values.type === PaymentTypeEnum.TRANSFER ? values.transferRef || undefined : undefined,
+    bankAccountId: takesBankAccount(values.type) ? values.bankAccountId || undefined : undefined,
+    ...toApiChequeFields(values),
   };
 }
 
@@ -57,3 +89,9 @@ export function paymentTypeOf(rows) {
 /** پرداختِ عادی (نه قسط و نه اثرِ مرجوعی) — فقط این‌ها از کارتِ پرداخت‌ها اصلاح/ابطال می‌شوند. */
 export const isNormalPayment = (row) =>
   (row.purpose ?? PaymentPurposeEnum.NORMAL) === PaymentPurposeEnum.NORMAL;
+
+/**
+ * چکی که سرنوشتش ثبت شده (وصول، برگشت، خرج) دیگر با اصلاح/ابطال عوض نمی‌شود (سرور ۴۰۰)؛ از صفحه‌ی چک‌ها.
+ */
+export const isChequeSettled = (row) =>
+  row.checkStatus != null && Number(row.checkStatus) !== ChequeStatusEnum.PENDING;

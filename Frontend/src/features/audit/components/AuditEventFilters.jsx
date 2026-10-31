@@ -1,6 +1,6 @@
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
-import { toFilterOptions } from "@/shared/components/filters/filterUtils";
+import { optionsFromLabels } from "@/shared/lib/options";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { DOCUMENT_KIND_LABELS } from "@/shared/domain/enums/documentKind";
@@ -11,7 +11,7 @@ import { useAuditEventFilterStore } from "../store/auditEventFilterStore";
 import AuditActionSelect from "./AuditActionSelect";
 
 const ENTITY_OPTIONS = STANDALONE_ENTITY_TYPES.map((value) => ({ value, label: AUDIT_ENTITY_LABELS[value] }));
-const DOCUMENT_OPTIONS = toFilterOptions(DOCUMENT_KIND_LABELS);
+const DOCUMENT_OPTIONS = optionsFromLabels(DOCUMENT_KIND_LABELS);
 
 /** شناسه‌ی رکورد/سند؛ رقمِ فارسی هم پذیرفته می‌شود. */
 function IdInput({ label, placeholder, value, onChange }) {
@@ -44,6 +44,9 @@ export default function AuditEventFilters() {
       store={useAuditEventFilterStore}
       onReset={state.resetFilters}
       primary={userSelect}
+      dateRowClassName="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-5 gap-4 pt-3 border-t border-border"
+      resetWrapperClassName="flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end"
+      resetButtonClassName="w-full px-4"
       dateRow={
         <>
           <FilterSelect

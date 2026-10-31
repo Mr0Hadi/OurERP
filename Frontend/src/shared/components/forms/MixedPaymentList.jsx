@@ -4,18 +4,12 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
   PAYMENT_TYPE_LABELS,
   PAYMENT_REFERENCE_FIELDS,
   SPLITTABLE_PAYMENT_TYPES,
 } from "@/shared/domain/enums/paymentType";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
+import OptionSelect from "./OptionSelect";
 
 /** روش‌هایی که یک تکه از پرداختِ ترکیبی می‌تواند داشته باشد. */
 const TYPES = SPLITTABLE_PAYMENT_TYPES.map((value) => ({
@@ -100,21 +94,13 @@ export default function MixedPaymentList({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label className={labelClass}>روش</Label>
-                <Select
-                  value={String(payment.type)}
-                  onValueChange={(val) => onChange(idx, "type", Number(val))}
-                >
-                  <SelectTrigger className={inputHeight}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TYPES.map((t) => (
-                      <SelectItem key={t.value} value={String(t.value)}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OptionSelect
+                  value={payment.type}
+                  onChange={(type) => onChange(idx, "type", type)}
+                  numeric
+                  className={`${inputHeight} w-fit`}
+                  options={TYPES}
+                />
               </div>
 
               <div className="space-y-1">

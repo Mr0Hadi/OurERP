@@ -2,16 +2,20 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
+import BankAccountSelect from "@/shared/components/payments/BankAccountSelect";
+import ChequeFields from "@/shared/components/payments/ChequeFields";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { takesBankAccount } from "@/shared/domain/payments/paymentRows";
 import { PAYMENT_REFERENCE_FIELDS, PAYMENT_TYPE_LABELS } from "@/shared/domain/enums/paymentType";
 import { INSTALLMENT_PAYMENT_TYPES } from "../domain/installmentPlan";
 
 const METHOD_OPTIONS = INSTALLMENT_PAYMENT_TYPES.map((type) => ({ value: type, label: PAYMENT_TYPE_LABELS[type] }));
 
 /**
- * روش، مرجع و تاریخِ یک پرداختِ قرارداد (پیش‌پرداخت، قسط، تسویه). مبلغ اینجا نیست: مبلغِ
+ * روش، مرجع، تاریخ و صندوق/حسابِ یک پرداختِ قرارداد (پیش‌پرداخت، قسط، تسویه). مبلغ اینجا نیست: مبلغِ
  * قسط و تسویه را سرور تعیین می‌کند و پیش‌پرداخت فیلدِ خودش را دارد.
  *
- * @param value `{ paymentType, checkNumber, transferRef, paidAt }`
+ * @param value `{ paymentType, checkNumber, transferRef, paidAt, bankAccountId, checkDueDate, checkBankName, checkDrawerName }`
  * @param onChange `(patch) => void`
  */
 export default function InstallmentPaymentFields({ value, onChange, idPrefix = "installment-payment" }) {
@@ -48,6 +52,22 @@ export default function InstallmentPaymentFields({ value, onChange, idPrefix = "
               value={value[reference.field] || ""}
               onChange={(e) => onChange({ [reference.field]: e.target.value })}
               className="h-9"
+            />
+          </div>
+        )}
+        {value.paymentType === PaymentTypeEnum.CHECK && (
+          <ChequeFields value={value} onChange={onChange} idPrefix={`${idPrefix}-cheque`} />
+        )}
+        {takesBankAccount(value.paymentType) && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`${idPrefix}-bank-account`} className="text-xs">
+              صندوق / حساب
+            </Label>
+            <BankAccountSelect
+              id={`${idPrefix}-bank-account`}
+              value={value.bankAccountId}
+              onChange={(bankAccountId) => onChange({ bankAccountId })}
+              paymentType={value.paymentType}
             />
           </div>
         )}

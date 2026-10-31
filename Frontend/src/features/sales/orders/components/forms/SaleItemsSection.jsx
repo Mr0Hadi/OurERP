@@ -4,7 +4,8 @@ import { SALE_PRICE_MODES, salePriceOf } from "../../domain/salePricing";
 
 
 /**
- * اقلامِ فروش، با کلیدِ «خرده / همکار» برای قیمتِ پیش‌فرض.
+ * اقلامِ فروش، با کلیدِ «خرده / همکار» برای قیمتِ پیش‌فرض. `trackUnits`: اسکنِ دانه (فقط فروشِ
+ * پیشخوان؛ در فروشِ عادی دانه‌ها را انبار در بررسیِ پیش‌فاکتور اسکن می‌کند).
  *
  * عوض‌کردنِ حالت، قیمتِ اقلامی را هم که هنوز روی قیمتِ پیش‌فرضِ حالتِ قبلی
  * مانده‌اند به‌روز می‌کند؛ قیمتی که کاربر دستی عوض کرده دست نمی‌خورد.
@@ -17,6 +18,7 @@ export default function SaleItemsSection({
   priceMode = "retail",
   onPriceModeChange,
   onAddNewProduct,
+  trackUnits = false,
 }) {
   const switchMode = (nextMode) => {
     if (nextMode === priceMode || !onPriceModeChange) return;
@@ -40,7 +42,7 @@ export default function SaleItemsSection({
       products={products}
       isLoadingProducts={isLoadingProducts}
       priceOf={salePriceOf(priceMode)}
-      trackUnits
+      trackUnits={trackUnits}
       onAddNewProduct={onAddNewProduct}
       actions={
         onPriceModeChange && (

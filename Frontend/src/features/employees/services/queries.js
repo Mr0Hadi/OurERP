@@ -15,10 +15,9 @@ const COUNT_ONLY = { page: 1, take: 1 };
  * فهرستِ کارمندان — `GetUserList`.
  *
  * `params` دقیقاً همان چیزی است که سرور می‌گیرد: `page`, `take`,
- * `fullName`, `personelCode`, `departmentId`, `teamId`, `isActive`. هیچ
+ * `fullName`, `personelCode`, `departmentId`, `teamId`, `isActive`، به‌علاوه‌ی
+ * `sorting`ِ جدول که در `api-v1` به `sortBy`/`sortDirection` تبدیل می‌شود. هیچ
  * نامی ترجمه نمی‌شود و پاسخ هم همان `{ userList, page }` سرور است.
- *
- * ⚠️ `GetUserList` مرتب‌سازی نمی‌گیرد؛ ترتیبِ ردیف‌ها را سرور تعیین می‌کند.
  *
  * @param queryOptions گزینه‌های اضافه‌ی react-query (مثلاً `enabled`) — برای
  *        فهرست‌هایی که تا انتخابِ یک واحد نباید درخواستی بزنند.

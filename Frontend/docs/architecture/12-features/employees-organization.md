@@ -16,7 +16,7 @@
 
 ## سرویس‌ها
 
-- employees (`src/features/employees/services/api-v1.js`): `getUserList` GET `/User/GetUserList`، `getUserUpdate` GET `/User/GetUserUpdate`، `createUser` POST، `updateUser` PUT، `changeUserTeam` PUT `/User/ChangeUserTeam`، `resetUserPassword` PUT، `logoutUserById` POST `/Account/LogoutUserById`. هوک‌ها: `useUserListQuery`، `useAllUsersQuery`، `useUserUpdateQuery`، `useDepartmentUserCountQuery`، `useTeamMembersQuery`، `useTeamCandidatesQuery`؛ `useCreateUserMutation`، `useUpdateUserMutation`، `useChangeUserTeamMutation`، `useLogoutUserByIdMutation`، `useResetUserPasswordMutation`. کلید `userKeys` (`["users"]`).
+- employees (`src/features/employees/services/api-v1.js`): `getUserList` GET `/User/GetUserList` (مرتب‌سازی با `sorting` → `UserListSortEnum`)، `getUserUpdate` GET `/User/GetUserUpdate`، `createUser` POST، `updateUser` PUT، `changeUserTeam` PUT `/User/ChangeUserTeam`، `resetUserPassword` PUT، `logoutUserById` POST `/Account/LogoutUserById`. هوک‌ها: `useUserListQuery`، `useAllUsersQuery`، `useUserUpdateQuery`، `useDepartmentUserCountQuery`، `useTeamMembersQuery`، `useTeamCandidatesQuery`؛ `useCreateUserMutation`، `useUpdateUserMutation`، `useChangeUserTeamMutation`، `useLogoutUserByIdMutation`، `useResetUserPasswordMutation`. کلید `userKeys` (`["users"]`).
 - departments: `/Department/*` (`getDepartmentList`، `getDepartmentDetail`، `createDepartment`، `updateDepartment`، `deleteDepartment`)؛ `departmentKeys` (`["departments"]`).
 - teams: `/Team/*`؛ `useTeamOptionsQuery(departmentId)`؛ `teamKeys` (`["teams"]`).
 - مشترکِ دو زیرماژولِ سازمان: `src/features/organization/components/OrgLeadershipForm.jsx`، `OrgDetailLoading.jsx`، `src/features/organization/hooks/useEmployeeOptions.js`، `useSyncLeadershipValues.js`.
@@ -30,7 +30,7 @@
 **تغییرِ واحد/تیمِ کارمند**
 - از فرمِ کارمند: `EmployeeOrgForm` با عوض‌شدنِ واحد `teamId` را پاک می‌کند → `useUpdateUserMutation` → invalidate `userKeys.lists()`، `userKeys.detail(id)`، `teamKeys.all`، `departmentKeys.all`، **`authKeys.session()`** (چون سایدبار واحد/تیمِ کاربرِ جاری را از `useUserInfoQuery` نشان می‌دهد).
 - از صفحه‌ی تیم: `TeamMembersCard` → `useChangeUserTeamMutation` (افزودن/حذف، سرپرست/جانشین؛ `isHead` → `isDeputy` خاموش) → `userKeys.all`، `teamKeys.all`، `departmentKeys.all`، `authKeys.session()`.
-- mutationهای واحد/تیم تابعِ داخلیِ `invalidateOrgChart` را صدا می‌زنند (ریشه‌های واحد، تیم، کاربر + `session`).
+- همه‌ی mutationهای واحد/تیم (ساخت، ویرایش، حذف) `invalidateOrgChart` از `src/features/organization/services/invalidation.js` را صدا می‌زنند (ریشه‌های واحد، تیم، کاربر + `session`).
 
 **رفت‌وبرگشت با پیش‌نویس (`useFormDraft`)** — [08](../08-client-state-zustand.md):
 - `EmployeeNewPage` (`DRAFT_KEY = "employee:new"`): `leaveForCreate` پیش‌نویس را ذخیره و به `ORG_DEPARTMENTS_NEW` یا `ORG_TEAMS_NEW` با `state: { returnTo: ROUTES.EMPLOYEES_NEW }` می‌رود؛ در برگشت `mergeDraft(draft, location.state)` شناسه‌ی واحدِ تازه را می‌نشاند. خودش بعد از ثبت یا انصراف با `useReturnTo(ROUTES.EMPLOYEES).goBack()` به `returnTo` (یا فهرستِ کارمندان) برمی‌گردد.
@@ -44,6 +44,5 @@
 ## نکته‌ها و بدهی
 
 - `EMPLOYEES_DETAIL` مجوزِ `UserUpdate` می‌خواهد نه `UserView` (برخلافِ بقیه‌ی صفحه‌های جزئیات).
-- `invalidateOrgChart` دو بار تعریف شده (`src/features/organization/departments/services/mutations.js` و `src/features/organization/teams/services/mutations.js`).
 - حذفِ واحد `userKeys` و `authKeys.session()` را باطل نمی‌کند؛ حذفِ تیم `authKeys.session()` را. ساخت/ویرایش می‌کنند.
 - importِ کلیدها بین `departments` و `teams` نسبی است (`../../teams/...`).

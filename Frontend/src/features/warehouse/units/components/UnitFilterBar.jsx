@@ -5,6 +5,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import EntitySelect from "@/shared/components/filters/EntitySelect";
+import FilterCollapse from "@/shared/components/filters/FilterCollapse";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
@@ -14,11 +15,10 @@ import { useCustomersOptionsQuery } from "@/features/customers/services/queries"
 import { UNIT_SEGMENTS } from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import { optionsFromLabels } from "@/shared/lib/options";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
-const CUSTODY_OPTIONS = Object.entries(UNIT_CUSTODY_REASON_LABELS).map(([value, label]) => ({
-  value: Number(value),
-  label,
-}));
+const CUSTODY_OPTIONS = optionsFromLabels(UNIT_CUSTODY_REASON_LABELS, { numeric: true });
 
 function Field({ label, children, className = "" }) {
   return (
@@ -45,7 +45,6 @@ export default function UnitFilterBar({ store, search, products }) {
   const customerOptions = useCustomersOptionsQuery({ enabled: showMore || Boolean(store.customerId) });
   const suppliers = supplierOptions.suppliers;
   const customers = customerOptions.customers;
-  const isLoadingParties = supplierOptions.isLoading || customerOptions.isLoading;
   const isQuarantine = store.segment === UNIT_SEGMENTS.QUARANTINE;
 
   const advancedActive = [
@@ -98,7 +97,7 @@ export default function UnitFilterBar({ store, search, products }) {
                 {formatNumber(advancedActive)}
               </span>
             )}
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMore ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showMore ? "rotate-180" : ""}`} />
           </Button>
 
           {anyActive && (
@@ -119,80 +118,67 @@ export default function UnitFilterBar({ store, search, products }) {
         </div>
       </div>
 
-      {showMore && (
-        <div className="grid gap-3 rounded-xl border border-border bg-muted/30 p-3 @lg/filters:grid-cols-2 @4xl/filters:grid-cols-4">
-          <Field label="تامین‌کننده">
-            <EntitySelect
-              label="تامین‌کننده"
-              placeholder="همه"
-              items={suppliers}
-              isLoading={isLoadingParties}
-              value={store.supplierId}
-              onSelect={(id) => store.setSupplierId(id)}
-            />
-          </Field>
-          <Field label="مشتری">
-            <EntitySelect
-              label="مشتری"
-              placeholder="همه"
-              items={customers}
-              isLoading={isLoadingParties}
-              value={store.customerId}
-              onSelect={(id) => store.setCustomerId(id)}
-            />
-          </Field>
-          <Field label="تاریخ ورود به انبار">
-            <div className="grid grid-cols-2 gap-2">
-              <PersianDatePicker value={store.fromDate} onChange={store.setFromDate} placeholder="از" />
-              <PersianDatePicker value={store.toDate} onChange={store.setToDate} placeholder="تا" />
-            </div>
-          </Field>
-          <Field label={store.productId ? "بازه‌ی سریال" : "بازه‌ی سریال (اول کالا را انتخاب کنید)"}>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                placeholder="از"
-                disabled={!store.productId}
-                value={store.fromSerial}
-                onChange={(event) => store.setFromSerial(event.target.value)}
-                className="h-9"
-              />
-              <Input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                placeholder="تا"
-                disabled={!store.productId}
-                value={store.toSerial}
-                onChange={(event) => store.setToSerial(event.target.value)}
-                className="h-9"
-              />
-            </div>
-          </Field>
-          <Field label="قفسه">
+      <FilterCollapse
+        open={showMore}
+        className="grid gap-3 rounded-xl border border-border bg-muted/30 p-3 @lg/filters:grid-cols-2 @4xl/filters:grid-cols-4"
+      >
+        <Field label="تامین‌کننده">
+          <PartySelect side="supplier" placeholder="همه" value={store.supplierId} onSelect={store.setSupplierId} />
+        </Field>
+        <Field label="مشتری">
+          <PartySelect side="customer" placeholder="همه" value={store.customerId} onSelect={store.setCustomerId} />
+        </Field>
+        <Field label="تاریخ ورود به انبار">
+          <div className="grid grid-cols-2 gap-2">
+            <PersianDatePicker value={store.fromDate} onChange={store.setFromDate} placeholder="از" />
+            <PersianDatePicker value={store.toDate} onChange={store.setToDate} placeholder="تا" />
+          </div>
+        </Field>
+        <Field label={store.productId ? "بازه‌ی سریال" : "بازه‌ی سریال (اول کالا را انتخاب کنید)"}>
+          <div className="grid grid-cols-2 gap-2">
             <Input
-              placeholder="مثلاً A-03 (همه‌ی A-03-*)"
-              dir="ltr"
-              value={store.binLocation}
-              onChange={(event) => store.setBinLocation(event.target.value)}
-              className="h-9 font-mono"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              placeholder="از"
+              disabled={!store.productId}
+              value={store.fromSerial}
+              onChange={(event) => store.setFromSerial(event.target.value)}
+              className="h-9"
+            />
+            <Input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              placeholder="تا"
+              disabled={!store.productId}
+              value={store.toSerial}
+              onChange={(event) => store.setToSerial(event.target.value)}
+              className="h-9"
+            />
+          </div>
+        </Field>
+        <Field label="قفسه">
+          <Input
+            placeholder="مثلاً A-03 (همه‌ی A-03-*)"
+            dir="ltr"
+            value={store.binLocation}
+            onChange={(event) => store.setBinLocation(event.target.value)}
+            className="h-9 font-mono"
+          />
+        </Field>
+        {isQuarantine && (
+          <Field label="علت قرنطینه">
+            <FilterSelect
+              label="علت قرنطینه"
+              value={store.custodyReason}
+              onChange={store.setCustodyReason}
+              options={CUSTODY_OPTIONS}
+              numeric
             />
           </Field>
-          {isQuarantine && (
-            <Field label="علت قرنطینه">
-              <FilterSelect
-                label="علت قرنطینه"
-                value={store.custodyReason}
-                onChange={store.setCustodyReason}
-                options={CUSTODY_OPTIONS}
-                numeric
-              />
-            </Field>
-          )}
-        </div>
-      )}
+        )}
+      </FilterCollapse>
 
       <UnitActiveFilters
         store={store}

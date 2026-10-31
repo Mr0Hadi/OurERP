@@ -40,6 +40,10 @@ namespace Domain.Entities
         public ReturnPaymentMethodEnum? Method { get; set; }
         public string? Reference { get; set; }
 
+        /// <summary>See PurchaseReturnEffect.BankAccountId.</summary>
+        public int? BankAccountId { get; set; }
+        public BankAccount? BankAccount { get; set; }
+
         public string? Note { get; set; }
         public ReturnEffectStatusEnum Status { get; set; }
         public DateTime CreatedAt { get; set; }

@@ -26,6 +26,11 @@ export const useAuthStore = create(
       // اول به صفحه‌ی ورود می‌فرستد و آنجا توکنِ ذخیره‌شده سنجیده می‌شود.
       // `isAuthenticated` فقط یعنی «توکنی در localStorage هست».
       sessionVerified: false,
+      // مدیر رمزِ این کاربر را بازنشانی کرده (`mustChangePassword` در پاسخِ ورود، یا
+      // ۴۰۳ِ سرور با همین پرچم). تا رمز عوض نشود سرور جز چند درخواستِ معدود همه را رد
+      // می‌کند، پس برنامه کاربر را به `ROUTES.CHANGE_PASSWORD` می‌برد. persist می‌شود
+      // چون `GetUserInfo` این پرچم را ندارد و بعد از بارگذاریِ دوباره راهِ دیگری نیست.
+      mustChangePassword: false,
 
       // بعد از رفرش موفق فقط توکن‌ها آپدیت می‌شن
       setTokens: (accessToken, refreshToken) =>
@@ -35,12 +40,26 @@ export const useAuthStore = create(
           isAuthenticated: !!accessToken,
         }),
 
-      loginSuccess: ({ accessToken, refreshToken }) =>
+      loginSuccess: ({ accessToken, refreshToken, mustChangePassword = false }) =>
         set({
           accessToken,
           refreshToken,
           isAuthenticated: true,
           sessionVerified: true,
+          mustChangePassword: !!mustChangePassword,
+        }),
+
+      setMustChangePassword: (mustChangePassword) => set({ mustChangePassword }),
+
+      // `ChangePassword` همه‌ی نشست‌ها را می‌بندد، حتی همین توکن را، و جفتِ تازه
+      // می‌دهد؛ نگه‌داشتنِ توکنِ قبلی یعنی درخواستِ بعدی ۴۰۱ و خروج.
+      passwordChanged: ({ accessToken, refreshToken }) =>
+        set({
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
+          sessionVerified: true,
+          mustChangePassword: false,
         }),
 
       markSessionVerified: () => set({ sessionVerified: true }),
@@ -53,6 +72,7 @@ export const useAuthStore = create(
           refreshToken: null,
           isAuthenticated: false,
           sessionVerified: false,
+          mustChangePassword: false,
         }),
     }),
     {
@@ -62,6 +82,7 @@ export const useAuthStore = create(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
+        mustChangePassword: state.mustChangePassword,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

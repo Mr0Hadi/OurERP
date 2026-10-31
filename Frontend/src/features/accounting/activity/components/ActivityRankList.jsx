@@ -5,6 +5,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 import { formatNumber, formatPercent } from "@/shared/components/charts/chartUtils";
 import { cn } from "@/shared/lib/utils";
 import { toneSolid, toneText } from "@/shared/lib/tone";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 /**
  * رتبه‌بندیِ گزارش‌های فعالیت — به‌جای جدول، فهرستِ نواری.
@@ -79,13 +80,12 @@ export default function ActivityRankList({
 
   if (!items.length) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-10 text-center">
-        <Inbox className="size-5 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
-        <p className="text-xs text-muted-foreground">
-          بازه‌ی دیگری را امتحان کنید یا «همه» را انتخاب کنید.
-        </p>
-      </div>
+      <EmptyState
+        size="sm"
+        icon={Inbox}
+        title={emptyMessage}
+        description="بازه‌ی دیگری را امتحان کنید یا «همه» را انتخاب کنید."
+      />
     );
   }
 

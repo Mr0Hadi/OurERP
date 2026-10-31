@@ -1,13 +1,14 @@
 import DataTable from "@/shared/components/table/DataTable";
 import PaymentProgress from "@/shared/components/table/PaymentProgress";
-import PaymentTypeBadge from "@/shared/components/status/PaymentTypeBadge";
 import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import SaleStatusBadge from "@/shared/components/status/SaleStatusBadge";
 import StatusBadge from "@/shared/components/status/StatusBadge";
+import { SALE_PROFORMA_STAGE_TONES } from "@/shared/domain/enums/saleProforma";
 import { detailsColumn } from "@/shared/components/table/columns";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import SalePaymentTypeBadge from "./SalePaymentTypeBadge";
 
 /** ستون‌های فهرستِ فروش — ثابتِ ماژول؛ به props وابسته نیستند. */
 const COLUMNS = [
@@ -44,10 +45,22 @@ const COLUMNS = [
     // وضعیت فقط مرحله‌ی ارسال است؛ مرجوعی سندِ جداست و کنارش نشان داده
     // می‌شود (`returnCount`، و `hasOpenReturn` برای مرجوعیِ هنوز باز).
     cell: (info) => {
-      const { returnCount, hasOpenReturn } = info.row.original;
+      const { returnCount, hasOpenReturn, proformaStage, proformaStageTitle, openWarehouseIssueCount } =
+        info.row.original;
       return (
         <div className="flex flex-wrap items-center gap-1">
           <SaleStatusBadge status={info.getValue()} />
+          {/* مرحله‌ی چرخه‌ی تأیید؛ سرور فقط برای پیش‌فاکتور پرش می‌کند. */}
+          {proformaStageTitle && (
+            <StatusBadge size="sm" tone={SALE_PROFORMA_STAGE_TONES[proformaStage] ?? "neutral"}>
+              {proformaStageTitle}
+            </StatusBadge>
+          )}
+          {openWarehouseIssueCount > 0 && (
+            <StatusBadge size="sm" tone="danger" title="دانه‌ی معیوب/مفقودِ گزارش‌شده در بررسیِ انبار، منتظرِ تصمیمِ حسابداری">
+              {formatNumber(openWarehouseIssueCount)} گزارش انبار
+            </StatusBadge>
+          )}
           {returnCount > 0 && (
             <StatusBadge
               size="sm"
@@ -74,7 +87,7 @@ const COLUMNS = [
         String(plan.nextDueDate).slice(0, 10) < todayIso();
       return (
         <div className="flex flex-wrap items-center justify-center gap-1">
-          <PaymentTypeBadge type={info.getValue()} />
+          <SalePaymentTypeBadge type={info.getValue()} />
           {late && (
             <StatusBadge size="sm" tone="danger" title={`سررسید: ${gregorianToPersian(plan.nextDueDate)}`}>
               قسط معوق
@@ -110,6 +123,7 @@ const SaleTable = ({
   onPaginationChange,
   sorting,
   onSortingChange,
+  refresh,
 }) => {
 
 
@@ -124,6 +138,7 @@ const SaleTable = ({
       onPaginationChange={onPaginationChange}
       sorting={sorting}
       onSortingChange={onSortingChange}
+      refresh={refresh}
       emptyMessage="فروشی یافت نشد."
     />
   );

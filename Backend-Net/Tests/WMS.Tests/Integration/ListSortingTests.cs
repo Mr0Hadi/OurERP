@@ -1,3 +1,5 @@
+using Application.Features.Warehousing.Queries;
+using Application.Features.Stocktaking.Queries;
 using Application.Features.Cheque.Queries;
 using Application.Features.PartyAccount.Queries;
 ﻿using Application.Features.Accounting;
@@ -66,6 +68,8 @@ namespace WMS.Tests.Integration
             await RunAll<DepartmentListSortEnum>((s, d) => new GetDepartmentListQueryHandler(scope.Db).Handle(new GetDepartmentListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<TeamListSortEnum>((s, d) => new GetTeamListQueryHandler(scope.Db).Handle(new GetTeamListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PosTerminalListSortEnum>((s, d) => new GetPosTerminalListQueryHandler(scope.Db).Handle(new GetPosTerminalListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<StockTransferListSortEnum>((s, d) => new GetStockTransferListQueryHandler(scope.Db).Handle(new GetStockTransferListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<StocktakeListSortEnum>((s, d) => new GetStocktakeListQueryHandler(scope.Db).Handle(new GetStocktakeListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<CheckListSortEnum>((s, d) => new GetCheckListQueryHandler(scope.Db).Handle(new GetCheckListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PartyPaymentListSortEnum>((s, d) => new GetPartyPaymentListQueryHandler(scope.Db).Handle(new GetPartyPaymentListQuery { SortBy = s, SortDirection = d, HasUnallocated = true }, ct));
             await RunAll<PosPaymentListSortEnum>((s, d) => new GetPosPaymentListQueryHandler(scope.Db).Handle(new GetPosPaymentListQuery { SortBy = s, SortDirection = d }, ct));
@@ -80,6 +84,7 @@ namespace WMS.Tests.Integration
             await RunAll<SaleJournalSortEnum>((s, d) => new GetSaleJournalQueryHandler(scope.Db).Handle(new GetSaleJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseJournalSortEnum>((s, d) => new GetPurchaseJournalQueryHandler(scope.Db).Handle(new GetPurchaseJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SaleLineJournalSortEnum>((s, d) => new GetSaleLineJournalQueryHandler(scope.Db).Handle(new GetSaleLineJournalQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<PurchaseLineJournalSortEnum>((s, d) => new GetPurchaseLineJournalQueryHandler(scope.Db).Handle(new GetPurchaseLineJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PaymentJournalSortEnum>((s, d) => new GetPaymentJournalQueryHandler(scope.Db).Handle(new GetPaymentJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<InventoryValuationSortEnum>((s, d) => new GetInventoryValuationQueryHandler(scope.Db).Handle(new GetInventoryValuationQuery { SortBy = s, SortDirection = d }, ct));
             foreach (var side in Enum.GetValues<DocumentSideEnum>())

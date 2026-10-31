@@ -16,6 +16,7 @@ import {
   scopeSides,
 } from "../../domain/scopeMetrics";
 import { useScopePerformanceQuery } from "../../services/queries";
+import EmptyState from "@/shared/components/feedback/EmptyState";
 
 const SCOPE_COPY = {
   [ReportScopeEnum.ME]: {
@@ -34,14 +35,12 @@ const SCOPE_COPY = {
 
 function UnavailableState() {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-4 py-8 text-center">
-      <Hourglass className="size-5 text-muted-foreground" />
-      <p className="text-sm font-medium">این گزارش هنوز روی سرور فعال نشده است</p>
-      <p className="max-w-md text-xs leading-5 text-muted-foreground">
-        به‌محضِ این‌که گزارشِ «عملکردِ محدوده» در سرور اضافه شود، همین‌جا
-        عددهای شما نمایش داده می‌شود؛ نیازی به کاری از طرفِ شما نیست.
-      </p>
-    </div>
+    <EmptyState
+      size="sm"
+      icon={Hourglass}
+      title="این گزارش هنوز روی سرور فعال نشده است"
+      description="به‌محضِ این‌که گزارشِ «عملکردِ محدوده» در سرور اضافه شود، همین‌جا عددهای شما نمایش داده می‌شود؛ نیازی به کاری از طرفِ شما نیست."
+    />
   );
 }
 

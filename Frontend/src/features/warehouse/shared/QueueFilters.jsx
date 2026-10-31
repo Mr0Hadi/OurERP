@@ -1,16 +1,10 @@
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import { Label } from "@/shared/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 import { parseQueueFilter } from "./queueFilters";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import PartySelect from "@/features/partyAccount/components/PartySelect";
 
 /**
  * فیلترهای صفِ دریافت یا ارسال: شماره‌ی فاکتور، طرفِ حساب، وضعیت و بازه‌ی تاریخ.
@@ -20,8 +14,8 @@ import { parseQueueFilter } from "./queueFilters";
  *
  * @param {object} props
  * @param {Function} props.useStore استورِ فیلترِ صف (`createFilterStore`)
- * @param {object} props.party `{ key, label, emptyText, items, isLoading, phoneOf }` —
- *   `key` نامِ فیلترِ سرور (`supplierId`/`customerId`)
+ * @param {object} props.party `{ key, side }` — `key` نامِ فیلترِ سرور (`supplierId`/`customerId`)،
+ *   `side` نوعِ `PartySelect`
  * @param {{ value, label }[]} props.statusOptions
  * @param {string} props.searchPlaceholder
  */
@@ -33,9 +27,6 @@ export default function QueueFilters({ useStore, party, statusOptions, searchPla
     <FilterPanel
       onReset={store.resetFilters}
       firstRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-      dateRowClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-border"
-      resetWrapperClassName="flex items-end sm:col-span-2 lg:col-span-2 lg:justify-end"
-      resetButtonClassName="w-full lg:w-auto px-4"
       dateRow={
         <>
           <FilterDateInput label="از تاریخ" value={store.fromDate} onChange={store.setFromDate} />
@@ -51,38 +42,16 @@ export default function QueueFilters({ useStore, party, statusOptions, searchPla
         />
       }
     >
-      <EntitySelect
-        label={party.label}
-        placeholder={`انتخاب ${party.label}...`}
-        emptyText={party.emptyText}
-        items={party.items}
-        value={store[party.key]}
-        onSelect={setParty}
-        isLoading={party.isLoading}
-        renderMeta={(item) =>
-          party.phoneOf(item) ? (
-            <span className="text-xs text-muted-foreground">{party.phoneOf(item)}</span>
-          ) : null
-        }
-      />
+      <PartySelect side={party.side} value={store[party.key]} onSelect={setParty} />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <Label className="whitespace-nowrap font-medium text-foreground text-sm">وضعیت</Label>
-        <Select
-          value={String(store.status)}
-          onValueChange={(value) => store.setStatus(parseQueueFilter(value))}
-        >
-          <SelectTrigger className="flex-1 w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((option) => (
-              <SelectItem key={option.value} value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <OptionSelect
+          value={store.status}
+          onChange={(value) => store.setStatus(parseQueueFilter(value))}
+          options={statusOptions}
+          className="flex-1 w-full"
+        />
       </div>
     </FilterPanel>
   );

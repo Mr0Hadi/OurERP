@@ -5,11 +5,14 @@ import { useCreateSupplierMutation } from "../services/mutations";
 import { useSupplierForm } from "../hooks/useSupplierForm";
 import { Button } from "@/shared/components/ui/button";
 import SupplierIdentityForm from "../components/forms/SupplierIdentityForm";
-import SupplierFinanceForm from "../components/forms/SupplierFinanceForm";
+import PartyFinanceForm from "@/features/partyAccount/components/PartyFinanceForm";
 import PartyAddressForm from "@/features/partyAccount/components/PartyAddressForm";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 
 export default function SupplierNewPage() {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   // از فرمِ خرید/فروش آمده باشیم (`state.returnTo`) به همان‌جا برمی‌گردیم و شناسه‌ی
   // رکوردِ تازه را می‌فرستیم تا همان‌جا انتخاب شود؛ وگرنه به لیستِ خودش. برگشتِ ساده در
   // تاریخچه به هر صفحه‌ای که قبلاً باز بود می‌رفت و شناسه را گم می‌کرد.
@@ -72,8 +75,8 @@ const {
               imageUpload={imageUpload}
             />
 
-            <SupplierFinanceForm
-              register={register}
+            <PartyFinanceForm
+              side="supplier"
               errors={errors}
               balanceType={balanceType}
               control={control}

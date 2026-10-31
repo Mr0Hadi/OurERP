@@ -14,7 +14,7 @@
 4. `src/features/<f>/services/queries.js` — `use<X>ListFilters` با `useDebouncedFilters(store, { text, instant })` و `use<X>sQuery` با `listQuery` + `keepPreviousData`؛ کپی از `useCustomerListFilters` / `useCustomersQuery`. **هر کلیدِ فیلتر را در `text` یا `instant` بیاورید، وگرنه فرستاده نمی‌شود** (باگِ رفع‌شده‌ی B1 در [14](14-dependency-graph-and-health.md): `vehicleId` جا مانده بود).
 5. `src/features/<f>/components/<X>Table.jsx` — `COLUMNS` بیرون از کامپوننت (با `meta.mobile`) + `detailsColumn(...)` + `<DataTable columns={COLUMNS} {...props} />`؛ کپی از `src/features/customers/components/CustomerTable.jsx`.
 6. `src/features/<f>/components/<X>Filters.jsx` — `ResponsiveFilters` از `src/shared/components/filters/FilterPanel.jsx` با `FilterSearchInput`/`FilterSelect`/`EntitySelect`؛ الگو: `src/features/partyAccount/components/PartyListFilters.jsx`.
-7. `src/features/<f>/pages/<X>sPage.jsx` — `ListPageLayout` + فیلترها + `ServerTable query={query} listState={listState} table={<X>Table}`؛ کپی از `src/features/customers/pages/CustomersPage.jsx`.
+7. `src/features/<f>/pages/<X>sPage.jsx` — `ListPageLayout` + فیلترها + `ServerTable query={query} listState={listState} table={<X>Table}` (دکمه‌ی تازه‌سازی خودکار می‌آید؛ `<X>Table` باید `{...props}` را به `DataTable` برساند)؛ کپی از `src/features/customers/pages/CustomersPage.jsx`.
 8. مسیر، منو، breadcrumb — دستورالعملِ ۸ (گام‌های ۱ و ۴ تا ۷).
 
 ## ۲. صفحه‌ی جزئیات/ویرایش
@@ -28,7 +28,7 @@
    - بیرونی: `useParams` → `use<X>Query(id)`؛ `usePageHeader`؛ `isLoading` → اسکلتون؛ `isError || !data` → `DetailErrorState` با `notFoundMessage`، `onRetry`، `onBack`؛ وگرنه `<X>DetailForm key={data.id} ...>` (`key` فرم را با عوض‌شدنِ رکورد از نو می‌سازد).
    - فرم: `use<X>Form(data)`؛ `onSubmit` → `updateMutation.mutate({ id, data: build<X>Payload(values) }, { onSuccess: () => { imageUpload.commit(); navigate(...) } })`.
 5. حذف — `ConfirmDialog` (`src/shared/components/feedback/ConfirmDialog.jsx`)؛ در `onSuccess`ِ mutation ببندید یا ناوبری کنید.
-6. مسیر با `:id` + کلیدِ والد در `DETAIL_TITLES`ِ `src/shared/components/layout/AppBreadcrumb.jsx`.
+6. مسیر با `:id` + کلیدِ والد در `DETAIL_TITLES`ِ `src/app/layouts/AppBreadcrumb.jsx`.
 
 ## ۳. فرمِ ثبتِ موجودیتِ ساده
 
@@ -77,7 +77,7 @@
 
 1. `src/shared/domain/enums/<x>.js` (یا `domain/`ِ فیچر اگر فقط همان‌جا لازم است) — `<X>Enum` با **همان اعدادِ بکند** + `<X>_LABELS` + `<X>_TONES` (معناها از `src/shared/lib/tone.js`).
 2. اگر badgeِ اختصاصی می‌خواهید: `src/shared/components/status/<X>Badge.jsx` روی `StatusBadge`؛ کپی از `SaleStatusBadge.jsx`. آیکن: `src/shared/components/status/statusIcons.js`.
-3. فیلترِ لیست: گزینه‌ها با `toFilterOptions` (`src/shared/components/filters/filterUtils.js`).
+3. فیلترِ لیست و کشویی‌ها: گزینه‌ها با `optionsFromLabels(LABELS, { numeric })` (`src/shared/lib/options.js`) برای `FilterSelect`/`OptionSelect`؛ گزینه‌ی پرتکرار را کنارِ enum بگذارید (`PRODUCT_UNIT_OPTIONS`، `REPORT_PERIOD_OPTIONS`).
 4. قواعدی که به وضعیت بستگی دارند: `domain/<x>Rules.js`ِ فیچر (مثل `saleRules.js`).
 
 ## ۷. فیلترِ تازه روی لیستِ موجود
@@ -100,7 +100,7 @@
 5. `src/features/<f>/routes.jsx` — `lazy(() => import("./pages/..."))` و `handle: { permission: "<PermissionEnum member>" }` برای **هر** مسیر.
 6. `src/app/routes/routers.jsx` — import و `...<f>Routes` در `children`ِ `AppLayout`.
 7. `src/shared/constants/navigationData.js` — زیرآیتم با همان `permission`.
-8. `src/shared/components/layout/AppBreadcrumb.jsx` — `ROUTE_TITLES` و `DETAIL_TITLES`.
+8. `src/app/layouts/AppBreadcrumb.jsx` — `ROUTE_TITLES` و `DETAIL_TITLES`.
 9. نامِ مجوز را در `../Backend-Net/Domain/Enums/PermissionEnum.cs` چک کنید ([05](05-permissions.md)).
 10. سند: فایلِ تازه در `docs/architecture/12-features/` و ردیف در `12-features/README.md`.
 
@@ -141,10 +141,43 @@
 
 فرانت کدِ `Backend-Net/` را تغییر نمی‌دهد. بخشِ شماره‌دارِ تازه در `Backend-Net/docs/frontend-requests.fa.md` بنویسید و در کد با `TODO` به همان شماره ارجاع دهید (قالبِ موجود: `TODO(بکند): ... (بندِ ۱۳.۵ frontend-requests.fa.md)` در `src/features/warehouse/products/services/queries.js`).
 
+## ۱۴. برگه‌ی چاپیِ تازه (گزارش، رسید، …)
+
+**الگو:** `src/features/sales/orders/components/proforma/PriceListPrint.jsx` (+ `PriceListDocument.jsx`).
+
+1. **متنِ برگه** را جدا بنویسید (`XDocument.jsx`): فقط نمایش، رنگِ سیاه/سفید (`text-black`، `border-black/…`)، اندازه‌ی پایه با `baseFontPt(settings.textScale)` (`src/shared/components/print/typography.js`) و بقیه با `em`. برای کاغذِ باریک (`geometry.contentWidthMm` کم) چیدمانِ فشرده بدهید.
+2. **پیش‌فرض‌ها** شیءِ ثابتِ ماژول: `{ ...DEFAULT_PAPER_SETTINGS, ...گزینه‌های برگه }` (`src/shared/components/print/paper.js`)؛ تنظیمات با `usePrintSettings("<kind>", DEFAULTS)` (`src/shared/store/printSettingsStore.js`). `kind` پایدار است؛ عوضش کنید، ذخیره‌ی کاربران دور ریخته می‌شود.
+3. **هندسه:** `pageGeometryOf(settings)`؛ پنلِ کاغذ با `<PaperSettings paperKeys={[…]} />`، بقیه‌ی گزینه‌ها در `PrintSettingsSection` با `SegmentedControl`/`Switch`/`Checkbox`.
+4. **پوسته:** `<PrintStudio settings={…} preview={<FlowSheet geometry pageCount onMeasure>…</FlowSheet>} previewWidthMm={geometry.widthMm} onPrint={() => print(flowPrintOptions(geometry, heightMm))} />` با `usePrint` (`src/shared/components/print/usePrint.js`). صفحه‌هایی که خودتان می‌سازید (شبکه‌ی ثابت، مثلِ برچسب و تصویر) کلاسِ `print-page` و `fixedPagePrintOptions(geometry)` می‌خواهند.
+5. نمایش در صفحه‌ی مصرف‌کننده: `{open && <XPrint … onClose />}` — پوسته خودش پورتال است. اگر چاپ کنارِ سندهای یک سفارش است، از `localPrints`ِ `InvoiceDocumentSection` باز شود.
+6. سندی که **سرور** می‌سازد (فاکتور، برگه‌های مرجوعی) را از داده‌ی فرم بازسازی نکنید. PDFِ رسمی با `printPdfDocuments`/`printPdfBlob` (`src/shared/services/invoice/documentOutput.js`)؛ چاپ با کاغذ و چیدمانِ دلخواه با `InvoicePrintStudio` (`src/shared/components/invoice/print/InvoicePrintStudio.jsx`) که داده‌ی خودِ سرور را می‌خواند (`getInvoiceDocument`). نوعِ سندِ تازه‌ی سرور = یک ردیف در `DOCUMENT_ENDPOINTS`ِ `src/shared/services/invoice/api-v1.js`.
+
+## ۱۵. نوشتنِ تست برای منطقِ خالص
+
+**الگو:** `src/features/sales/installments/domain/installmentPlan.test.js`، `src/shared/domain/returns/resolutions.test.js`.
+
+1. **چه چیزی:** تابع‌های خالصِ `domain/`، `src/shared/lib/` و `tools/` — بی React و بی شبکه. کامپوننت و هوکِ query اینجا تست نمی‌شوند؛ قاعده را از کامپوننت به یک تابعِ `domain/` ببرید و همان را تست کنید.
+2. **کجا:** کنارِ فایل، `x.js` → `x.test.js`؛ import از `vitest` (`describe`، `it`، `expect`، `vi`) و با aliasِ `@/`.
+3. **چه بسنجید:** قراردادی که کامنتِ خودِ تابع یا سرور (`api-guide`، validatorها) می‌گوید، با عددِ واقعی: مرزها (صفر، خالی، سقف)، گرد کردن، و هر باگِ گذشته — مثلاً «۳۰۰۰ × ۱٫۱۵٪ = ۳۵ نه ۳۴». نامِ تست جمله‌ی فارسیِ همان قاعده است.
+4. **زمان:** وابسته به «امروز» با `vi.useFakeTimers()` + `vi.setSystemTime(...)` و در پایان `vi.useRealTimers()`.
+5. **عددِ معتبر را بسازید، حفظ نکنید:** کارت با Luhn و شبا با mod-97 درونِ تست (`src/features/treasury/bankAccounts/domain/bankAccountForm.test.js`)؛ فایل‌سیستم با پوشه‌ی موقت (`tools/dev-inspector/sourceIndex.test.js`).
+6. **آیا تست واقعاً می‌گیرد؟** یک بار قاعده را عمداً خراب کنید و ببینید قرمز می‌شود.
+7. **مرزِ HTTP:** ارکستراسیونِ چندمرحله‌ای (`proformaWorkflow`، `documentChanges`) با `vi.mock("./api-v1")` تست می‌شود — فقط مرزِ شبکه جایگزین می‌شود، نه داده‌ی برنامه؛ `queryClient` با یک شیءِ ضبط‌کننده‌ی `invalidateQueries`.
+8. **تست‌های قرارداد** (بدونِ کارِ اضافه برای فایلِ تازه، با `import.meta.glob`):
+   - `src/shared/domain/enums/backendContract.test.js` — هر enumِ عددیِ فرانت (export‌شده یا نه) با همان نام و عدد در `../Backend-Net/`؛ enumِ تازه با نامِ متفاوت در `BACKEND_NAME`، فقط‌فرانت در `FRONTEND_ONLY`.
+   - `src/shared/domain/enums/labelsContract.test.js` — `_LABELS`/`_TONES`/آیکنِ هر enum همه‌ی اعضا را دارد؛ enumِ تازه را به `COMPLETE_MAPS` اضافه کنید.
+   - `src/shared/constants/appContract.test.js` — هر نامِ دسترسی (`permission:`، `can()`، `allows()`) عضوِ `PermissionEnum`، هر آیتمِ منو routeدار، و ریشه‌ی کلیدهای React Query یکتا.
+   - بی `../Backend-Net/` (کلونِ فقط فرانت) بخشِ بکندیِ این‌ها رد می‌شود.
+9. اجرا: `pnpm test:watch` حینِ کار؛ `pnpm test:coverage` و گزارشِ HTML در `coverage/index.html`.
+
 ## قبل از commit
 
 ```bash
 pnpm lint
+```
+
+```bash
+pnpm test
 ```
 
 ```bash

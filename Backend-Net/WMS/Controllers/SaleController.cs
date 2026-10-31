@@ -44,6 +44,20 @@ namespace WMS.Controllers
         }
 
         [HasPermission(PermissionEnum.SaleInPerson)]
+        [HttpPost("CreateInPersonProforma")]
+        public async Task<ActionResult<ResponseDto>> CreateInPersonProforma([FromBody] CreateInPersonProformaCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SaleUpdate, PermissionEnum.SaleWarehouseCheck)]
+        [HttpPost("ReleaseSaleReservation")]
+        public async Task<ActionResult<ResponseDto>> ReleaseSaleReservation([FromBody] ReleaseSaleReservationCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SaleInPerson)]
         [HttpPost("CompleteInPersonSale")]
         public async Task<ActionResult<ResponseDto>> CompleteInPersonSale([FromBody] CompleteInPersonSaleCommand request)
         {

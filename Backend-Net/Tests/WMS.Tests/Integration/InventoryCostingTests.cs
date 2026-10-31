@@ -29,7 +29,7 @@ namespace WMS.Tests.Integration
             var purchase1Item = Seed.PurchaseItem(product, quantity: 10, unitPrice: 100_000);
             var purchase1 = Seed.Purchase(supplier, PurchaseStatusEnum.SHIPPED, purchase1Item);
             scope.Context.Purchases.Add(purchase1);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var receiveHandler = new ReceivePurchaseCommandHandler(scope.Db, scope.PurchaseReturnCalculation, scope.ProductUnitService, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
@@ -39,14 +39,14 @@ namespace WMS.Tests.Integration
                 Items = new() { new ReceivePurchaseItemDto { PurchaseItemId = purchase1Item.Id, ArrivedQuantity = 10 } },
             }, CancellationToken.None);
 
-            var afterFirstReceipt = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync();
+            var afterFirstReceipt = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(10, afterFirstReceipt.RunningQuantity);
             Assert.Equal(100_000m, afterFirstReceipt.RunningAverageCost);
 
             var sale1Item = Seed.SaleItem(product, quantity: 5, unitPrice: 150_000);
             var sale1 = Seed.Sale(customer, SalesStatusEnum.PROCESSING, sale1Item);
             scope.Context.Sales.Add(sale1);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var shipHandler = new ShipSaleCommandHandler(scope.Db, scope.ProductUnitService, scope.InventoryCostingService, scope.UnitOfWork);
 
@@ -56,7 +56,7 @@ namespace WMS.Tests.Integration
                 Items = new() { new ShipSaleItemDto { SaleItemId = sale1Item.Id, ShippedQuantity = 5 } },
             }, CancellationToken.None);
 
-            var afterFirstSale = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync();
+            var afterFirstSale = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(5, afterFirstSale.RunningQuantity);
             Assert.Equal(100_000m, afterFirstSale.UnitCost); // consumed at the average that existed - not a fresh price
             Assert.Equal(500_000m, -afterFirstSale.InventoryValueDelta);
@@ -67,7 +67,7 @@ namespace WMS.Tests.Integration
             var purchase2Item = Seed.PurchaseItem(product, quantity: 10, unitPrice: 200_000);
             var purchase2 = Seed.Purchase(supplier, PurchaseStatusEnum.SHIPPED, purchase2Item);
             scope.Context.Purchases.Add(purchase2);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await receiveHandler.Handle(new ReceivePurchaseCommand
             {
@@ -77,7 +77,7 @@ namespace WMS.Tests.Integration
 
             Assert.Equal(100_000m, afterFirstSale.RunningAverageCost); // unchanged by the later purchase
 
-            var afterSecondReceipt = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync();
+            var afterSecondReceipt = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
             Assert.Equal(15, afterSecondReceipt.RunningQuantity);
             AssertClose(2_500_000m, afterSecondReceipt.RunningInventoryValue);
             AssertClose(166_666.6667m, afterSecondReceipt.RunningAverageCost);
@@ -85,7 +85,7 @@ namespace WMS.Tests.Integration
             var sale2Item = Seed.SaleItem(product, quantity: 5, unitPrice: 250_000);
             var sale2 = Seed.Sale(customer, SalesStatusEnum.PROCESSING, sale2Item);
             scope.Context.Sales.Add(sale2);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             await shipHandler.Handle(new ShipSaleCommand
             {
@@ -93,7 +93,7 @@ namespace WMS.Tests.Integration
                 Items = new() { new ShipSaleItemDto { SaleItemId = sale2Item.Id, ShippedQuantity = 5 } },
             }, CancellationToken.None);
 
-            var afterSecondSale = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync();
+            var afterSecondSale = await scope.Context.InventoryCostLedgerEntries.OrderByDescending(x => x.Id).FirstAsync(cancellationToken: TestContext.Current.CancellationToken);
             AssertClose(166_666.6667m, afterSecondSale.UnitCost);
             AssertClose(833_333.3335m, -afterSecondSale.InventoryValueDelta);
             Assert.Equal(1_250_000m, afterSecondSale.RevenueDelta);
@@ -126,7 +126,7 @@ namespace WMS.Tests.Integration
                 RevenueDelta = 750_000m,
                 CreatedAt = DateTime.Now,
             });
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var claim = new Domain.Entities.SaleReturnClaim
             {
@@ -149,7 +149,7 @@ namespace WMS.Tests.Integration
                 UpdatedAt = DateTime.Now,
             };
             scope.Context.SaleReturns.Add(saleReturn);
-            await scope.Context.SaveChangesAsync();
+            await scope.Context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
             var addHandler = new AddClaimResolutionCommandHandler(scope.Db, scope.SaleReturnCalculation, scope.InventoryCostingService, FakeObjectStorage.Instance, scope.UnitOfWork);
 
@@ -167,7 +167,7 @@ namespace WMS.Tests.Integration
 
             var refundEntry = await scope.Context.InventoryCostLedgerEntries
                 .Where(x => x.EventType == InventoryCostEventTypeEnum.SALE_RETURN_REFUND)
-                .SingleAsync();
+                .SingleAsync(cancellationToken: TestContext.Current.CancellationToken);
 
             Assert.Equal(0, refundEntry.QuantityDelta);
             Assert.Equal(-100_000m, refundEntry.RevenueDelta);

@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Documents;
@@ -79,7 +79,7 @@ public static class SaleReturnDetailReader
             CanCancel = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.CANCEL),
             CanReject = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.REJECT),
             CanReopen = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.REOPEN),
-            Claims = [.. saleReturn.Claims.Select(c => c.ToDto())],
+            Claims = [.. saleReturn.Claims.Select(c => c.ToDto(storage))],
             Attachments = attachments,
             QuarantinedQuantity = quarantinedQuantity,
         };

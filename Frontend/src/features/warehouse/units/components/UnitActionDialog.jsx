@@ -5,21 +5,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { Input } from "@/shared/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
 
 import {
   UNIT_ACTION_META,
@@ -37,6 +28,8 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { useApplyUnitActionMutation, useSetUnitLocationMutation } from "../services/mutations";
 import Notice from "@/shared/components/feedback/Notice";
 import { productUnitKeys } from "../services/queryKeys";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import DialogActions from "@/shared/components/feedback/DialogActions";
 
 /** چرا بخشی از انتخاب کنار گذاشته شد — به زبانِ کاری، نه «مجاز نیست». */
 function skippedReason(units) {
@@ -106,18 +99,12 @@ function ActionForm({ action, units, onDone, onCancel }) {
 
       <div className="space-y-1.5">
         <Label>علت</Label>
-        <Select value={String(reason)} onValueChange={(value) => setReason(Number(value))}>
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {reasons.map((value) => (
-              <SelectItem key={value} value={String(value)}>
-                {UNIT_ACTION_REASON_LABELS[value]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <OptionSelect
+          value={reason}
+          onChange={setReason}
+          numeric
+          options={reasons.map((value) => ({ value, label: UNIT_ACTION_REASON_LABELS[value] }))}
+        />
       </div>
 
       <div className="space-y-1.5">
@@ -136,18 +123,13 @@ function ActionForm({ action, units, onDone, onCancel }) {
         )}
       </div>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-        <Button
-          type="submit"
-          variant={meta.tone === "destructive" ? "destructive" : "default"}
-          disabled={eligible.length === 0 || mutation.isPending}
-        >
-          {mutation.isPending ? "در حال ثبت..." : `${formatNumber(eligible.length)} دانه ${meta.verb}`}
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onCancel}
+        isPending={mutation.isPending}
+        disabled={eligible.length === 0}
+        variant={meta.tone === "destructive" ? "destructive" : "default"}
+        submitLabel={`${formatNumber(eligible.length)} دانه ${meta.verb}`}
+      />
     </form>
   );
 }
@@ -205,14 +187,12 @@ function LocationForm({ units, onDone, onCancel }) {
         )}
       </div>
 
-      <DialogFooter className="gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={mutation.isPending}>
-          انصراف
-        </Button>
-        <Button type="submit" disabled={eligible.length === 0 || mutation.isPending}>
-          {mutation.isPending ? "در حال ثبت..." : binLocation.trim() ? "ثبت قفسه" : "پاک‌کردن قفسه"}
-        </Button>
-      </DialogFooter>
+      <DialogActions
+        onCancel={onCancel}
+        isPending={mutation.isPending}
+        disabled={eligible.length === 0}
+        submitLabel={binLocation.trim() ? "ثبت قفسه" : "پاک‌کردن قفسه"}
+      />
     </form>
   );
 }

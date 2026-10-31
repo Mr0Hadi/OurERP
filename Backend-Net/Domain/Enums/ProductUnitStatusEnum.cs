@@ -28,5 +28,12 @@ namespace Domain.Enums
         /// moves exactly these units to SOLD; editing the line, cancelling or deleting the sale puts them back IN_STOCK.
         /// </summary>
         RESERVED = 10,
+
+        /// <summary>
+        /// On a stock transfer between warehouses (GAP-08): off the source shelf, not yet on the destination's. Out of
+        /// Product.Stock, still ours (counted in inventory value like RESERVED).
+        /// </summary>
+
+        IN_TRANSIT = 11,
     }
 }

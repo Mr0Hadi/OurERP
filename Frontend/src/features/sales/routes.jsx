@@ -7,7 +7,6 @@ const SaleDetailPage = lazy(() => import("./orders/pages/SaleDetailPage"));
 const SalesReturnsListPage = lazy(() => import("./returns/pages/SalesReturnsListPage"));
 const SalesReturnNewPage = lazy(() => import("./returns/pages/SalesReturnNewPage"));
 const SalesReturnDetailPage = lazy(() => import("./returns/pages/SalesReturnDetailPage"));
-const InstallmentsPage = lazy(() => import("./installments/pages/InstallmentsPage"));
 
 export const salesRoutes = [
   {
@@ -24,11 +23,6 @@ export const salesRoutes = [
     path: ROUTES.SALES_NEW,
     handle: { permission: ["SaleCreate", "SaleInPerson"] },
     element: <SaleNewPage />,
-  },
-  {
-    path: ROUTES.SALES_INSTALLMENTS,
-    handle: { permission: "SaleInstallmentView" },
-    element: <InstallmentsPage />,
   },
   {
     path: ROUTES.SALES_RETURNS_LIST,

@@ -2,21 +2,18 @@ import { Plus, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
   OBSERVATION_PROBLEMS,
   OBSERVATION_PROBLEM_LABELS,
   DEFAULT_OBSERVATION_PROBLEM,
 } from "@/shared/domain/returns/observations";
 import { cn } from "@/shared/lib/utils";
 import { formatNumber } from "@/shared/lib/numberFormat";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
 
-const PROBLEM_OPTIONS = Object.values(OBSERVATION_PROBLEMS);
+const PROBLEM_SELECT_OPTIONS = Object.values(OBSERVATION_PROBLEMS).map((value) => ({
+  value,
+  label: OBSERVATION_PROBLEM_LABELS[value] ?? value,
+}));
 
 /**
  * `Observations` یک خطِ دورِ کالا — مشاهده‌ی خودِ انباردار هنگامِ
@@ -86,30 +83,15 @@ export default function ObservationEditor({
           className="space-y-1.5 bg-card rounded-md border border-border p-1.5"
         >
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5">
-            {/* problem از فضای عددیِ RETURN_PROBLEMS می‌آید؛ Radix رشته
-                می‌خواهد و رشته برمی‌گرداند. */}
-            <Select
-              value={observation.problem == null ? "" : String(observation.problem)}
-              onValueChange={(v) =>
-                onUpdateObservation(
-                  round.effectId,
-                  observation.id,
-                  "problem",
-                  Number(v),
-                )
+            <OptionSelect
+              value={observation.problem}
+              onChange={(problem) =>
+                onUpdateObservation(round.effectId, observation.id, "problem", problem)
               }
-            >
-              <SelectTrigger className="h-8 text-xs sm:w-36 shrink-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROBLEM_OPTIONS.map((value) => (
-                  <SelectItem key={value} value={String(value)}>
-                    {OBSERVATION_PROBLEM_LABELS[value] ?? value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              numeric
+              className="h-8 text-xs sm:w-36 shrink-0"
+              options={PROBLEM_SELECT_OPTIONS}
+            />
 
             <Input
               type="number"

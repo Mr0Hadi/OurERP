@@ -361,7 +361,7 @@ sequenceDiagram
         <li><span class="mono">index.html</span> — <span class="mono">lang="fa-IR" dir="rtl"</span></li>
         <li><span class="mono">src/main.jsx</span> — <span class="mono">DirectionProvider direction="rtl"</span></li>
         <li><span class="mono">components.json</span> — <span class="mono">rtl: true</span> برای shadcn</li>
-        <li><span class="mono">AppLayout.jsx</span> — <span class="mono">AppSidebar side="right"</span></li>
+        <li><span class="mono">AppLayout.jsx</span> — <span class="mono">AppSidebar side="right"</span>؛ هدرِ جمع‌شونده با <span class="mono">useHideOnScroll</span> و <span class="mono">--app-header-offset</span></li>
         <li><span class="mono">ToastProvider.jsx</span> — <span class="mono">direction: "rtl"</span></li>
       </ul>
       <h3>۸ تم</h3>
@@ -449,7 +449,7 @@ const LAYERS=[
  {id:"shared",nm:"src/shared/",ds:"بی‌مالک و چندبارمصرف",
   what:"کامپوننت‌های مشترک، enum و منطقِ خالص، زیرساختِ شبکه، هوک، کمک‌تابع، storeهای سراسری، ثابتِ ROUTES و منو.",
   files:["components/ui/ — تولیدِ shadcn","components/table · filters · status · payments · print …","domain/enums · returns · payments · invoice","services/api/axios.js · contract.js","lib/ · hooks/ · store/ · constants/routes.js"],
-  yes:"import فقط از shared.",no:"کامپوننتی که فقط یک فیچر مصرف می‌کند. الان ۹ فایل خلافِ قاعده از features import می‌کنند (مثلاً <code>axios.js</code> → <code>authStore</code>)."}
+  yes:"import فقط از shared.",no:"کامپوننتی که فقط یک فیچر مصرف می‌کند. الان ۶ فایل خلافِ قاعده از features import می‌کنند (مثلاً <code>axios.js</code> → <code>authStore</code>)."}
 ];
 function renderLayer(id){const L=LAYERS.find(x=>x.id===id);
  document.querySelectorAll(".layer").forEach(b=>b.classList.toggle("on",b.dataset.id===id));
@@ -526,10 +526,10 @@ SC.forEach((s,i)=>{const b=el("button","btn",s.n);b.type="button";b.style.textAl
 /* permissions */
 const ROUTES_P=[
  ["/customers","CustomerView","مشتریان"],["/customers/new","CustomerCreate","مشتری جدید"],
- ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/sales/installments","SaleInstallmentView","اقساط"],
+ ["/sales/new",["SaleCreate","SaleInPerson"],"فروشِ جدید"],["/treasury/cashier","SalePayment","صندوق"],["/treasury/installments","SaleInstallmentView","اقساط"],["/treasury/accounts",["BankAccountView","BankAccountManage"],"صندوق و بانک"],["/treasury/party-payments",["PartyStatementView","PartyPaymentCreate"],"علی‌الحساب"],["/treasury/cheques",["CheckView","CheckManage"],"چک‌ها"],
  ["/warehouse/vehicles",["VehicleView","ProductCategoryView"],"خودروها"],["/warehouse/receiving","PurchaseReceive","دریافتِ کالا"],
- ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],
- ["/dashboard",null,"داشبورد"],["/settings",null,"تنظیمات (placeholder)"]
+ ["/employees/:id","UserUpdate","جزئیاتِ کارمند"],["/accounting","AccountingView","دفتر حساب‌ها"],["/accounting/employees","ReportView","فعالیتِ کارمندان"],["/audit","AuditLogView","گزارشِ فعالیتِ کاربران"],["/warehouse/sale-check","SaleWarehouseCheck","بررسیِ انبارِ پیش‌فاکتور"],["/accounting/warehouse-issues",["AccountingView","SaleWarehouseIssueResolve"],"گزارش‌های انبار"],["/settings",["SettingView","SettingManage"],"تنظیماتِ سامانه"],
+ ["/dashboard",null,"داشبورد"]
 ];
 const ALL=[...new Set(ROUTES_P.flatMap(r=>r[1]==null?[]:[].concat(r[1])))];
 let have=new Set(["CustomerView","SaleCreate"]);
@@ -558,21 +558,22 @@ $("#routeSel").onchange=renderPerm;$("#stateSel").onchange=renderPerm;renderPerm
 /* features graph */
 const F={
  sales:{p:"/sales",pages:"SalePage، SaleNewPage، SaleDetailPage (SaleForm / SaleIssuedView)، InstallmentsPage، SalesReturns*Page",stores:"useSaleFormStore، useSaleFilterStore، useSalesReturnFormStore، useInstallmentFilterStore",api:"/Sale/*، /SaleReturn/*، /SaleInstallment/*",sub:"orders · returns · installments",note:"ثبتِ تغییرات با runDocumentChanges؛ invalidateSalesEcosystem."},
- purchases:{p:"/purchases",pages:"PurchasesPage، PurchasesNewPage، PurchaseDetailPage، PurchaseReturn*Page",stores:"usePurchaseFormStore، usePurchaseFilterStore، usePurchaseReturnFormStore",api:"/Purchase/*، /PurchaseReturn/*",sub:"orders · returns",note:"قرنطینه فقط در مرجوعیِ خرید؛ invalidatePurchaseEcosystem."},
- warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping",note:"فیلترِ خودرو (vehicleId) در instantِ useProductListFilters."},
+ purchases:{p:"/purchases",pages:"PurchasesPage، PurchasesNewPage، PurchaseDetailPage، PurchaseReturn*Page، ReorderPage",stores:"usePurchaseFormStore، usePurchaseFilterStore، usePurchaseReturnFormStore، useReorderFilterStore",api:"/Purchase/*، /PurchaseReturn/*، /Reorder/*",sub:"orders · returns · reorder",note:"قرنطینه فقط در مرجوعیِ خرید؛ invalidatePurchaseEcosystem."},
+ warehouse:{p:"/warehouse",pages:"ProductsPage، CategoriesPage، VehiclesPage، UnitsPage، Receiving*Page، Shipping*Page، SaleCheck*Page",stores:"useProductFilterStore، useLabelTemplateStore، useReceivingFormStore، useShippingFormStore",api:"/Product/*، /ProductCategory/*، /Vehicle/*، /Shipment/*",sub:"products · categories · units · vehicles · receiving · shipping · saleCheck",note:"فیلترِ خودرو (vehicleId) در instantِ useProductListFilters."},
  customers:{p:"/customers",pages:"CustomersPage، CustomerNewPage، CustomerDetailPage",stores:"useCustomerFilterStore",api:"/Customer/*",note:"صورت‌حساب زیرِ customerKeys.all است."},
- suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:"SupplierEditPage placeholderِ مسیردار است."},
+ suppliers:{p:"/suppliers",pages:"SuppliersPage، SupplierNewPage، SupplierDetailPage",stores:"useSupplierFilterStore",api:"/Supplier/*",note:""},
  partyAccount:{p:"— (بدونِ مسیر)",pages:"—",stores:"createPartyFilterStore",api:"/PartyAccount/GetPartyStatement",note:"کتابخانه‌ی مشترکِ مشتری و تامین‌کننده."},
  employees:{p:"/employees",pages:"EmployeesPage، EmployeeNewPage، EmployeeDetailPage",stores:"useEmployeeFilterStore",api:"/User/*",note:"جزئیات مجوزِ UserUpdate می‌خواهد."},
  organization:{p:"/organization",pages:"DepartmentsPage، TeamsPage و جزئیات",stores:"useDepartmentFilterStore، useTeamFilterStore",api:"/Department/*، /Team/*",sub:"departments · teams",note:"تغییرِ تیم authKeys.session() را باطل می‌کند."},
  permissions:{p:"/access",pages:"UserAccessPage، DepartmentTemplatesPage",stores:"— (usePermissionDraft)",api:"/Permission/*",note:"کاتالوگِ چک‌باکس‌ها از سرور می‌آید."},
  dashboard:{p:"/ ، /dashboard",pages:"DashboardPage",stores:"useDashboardLayoutStore (persist)، useDashboardFilterStore",api:"/Report/GetSaleReport، GetPurchaseReport، GetScopePerformance",note:"ویجت‌ها با buildDashboardContext انتخاب می‌شوند."},
- accounting:{p:"/accounting",pages:"AccountingDashboardPage، PartyBalancesPage، InvoiceJournalPage، *ActivityPage",stores:"accountingFilterStores.js، activityFilterStore.js",api:"/Accounting/*، /Report/*",sub:"activity",note:"/reports/* قدیمی به این‌جا ریدایرکت می‌شود."},
+ accounting:{p:"/accounting",pages:"AccountingDashboardPage، PartyBalancesPage، InvoiceJournalPage، WarehouseIssuesPage، *ActivityPage",stores:"accountingFilterStores.js، activityFilterStore.js",api:"/Accounting/*، /Report/*",sub:"activity",note:"/reports/* قدیمی به این‌جا ریدایرکت می‌شود."},
  audit:{p:"/audit",pages:"AuditEventsPage، AuditEventDetailPage + AuditHistoryButton در صفحه‌های جزئیات",stores:"useAuditEventFilterStore",api:"/Audit/*",note:"فقط‌خواندنی، پشتِ AuditLogView. دکمه‌ی «تاریخچه» با PageHeaderActions در هدرِ صفحه‌های جزئیات می‌نشیند."},
- auth:{p:"/auth",pages:"LoginPage",stores:"useAuthStore (persist)",api:"/Account/Login، Logout، RefreshToken؛ /User/GetUserInfo",note:"همه‌ی فیچرها برای مجوز به آن وابسته‌اند."}
+ treasury:{p:"/treasury",pages:"CashierQueuePage، CashierPaymentPage، InstallmentsPage (از sales)، BankAccountsPage، PartyPaymentsPage، PartyPaymentDetailPage، ChequesPage",stores:"createProformaQueueFilterStore، usePartyPaymentFilterStore، useChequeFilterStore",api:"/BankAccount/*، /PartyAccount/* (پرداخت‌ها)، /Check/*",sub:"cashier، bankAccounts، partyPayments، cheques",note:"هرچه پول جابه‌جا می‌کند: صندوق، اقساط، صندوق و بانک، علی‌الحساب، چک (GAP-03). کلیدِ حساب‌ها و انتخابگرِ حساب در shared/."},
+ auth:{p:"/auth، /account",pages:"LoginPage، ChangePasswordPage، AccountPage",stores:"useAuthStore (persist، با mustChangePassword)",api:"/Account/Login، Logout، RefreshToken؛ /User/GetUserInfo، ChangePassword، UpdateUserInfo؛ /Setting/GetFeatureFlags",note:"همه‌ی فیچرها برای مجوز به آن وابسته‌اند."}
 };
-const E=[["accounting","organization",2],["accounting","customers",1],["accounting","employees",2],["accounting","suppliers",1],["accounting","warehouse",1],["customers","partyAccount",9],["customers","sales",1],["dashboard","warehouse",2],["dashboard","accounting",1],["dashboard","sales",1],["employees","organization",6],["employees","permissions",1],["organization","employees",7],["organization","permissions",1],["partyAccount","customers",1],["partyAccount","suppliers",1],["permissions","organization",3],["permissions","employees",2],["purchases","warehouse",6],["purchases","suppliers",4],["purchases","partyAccount",1],["sales","warehouse",8],["sales","customers",6],["sales","partyAccount",1],["sales","dashboard",1],["suppliers","partyAccount",9],["warehouse","purchases",7],["warehouse","sales",5],["warehouse","suppliers",3],["warehouse","customers",2],["audit","employees",1],["customers","audit",1],["suppliers","audit",1],["sales","audit",2],["purchases","audit",2],["warehouse","audit",1],["employees","audit",2],["organization","audit",2]];
-const order=["sales","warehouse","purchases","suppliers","partyAccount","customers","accounting","organization","employees","permissions","dashboard","audit"];
+const E=[["accounting","organization",2],["accounting","customers",1],["accounting","employees",2],["accounting","suppliers",1],["accounting","warehouse",1],["customers","partyAccount",9],["customers","sales",1],["dashboard","warehouse",2],["dashboard","accounting",1],["dashboard","sales",1],["employees","organization",6],["employees","permissions",1],["organization","employees",7],["organization","permissions",1],["partyAccount","customers",1],["partyAccount","suppliers",1],["permissions","organization",3],["permissions","employees",2],["purchases","warehouse",6],["purchases","suppliers",4],["purchases","partyAccount",1],["sales","warehouse",8],["sales","customers",6],["sales","partyAccount",1],["sales","dashboard",1],["suppliers","partyAccount",9],["warehouse","purchases",7],["warehouse","sales",5],["warehouse","suppliers",3],["warehouse","customers",2],["audit","employees",1],["customers","audit",1],["suppliers","audit",1],["sales","audit",2],["purchases","audit",2],["warehouse","audit",1],["employees","audit",2],["organization","audit",2],["treasury","sales",16],["treasury","customers",7],["treasury","suppliers",6],["treasury","partyAccount",4],["treasury","accounting",2],["treasury","purchases",2],["customers","treasury",1],["suppliers","treasury",1]];
+const order=["sales","treasury","warehouse","purchases","suppliers","partyAccount","customers","accounting","organization","employees","permissions","dashboard","audit"];
 const pos={},cx=280,cy=250,R=190;order.forEach((k,i)=>{const a=-Math.PI/2+i*2*Math.PI/order.length;pos[k]=[cx+R*Math.cos(a),cy+R*Math.sin(a)]});pos.auth=[cx,cy];
 const NS="http://www.w3.org/2000/svg",g=$("#graph");
 const defs=document.createElementNS(NS,"defs");
@@ -618,6 +619,7 @@ renderWiz("start");
 const KEYS=["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all","purchaseKeys.detail","purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","supplierKeys.all","customerKeys.lists","customerKeys.detail","authKeys.session","authKeys.myPermissions","userKeys.*","teamKeys.all","departmentKeys.all","permissionKeys.user"];
 const MUT=[
  {n:"useCreateSaleMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"invalidateSalesEcosystem(queryClient, created.id) + customerKeys.all"},
+ {n:"useSettleProformaMutation",set:[],hit:["saleKeys.detail","saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"settleProforma: شیوه‌ی پرداخت، تغییرهای بی‌اثر، و دریافت/قرارداد/تحویلِ حضوری؛ صدورِ فاکتور."},
  {n:"useSaleChangesSaver (ثبت تغییرات)",set:["saleKeys.detail"],hit:["saleKeys.lists","shippingKeys.detail","shippingKeys.lists","salesReturnKeys.*","productKeys.all","productUnitKeys.all","customerKeys.all"],note:"applySale: setQueryData برای جزئیات، بقیه با invalidateSalesEcosystem({ freshSale: true })."},
  {n:"useCreatePurchaseMutation",set:["purchaseKeys.detail"],hit:["purchaseKeys.lists","receivingKeys.*","purchaseReturnKeys.*","productKeys.all","productUnitKeys.all","supplierKeys.all"],note:"applyPurchase: setQueryData + invalidatePurchaseEcosystem({ freshPurchase: true }) + supplierKeys.all"},
  {n:"useUpdateCustomerMutation",set:[],hit:["customerKeys.lists","customerKeys.detail"],note:"الگوی ساده: lists() و detail(id)."},
@@ -667,13 +669,14 @@ TONES.forEach((t,i)=>{const b=el("button","btn",`<span class="mono" style="font-
 
 /* components */
 const COMP={
- "table":[["ServerTable","لیستِ صفحه‌بندی‌شده‌ی سرور: خطا، overlay و صفحه‌بندی را خودش می‌کند",17],["DataTable","پوسته‌ی جدول؛ مرتب‌سازیِ تک‌ستونی؛ در موبایل MobileRowCards",19],["detailsColumn","ستونِ استانداردِ «جزئیات»",9],["DataTablePagination","صفحه‌بندی بیرون از DataTable",4]],
+ "table":[["ServerTable","لیستِ صفحه‌بندی‌شده‌ی سرور: خطا، overlay و صفحه‌بندی را خودش می‌کند",17],["DataTable","پوسته‌ی جدول؛ مرتب‌سازیِ تک‌ستونی؛ در موبایل MobileRowCards",19],["detailsColumn","ستونِ استانداردِ «جزئیات»",9],["DataTablePagination","صفحه‌بندی بیرون از DataTable",4],["SortSelect","انتخابِ مرتب‌سازیِ موبایل؛ MobileRowCards و کارت‌های دانه‌ها",2],["RefreshButton","تازه‌سازیِ کوئری؛ DataTable آن را در گوشه‌ی سرتیترِ جدول می‌گذارد (موبایل: نوارِ کارت‌ها)؛ در MasterListPane کنارِ جست‌وجو",5]],
  "layout":[["ListPageLayout","پوسته‌ی هر صفحه‌ی لیست: title، create، actions",11],["MasterListPane","ستونِ فهرست در صفحه‌های فهرست/جزئیاتِ کنارِ هم",4]],
- "filters":[["FilterPanel / ResponsiveFilters","پوسته‌ی فیلترها؛ پنلِ بازشونده در موبایل",17],["FilterSearchInput","جست‌وجوی متنی",15],["FilterSelect","انتخابِ تکیِ کم‌گزینه",13],["EntitySelect","انتخابِ یک موجودیت با جست‌وجو؛ عمداً تک‌انتخابی",12],["DateRangeToolbar","بازه‌ی تاریخ با میان‌بر",8]],
- "feedback":[["ConfirmDialog","تأییدِ کارِ برگشت‌ناپذیر؛ تا پایانِ درخواست باز می‌ماند",16],["QueryErrorState","خطای لیست با «تلاش دوباره»",15],["DetailErrorState","جزئیات: «پیدا نشد» را از «واکشی شکست خورد» جدا می‌کند",14],["Notice","باکسِ توضیح/هشدار با tone",14],["FetchingOverlay","پوششِ واکشیِ دوباره",9]],
+ "filters":[["FilterPanel / ResponsiveFilters","پوسته‌ی فیلترها؛ پنلِ بازشونده در موبایل",17],["FilterSearchInput","جست‌وجوی متنی",15],["FilterSelect","انتخابِ تکیِ کم‌گزینه با «همه»؛ روی OptionSelect",18],["EntitySelect","انتخابِ یک موجودیت با جست‌وجو؛ عمداً تک‌انتخابی؛ پایه‌ی PartySelect و CategorySelect",12],["DateRangeToolbar","بازه‌ی تاریخ با میان‌بر",8]],
+ "feedback":[["ConfirmDialog","تأییدِ کارِ برگشت‌ناپذیر؛ تا پایانِ درخواست باز می‌ماند",29],["QueryErrorState","خطای لیست با «تلاش دوباره»",15],["DetailErrorState","جزئیات: «پیدا نشد» را از «واکشی شکست خورد» جدا می‌کند",14],["Notice","باکسِ توضیح/هشدار با tone",14],["FetchingOverlay","پوششِ واکشیِ دوباره",9],["DialogActions","پاورقیِ دیالوگِ فرم: انصراف + ثبت با «در حال ثبت...»",17],["EmptyState","جای خالی؛ size=sm برای ویجت، fill برای ستونِ جزئیات",12]],
+ "data":[["InfoList · InfoRow","فهرستِ برچسب … مقدار (dl)؛ ردیفِ جمع با total",8],["StatGrid","نوارِ خانه‌های عدد با tone و hint",5]],
  "status":[["StatusBadge","هر وضعیت با tone",25],["SaleStatusBadge · PurchaseStatusBadge · PaymentTypeBadge","وضعیت با tone و آیکن از enum",5],["StatusText","متنِ رنگی",2]],
- "forms":[["FormSectionCard","کارتِ بخشِ فرم با هدرِ آیکون‌دار",11],["SectionCard","کارتِ بخشِ صفحه‌ی سند",8],["StatusChoice","انتخابِ وضعیت با دکمه",7],["FormField · FormSelectField","فیلدِ react-hook-form",6],["DocumentFormLayout","چیدمانِ دوستونیِ فرمِ خرید/فروش",4]],
- "دیگر":[["PaymentsCard","همه‌ی پرداخت‌های یک سند (پیش‌نویس تا «ثبت تغییرات»)",4],["DataTransferActions","دکمه‌ی ورود/خروجیِ CSV/Excel",9],["ChartCard","پوسته‌ی نمودار؛ نمودارها SVGِ دست‌سازند",12],["RemoteImage · ImageUploadField","تصویر از سرور و آپلود",5],["usePrint · LabelSheet","چاپ با مرورگر",1],["CameraScanButton","اسکنِ بارکد با دوربین",3]]
+ "forms":[["FormSectionCard","کارتِ بخشِ فرم با هدرِ آیکون‌دار",11],["SectionCard","کارتِ بخشِ صفحه‌ی سند",8],["StatusChoice","انتخابِ وضعیت با دکمه",7],["FormField","برچسب + کنترل + خطا/راهنما؛ size=sm برای فرمِ فشرده",26],["OptionSelect","کشوییِ ساده از options با تبدیلِ عدد/بولین؛ جای Select دستی",24],["FormSelectField · FormPriceField","OptionSelect / PriceInput متصل به react-hook-form",6],["DocumentFormLayout","چیدمانِ دوستونیِ فرمِ خرید/فروش",4]],
+ "دیگر":[["PaymentsCard","همه‌ی پرداخت‌های یک سند (پیش‌نویس تا «ثبت تغییرات»)",4],["DataTransferActions","دکمه‌ی ورود/خروجیِ CSV/Excel",9],["ChartCard","پوسته‌ی نمودار؛ نمودارها SVGِ دست‌سازند",12],["RemoteImage · ImageUploadField","تصویر از سرور و آپلود",5],["PrintStudio · PaperSettings · FlowSheet","پوسته‌ی مشترکِ چاپ: کاغذ، حاشیه، پیش‌نمایش؛ تنظیم با usePrintSettings",4],["InvoicePrintStudio","سندِ رسمیِ سرور (فاکتور، برگه‌های مرجوعی) با چیدمانِ دلخواه از داده‌ی سرور",1],["usePrint · LabelSheet","چاپ با مرورگر",3],["CameraScanButton","اسکنِ بارکد با دوربین",3]]
 };
 let ct="table";
 function renderComp(){document.querySelectorAll("#compTabs .btn").forEach(b=>b.classList.toggle("on",b.dataset.k===ct));$("#compRows").innerHTML=COMP[ct].map(c=>`<tr><td class="mono">${c[0]}</td><td>${c[1]}</td><td class="mono">${c[2]}</td></tr>`).join("")}
@@ -693,17 +696,13 @@ REC.forEach(r=>$("#recipeGrid").append(el("div","recipe",`<h3>${r.t}</h3><div cl
 
 /* debt */
 const D=[
- ["R1","risk","settings، invoice و transactions بدونِ lazy() و مجوز","تا وقتی placeholderاند از routers.jsx بردارید."],
  ["R4","risk","دو مسیرِ خروجِ ناهم‌سان","در شکستِ refresh هم leaveSession."],
  ["R6","risk","نامِ مجوزها با PermissionEnum.cs خودکار سنجیده نمی‌شود","اسکریپتی مثلِ check-docs-paths.mjs."],
- ["R7","risk","lineMath.js قاعده‌ی سرور را بی‌تست تکرار می‌کند","تستِ واحد با اعدادِ نمونه."],
- ["R11","risk","useUpdateGuard در ۹ جا صدا زده می‌شود ولی خواننده ندارد","با تصمیمِ PWA برگردانید یا حذف کنید."],
  ["L1","layer","axios.js از authStoreِ فیچرِ auth import می‌کند","authStore را به src/shared/store/ ببرید."],
- ["L2","layer","AppSidebar و Nav* از auth import می‌کنند","به src/app/layouts/ منتقل شوند."],
  ["L3","layer","ProductSearchPanel، ProductPicker و useReturnedNewProduct از warehouse","داده را با props بگیرند یا به فیچر منتقل شوند."],
  ["L4","layer","useClaimsInOtherReturns از هر دو returns","تابع‌ها را به‌عنوانِ پارامتر بگیرد."],
  ["C1","clean","کلاس‌های جهتِ فیزیکی رایج‌ترند (۱۰۱ در برابرِ ۱۶)","کلاسِ منطقی برای کدِ تازه."],
- ["C2","clean","invalidateOrgChart و formatNumber هر کدام دو نسخه دارند","یکی کنید."],
+ ["C2","clean","formatNumber دو نسخه دارد","یکی کنید."],
  ["C3","clean","نامِ صفحه‌های مرجوعیِ انبار گمراه‌کننده است","SaleReturnReceivingPage / PurchaseReturnShippingPage."]
 ];
 const CAT={all:"همه",bug:"باگ",risk:"ریسک",layer:"مرزِ لایه",clean:"تمیزی"},PC={bug:"p-bad",risk:"p-warn",layer:"p-info",clean:"p-acc"};

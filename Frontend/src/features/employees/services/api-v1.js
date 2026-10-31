@@ -1,5 +1,6 @@
 import axiosInstance from "@/shared/services/api/axios";
 import { compactParams } from "@/shared/services/api/contract";
+import { toApiSort } from "@/shared/services/api/sorting";
 
 /**
  * لایه‌ی سرورِ فیچر کارمندان — نگاشتِ مستقیم روی `api/User` و
@@ -25,6 +26,16 @@ import { compactParams } from "@/shared/services/api/contract";
  *      اگر جابه‌جا شده آزاد می‌شود. غیرفعال‌کردن هم نقش را آزاد می‌کند.
  */
 
+/** `UserListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
+const USER_SORT_COLUMNS = {
+  personelCode: 4,
+  fullName: 2, // LAST_NAME
+  username: 3,
+  departmentName: 5,
+  teamName: 6,
+};
+
+/** `sorting` (`{ id, desc }` جدول) اختیاری است؛ بدونِ آن ترتیبِ پیش‌فرضِ سرور (جدیدترین‌ها اول). */
 export async function getUserList(params = {}) {
   const { data } = await axiosInstance.get("/User/GetUserList", {
     params: compactParams({
@@ -37,6 +48,7 @@ export async function getUserList(params = {}) {
       departmentId: params.departmentId,
       teamId: params.teamId,
       isActive: params.isActive,
+      ...toApiSort(params.sorting, USER_SORT_COLUMNS),
     }),
   });
 

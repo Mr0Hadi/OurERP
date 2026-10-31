@@ -234,7 +234,7 @@ namespace WMS.Tests.Unit
 
         private static CreateUserCommand Valid() => new()
         {
-            FisrtName = "کاربر",
+            FirstName = "کاربر",
             LastName = "تست",
             Username = "tester1",
             Password = "Test@1234",
@@ -279,7 +279,7 @@ namespace WMS.Tests.Unit
         public void LatinFirstName_IsInvalid()
         {
             var command = Valid();
-            command.FisrtName = "User";
+            command.FirstName = "User";
 
             Assert.False(_sut.Validate(command).IsValid);
         }

@@ -10,23 +10,6 @@ import {
 
 import FormSectionCard from "@/shared/components/forms/FormSectionCard";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import { ORG_ROLE_LABELS, OrgRoleEnum } from "@/shared/domain/enums/orgRole";
 
 import {
@@ -34,6 +17,8 @@ import {
   useTeamCandidatesQuery,
 } from "@/features/employees/services/queries";
 import { useChangeUserTeamMutation } from "@/features/employees/services/mutations";
+import OptionSelect from "@/shared/components/forms/OptionSelect";
+import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 /** `UserListDto` نامِ کامل ندارد؛ از `firstName`/`lastName` ساخته می‌شود. */
 const fullNameOf = (user) =>
@@ -200,41 +185,28 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
         <div className="space-y-2 border-t border-border pt-4">
           <p className="text-sm font-medium">افزودن عضو</p>
           <div className="flex gap-2">
-            {/* رشته‌ی خالی (نه undefined) یعنی «بدون انتخاب»؛ با undefined
-                انتخابگر uncontrolled می‌شود و بعد از افزودنِ عضو، نامِ
-                قبلی روی دکمه می‌ماند. */}
-            <Select
-              value={String(memberToAdd)}
-              onValueChange={setMemberToAdd}
+            <OptionSelect
+              value={memberToAdd}
+              onChange={setMemberToAdd}
               disabled={isBusy || candidates.length === 0}
-            >
-              <SelectTrigger className="h-10 rounded-lg flex-1">
-                <SelectValue
-                  placeholder={
-                    candidates.length === 0
-                      ? "کارمندی برای افزودن نیست"
-                      : "انتخاب کارمند"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {candidates.map((user) => (
-                  <SelectItem
-                    key={user.id}
-                    value={String(user.id)}
-                    className="rounded-lg"
-                  >
+              placeholder={
+                candidates.length === 0 ? "کارمندی برای افزودن نیست" : "انتخاب کارمند"
+              }
+              className="h-10 rounded-lg flex-1"
+              contentClassName="rounded-xl"
+              itemClassName="rounded-lg"
+              options={candidates.map((user) => ({
+                value: user.id,
+                label: (
+                  <>
                     {fullNameOf(user)}
                     {" — "}
-                    {[user.departmentName, user.teamName]
-                      .filter(Boolean)
-                      .join(" / ")}
-                    {user.role !== OrgRoleEnum.MEMBER &&
-                      ` (${roleTitleOf(user)})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                    {[user.departmentName, user.teamName].filter(Boolean).join(" / ")}
+                    {user.role !== OrgRoleEnum.MEMBER && ` (${roleTitleOf(user)})`}
+                  </>
+                ),
+              }))}
+            />
 
             <Button
               type="button"
@@ -253,31 +225,20 @@ export default function TeamMembersCard({ team, onOpenEmployee }) {
         </div>
       </div>
 
-      <AlertDialog
+      <ConfirmDialog
         open={memberToRemove != null}
         onOpenChange={(open) => !open && setMemberToRemove(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>خروج عضو از تیم</AlertDialogTitle>
-            <AlertDialogDescription>
-              {memberToRemove && fullNameOf(memberToRemove)} از «{team.name}»
-              خارج می‌شود و عضو ساده‌ی واحدش باقی می‌ماند. اگر مسئول یا جانشینِ
-              این تیم باشد، آن نقش آزاد می‌شود.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isBusy}>انصراف</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRemove}
-              disabled={isBusy}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isBusy ? "در حال انجام..." : "خروج از تیم"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        title="خروج عضو از تیم"
+        description={
+          <>
+            {memberToRemove && fullNameOf(memberToRemove)} از «{team.name}» خارج می‌شود و عضو ساده‌ی واحدش
+            باقی می‌ماند. اگر مسئول یا جانشینِ این تیم باشد، آن نقش آزاد می‌شود.
+          </>
+        }
+        confirmLabel="خروج از تیم"
+        isPending={isBusy}
+        onConfirm={handleRemove}
+      />
     </FormSectionCard>
   );
 }

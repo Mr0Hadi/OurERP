@@ -6,6 +6,8 @@ namespace Application.Common.Settings
     /// <summary>
     /// One entry of the settings catalogue: what the value means, how it is written and the limits it must stay within.
     /// Values are stored and sent as invariant-culture text ("10", "true"); <see cref="Normalize"/> is the one parser.
+    /// <see cref="IsPublic"/> = readable by every signed-in user through GetFeatureFlags (feature switches the frontend needs to
+    /// hide or show menus); everything else needs SettingView. See CLAUDE.md section 6b for what a switch may and may not do.
     /// </summary>
     public sealed record SystemSettingDefinition(
         string Key,
@@ -17,7 +19,8 @@ namespace Application.Common.Settings
         long? MinValue = null,
         long? MaxValue = null,
         string? Unit = null,
-        int MaxLength = 1000)
+        int MaxLength = 1000,
+        bool IsPublic = false)
     {
         /// <summary>
         /// The canonical text of <paramref name="value"/>, or null with <paramref name="error"/> set when it is not a valid value

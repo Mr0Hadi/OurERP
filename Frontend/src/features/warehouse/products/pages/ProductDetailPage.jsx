@@ -9,6 +9,7 @@ import { useUpdateProductMutation, useDeleteProductMutation } from "../services/
 import { useProductForm } from "../hooks/useProductForm";
 import ProductBasicInfoForm from "../components/forms/ProductBasicInfoForm";
 import ProductPricingForm from "../components/forms/ProductPricingForm";
+import ProductReorderForm from "../components/forms/ProductReorderForm";
 import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
@@ -19,6 +20,9 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 
 function ProductDetailForm({ productData }) {
+  // react-hook-form خطاها را در همان شیءِ `errors` می‌نویسد؛ React Compiler با propsِ
+  // هم‌مرجع کارت‌های فرم را دوباره رندر نمی‌کرد و خطای «ذخیره» دیده نمی‌شد (docs 08).
+  "use no memo";
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
@@ -77,9 +81,14 @@ function ProductDetailForm({ productData }) {
               isIncomplete={Boolean(productData?.isIncomplete)}
             />
             <ProductPricingForm register={register} control={control} errors={errors} />
+            <ProductReorderForm register={register} control={control} errors={errors} />
           </div>
-          <div className="flex flex-col gap-4 md:gap-3">
-            <ProductImageUpload imageUpload={imageUpload} />
+          {/* در موبایل این ستون `contents` است تا تصویر با `order-first` بالای فرم بیاید
+              و دکمه‌ها همچنان پایین بمانند. */}
+          <div className="contents md:flex md:flex-col md:gap-3">
+            <div className="order-first md:order-none">
+              <ProductImageUpload imageUpload={imageUpload} />
+            </div>
             {/* بارکد را سرور می‌سازد و در فرم عوض نمی‌شود. */}
             <ProductBarcodeDisplay value={productData.barCode ?? ""} />
             <UnitsPageLink

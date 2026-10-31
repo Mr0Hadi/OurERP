@@ -2,23 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 
 import { createTeam, updateTeam, deleteTeam } from "./api-v1";
-import { teamKeys } from "./queryKeys";
-import { departmentKeys } from "../../departments/services/queryKeys";
-import { userKeys } from "@/features/employees/services/queryKeys";
-import { authKeys } from "@/features/auth/services/queryKeys";
+import { invalidateOrgChart } from "../../services/invalidation";
 import { getErrorMessage } from "@/shared/lib/errorMessage";
-
-/**
- * تعیینِ مسئول/جانشینِ تیم کارمند را به تیم (و واحدش) منتقل می‌کند و
- * نقشِ قبلی‌اش را آزاد می‌کند — شاید مسئولیتِ همان واحد یا تیمِ دیگری. پس
- * همه‌ی نماهای چارت سازمانی و نشستِ کاربرِ جاری باید تازه شوند.
- */
-function invalidateOrgChart(queryClient) {
-  queryClient.invalidateQueries({ queryKey: teamKeys.all });
-  queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-  queryClient.invalidateQueries({ queryKey: userKeys.all });
-  queryClient.invalidateQueries({ queryKey: authKeys.session() });
-}
 
 export function useCreateTeamMutation() {
   const queryClient = useQueryClient();
@@ -51,12 +36,9 @@ export function useDeleteTeamMutation() {
 
   return useMutation({
     mutationFn: deleteTeam,
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       toast.success("تیم با موفقیت حذف شد.");
-      queryClient.invalidateQueries({ queryKey: teamKeys.all });
-      queryClient.invalidateQueries({ queryKey: teamKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
-      queryClient.invalidateQueries({ queryKey: userKeys.all });
+      invalidateOrgChart(queryClient);
     },
     onError: (error) => toast.error(getErrorMessage(error, "خطا در حذف تیم")),
   });

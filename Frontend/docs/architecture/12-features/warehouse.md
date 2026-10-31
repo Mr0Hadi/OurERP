@@ -1,6 +1,6 @@
 # warehouse — کالا، دسته، دانه، خودرو، دریافت و ارسال
 
-شش زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
+هفت زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/` (بررسیِ انبارِ پیش‌فاکتورِ فروش)؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
 
 ## مسیرها
 
@@ -17,6 +17,7 @@
 | `WAREHOUSE_RECEIVING` (+ `_DETAIL`) | `/warehouse/receiving`، `/:id` | `PurchaseReceive` | `src/features/warehouse/receiving/pages/ReceivingListPage.jsx`، `ReceivingDetailPage.jsx` |
 | `WAREHOUSE_RECEIVING_RETURN_DETAIL` | `/warehouse/receiving/returns/:id` | `SaleReturnExecute` | `src/features/warehouse/receiving/pages/ReceivingReturnDetailPage.jsx` (کالای برگشتی از **مرجوعیِ فروش**) |
 | `WAREHOUSE_SHIPPING` (+ `_DETAIL`) | `/warehouse/shipping`، `/:id` | `SaleShip` | `src/features/warehouse/shipping/pages/ShippingListPage.jsx`، `ShippingDetailPage.jsx` |
+| `WAREHOUSE_SALE_CHECK` (+ `_DETAIL`) | `/warehouse/sale-check`، `/:id` | `SaleWarehouseCheck` | `src/features/warehouse/saleCheck/pages/SaleCheckListPage.jsx`، `SaleCheckPage.jsx` (اسکن و رزروِ دانه‌ها، کم‌کردنِ اقلام با دلیل و تأیید، گزارشِ معیوب/مفقود) |
 | `WAREHOUSE_SHIPPING_RETURN_DETAIL` | `/warehouse/shipping/returns/:id` | `PurchaseReturnExecute` | `src/features/warehouse/shipping/pages/SupplierReturnDetailPage.jsx` (عودت به تامین‌کننده در **مرجوعیِ خرید**) |
 
 `CategoriesPage` و `VehiclesPage` فهرست/جزئیات در یک کامپوننت‌اند؛ `:id` فقط انتخاب است.
@@ -30,14 +31,17 @@
 | units | `fetchProductUnits` GET `/Product/GetProductUnitList`، `fetchAllProductUnits` (صفحه‌به‌صفحه ۲۰۰تایی تا ۲۰۰۰)، `fetchProductUnitSummary`، `fetchProductUnitHistory`، `resolveScannedCode`، `markProductUnitsPrinted` POST، `applyProductUnitAction` POST (ایدمپوتنت)، `setProductUnitLocation` POST | `productUnitKeys` (`["productUnits"]`) |
 | vehicles | `/Vehicle/GetVehicleList` (take ۵۰۰)، `GetVehicleProductList`، `CreateVehicle`، `UpdateVehicle`، `DeleteVehicle`، `AddProductsToVehicle`، `RemoveProductFromVehicle` | `vehicleKeys` (`["vehicles"]`) |
 | receiving | `fetchReceivablePurchases` GET `/Purchase/GetPurchaseList`، `fetchPurchaseReceivingInfo` GET `/PurchaseReturn/GetPurchaseReceivingInfo`، `fetchPurchaseReturnPendingEffects`، `receiveShipment` POST `/Shipment/ReceiveShipment` | `receivingKeys` (`['receiving']`) |
+| saleCheck | `useProformaQueueQuery(CUSTOMER_APPROVED)` و فیلترهای `ProformaQueueFilters` از `sales/orders`، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useWarehouseApproveMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
 | shipping | `fetchShippableSales` GET `/Sale/GetSaleList`، `fetchSaleForShipping` GET `/Sale/GetSaleDetail`، `fetchSaleReturnPendingEffects`، `dispatchShipment` POST `/Shipment/DispatchShipment` | `shippingKeys` (`['shipping']`) |
+
+فرمِ کالا کارتِ `ProductReorderForm` (نقطه‌ی سفارش، `targetStock`، `minOrderQuantity`، `leadTimeDays`، `preferredSupplierId`) دارد؛ `buildProductPayload` در `src/features/warehouse/products/hooks/useProductForm.js` این‌ها را همیشه می‌فرستد، چون `UpdateProduct` نفرستاده را پاک می‌کند.
 
 هوک‌های پرکاربرد برای بقیه‌ی برنامه: `useDocumentProducts`، `useProductSearchQuery`، `useProductsOptionsQuery` (`src/features/warehouse/products/services/queries.js`)؛ `UnitsPageLink` (`src/features/warehouse/units/components/UnitsPageLink.jsx`).
 
 ## state و دامنه
 
 - `useProductFilterStore` (`src/features/warehouse/products/store/productFilterStore.js`، با اکشنِ `setPriceRange`).
-- `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`، و **`useLabelTemplateStore`** (persist `unit-label-template`).
+- `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`؛ `src/features/warehouse/units/store/labelTemplateStore.js`: `useLabelTemplateStore` (persist `unit-label-template`).
 - `useReceivingFormStore`، `useShippingFormStore`، `useReceivingFilterStore`، `useShippingFilterStore`؛ hookها `useReceivingForm`، `useShippingForm`.
 - دامنه: `src/features/warehouse/units/domain/unitVocabulary.js` (`UNIT_SEGMENTS`، `UnitActionEnum`، `REASONS_BY_ACTION`، `allowedActionsOf`، `canApply`، …؛ `DocumentKindEnum`/`documentRouteOf` از `src/shared/domain/enums/documentKind.js`)، `labelTemplate.js` (هندسه‌ی برگه و قالب)، `receivingVocabulary.js`، `shippingVocabulary.js`.
 - `src/features/warehouse/shared/`: `useQueueRows.js`، `queueFilters.js`، `shipmentCache.js` (`applyShipmentResult`)، `productInfo.js`، `QueueTable.jsx`، `QueueFilters.jsx`، `NothingPending.jsx`، `WarehouseSubmitBar.jsx`، `returnRowCells.jsx`.
@@ -48,7 +52,7 @@
 
 **اقدام روی دانه** — `UnitActionDialog.jsx` (دلیل‌ها از `REASONS_BY_ACTION`) → `useApplyUnitActionMutation` (`mutationKey: productUnitKeys.unitWrites()`) → `applyProductUnitAction(variables, { idempotencyKey: idempotencyKeyFor(variables) })` → invalidate `productUnitKeys.all`، `productKeys.all`، `purchaseKeys.all`، `supplierKeys.all`. حالتِ «در حال ذخیره» با `useIsMutating({ mutationKey: unitWrites() })`.
 
-**چاپِ برچسب** — `UnitBulkBar` یا `UnitDetailSheet` → `UnitsPage.openPrint` → `LabelPrintDesigner` (lazy) با قالبِ `useLabelTemplateStore` و `sheetGeometryOf` → `UnitLabel` در `LabelSheet` (`src/shared/components/print/`) → `usePrint()` → پرسشِ «چاپ شد؟» → فقط با «بله» `useMarkUnitsPrintedMutation` (`POST /Product/MarkProductUnitsPrinted`).
+**چاپِ برچسب** — `UnitBulkBar` یا `UnitDetailSheet` → `UnitsPage.openPrint` → `LabelPrintDesigner` (lazy؛ پوسته‌ی مشترکِ `PrintStudio` از `src/shared/components/print/studio/`) با قالبِ `useLabelTemplateStore` و `sheetGeometryOf` → `UnitLabel` در `LabelSheet` (`src/shared/components/print/`) → `usePrint()` → پرسشِ «چاپ شد؟» (دیالوگِ پرسش در چاپ پنهان است؛ `print.css` همه‌ی فرزندانِ body جز پورتال را کنار می‌گذارد) → فقط با «بله» `useMarkUnitsPrintedMutation` (`POST /Product/MarkProductUnitsPrinted`).
 
 ### دریافت و ارسال
 
@@ -64,10 +68,8 @@
 ## نکته‌ها و بدهی
 
 - نام‌گذاریِ صفحه‌های مرجوعی در انبار گمراه‌کننده است: `ReceivingReturnDetailPage` مرجوعیِ **فروش** است و `SupplierReturnDetailPage` زیرِ `/shipping/` مرجوعیِ **خرید**.
-- `useLabelTemplateStore` در فایلی به نامِ `unitFilterStore.js` است.
 - `fetchCategoryProducts` پارامترها را دستی PascalCase می‌سازد (`ProductCategoryId`، `Page`، `Take`) به جای `listQuery`.
 - mutationهای دسته فقط `productCategoryKeys.lists()` را باطل می‌کنند.
 - `createProductCategory` وقتی سرور شناسه نمی‌دهد، فهرست را با نام می‌گردد (TODO به بکند).
 - `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند (TODOِ خودش: جست‌وجوی سمتِ سرور).
-- `ROUTES.WAREHOUSE_STOCK` و `WAREHOUSE_TRANSACTIONS` فقط در breadcrumb هستند.
 - `useQueueRows.js` اثرهای معلقِ مرجوعیِ خرید را بدونِ `purchaseId` می‌گیرد (همه‌ی خریدها؛ ظاهراً عمدی).

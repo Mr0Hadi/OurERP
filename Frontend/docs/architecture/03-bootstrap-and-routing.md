@@ -18,7 +18,7 @@
 | `src/app/layouts/AppLayout.jsx`، `AuthLayout.jsx` | پوسته‌ها |
 | `src/shared/constants/routes.js` | ثابتِ `ROUTES` (همه‌ی آدرس‌ها) |
 | `src/shared/constants/navigationData.js` | منوی سایدبار |
-| `src/shared/components/layout/AppBreadcrumb.jsx` | عنوانِ breadcrumb (`ROUTE_TITLES`، `DETAIL_TITLES`) |
+| `src/app/layouts/AppBreadcrumb.jsx` | عنوانِ breadcrumb (`ROUTE_TITLES`، `DETAIL_TITLES`) |
 | `src/shared/lib/routeTransitionBus.js`، `src/shared/components/layout/RouteLoadingOverlay.jsx` | اسپینرِ جابه‌جایی |
 
 ## چطور کار می‌کند: توالیِ راه‌اندازی
@@ -87,7 +87,7 @@ flowchart LR
   PG --> Page["صفحه‌ی lazy در Suspense"]
 ```
 
-1. **آدرس:** یک کلید در `ROUTES` (`src/shared/constants/routes.js`). همه‌ی مسیرهای محافظت‌شده آدرسِ مطلق می‌دهند (`"/customers"`)؛ استثنا: `invoice` و `transactions` رشته‌ی نسبی (`"invoice"`) می‌دهند و `auth` هم `"login"`.
+1. **آدرس:** یک کلید در `ROUTES` (`src/shared/constants/routes.js`). همه‌ی مسیرهای محافظت‌شده آدرسِ مطلق می‌دهند (`"/customers"`)؛ استثنا: `auth` رشته‌ی نسبیِ `"login"` می‌دهد.
 2. **فیچر:** هر فیچر در `src/features/<f>/routes.jsx` آرایه‌ای تخت export می‌کند (`customersRoutes`، `warehouseRoutes`، …). صفحه‌ها با `lazy(() => import("./pages/X"))` بار می‌شوند. مسیرِ تو در تو (`children`) در هیچ فیچری نیست؛ تنها `index: true` در `src/features/dashboard/routes.jsx` است (`/` → `DashboardPage`).
 3. **ادغام:** `src/app/routes/routers.jsx` همه را زیرِ یک شیءِ `{ path: ROUTES.ROOT, element: <AppLayout />, loader: protectedLoader, errorElement: <RouteErrorPage />, children: [{ errorElement: <RouteErrorPage />, children: [...] }] }` پخش می‌کند. routeِ بی‌مسیرِ میانی فقط برای این است که خطای رندرِ یک صفحه داخلِ پوسته (با سایدبار و هدر) نشان داده شود؛ `errorElement`ِ بیرونی خطای `protectedLoader` یا خودِ `AppLayout` را تمام‌صفحه می‌گیرد. ترتیبِ پخش اهمیتی ندارد (React Router بر اساسِ دقتِ مسیر رتبه می‌دهد).
 4. **مجوز:** `handle: { permission: "CustomerView" }` یا آرایه‌ای که **هر کدام** کافی است (`satisfies` در `src/features/auth/hooks/usePermission.js`)، مثلاً `["VehicleView", "ProductCategoryView"]` در `src/features/warehouse/routes.jsx`. مسیرِ بدونِ `handle.permission` برای هر کاربرِ واردشده باز است. جزئیات در [05](05-permissions.md).
@@ -97,8 +97,8 @@ flowchart LR
 
 | پوسته | مسیر | مسیرهای فرزند | گارد |
 | --- | --- | --- | --- |
-| `AuthLayout` (`src/app/layouts/AuthLayout.jsx`) | `ROUTES.AUTH` = `/auth` | `authRoutes` (`login`) | ندارد؛ `LoginPage` خودش نشست را می‌سنجد |
-| `AppLayout` (`src/app/layouts/AppLayout.jsx`) | `ROUTES.ROOT` = `/` | `dashboardRoutes`، `customersRoutes`، `employeesRoutes`، `organizationRoutes`، `permissionsRoutes`، `auditRoutes`، `purchasesRoutes`، `warehouseRoutes`، `invoiceRoutes`، `salesRoutes`، `suppliersRoutes`، `accountingRoutes`، `settingsRoutes`، `transactionsRoutes` | `protectedLoader` + `isAuthenticated` در خودِ layout + `PermissionGate` |
+| `AuthLayout` (`src/app/layouts/AuthLayout.jsx`) | `ROUTES.AUTH` = `/auth` | `authRoutes` (`login`، `change-password`) | ندارد؛ `LoginPage` خودش نشست را می‌سنجد |
+| `AppLayout` (`src/app/layouts/AppLayout.jsx`) | `ROUTES.ROOT` = `/` | `dashboardRoutes`، `customersRoutes`، `employeesRoutes`، `organizationRoutes`، `permissionsRoutes`، `auditRoutes`، `purchasesRoutes`، `warehouseRoutes`، `salesRoutes`، `suppliersRoutes`، `accountingRoutes`، `treasuryRoutes`، `settingsRoutes` | `protectedLoader` + `isAuthenticated` در خودِ layout + `PermissionGate` |
 | بدونِ پوسته | `/dev/ui` (فقط `import.meta.env.DEV`) | `StyleGuidePage` | ندارد |
 | بدونِ پوسته | `*` | `NotFoundPage` | — |
 
@@ -127,7 +127,7 @@ flowchart LR
 4. **فقط اگر فیچرِ تازه است:** `export const <f>Routes` را در `src/app/routes/routers.jsx` import و در `children` پخش کنید.
 5. **کلیدِ مجوز** — نامِ یک عضوِ `PermissionEnum` در `../Backend-Net/Domain/Enums/PermissionEnum.cs`؛ فرانت فهرستِ ثابتی ندارد، پس نام را از همان فایل کپی کنید. ببینید [05](05-permissions.md).
 6. **منو** — `src/shared/constants/navigationData.js`، زیرِ `items` گروهِ مربوط: `{ title, url: ROUTES.WAREHOUSE_VEHICLES, permission: [...], icon: Car, description }`. همان `permission`ِ مسیر را بدهید تا منو و گارد هم‌خوان باشند.
-7. **breadcrumb** — `ROUTE_TITLES` در `src/shared/components/layout/AppBreadcrumb.jsx`؛ برای صفحه‌ی جزئیات با `:id`، کلیدِ والد را در `DETAIL_TITLES` بگذارید. خودروها هر دو را دارند (`ROUTES.WAREHOUSE_VEHICLES` → «خودروها» و «جزئیات خودرو»).
+7. **breadcrumb** — `ROUTE_TITLES` در `src/app/layouts/AppBreadcrumb.jsx`؛ برای صفحه‌ی جزئیات با `:id`، کلیدِ والد را در `DETAIL_TITLES` بگذارید. خودروها هر دو را دارند (`ROUTES.WAREHOUSE_VEHICLES` → «خودروها» و «جزئیات خودرو»).
 
 ## مسیرِ «navigation settled»: اسپینرِ جابه‌جایی
 
@@ -153,14 +153,13 @@ flowchart LR
 | صفحه‌ی ۴۰۴ | `src/app/layouts/NotFoundPage.jsx` |
 | صفحه‌ی خطای رندر/loader | `src/app/layouts/RouteErrorPage.jsx` |
 | صفحه‌ی «دسترسی ندارید» | `src/app/layouts/ForbiddenPage.jsx` |
-| هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx`؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`)؛ دکمه‌های صفحه در هدر با `PageHeaderActions` (`src/shared/components/layout/PageHeaderActions.jsx`، پورتال به `actionsSlot`) |
+| هدر/سایدبارِ پوسته | `src/app/layouts/AppLayout.jsx` (هدرِ جمع‌شونده با `useHideOnScroll`، [09](09-ui-system-theming-rtl.md))؛ عنوانِ صفحه از `useHeaderStore` (`src/shared/store/headerStore.js`)؛ دکمه‌های صفحه در هدر با `PageHeaderActions` (`src/shared/components/layout/PageHeaderActions.jsx`، پورتال به `actionsSlot`) |
 | رفتارِ اسپینرِ جابه‌جایی | `src/shared/components/layout/RouteLoadingOverlay.jsx` |
 | مقصدِ پیش‌فرض بعد از ورود | `from` در `src/features/auth/pages/LoginPage.jsx` (پیش‌فرض `ROUTES.DASHBOARD`) |
 | splash یا رنگِ پیش از React | `index.html` |
 
 ## سؤال‌های باز / بدهی
 
-- **`settings/` نه `lazy()` دارد نه `handle.permission`** (`src/features/settings/routes.jsx`): ۹ صفحه‌ی placeholder در باندلِ اصلی هستند و برای هر کاربرِ واردشده باز. همین‌طور `src/features/invoice/routes.jsx` و `src/features/transactions/routes.jsx` (import مستقیم، بدونِ مجوز). `src/features/dashboard/routes.jsx` هم مجوز ندارد (احتمالاً عمدی؛ داشبورد برای همه).
-- `ROUTE_TITLES`ِ `AppBreadcrumb.jsx` کلیدهایی دارد که هیچ مسیرِ ثبت‌شده‌ای ندارند: `INVOICE_LIST`، `INVOICE_NEW`، `TRANSACTIONS_BUY_SELL`، `TRANSACTIONS_PAYMENTS`، `TRANSACTIONS_RETURNS`، `WAREHOUSE_STOCK`، `WAREHOUSE_TRANSACTIONS`، `TOOLS_NUMBER_TO_WORDS`، `TOOLS_CALENDAR`، `FEEDBACK` (همه در `ROUTES` تعریف شده‌اند — بررسی‌شده؛ فقط صفحه ندارند). همه‌ی `ROUTES.*`ِ به‌کاررفته در `AppBreadcrumb.jsx`، `navigationData.js` و `routes.jsx`ها در `src/shared/constants/routes.js` وجود دارند.
+- `src/features/dashboard/routes.jsx` مجوز ندارد (احتمالاً عمدی؛ داشبورد برای همه).
 - هر بارگذاریِ کامل از صفحه‌ی ورود رد می‌شود (طراحیِ عمدی، ولی URL برای یک لحظه به `/auth/login?from=` می‌رود).
 - منطقِ تم در `index.html` و `themeClasses.js` دو نسخه است.

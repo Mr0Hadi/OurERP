@@ -48,7 +48,7 @@ export default defineConfig([
   },
   {
     // فایل‌هایی که در Node اجرا می‌شوند، نه در مرورگر.
-    files: ["vite.config.js", "structure.js", "scripts/**/*.{js,mjs}"],
+    files: ["vite.config.js", "vitest.config.js", "structure.js", "scripts/**/*.{js,mjs}", "tools/dev-inspector/{index,sourceIndex}.js"],
     languageOptions: {
       globals: globals.node,
     },
