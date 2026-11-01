@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
-import { withProductInfo } from "../../shared/productInfo";
+import { documentProductMap, withProductInfo } from "../../shared/productInfo";
 import { checkSummary, lineNeed } from "../domain/saleCheck";
 
 /**
@@ -16,8 +15,7 @@ export function useSaleCheckForm(sale, { canEdit }) {
   const [issues, setIssues] = useState([]);
   const [reason, setReason] = useState("");
 
-  const { productMap } = useDocumentProducts((sale.items || []).map((item) => item.productId));
-  const items = useMemo(() => withProductInfo(sale.items || [], productMap), [sale.items, productMap]);
+  const items = useMemo(() => withProductInfo(sale.items || [], documentProductMap(sale.items || [])), [sale.items]);
   const { changed, blockingReason } = checkSummary(items, { scans, quantities, issues, reason, canEdit });
   const scannedCount = Object.values(scans).reduce((sum, codes) => sum + codes.length, 0);
   const needTotal = items.reduce((sum, item) => sum + lineNeed(item, quantities), 0);

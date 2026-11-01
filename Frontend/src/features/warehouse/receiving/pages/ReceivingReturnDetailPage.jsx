@@ -7,7 +7,6 @@ import { Badge } from "@/shared/components/ui/badge";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import { useSalesReturnQuery } from "@/features/sales/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/sales/returns/services/mutations";
-import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
@@ -22,7 +21,7 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
-import { withProductInfo } from "../../shared/productInfo";
+import { documentProductMap, returnEffectsOf, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 import NothingPending from "../../shared/NothingPending";
 
@@ -80,7 +79,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
     barcodesAllowed: restoresLineUnits,
   });
 
-  const { productMap } = useDocumentProducts(lines.map((line) => line.productId));
+  const productMap = useMemo(() => documentProductMap(returnEffectsOf(salesReturn)), [salesReturn]);
   const displayRounds = useMemo(() => withProductInfo(rounds, productMap), [rounds, productMap]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);

@@ -6,16 +6,6 @@ import { getPartyName } from "@/shared/components/filters/filterUtils";
  * (`{ items, total, page, totalPages }`) تا `ServerTable`/`DataTable` بی‌تغییر کار کنند.
  */
 
-/**
- * کالایی که سفارش‌های در راهش آن را تا هدف (`targetStock`، یا نقطه‌ی سفارش) پوشش داده‌اند، کنار می‌رود؛
- * کالایی که بی‌سفارشِ در راه درست روی نقطه‌ی سفارش است می‌ماند (به نقطه‌ی سفارش رسیده).
- *
- * TODO(بکند): سرور کالا را تا `stock + onOrder ≤ نقطه‌ی سفارش` نگه می‌دارد؛ کالای بی‌موجودیِ‌هدف بعد از
- * ساختِ پیش‌فاکتور درست روی نقطه‌ی سفارش می‌ماند و با «۱» (حداقل سفارش) دوباره پیشنهاد می‌شد
- * (درخواستِ ۲۸ در `Backend-Net/docs/frontend-requests.fa.md`).
- */
-export const needsOrder = (s) => s.onOrder === 0 || s.stock + s.onOrder < (s.targetStock ?? s.reorderPoint);
-
 /** ستون‌های قابلِ مرتب‌سازی — همان نام‌های فیلدِ `ReorderSuggestionDto`. */
 const SORT_VALUE = {
   productName: (s) => s.productName ?? "",
@@ -47,7 +37,8 @@ function compareBy(sorting) {
  *   `all` همه‌ی ردیف‌های قابلِ نمایش (برای انتخاب‌های صفحه‌های دیگر)
  */
 export function reorderPage(rows, { pageIndex, pageSize }, sorting) {
-  const visible = (rows ?? []).filter(needsOrder);
+  // کالای پوشش‌داده تا هدف را خودِ سرور کنار می‌گذارد (۲۰۲۶-۱۰-۳۰، درخواستِ ۲۸).
+  const visible = rows ?? [];
   const compare = compareBy(sorting);
   const all = compare ? [...visible].sort(compare) : visible;
   const totalPages = Math.max(1, Math.ceil(all.length / pageSize));

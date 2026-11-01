@@ -6,7 +6,6 @@ import {
   useSaleForShippingQuery,
   useSaleReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { useDispatchShipmentMutation } from "../services/mutations";
 import { useShippingForm } from "../hooks/useShippingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -20,7 +19,7 @@ import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { isExcessAllowedFor } from "../domain/shippingVocabulary";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { trackedLookup, withProductInfo } from "../../shared/productInfo";
+import { documentProductMap, trackedLookup, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 
 /**
@@ -37,14 +36,9 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   const navigate = useNavigate();
   const dispatchMutation = useDispatchShipmentMutation();
 
-  // کالاهای همین فروش (و جایگزین‌های مرجوعی‌اش): تصویر، و اینکه اسکنِ دانه
-  // الزامی است. تا نیامده‌اند، ثبت بسته است — وگرنه کالای ردیابی‌پذیر بی‌اسکن
-  // فرستاده و سرور ردش می‌کرد.
+  // کالاهای همین فروش (و جایگزین‌های مرجوعی‌اش): تصویر، و اینکه اسکنِ دانه الزامی است — روی خودِ ردیف‌ها.
   const { data: pendingEffects = [] } = useSaleReturnPendingEffectsQuery(sale.id);
-  const { productMap, isLoading: productsLoading } = useDocumentProducts([
-    ...(sale.items || []).map((item) => item.productId),
-    ...pendingEffects.map((effect) => effect.productId),
-  ]);
+  const productMap = useMemo(() => documentProductMap(sale.items || [], pendingEffects), [sale.items, pendingEffects]);
   const isTracked = useMemo(() => trackedLookup(productMap), [productMap]);
 
   const {
@@ -199,7 +193,7 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
             }
             complete={complete}
             warnIncomplete={replacementOnly || items.length > 0}
-            canSubmit={hasSomething && !productsLoading}
+            canSubmit={hasSomething}
             blockingReason={blocking}
             isBusy={isBusy}
             onSubmit={() => setShowConfirmDialog(true)}
