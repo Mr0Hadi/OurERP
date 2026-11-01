@@ -106,7 +106,8 @@ export function buildCustomerPayload(data, imageKey) {
     nationalId: textOrNull(data.nationalId),
     registrationNumber: textOrNull(data.registrationNumber),
     referralCode: textOrNull(data.referralCode),
-    creditLimit: data.creditLimit ? Number(data.creditLimit) : 0,
+    // خالی = بی‌سقف (`null`)؛ صفر = فقط فروشِ نقدی — سرور سقف را اعمال می‌کند (GAP-06).
+    creditLimit: numberOrNull(data.creditLimit),
     description: textOrNull(data.description),
     balance,
     balanceType,

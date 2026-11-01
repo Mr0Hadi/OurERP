@@ -30,5 +30,10 @@
 
         /// <summary>The ordered line this supplement's excess arrived on; null for unlisted goods and ordinary lines.</summary>
         public int? SupplementOfPurchaseItemId { get; set; }
+
+        /// <summary>ClosePurchaseItem would accept this line now (PurchaseDocumentRules.CloseItemBlocker).</summary>
+        public bool CanClose { get; set; }
+        /// <summary>ReopenPurchaseItem would accept this line now.</summary>
+        public bool CanReopen { get; set; }
     }
 }

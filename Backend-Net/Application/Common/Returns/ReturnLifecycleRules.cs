@@ -62,6 +62,26 @@ namespace Application.Common.Returns
             return null;
         }
 
+        /// <summary>
+        /// RemoveClaimResolution (both sides): not on a terminal return, and not once any goods effect of the resolution has moved
+        /// a unit (AppliedQuantity &gt; 0). Backs *ReturnResolutionDto.CanRemove (frontend-requests 14.3).
+        /// </summary>
+        public static string? ResolutionRemoveBlocker(ReturnStatusEnum status, bool returnIsTerminal, IEnumerable<(ReturnEffectDirectionEnum Direction, int AppliedQuantity)> effects)
+        {
+            if (returnIsTerminal)
+                return NotEditableMessage(status);
+            if (effects.Any(e => ReturnEffectDirections.IsGoods(e.Direction) && e.AppliedQuantity > 0))
+                return "بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست.";
+            return null;
+        }
+
+        /// <summary>
+        /// The sale-return credit note (GetSaleReturnCreditNotePdf/Document) prints refunds, so it needs at least one MONEY_OUT
+        /// effect. Backs SaleReturnDetailDto.CanPrintCreditNote (14.3).
+        /// </summary>
+        public static string? CreditNoteBlocker(IEnumerable<ReturnEffectDirectionEnum> effectDirections) =>
+            effectDirections.Any(d => d == ReturnEffectDirectionEnum.MONEY_OUT) ? null : "این مرجوعی هیچ اثر مالی (استرداد وجه) ندارد.";
+
         /// <summary>The refusal Add/Remove resolution and ExecuteGoodsRound give on a return they may not edit.</summary>
         public static string NotEditableMessage(ReturnStatusEnum status) =>
             $"این مرجوعی در وضعیت «{status.GetDescription()}» است و قابل ویرایش نیست.";

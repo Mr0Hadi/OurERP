@@ -3,6 +3,7 @@ using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
+using Application.Common.Dtos.Returns;
 using Application.Common.Enums;
 using Application.Common.Queries;
 using Application.Features.PurchaseReturn.Dtos;
@@ -84,12 +85,32 @@ namespace Application.Features.PurchaseReturn.Queries
                 })
                 .ToListAsync(cancellationToken);
 
+            // 14.1: every claim of this purchase's live returns (rejected/cancelled ones claim nothing).
+            var otherClaims = await _context.PurchaseReturnClaims.AsNoTracking()
+                .Where(c => c.PurchaseReturn!.PurchaseId == request.PurchaseId && c.PurchaseReturn.IsActive
+                    && c.PurchaseReturn.Status != ReturnStatusEnum.REJECTED && c.PurchaseReturn.Status != ReturnStatusEnum.CANCELLED)
+                .OrderBy(c => c.PurchaseReturnId).ThenBy(c => c.Id)
+                .Select(c => new
+                {
+                    c.PurchaseItemId,
+                    c.ProductId,
+                    Dto = new Application.Common.Dtos.Returns.OtherReturnClaimDto
+                    {
+                        ReturnId = c.PurchaseReturnId,
+                        ReturnNumber = c.PurchaseReturn!.ReturnNumber,
+                        Status = c.PurchaseReturn.Status,
+                        OffScopeKind = c.OffScopeKind,
+                        Quantity = c.Quantity,
+                    },
+                })
+                .ToListAsync(cancellationToken);
+
             var unlistedIds = held.Where(h => h.CustodyReason == UnitCustodyReasonEnum.UNLISTED).Select(h => h.ProductId).Distinct().ToList();
             var unlistedProducts = await _context.Products
                 .Where(p => unlistedIds.Contains(p.Id))
                 .ToListAsync(cancellationToken);
 
-            res.Data = new PurchaseReceivingInfoDto
+            var info = new PurchaseReceivingInfoDto
             {
                 PurchaseId = purchase.Id,
                 InvoiceNumber = purchase.InvoiceNumber,
@@ -140,6 +161,8 @@ namespace Application.Features.PurchaseReturn.Queries
                         QuarantinedExcessQuantity = quarantinedExcess,
                         FreeExcessQuantity = Math.Max(0, quarantinedExcess - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(excessGroup, item.ProductId, purchase.Id, openReturns)),
                         ClaimableQuantity = _purchaseReturnCalculationService.GetClaimableQuantity(item, openReturns),
+                        OtherReturnClaims = otherClaims.Where(c => c.PurchaseItemId == item.Id && c.Dto.OffScopeKind != ReturnOffScopeKindEnum.UNLISTED)
+                            .Select(c => c.Dto).ToList(),
                     };
                 }).ToList(),
                 UnlistedItems = unlistedProducts.Select(p =>
@@ -158,14 +181,79 @@ namespace Application.Features.PurchaseReturn.Queries
                         QuarantinedQuantity = quarantined,
                         FreeQuantity = Math.Max(0, quarantined - _purchaseReturnCalculationService.GetReservedQuarantineQuantity(
                             new UnitSelection(ProductUnitStatusEnum.QUARANTINED, purchase.Id, null, UnitCustodyReasonEnum.UNLISTED), p.Id, purchase.Id, openReturns)),
+                        OtherReturnClaims = otherClaims.Where(c => c.ProductId == p.Id && c.Dto.OffScopeKind == ReturnOffScopeKindEnum.UNLISTED)
+                            .Select(c => c.Dto).ToList(),
                     };
                 }).ToList(),
                 Discrepancies = discrepancies,
             };
+            // Ordered goods in quarantine that an open ON_ORDER claim already covers are not suggested again: an ON_ORDER claim
+            // reserves the line's quota, not quarantine units, so FreeQuarantinedOnOrderQuantity alone does not see it.
+            var openOnOrderClaims = openReturns.SelectMany(r => r.Claims)
+                .Where(c => c.OnOrderPurchaseItemId.HasValue)
+                .GroupBy(c => c.OnOrderPurchaseItemId!.Value)
+                .ToDictionary(g => g.Key, g => g.Sum(c => c.RemainingQuantity));
+            info.SuggestedClaims = SuggestedClaims(info, openOnOrderClaims);
+            res.Data = info;
 
             res.Message = "اطلاعات دریافت خرید با موفقیت ارسال شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+
+        /// <summary>14.6: the "record a discrepancy" prefill, built from the free numbers above (the caps CreatePurchaseReturn enforces).</summary>
+        private static List<CreateReturnClaimDto> SuggestedClaims(PurchaseReceivingInfoDto info, IReadOnlyDictionary<int, int> openOnOrderClaims)
+        {
+            ReturnProblemEnum Dominant(Func<PurchaseReceivingDiscrepancyDto, bool> matches, ReturnProblemEnum fallback) =>
+                info.Discrepancies.Where(matches)
+                    .GroupBy(d => d.Problem)
+                    .Select(g => new { Problem = g.Key, Quantity = g.Sum(d => d.Quantity) })
+                    .Where(g => g.Quantity > 0)
+                    .OrderByDescending(g => g.Quantity).ThenBy(g => g.Problem)
+                    .Select(g => (ReturnProblemEnum?)g.Problem)
+                    .FirstOrDefault() ?? fallback;
+
+            var claims = new List<CreateReturnClaimDto>();
+            foreach (var item in info.Items)
+            {
+                var onOrder = Math.Min(item.FreeQuarantinedOnOrderQuantity - openOnOrderClaims.GetValueOrDefault(item.PurchaseItemId), item.ClaimableQuantity);
+                if (onOrder > 0)
+                    claims.Add(new CreateReturnClaimDto
+                    {
+                        Scope = ReturnClaimScopeEnum.ON_ORDER,
+                        OrderLineId = item.PurchaseItemId,
+                        ProductId = item.ProductId,
+                        UnitPrice = item.UnitPrice,
+                        Quantity = onOrder,
+                        Problem = Dominant(d => d.PurchaseItemId == item.PurchaseItemId && d.CustodyReason == UnitCustodyReasonEnum.ON_ORDER, ReturnProblemEnum.DEFECTIVE),
+                    });
+
+                if (item.FreeExcessQuantity > 0)
+                    claims.Add(new CreateReturnClaimDto
+                    {
+                        Scope = ReturnClaimScopeEnum.OFF_ORDER,
+                        OffScopeKind = ReturnOffScopeKindEnum.EXCESS,
+                        OrderLineId = item.PurchaseItemId,
+                        ProductId = item.ProductId,
+                        UnitPrice = item.UnitPrice,
+                        Quantity = item.FreeExcessQuantity,
+                        Problem = Dominant(d => d.PurchaseItemId == item.PurchaseItemId && d.CustodyReason == UnitCustodyReasonEnum.EXCESS, ReturnProblemEnum.OVER_SHIPPED),
+                    });
+            }
+
+            // Nothing was paid for unlisted goods: the price is the user's to agree, so 0.
+            foreach (var item in info.UnlistedItems.Where(u => u.FreeQuantity > 0))
+                claims.Add(new CreateReturnClaimDto
+                {
+                    Scope = ReturnClaimScopeEnum.OFF_ORDER,
+                    OffScopeKind = ReturnOffScopeKindEnum.UNLISTED,
+                    ProductId = item.ProductId,
+                    UnitPrice = 0,
+                    Quantity = item.FreeQuantity,
+                    Problem = ReturnProblemEnum.UNLISTED_ITEM,
+                });
+
+            return claims;
         }
     }
 }

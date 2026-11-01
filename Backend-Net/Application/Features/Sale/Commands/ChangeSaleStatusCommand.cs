@@ -15,6 +15,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Application.Common.Audit;
+using Application.Common.Documents;
 
 namespace Application.Features.Sale.Commands
 {
@@ -77,19 +78,14 @@ namespace Application.Features.Sale.Commands
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            if (sale.Status == SalesStatusEnum.CANCELLED)
-                throw new ValidationCustomException("فروش لغوشده قابل تغییر وضعیت نیست.");
+            var hasActivePlan = request.Status == SalesStatusEnum.CANCELLED && await _context.SaleInstallmentPlans.AnyAsync(
+                x => x.SaleId == sale.Id && x.IsActive && x.Status == SaleInstallmentPlanStatusEnum.ACTIVE, cancellationToken);
+            var blocker = SaleDocumentRules.StatusChangeBlocker(sale, request.Status, hasActivePlan, DateTime.Now);
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
             if (request.Status == SalesStatusEnum.PROCESSING)
             {
-                // A credit sale: the invoice is issued and goes on the customer's account with nothing paid. Only after the
-                // customer and the warehouse have approved it - the same gate a payment passes.
-                if (sale.Status != SalesStatusEnum.PROFORMA)
-                    throw new ValidationCustomException("فاکتور این فروش قبلاً صادر شده است.");
-                if (sale.PaymentType == PaymentTypeEnum.INSTALLMENT)
-                    throw new ValidationCustomException("فاکتور فروش اقساطی با ثبت قرارداد و پیش‌پرداخت صادر می‌شود.");
-                SaleProformaPipeline.EnsureReadyForPayment(sale);
-
                 await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, request.InvoiceDate, cancellationToken);
                 sale.UpdatedAt = DateTime.Now;
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -98,22 +94,6 @@ namespace Application.Features.Sale.Commands
                 res.Message = "فاکتور فروش صادر شد.";
                 res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
                 return res;
-            }
-
-            if (request.Status == SalesStatusEnum.DELIVERED)
-            {
-                if (sale.Status != SalesStatusEnum.SHIPPED)
-                    throw new ValidationCustomException("فقط فروشی که همه‌ی کالایش ارسال شده تحویل‌شده ثبت می‌شود.");
-            }
-            else
-            {
-                if (sale.Items.Any(i => i.ShippedQuantity > 0))
-                    throw new ValidationCustomException("کالای این فروش ارسال شده و قابل لغو نیست؛ از مسیر مرجوعی اقدام کنید.");
-
-                var hasActivePlan = await _context.SaleInstallmentPlans.AnyAsync(
-                    x => x.SaleId == sale.Id && x.IsActive && x.Status == SaleInstallmentPlanStatusEnum.ACTIVE, cancellationToken);
-                if (hasActivePlan)
-                    throw new ValidationCustomException("این فروش قرارداد اقساطی فعال دارد؛ ابتدا قرارداد را لغو کنید.");
             }
 
             // Cancelling an issued invoice takes it (and any installment charge) off the customer's account; the payments

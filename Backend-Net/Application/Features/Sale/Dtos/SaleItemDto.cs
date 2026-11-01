@@ -41,6 +41,8 @@
         /// with custody EXCESS) minus what open EXCESS claims already reserve. 0 until the warehouse records excess.
         /// </summary>
         public int ClaimableExcessQuantity { get; set; }
+        /// <summary>Claims of this sale's returns on this line, ON_ORDER and EXCESS; rejected/cancelled returns left out (frontend-requests 14.1).</summary>
+        public List<Application.Common.Dtos.Returns.OtherReturnClaimDto> OtherReturnClaims { get; set; } = new();
         public int SaleId { get; set; }
 
         /// <summary>Units the warehouse scanned and reserved for this line (proforma pipeline); shipping takes exactly these.</summary>

@@ -31,6 +31,11 @@ namespace Application.Features.Purchase.Queries
         /// <summary>Matches the invoice number or the supplier's company name, like GetPurchaseReturnList's Search.</summary>
         public string? Search { get; set; }
         public int? SupplierId { get; set; }
+        /// <summary>
+        /// true: only purchases CreatePurchaseReturn accepts (not cancelled, something arrived) - the same rule, from
+        /// PurchaseDocumentRules (frontend-requests 13.3). false/omitted: no filter.
+        /// </summary>
+        public bool? Returnable { get; set; }
         public PurchaseStatusEnum? Status { get; set; }
         /// <summary>
         /// Any of these statuses (?statuses=2&amp;statuses=3) - e.g. the warehouse receiving queue, which wants SHIPPED and
@@ -67,6 +72,11 @@ namespace Application.Features.Purchase.Queries
             {
                 var search = request.Search.Trim();
                 query = query.Where(x => x.InvoiceNumber.Contains(search) || x.Supplier.CompanyName.Contains(search));
+            }
+
+            if (request.Returnable == true)
+            {
+                query = query.Where(Application.Common.Documents.PurchaseDocumentRules.IsReturnable(_context));
             }
 
             if (request.SupplierId.HasValue)

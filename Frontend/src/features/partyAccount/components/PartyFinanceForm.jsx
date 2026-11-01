@@ -68,7 +68,13 @@ export default function PartyFinanceForm({ errors, balanceType, control, side })
       </p>
 
       {side === "customer" && (
-        <FormPriceField name="creditLimit" control={control} label="سقف اعتبار (ریال)" icon={ShieldCheck} />
+        <FormPriceField
+          name="creditLimit"
+          control={control}
+          label="سقف اعتبار (ریال)"
+          icon={ShieldCheck}
+          hint="خالی یعنی بدون سقف؛ صفر یعنی فقط فروشِ نقدی. فروشِ نسیه‌ی فراتر از سقف را سرور رد می‌کند."
+        />
       )}
     </FormSectionCard>
   );

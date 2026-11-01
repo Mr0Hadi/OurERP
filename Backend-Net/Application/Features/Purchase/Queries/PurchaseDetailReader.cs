@@ -2,6 +2,7 @@
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
+using Application.Common.Payments;
 using Application.Features.Purchase.Dtos;
 using Common.Exceptions;
 using Domain.Enums;
@@ -30,6 +31,7 @@ namespace Application.Features.Purchase.Queries
                     TotalAmount = x.TotalAmount,
                     PaidAmount = x.PaidAmount,
                     Description = x.Description,
+                    UpdatedAt = x.UpdatedAt,
                     SupplierId = x.SupplierId,
                     SupplierName = x.Supplier.CompanyName,
                     Items = x.Items.OrderBy(i => i.Id).Select(i => new PurchaseItemDto
@@ -118,9 +120,33 @@ namespace Application.Features.Purchase.Queries
             var shortClosed = purchase.Items.Aggregate(0UL, (sum, i) => sum + InvoiceLineMath.ShareOfTotal(i.TotalAmount, i.Quantity, i.ShortClosedQuantity));
             purchase.PayableAmount = purchase.TotalAmount > shortClosed ? purchase.TotalAmount - shortClosed : 0UL;
 
+            await FillAllowedActionsAsync(context, purchase, cancellationToken);
+
             purchase.Attachments = await DocumentAttachmentWriter.ReadAsync(context, objectStorageService, DocumentKindEnum.PURCHASE, purchaseId, cancellationToken);
 
             return purchase;
+        }
+
+        /// <summary>The can* flags, from the same PurchaseDocumentRules calls the commands make.</summary>
+        private static async Task FillAllowedActionsAsync(IWMSDbContext context, PurchaseDto purchase, CancellationToken cancellationToken)
+        {
+            var payments = await context.PaymentDetails.AsNoTracking().Where(p => p.PurchaseId == purchase.Id).ToListAsync(cancellationToken);
+            var ownNetPaid = DocumentPayments.NetPaid(payments, Array.Empty<Domain.Entities.PaymentAllocation>(), DocumentPayments.PurchaseDirection);
+            var hasInvoice = !string.IsNullOrWhiteSpace(purchase.InvoiceNumber) && purchase.InvoiceDate.HasValue;
+            var anythingReceived = purchase.Items.Any(i => i.ReceivedQuantity > 0);
+
+            purchase.CanDelete = PurchaseDocumentRules.DeleteBlocker(purchase.Status, ownNetPaid) == null;
+            purchase.CanCancel = PurchaseDocumentRules.StatusChangeBlocker(purchase.Status, PurchaseStatusEnum.CANCELLED, hasInvoice, anythingReceived) == null;
+            purchase.AllowedStatuses = PurchaseDocumentRules.AllowedStatuses(purchase.Status, hasInvoice, anythingReceived);
+            purchase.CanCreateReturn = PurchaseDocumentRules.CreateReturnBlocker(purchase.Status,
+                await PurchaseDocumentRules.AnythingArrivedAsync(context, purchase.Id, cancellationToken)) == null;
+
+            foreach (var item in purchase.Items)
+            {
+                var stillOwed = new Domain.Entities.PurchaseItem { Quantity = item.Quantity, ReceivedQuantity = item.ReceivedQuantity, ShortClosedQuantity = item.ShortClosedQuantity }.StillOwedQuantity;
+                item.CanClose = PurchaseDocumentRules.CloseItemBlocker(purchase.Status, anythingReceived, item.ShortClosedQuantity, stillOwed) == null;
+                item.CanReopen = PurchaseDocumentRules.ReopenItemBlocker(purchase.Status, item.ShortClosedQuantity) == null;
+            }
         }
     }
 }

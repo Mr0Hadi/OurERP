@@ -12,6 +12,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Application.Common.Audit;
+using Application.Common.Documents;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -64,22 +65,11 @@ namespace Application.Features.Purchase.Commands
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
-            if (purchase.Status == PurchaseStatusEnum.CANCELLED)
-                throw new ValidationCustomException("خرید لغوشده قابل تغییر وضعیت نیست.");
-
-            if (purchase.Status is PurchaseStatusEnum.PARTIALLY_RECEIVED or PurchaseStatusEnum.RECEIVED)
-                throw new ValidationCustomException("وضعیت خریدی که کالایش دریافت شده از روی دریافت‌ها حساب می‌شود و دستی تغییر نمی‌کند.");
-
-            if (request.Status == PurchaseStatusEnum.CANCELLED)
-            {
-                if (purchase.Items.Any(i => i.ReceivedQuantity > 0))
-                    throw new ValidationCustomException("کالای این خرید دریافت شده و قابل لغو نیست؛ از مسیر مرجوعی یا بستن ردیف اقدام کنید.");
-            }
-            else if (purchase.Status == PurchaseStatusEnum.PROFORMA
-                     && (string.IsNullOrWhiteSpace(purchase.InvoiceNumber) || !purchase.InvoiceDate.HasValue))
-            {
-                throw new ValidationCustomException("برای خروج از پیش‌فاکتور، ابتدا شماره و تاریخ فاکتور تامین‌کننده را در پیش‌فاکتور ثبت کنید.");
-            }
+            var blocker = PurchaseDocumentRules.StatusChangeBlocker(purchase.Status, request.Status,
+                !string.IsNullOrWhiteSpace(purchase.InvoiceNumber) && purchase.InvoiceDate.HasValue,
+                purchase.Items.Any(i => i.ReceivedQuantity > 0));
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
             // The supplier's invoice enters the account when the purchase leaves PROFORMA, and leaves it on cancellation
             // (a draft cancelled before that never reached the account). Payments stay; a supplier refund is a payment row.

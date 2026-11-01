@@ -1434,11 +1434,11 @@ access token و refresh token هر دو در `localStorage` مرورگرند؛ �
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۱۳.۱ — `canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `items[].canClose/canReopen`
-- [ ] ۱۳.۲ — `UpdatedAt`/`RowVersion` و `409` برای ویرایشِ هم‌زمانِ پیش‌فاکتور — نیمه: `updatedAt` فقط روی `SaleDto` آمد (۲۴.۲)؛ روی خرید و `409` نه
-- [ ] ۱۳.۳ — `Returnable = true` روی فهرستِ خرید و فروش
-- [ ] ۱۳.۴ — `PreviewResolution` برای هر دو سمتِ مرجوعی
-- [ ] ۱۳.۵ — `Search` روی `GetProductList` و فیلدهای کاملِ کالا در فهرست — نیمه: فیلدهای کالا با ۹.۳ آمد؛ پارامترِ `Search` نه
+- [x] ۱۳.۱ — `canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `items[].canClose/canReopen`
+- [x] ۱۳.۲ — `UpdatedAt`/`RowVersion` و `409` برای ویرایشِ هم‌زمانِ پیش‌فاکتور
+- [x] ۱۳.۳ — `Returnable = true` روی فهرستِ خرید و فروش
+- [x] ۱۳.۴ — `PreviewResolution` برای هر دو سمتِ مرجوعی
+- [x] ۱۳.۵ — `Search` روی `GetProductList` و فیلدهای کاملِ کالا در فهرست
 
 ---
 
@@ -1511,12 +1511,12 @@ access token و refresh token هر دو در `localStorage` مرورگرند؛ �
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۱۴.۱ — `otherReturnClaims` روی اقلامِ `GetPurchaseReceivingInfo` و `GetSaleDetail`
-- [ ] ۱۴.۲ — `Search` (شماره‌ی فاکتور یا نامِ طرف‌حساب) روی `GetPurchaseList`/`GetSaleList` — نیمه: روی `GetPurchaseList` هست؛ روی `GetSaleList` نه
-- [ ] ۱۴.۳ — `canRemove` روی تصمیم، `lifecycleBlocker` روی مرجوعی، `canPrintCreditNote` روی مرجوعیِ فروش
-- [ ] ۱۴.۴ — `freeQuarantinedQuantity` روی ادعای مرجوعیِ خرید
-- [ ] ۱۴.۵ — `pendingWarehouseWork` روی جزئیاتِ مرجوعی
-- [ ] ۱۴.۶ — `suggestedClaims` روی `GetPurchaseReceivingInfo`
+- [x] ۱۴.۱ — `otherReturnClaims` روی اقلامِ `GetPurchaseReceivingInfo` و `GetSaleDetail`
+- [x] ۱۴.۲ — `Search` (شماره‌ی فاکتور یا نامِ طرف‌حساب) روی `GetPurchaseList`/`GetSaleList`
+- [x] ۱۴.۳ — `canRemove` روی تصمیم، `lifecycleBlocker` روی مرجوعی، `canPrintCreditNote` روی مرجوعیِ فروش
+- [x] ۱۴.۴ — `freeQuarantinedQuantity` روی ادعای مرجوعیِ خرید
+- [x] ۱۴.۵ — `pendingWarehouseWork` روی جزئیاتِ مرجوعی
+- [x] ۱۴.۶ — `suggestedClaims` روی `GetPurchaseReceivingInfo`
 
 ---
 
@@ -2185,6 +2185,30 @@ PDFِ رسمی مثلِ قبل کار می‌کند.
   دارد (`unitPrice`ِ ادعا = فیِ قلم، بی‌مالیات) و پیش‌فرضِ بازپرداختِ فرانت هم باید بی‌مالیات بماند. ممکن است بعداً بازبینی شود.
 - **باز:** ۹.۹ («فروش غیر رسمی») تصمیمِ مالی است. ۲۰.۲ (Always Running در IIS، `Connect Timeout`) و ۲۰.۴ (اسرارِ `appsettings.json`) کارِ صاحبِ سرورند — برای ping از `GET api/Health` استفاده کنید.
 
+## پاسخِ بکند به بخش‌های ۱۳ و ۱۴ (۲۰۲۶-۱۱-۰۱)
+
+قرارداد در `api-guide.fa.md` بخش ۱۶، جدولِ «۲۰۲۶-۱۱-۰۱». هر پرچم با همان تابعی ساخته می‌شود که دستور هنگامِ اجرا چک می‌کند،
+پس با آمدنش این توابعِ فرانت را بردارید:
+
+- **۱۳.۱:** `canCancelPurchase`، `purchaseStatusTargets`، `RETURNABLE_PURCHASE_STATUSES`، `canClosePurchaseItem`، `canReopenPurchaseItem` ⇒
+  `canDelete`/`canCancel`/`allowedStatuses`/`canCreateReturn` و `items[].canClose`/`canReopen` روی `PurchaseDto`. سمتِ فروش `canCancelSale`،
+  `saleStatusOptions` و `RETURNABLE_SALE_STATUSES` ⇒ همین چهار فیلد روی `SaleDto`. `allowedStatuses` وضعیتِ فعلی و `CANCELLED` را ندارد (لغو `canCancel`
+  است). روی فروش `PROCESSING` یعنی «صدورِ فاکتورِ نسیه» (۹.۱۱) و فقط وقتی می‌آید که پیش‌فاکتور تأییدِ انبار دارد و رزروش معتبر است.
+- **تغییرِ رفتار:** `CreatePurchaseReturn` روی خریدی که هیچ کالایی‌اش نرسیده (نه روی قلم، نه در قرنطینه) حالا پیامِ روشنِ «هنوز هیچ کالایی… دریافت نشده» می‌دهد.
+- **۱۳.۲:** `updatedAt` را از جزئیات بگیرید و با `UpdatePurchase`/`UpdateSale` برگردانید؛ اگر کسِ دیگری سند را عوض کرده باشد **۴۰۹** می‌آید
+  (`data.updatedAt` نسخه‌ی تازه). فیلد اختیاری است؛ نفرستید یعنی بی‌چک. `documentVersion` (اثرِ انگشتِ فرانت) را بردارید.
+- **۱۳.۳ / ۱۴.۲:** انتخابگرِ سندِ مرجوعی: `GetPurchaseList`/`GetSaleList` با `returnable=true&search=…` — جست‌وجو روی شماره‌ی فاکتور یا نامِ طرف‌حساب.
+- **۱۳.۴:** `POST {PurchaseReturn,SaleReturn}/PreviewResolution` با همان بدنه‌ی `AddClaimResolution`. ردها در `errors` می‌آیند (پاسخ ۲۰۰)، نه ۴۰۰. با این،
+  `expandComposition`/`validateComposition`/`resolveSources`/`suggestedMoneyAmount` در `resolutions.js` قابلِ حذف‌اند. منبعِ GOODS_OUT همچنان هنگامِ
+  اجرا اعلام می‌شود؛ پیش‌نمایش آن را حدس نمی‌زند (`source = null`).
+- **۱۳.۵:** `GetProductList?search=` برای انتخابگرِ اقلام و اسکن (نام، کد، بارکدِ کالا، بارکدِ دانه). فیلدهای ۹.۳ و `requiresUnitTracking`، `wholeSalePrice`
+  از قبل روی ردیف بودند. ۲۰۰ ردیفِ یک‌جا را بردارید.
+- **۱۴.۱:** `otherReturnClaims` روی `items[]` و `unlistedItems[]`ِ `GetPurchaseReceivingInfo` و `items[]`ِ `GetSaleDetail` ⇒ `useClaimsInOtherReturns` حذف.
+- **۱۴.۳:** `resolutions[].canRemove`، `lifecycleBlocker` (زیرِ کارت وقتی هیچ دکمه‌ای نیست)، `canPrintCreditNote` روی مرجوعیِ فروش.
+- **۱۴.۴:** `claims[].freeQuarantinedQuantity` روی مرجوعیِ خرید ⇒ `claimQuarantinedQuantity` و درخواستِ اضافه‌ی `GetPurchaseReceivingInfo` حذف.
+- **۱۴.۵:** `pendingWarehouseWork: { goodsIn, goodsOut, quarantineExit }` ⇒ `hasPendingGoodsIn`/`Out`/`QuarantineExit` حذف.
+- **۱۴.۶:** `GetPurchaseReceivingInfo.suggestedClaims` (همان شکلِ `claims[]`ِ `CreatePurchaseReturn`) ⇒ `quarantineClaimsOf`/`dominantProblem` حذف.
+
 ## چک‌لیستِ کل
 
 - [x] ۱.۱ — کد پستیِ اختیاری (مشتری و تامین‌کننده)
@@ -2202,8 +2226,8 @@ PDFِ رسمی مثلِ قبل کار می‌کند.
 - [x] ۱۰ — کدِ کالا و بارکدِ دانه با خط‌تیره (در `main`)
 - [ ] ۱۱ — پرداخت با کارتخوان (دسترسی/فهرستِ دستگاه، فیلدهای تراکنش، فروشِ حضوری با دریافتِ ناقص؛ جزئیات در بخشِ ۱۱)
 - [ ] ۱۲ — امنیت و پیش‌نیازهای مجوزِ کارتخوان (۱۲.۱ تا ۱۲.۷)
-- [ ] ۱۳ — منطقِ تکراری در فرانت که باید از سرور بیاید (۱۳.۱ تا ۱۳.۵)
-- [ ] ۱۴ — مرجوعی‌ها: منطقِ تکراری و درخواست‌های اضافه (۱۴.۱ تا ۱۴.۶)
+- [x] ۱۳ — منطقِ تکراری در فرانت که باید از سرور بیاید (۱۳.۱ تا ۱۳.۵) (۲۰۲۶-۱۱-۰۱)
+- [x] ۱۴ — مرجوعی‌ها: منطقِ تکراری و درخواست‌های اضافه (۱۴.۱ تا ۱۴.۶) (۲۰۲۶-۱۱-۰۱)
 - [x] ۱۵ — انبار و کالا (۱۵.۱ تا ۱۵.۵؛ ۱۵.۳ از قبل انجام شده بود) (۲۰۲۶-۱۰-۳۰)
 - [x] ۱۶ — ورود و خروجِ اطلاعات با CSV/Excel (در `main`؛ api-guide بخشِ ۱۹)
 - [ ] ۱۷ — فروشِ اقساطی: ۱۷.۲، ۱۷.۳، ۱۷.۵، ۱۷.۷، ۱۷.۸ انجام شد (۲۰۲۶-۱۰-۳۰)؛ ۱۷.۴ با بخش ۲۵؛ ۱۷.۱ با خطِ تأییدِ پیش‌فاکتور منتفی؛ ۱۷.۶ (کارتخوان) باز

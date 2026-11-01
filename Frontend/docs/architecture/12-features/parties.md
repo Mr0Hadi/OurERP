@@ -44,3 +44,6 @@
 - `useCreateCustomerMutation` فقط `customerKeys.lists()` را باطل می‌کند؛ چون `customerKeys.options()` = `[...lists(), "options"]` است، گزینه‌های انتخابگر هم با همین prefix تازه می‌شوند (کشِ صورت‌حساب و جزئیات نه).
 - TODO در `CustomerNewPage.jsx`: endpointِ ساخت هنوز شناسه‌ی رکوردِ تازه را برنمی‌گرداند.
 - نامِ فیلدِ بکند `refferalCode` (غلطِ املایی) است.
+- **سقفِ اعتبار (GAP-06):** `creditLimit` `null` = بی‌سقف، `0` = فقط نقدی؛ `buildCustomerPayload` خالی را `null` می‌فرستد (هرگز `0`).
+  سرور سقف را هنگامِ صدورِ فاکتور اعمال می‌کند؛ جزئیات و فهرست `creditExposure` (مانده + چک‌های وصول‌نشده) و `creditAvailable`
+  دارند. کارهای باز (نشان در فهرست، نمایش در پرونده): `FEATURE-GAPS.fa.md` بخشِ GAP-06.

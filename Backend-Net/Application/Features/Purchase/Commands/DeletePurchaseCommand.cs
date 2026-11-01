@@ -44,13 +44,12 @@ namespace Application.Features.Purchase.Commands
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
-            if (purchase.Status != Domain.Enums.PurchaseStatusEnum.PROFORMA)
-                throw new ValidationCustomException("فقط پیش‌فاکتور حذف می‌شود؛ خرید صادرشده را لغو کنید.");
-
             // Allocated on-account money just goes back to being unallocated; money paid on the draft itself must be voided first.
+            var blocker = PurchaseDocumentRules.DeleteBlocker(purchase.Status,
+                DocumentPayments.NetPaid(purchase.PaymentDetails, Array.Empty<Domain.Entities.PaymentAllocation>(), DocumentPayments.PurchaseDirection));
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
             DocumentPayments.ReleaseAllocations(purchase.PaymentAllocations);
-            if (DocumentPayments.NetPaid(purchase.PaymentDetails, purchase.PaymentAllocations, DocumentPayments.PurchaseDirection) > 0)
-                throw new ValidationCustomException("این پیش‌فاکتور پرداخت ثبت‌شده دارد؛ ابتدا پرداخت‌ها را ابطال کنید.");
 
             purchase.PaidAmount = 0;
             purchase.IsActive = false;

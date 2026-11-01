@@ -44,6 +44,12 @@ namespace Application.Features.Sale.Commands
         public int CustomerId { get; set; }
         public List<UpdateSaleItemDto> Items { get; set; }
         public List<DocumentAttachmentInputDto> Attachments { get; set; } = new();
+
+        /// <summary>
+        /// The UpdatedAt the edit form read (GetXDetail). When sent and the server copy has changed since, the edit is refused
+        /// with 409 so two people editing one proforma do not silently overwrite each other (frontend-requests 13.2).
+        /// </summary>
+        public DateTime? UpdatedAt { get; set; }
     }
 
     public class UpdateSaleCommandValidator : AbstractValidator<UpdateSaleCommand>
@@ -101,6 +107,7 @@ namespace Application.Features.Sale.Commands
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             DocumentLockRules.EnsureDraft(sale.Status);
+            DocumentVersion.Ensure(sale.UpdatedAt, request.UpdatedAt, "این پیش‌فاکتور را کسِ دیگری پس از باز شدنِ این صفحه تغییر داده است؛ صفحه را تازه کنید.");
 
             var hasUnknownItems = request.Items.Where(x => x.Id != 0).Select(x => x.Id).Except(sale.Items.Select(x => x.Id)).Any();
             if (hasUnknownItems)

@@ -24,6 +24,20 @@ namespace Application.Common.Settings
             Unit: "دقیقه");
 
         /// <summary>
+        /// Customer credit limits (GAP-06, CreditLimitGuard). On: issuing a sale that leaves a customer's exposure (ledger
+        /// balance + uncleared cheques, unpaid installments included) above their CreditLimit is refused, with no override.
+        /// Off: limits are only shown. A customer with no limit (null) is never checked; 0 means cash only.
+        /// </summary>
+        public static readonly SystemSettingDefinition SaleCreditLimitEnforced = new(
+            Key: "Sale.CreditLimitEnforced",
+            Group: SystemSettingGroupEnum.SALE,
+            Type: SystemSettingTypeEnum.BOOLEAN,
+            DefaultValue: "true",
+            Title: "اعمال سقف اعتبار مشتری",
+            Description: "روشن: صدور فاکتوری که بدهی مشتری (مانده‌ی حساب + چک‌های وصول‌نشده + اقساط باقی) را از سقف اعتبارش بیشتر کند رد می‌شود و راه دوری ندارد. خاموش: سقف فقط نمایش داده می‌شود. مشتری بدون سقف آزاد است و سقف صفر یعنی فقط فروش نقدی.",
+            IsPublic: true);
+
+        /// <summary>
         /// Whether every new receipt/payment must name the cash box or bank account it went through. Off by default so existing
         /// screens keep working; turn it on once the frontend sends the account everywhere. CREDIT rows are exempt (no money moves).
         /// </summary>
@@ -139,6 +153,7 @@ namespace Application.Common.Settings
         public static readonly IReadOnlyList<SystemSettingDefinition> All = new[]
         {
             SaleReservationMinutes,
+            SaleCreditLimitEnforced,
             PaymentRequireBankAccount,
             InstallmentOverdueGraceDays,
             InstallmentEarlySettlementDiscountPercentage,

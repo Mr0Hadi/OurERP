@@ -66,8 +66,9 @@ const columns = [
     header: "مانده",
     cell: ({ row }) => {
       const { balance, creditLimit } = row.original;
-      // سقفِ اعتبار فقط برای مشتری؛ عبور از آن هشدار است نه خطا (سرور جلوی فروش را نمی‌گیرد).
-      const overLimit = Number(creditLimit) > 0 && Number(balance) > Number(creditLimit);
+      // سقفِ اعتبار فقط برای مشتری (`null` = بی‌سقف، صفر = فقط نقدی). سرور صدورِ فاکتورِ فراتر از سقف را رد
+      // می‌کند (GAP-06)؛ این‌جا فقط مانده‌ای را نشان می‌دهیم که پیش‌تر یا با پایین آوردنِ سقف از آن گذشته.
+      const overLimit = creditLimit != null && Number(balance) > Number(creditLimit);
       return (
         <div className="flex flex-col items-center gap-0.5">
           <BalanceAmount value={balance} />

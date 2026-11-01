@@ -163,53 +163,7 @@ namespace Application.Features.PurchaseReturn.Commands
         {
             var res = new ResponseDto();
 
-            var purchaseReturn = await _context.PurchaseReturns.Where(x => x.Claims.Any(c => c.Id == request.ClaimId))
-                .WhereNotDeleted()
-                .WithReturnGraph()
-                .WithPurchaseItems()
-                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
-
-            if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status) || purchaseReturn.Status == ReturnStatusEnum.SETTLED)
-                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(purchaseReturn.Status));
-
-            var claim = purchaseReturn.Claims.First(x => x.Id == request.ClaimId);
-
-            if (request.Composition.Quantity > claim.RemainingQuantity)
-                throw new ValidationCustomException("مقدار تصمیم از باقیمانده ادعا بیشتر است.");
-
-            var now = DateTime.Now;
-            var effects = _purchaseReturnCalculationService.ExpandComposition(request.Composition, now);
-            await ReturnMoneyAccounts.EnsureAsync(_context, effects.Where(e => ReturnEffectDirections.IsMoney(e.Direction))
-                .SelectMany(e => ReturnMoneyAccounts.Of(e.Method, e.BankAccountId, e.Status == ReturnEffectStatusEnum.APPLIED, e.MoneyParts.Select(p => (p.Method, p.BankAccountId))))
-                .ToList(), cancellationToken);
-
-            // ProductId defaults to the claim's own product and is resolved once, here, so every
-            // later reader (ExecuteGoodsRound, the read DTOs) sees a non-null value and none of them
-            // has to re-apply the default.
-            foreach (var effect in effects)
-            {
-                if (ReturnEffectDirections.IsGoods(effect.Direction))
-                    effect.ProductId ??= claim.ProductId;
-            }
-
-            // A product id that does not exist used to go unchecked and only surface as a NotFound at
-            // the goods round - at the warehouse, long after the decision was accepted.
-            var overriddenProductIds = effects
-                .Where(e => e.ProductId.HasValue && e.ProductId.Value != claim.ProductId)
-                .Select(e => e.ProductId!.Value)
-                .Distinct()
-                .ToList();
-
-            if (overriddenProductIds.Count > 0)
-            {
-                var foundCount = await _context.Products
-                    .CountAsync(p => overriddenProductIds.Contains(p.Id), cancellationToken);
-
-                if (foundCount != overriddenProductIds.Count)
-                    throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
-            }
-
-            await EnsureQuarantineCoversAsync(claim, effects, purchaseReturn.PurchaseId, cancellationToken);
+            var (purchaseReturn, claim, effects, now) = await PurchaseResolutionChecks.PrepareAsync(_context, _purchaseReturnCalculationService, request, cancellationToken);
 
             // Every check above runs before anything below touches tracked state or the cost ledger,
             // so a refused request leaves the loaded graph exactly as it was read.
@@ -257,6 +211,67 @@ namespace Application.Features.PurchaseReturn.Commands
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
         }
+    }
+
+    /// <summary>
+    /// Everything AddClaimResolution checks before it touches tracked state or the cost ledger, on its own so
+    /// PreviewResolution (frontend-requests 13.4) runs exactly the same checks and expansion without saving.
+    /// </summary>
+    public static class PurchaseResolutionChecks
+    {
+        public static async Task<(Domain.Entities.PurchaseReturn PurchaseReturn, Domain.Entities.PurchaseReturnClaim Claim, List<Domain.Entities.PurchaseReturnEffect> Effects, DateTime Now)> PrepareAsync(
+            IWMSDbContext context, IPurchaseReturnCalculationService calc, AddClaimResolutionCommand request, CancellationToken cancellationToken)
+        {
+            var purchaseReturn = await context.PurchaseReturns.Where(x => x.Claims.Any(c => c.Id == request.ClaimId))
+                .WhereNotDeleted()
+                .WithReturnGraph()
+                .WithPurchaseItems()
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
+
+            if (calc.IsTerminal(purchaseReturn.Status) || purchaseReturn.Status == ReturnStatusEnum.SETTLED)
+                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(purchaseReturn.Status));
+
+            var claim = purchaseReturn.Claims.First(x => x.Id == request.ClaimId);
+
+            if (request.Composition.Quantity > claim.RemainingQuantity)
+                throw new ValidationCustomException("مقدار تصمیم از باقیمانده ادعا بیشتر است.");
+
+            var now = DateTime.Now;
+            var effects = calc.ExpandComposition(request.Composition, now);
+            await ReturnMoneyAccounts.EnsureAsync(context, effects.Where(e => ReturnEffectDirections.IsMoney(e.Direction))
+                .SelectMany(e => ReturnMoneyAccounts.Of(e.Method, e.BankAccountId, e.Status == ReturnEffectStatusEnum.APPLIED, e.MoneyParts.Select(p => (p.Method, p.BankAccountId))))
+                .ToList(), cancellationToken);
+
+            // ProductId defaults to the claim's own product and is resolved once, here, so every
+            // later reader (ExecuteGoodsRound, the read DTOs) sees a non-null value and none of them
+            // has to re-apply the default.
+            foreach (var effect in effects)
+            {
+                if (ReturnEffectDirections.IsGoods(effect.Direction))
+                    effect.ProductId ??= claim.ProductId;
+            }
+
+            // A product id that does not exist used to go unchecked and only surface as a NotFound at
+            // the goods round - at the warehouse, long after the decision was accepted.
+            var overriddenProductIds = effects
+                .Where(e => e.ProductId.HasValue && e.ProductId.Value != claim.ProductId)
+                .Select(e => e.ProductId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (overriddenProductIds.Count > 0)
+            {
+                var foundCount = await context.Products
+                    .CountAsync(p => overriddenProductIds.Contains(p.Id), cancellationToken);
+
+                if (foundCount != overriddenProductIds.Count)
+                    throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
+            }
+
+            await EnsureQuarantineCoversAsync(context, calc, claim, effects, purchaseReturn.PurchaseId, cancellationToken);
+
+            return (purchaseReturn, claim, effects, now);
+        }
 
         /// <summary>
         /// Every effect that takes units from quarantine - a release, a scrap or a return stated as QUARANTINED - must find them
@@ -266,7 +281,7 @@ namespace Application.Features.PurchaseReturn.Commands
         /// reserved its own quantity when it was created, so its own outstanding part counts as available to it. Shelf-sourced
         /// effects reserve nothing: shelf stock stays sellable and is checked when the round runs.
         /// </summary>
-        private async Task EnsureQuarantineCoversAsync(Domain.Entities.PurchaseReturnClaim claim, List<Domain.Entities.PurchaseReturnEffect> effects, int purchaseId, CancellationToken cancellationToken)
+        private static async Task EnsureQuarantineCoversAsync(IWMSDbContext context, IPurchaseReturnCalculationService calc, Domain.Entities.PurchaseReturnClaim claim, List<Domain.Entities.PurchaseReturnEffect> effects, int purchaseId, CancellationToken cancellationToken)
         {
             var requested = effects
                 .Where(e => e.Source == ProductUnitStatusEnum.QUARANTINED)
@@ -276,7 +291,7 @@ namespace Application.Features.PurchaseReturn.Commands
             if (requested.Count == 0)
                 return;
 
-            var openReturns = await _context.PurchaseReturns
+            var openReturns = await context.PurchaseReturns
                 .Where(x => x.PurchaseId == purchaseId)
                 .WhereNotDeleted()
                 .WhereOpen()
@@ -286,23 +301,35 @@ namespace Application.Features.PurchaseReturn.Commands
 
             foreach (var group in requested)
             {
-                var productId = group.Key;
-                var sameProduct = productId == claim.ProductId;
-                var selection = PurchaseReturnQuarantine.For(claim, sameProduct, purchaseId);
-
-                var held = await _context.ProductUnits.CountAsync(selection.ToFilter(productId), cancellationToken);
-                var reserved = _purchaseReturnCalculationService.GetReservedQuarantineQuantity(selection, productId, purchaseId, openReturns);
-
-                // This claim's own reservation is what these effects draw on.
-                if (PurchaseReturnQuarantine.IsReservedByClaim(claim, sameProduct))
-                    reserved -= Math.Max(0, claim.Quantity - claim.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity));
-
-                var available = Math.Max(0, held - Math.Max(0, reserved));
+                var (held, reserved, available) = await FreeQuarantineAsync(context, calc, claim, group.Key, purchaseId, openReturns, cancellationToken);
                 if (group.Sum(e => e.Quantity) > available)
                     throw new ValidationCustomException(
-                        $"در قرنطینه‌ی مربوط به این ادعا {held} دانه هست که {Math.Max(0, reserved)} تای آن برای تصمیم‌های دیگرِ همین خرید رزرو شده؛ فقط {available} دانه آزاد است. "
+                        $"در قرنطینه‌ی مربوط به این ادعا {held} دانه هست که {reserved} تای آن برای تصمیم‌های دیگرِ همین خرید رزرو شده؛ فقط {available} دانه آزاد است. "
                         + "اگر کالا روی قفسه است، منبع را «موجودی» (IN_STOCK) بگذارید.");
             }
+        }
+
+        /// <summary>
+        /// Units of <paramref name="productId"/> free in the claim's quarantine group: held, minus what other decisions on this
+        /// purchase's open returns reserve, with the claim's own reservation counted as its own. The number
+        /// EnsureQuarantineCoversAsync checks against, and PurchaseReturnClaimDto.FreeQuarantinedQuantity shows (14.4).
+        /// <paramref name="openReturns"/>: the purchase's open, not-deleted returns with their graph.
+        /// </summary>
+        public static async Task<(int Held, int Reserved, int Available)> FreeQuarantineAsync(IWMSDbContext context, IPurchaseReturnCalculationService calc,
+            Domain.Entities.PurchaseReturnClaim claim, int productId, int purchaseId, List<Domain.Entities.PurchaseReturn> openReturns, CancellationToken cancellationToken)
+        {
+            var sameProduct = productId == claim.ProductId;
+            var selection = PurchaseReturnQuarantine.For(claim, sameProduct, purchaseId);
+
+            var held = await context.ProductUnits.CountAsync(selection.ToFilter(productId), cancellationToken);
+            var reserved = calc.GetReservedQuarantineQuantity(selection, productId, purchaseId, openReturns);
+
+            // This claim's own reservation is what these effects draw on.
+            if (PurchaseReturnQuarantine.IsReservedByClaim(claim, sameProduct))
+                reserved -= Math.Max(0, claim.Quantity - claim.Resolutions.Where(r => r.Effects.All(e => e.Status != ReturnEffectStatusEnum.PENDING)).Sum(r => r.Quantity));
+
+            reserved = Math.Max(0, reserved);
+            return (held, reserved, Math.Max(0, held - reserved));
         }
     }
 }

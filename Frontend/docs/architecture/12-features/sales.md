@@ -66,5 +66,8 @@
 - کامنتِ `applyInstallmentPlan` می‌گوید عمداً `invalidateSalesEcosystem` نیست، ولی `orders/services/mutations.js` هر دو را پشتِ هم صدا می‌زند.
 - فیلترِ `status`ِ `GetSaleInstallmentList` تک‌مقداری است، پس نمای «همه‌ی پرداخت‌نشده‌ها» (`PENDING` + `OVERDUE`) نیست و پیش‌فرضِ `installmentViews.js` «سررسیدگذشته» است؛ و پیش‌نمایشِ مبلغِ تسویه با تخفیف هم نیست (بندهای ۲۵.۱ و ۲۵.۳ `frontend-requests.fa.md`).
 - `useInstallmentsQuery` و `useInstallmentCountQuery` هر دو کلیدِ `installmentKeys.installmentList(params)` دارند؛ چون `queryFn` یکی است (`fetchInstallments(params)`) و شمارش فقط `select` دارد، اشتراکِ کش بی‌خطر است.
+- **سقفِ اعتبار (GAP-06):** سرور هر صدورِ فاکتور یا قراردادِ اقساطی را که بدهیِ مؤثرِ مشتری (مانده + چک‌های وصول‌نشده) را از
+  `creditLimit` بالاتر ببرد با ۴۰۰ رد می‌کند (پیامِ فارسی + `Data.CreditLimitExceeded`، PascalCase)؛ override ندارد و چیزی ذخیره
+  نمی‌شود. چک در فرم نسیه حساب می‌شود. هشدارِ زنده و دیالوگِ خطا هنوز ساخته نشده‌اند: `FEATURE-GAPS.fa.md` بخشِ GAP-06.
 - فروشِ کاملاً نسیه فعلاً ممکن نیست: بکند فروش را فقط با اولین دریافت به فاکتور تبدیل می‌کند (کامنتِ `SaleForm.jsx`).
 - فروشِ حضوری اتمیک نیست (چهار درخواست)؛ بکند دستورِ یک‌جا ندارد.

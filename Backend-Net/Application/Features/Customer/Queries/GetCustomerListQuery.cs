@@ -1,3 +1,4 @@
+using Application.Common.Credit;
 ﻿using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
@@ -67,13 +68,19 @@ namespace Application.Features.Customer.Queries
                 FirstName = x.FirstName,
                 LastName = x.LastName,
                 BalanceType = x.BalanceType,
-                Balance = x.Balance
+                Balance = x.Balance,
+                CreditLimit = x.CreditLimit,
             }).ToPagedAsync(request.Page, request.Take, cancellationToken);
 
             // After paging, one grouped query for the whole page - same place and reason as signed image URLs.
             var balances = await PartyLedger.CustomerBalancesAsync(_context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
+            var cheques = await CreditLimitGuard.UnclearedChequesByCustomerAsync(_context, paged.Items.Select(x => x.Id).ToList(), cancellationToken);
             foreach (var item in paged.Items)
+            {
                 item.LedgerBalance = balances.GetValueOrDefault(item.Id);
+                item.CreditExposure = item.LedgerBalance + cheques.GetValueOrDefault(item.Id);
+                item.CreditAvailable = item.CreditLimit.HasValue ? item.CreditLimit.Value - item.CreditExposure : null;
+            }
 
             res.Data = new
             {
