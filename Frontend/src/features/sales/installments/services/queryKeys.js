@@ -9,4 +9,5 @@ export const installmentKeys = {
   planList: (params) => [...installmentKeys.lists(), "plans", params],
   plans: () => [...installmentKeys.all, "plan"],
   planOfSale: (saleId) => [...installmentKeys.plans(), String(saleId)],
+  preview: (body) => [...installmentKeys.all, "preview", body],
 };

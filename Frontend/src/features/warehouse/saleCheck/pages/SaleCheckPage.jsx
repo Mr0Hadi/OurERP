@@ -49,7 +49,7 @@ function SaleCheckForm({ sale, mutation }) {
   const label = changedCount > 0 ? "تغییر و تأیید انبار" : "تأیید انبار";
   const confirmText = `${
     changedCount > 0 ? `پیش‌فاکتور با ${formatNumber(changedCount)} ردیفِ تغییرکرده ذخیره و ` : "پیش‌فاکتور "
-  }تأیید می‌شود و ${formatNumber(form.scannedCount)} دانه برای مشتری رزرو می‌شود.${
+  }تأیید می‌شود و ${formatNumber(form.reserveTotal)} دانه برای مشتری رزرو می‌شود.${
     form.issues.length ? ` ${formatNumber(form.issues.length)} دانه هم به قرنطینه می‌رود.` : ""
   }`;
 

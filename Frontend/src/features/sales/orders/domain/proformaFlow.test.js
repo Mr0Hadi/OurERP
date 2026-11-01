@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleProformaEventEnum, SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
 import {
-  IN_PERSON_CHECK_NOTE,
   ProformaAction,
   isInPersonProforma,
   proformaAction,
@@ -41,19 +40,22 @@ describe("proformaPaymentType", () => {
 });
 
 describe("فروشِ حضوری و یادداشتِ انبار", () => {
-  const event = (note, userName = "انباردار") => ({ kind: SaleProformaEventEnum.WAREHOUSE_CHECKED, note, userName });
-  const autoNote = "کالای همه‌ی اقلام از بررسی قبلی انبار رزرو مانده است.";
-  const sale = (events) => ({ proformaStage: WAREHOUSE_CHECKED, proformaEvents: events });
+  const { CUSTOMER_APPROVED, WAREHOUSE_ADJUSTED, RESERVATION_RELEASED } = SaleProformaEventEnum;
+  const event = (kind, note = "", userName = "انباردار") => ({ kind, note, userName });
+  const sale = (events, patch = {}) => ({ proformaStage: WAREHOUSE_CHECKED, proformaEvents: events, ...patch });
 
-  it("آخرین تأییدِ واقعیِ انبار، نه تأییدِ خودکار", () => {
-    expect(isInPersonProforma(sale([event(IN_PERSON_CHECK_NOTE), event(autoNote)]))).toBe(true);
-    expect(isInPersonProforma(sale([event(IN_PERSON_CHECK_NOTE), event("دو عدد کم بود")]))).toBe(false);
-    expect(isInPersonProforma({ proformaStage: DRAFT, proformaEvents: [event(IN_PERSON_CHECK_NOTE)] })).toBe(false);
+  it("حضوری از پرچمِ سرور، فقط در «آماده‌ی پرداخت»", () => {
+    expect(isInPersonProforma(sale([], { isInPerson: true }))).toBe(true);
+    expect(isInPersonProforma(sale([], { isInPerson: false }))).toBe(false);
+    expect(isInPersonProforma({ proformaStage: DRAFT, isInPerson: true })).toBe(false);
   });
 
-  it("دلیلِ تغییرِ اقلام؛ یادداشتِ حضوری دلیل نیست", () => {
-    expect(warehouseChangeNote(sale([event("دو عدد کم بود", "رضا")]))).toEqual({ note: "دو عدد کم بود", userName: "رضا" });
-    expect(warehouseChangeNote(sale([event(IN_PERSON_CHECK_NOTE)]))).toBe(null);
-    expect(warehouseChangeNote(sale([event("")]))).toBe(null);
+  it("دلیلِ تغییرِ انبار فقط از همین دورِ تأیید", () => {
+    const checked = event(SaleProformaEventEnum.WAREHOUSE_CHECKED);
+    const adjusted = event(WAREHOUSE_ADJUSTED, "دو عدد کم بود", "رضا");
+    expect(warehouseChangeNote(sale([event(CUSTOMER_APPROVED), adjusted, checked]))).toEqual({ note: "دو عدد کم بود", userName: "رضا" });
+    expect(warehouseChangeNote(sale([adjusted, checked, event(RESERVATION_RELEASED), event(CUSTOMER_APPROVED), checked]))).toBe(null);
+    expect(warehouseChangeNote(sale([checked]))).toBe(null);
+    expect(warehouseChangeNote({ proformaStage: DRAFT, proformaEvents: [adjusted] })).toBe(null);
   });
 });

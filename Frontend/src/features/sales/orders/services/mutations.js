@@ -20,6 +20,7 @@ import {
   approveAtWarehouse,
   createProforma,
   ensureProformaPaymentType,
+  issueOnCredit,
   recordProformaPlan,
   releaseReservation,
   saveProformaInfo,
@@ -128,7 +129,7 @@ export const useReleaseReservationMutation = () => {
     mutationFn: releaseReservation,
     onSuccess: (sale) => {
       applySale(queryClient, sale);
-      toast.success("رزرو آزاد شد؛ پیش‌فاکتور به پیش‌نویس برگشت");
+      toast.success("رزرو آزاد شد؛ پیش‌فاکتور به صفِ بررسیِ انبار برگشت");
     },
     onError: (error, sale) => {
       invalidateSalesEcosystem(queryClient, sale.id);
@@ -159,6 +160,23 @@ export const useSettleProformaMutation = (sale) => {
     onError: (error) => {
       invalidateSalesEcosystem(queryClient, sale.id);
       toast.error(partialSaveMessage(error, getErrorMessage(error, "ثبتِ دریافت انجام نشد")));
+    },
+  });
+};
+
+/** صدورِ فاکتورِ نسیه بی دریافت (`issueOnCredit`): `{ paymentType, info, paymentDate }`. */
+export const useIssueOnCreditMutation = (sale) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input) => issueOnCredit(sale, input),
+    onSuccess: (result) => {
+      refreshIssuedSale(queryClient, sale.id);
+      const number = result?.invoiceNumber ? ` ${result.invoiceNumber}` : "";
+      toast.success(`فاکتورِ نسیه${number} صادر شد؛ کلِ مبلغ بدهیِ مشتری است`);
+    },
+    onError: (error) => {
+      invalidateSalesEcosystem(queryClient, sale.id);
+      toast.error(partialSaveMessage(error, getErrorMessage(error, "صدورِ فاکتورِ نسیه انجام نشد")));
     },
   });
 };

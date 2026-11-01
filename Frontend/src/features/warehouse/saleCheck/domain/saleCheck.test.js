@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { approvedQuantity, changeDraft, checkSummary, lineNeed } from "./saleCheck";
+import { approvedQuantity, changeDraft, checkSummary, lineNeed, lineReady, reservedOnApproval } from "./saleCheck";
 
 const items = [
   { id: 1, productName: "لنت", quantity: 3, reservedQuantity: 1 },
@@ -31,5 +31,21 @@ describe("بررسیِ انبارِ پیش‌فاکتور", () => {
     expect(done).toMatchObject({ blockingReason: null, changed: [], unscanned: [] });
     const { changed } = checkSummary(items, { ...base, quantities: { 2: 1 }, reason: "x" });
     expect(changeDraft(changed, { 2: 1 })).toBe("«روغن»: ۲ ← ۱");
+  });
+
+  it("کالای بی‌ردیابی: بی‌اسکن یا کامل آماده است؛ نیمه‌کاره مانع", () => {
+    const bulk = { id: 3, productName: "پیچ", quantity: 4, reservedQuantity: 0, requiresUnitTracking: false };
+    expect([lineReady(bulk, 0, 4), lineReady(bulk, 4, 4), lineReady(bulk, 2, 4)]).toEqual([true, true, false]);
+    expect(lineReady(items[1], 0, 2)).toBe(false); // ردیابی‌دار (یا نامعلوم) همیشه اسکن می‌خواهد
+
+    const all = [items[0], bulk];
+    const ready = checkSummary(all, { ...base, scans: { 1: ["a", "b"] } });
+    expect(ready.blockingReason).toBeNull();
+    const partial = checkSummary(all, { ...base, scans: { 1: ["a", "b"], 3: ["x"] } });
+    expect(partial.blockingReason).toContain("یا همه‌ی ۴ دانه");
+
+    // رزروِ تأیید: اسکن‌شده‌ها + کلِ نیازِ بی‌ردیابیِ بی‌اسکن؛ ردیفِ حذف‌شده هیچ.
+    expect(reservedOnApproval(all, { scans: { 1: ["a", "b"] }, quantities: {} })).toBe(6);
+    expect(reservedOnApproval(all, { scans: { 1: ["a", "b"] }, quantities: { 3: 0 } })).toBe(2);
   });
 });

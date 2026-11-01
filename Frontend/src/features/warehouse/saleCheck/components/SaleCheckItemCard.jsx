@@ -6,6 +6,7 @@ import UnitBarcodeScanList from "@/shared/components/barcode/UnitBarcodeScanList
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { cn } from "@/shared/lib/utils";
+import { lineReady, scanOptional } from "../domain/saleCheck";
 
 /**
  * یک ردیفِ پیش‌فاکتور در بررسیِ انبار: دانه‌هایی که برداشته می‌شوند اسکن (و با ثبت رزرو) می‌شوند.
@@ -13,7 +14,7 @@ import { cn } from "@/shared/lib/utils";
  * الزامی می‌شود.
  *
  * @param quantity  تعدادِ تأییدی
- * @param need      دانه‌هایی که باید اسکن شوند
+ * @param need      دانه‌هایی که باید اسکن شوند (برای کالای بی‌ردیابی: اگر اسکن شوند)
  * @param canEdit   کاربر می‌تواند تعداد را تغییر دهد
  */
 export default function SaleCheckItemCard({ item, quantity, need, barcodes, canEdit, onQuantityChange, onBarcodesChange }) {
@@ -21,7 +22,9 @@ export default function SaleCheckItemCard({ item, quantity, need, barcodes, canE
   const changed = quantity !== ordered;
   const removed = quantity === 0;
   const reservedKept = !changed && Number(item.reservedQuantity) > 0;
-  const done = barcodes.length >= need;
+  const optional = scanOptional(item);
+  const done = lineReady(item, barcodes.length, need);
+  const autoReserve = optional && need > 0 && barcodes.length === 0;
 
   return (
     <div className={cn("space-y-3 rounded-lg border p-3", changed && "border-warning/60 bg-warning/5", removed && "opacity-70")}>
@@ -40,7 +43,11 @@ export default function SaleCheckItemCard({ item, quantity, need, barcodes, canE
           <StatusBadge tone="caution" className="shrink-0">حذف می‌شود</StatusBadge>
         ) : (
           <StatusBadge tone={done ? "success" : "neutral"} icon={done ? CheckCircle2 : CircleDashed} className="shrink-0">
-            {need === 0 ? "رزرو کامل" : `${formatNumber(barcodes.length)} از ${formatNumber(need)}`}
+            {need === 0
+              ? "رزرو کامل"
+              : autoReserve
+                ? "رزروِ خودکار"
+                : `${formatNumber(barcodes.length)} از ${formatNumber(need)}`}
           </StatusBadge>
         )}
       </div>
@@ -57,7 +64,12 @@ export default function SaleCheckItemCard({ item, quantity, need, barcodes, canE
       )}
 
       {need > 0 && (
-        <UnitBarcodeScanList productId={item.productId} barcodes={barcodes} max={need} required onChange={onBarcodesChange} />
+        <UnitBarcodeScanList productId={item.productId} barcodes={barcodes} max={need} required={!optional} onChange={onBarcodesChange} />
+      )}
+      {autoReserve && (
+        <p className="text-[11px] text-muted-foreground">
+          کالای بی‌ردیابی: بی‌اسکن، قدیمی‌ترین دانه‌های آزاد برای مشتری رزرو می‌شوند (اگر کم باشد کسری ثبت می‌شود).
+        </p>
       )}
     </div>
   );

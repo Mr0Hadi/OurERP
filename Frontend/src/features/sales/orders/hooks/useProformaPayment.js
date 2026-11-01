@@ -5,16 +5,17 @@ import {
   EMPTY_PLAN_DRAFT,
   addMonthsIso,
   planDraftErrors,
-  previewInstallmentPlan,
+  planPreviewRequestOf,
   toApiCreatePlan,
 } from "@/features/sales/installments/domain/installmentPlan";
+import { useInstallmentPlanPreviewQuery } from "@/features/sales/installments/services/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 import { todayIso } from "@/shared/lib/dateUtils";
 import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { isInPersonProforma, proformaPaymentType } from "../domain/proformaFlow";
-import { useSalePosActions, useSettleProformaMutation } from "../services/mutations";
+import { useIssueOnCreditMutation, useSalePosActions, useSettleProformaMutation } from "../services/mutations";
 
 const newPlanDraft = () => ({ ...EMPTY_PLAN_DRAFT, firstDueDate: addMonthsIso(todayIso(), 1) });
 
@@ -50,6 +51,7 @@ export function useProformaPayment({
 }) {
   const { allows } = usePermission();
   const settle = useSettleProformaMutation(sale);
+  const credit = useIssueOnCreditMutation(sale);
   const posActions = useSalePosActions();
   const [posLocked, setPosLocked] = useState(false);
   const [showPlanErrors, setShowPlanErrors] = useState(false);
@@ -79,7 +81,8 @@ export function useProformaPayment({
       : null;
   const canChooseTerms = !existingPlan && (isInstallment || allows("SaleInstallmentManage"));
 
-  const planPreview = isInstallment ? previewInstallmentPlan(total, planDraft) : null;
+  // مبالغ و جدولِ اقساط از سرور (`PreviewSaleInstallmentPlan`).
+  const planPreview = useInstallmentPlanPreviewQuery(isInstallment ? planPreviewRequestOf(sale?.id, planDraft) : null);
   const planErrors = isInstallment
     ? planDraftErrors(planDraft, { payable: planPreview?.totalAmount, withDownPayment: true })
     : {};
@@ -123,6 +126,21 @@ export function useProformaPayment({
       { onSuccess: () => onDone() },
     );
   };
+
+  // فاکتورِ نسیه بی دریافت (`ChangeSaleStatus PROCESSING`): فقط غیراقساطی، و نه وقتی دریافتِ ثبت‌نشده هست
+  // (آن‌وقت همان دکمه‌ی اصلی فاکتور را با دریافت صادر می‌کند).
+  const creditInvoice =
+    !isInstallment && allows("SaleUpdate")
+      ? {
+          blockedReason: payments.hasChanges ? "دریافت‌های ثبت‌نشده را با دکمه‌ی اصلی ثبت کنید یا بردارید." : null,
+          isPending: credit.isPending,
+          run: () =>
+            credit.mutate(
+              { paymentType: proformaPaymentType(false, sale), info: info(), paymentDate: dueDate },
+              { onSuccess: () => onDone() },
+            ),
+        }
+      : null;
 
   const posCommon = {
     onLockChange: setPosLocked,
@@ -195,7 +213,8 @@ export function useProformaPayment({
     canSubmit,
     submitLabel,
     submit,
-    isPending: settle.isPending,
+    creditInvoice,
+    isPending: settle.isPending || credit.isPending,
     posLocked,
   };
 }

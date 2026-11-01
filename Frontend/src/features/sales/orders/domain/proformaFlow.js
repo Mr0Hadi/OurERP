@@ -56,41 +56,30 @@ export function proformaPaymentType(isInstallment, sale) {
   return stored == null || stored === PaymentTypeEnum.INSTALLMENT ? PaymentTypeEnum.CREDIT : stored;
 }
 
-/**
- * یادداشتِ بررسیِ انبارِ فروشِ حضوری. دانه‌ها را خودِ فروشنده هنگامِ ثبت اسکن کرده و بررسیِ انبار با
- * همین یادداشت ثبت می‌شود؛ صفحه‌ها از روی آن می‌فهمند کالا جلوی مشتری است و با پرداختِ کامل همان‌جا
- * تحویل می‌شود (`CompleteInPersonSale`).
- *
- * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴.۵ — پرچمِ «حضوری» روی خودِ فروش به‌جای یادداشت.
- */
-export const IN_PERSON_CHECK_NOTE = "فروش حضوری: دانه‌ها هنگامِ ثبتِ پیش‌فاکتور جلوی مشتری اسکن شد.";
-
-/**
- * یادداشتی که سرور روی «تأییدِ انبار»ِ خودکار می‌گذارد: تأییدِ دوباره‌ی مشتری وقتی همه‌ی اقلام هنوز
- * رزروند (مثلاً پس از ثبتِ شیوه‌ی پرداخت) مستقیم «آماده‌ی پرداخت» می‌شود. آن رویداد بررسیِ تازه نیست،
- * پس در تشخیصِ حضوری از رویش می‌گذریم (`ApproveSaleProformaCommand`).
- */
-const AUTO_RECHECK_NOTE = "کالای همه‌ی اقلام از بررسی قبلی انبار رزرو مانده است.";
-
-/** آخرین «تأییدِ انبار»ِ واقعیِ پیش‌فاکتورِ «آماده‌ی پرداخت» (جز تأییدِ خودکار)، یا `undefined`. */
-function lastWarehouseCheck(sale) {
-  if (Number(sale?.proformaStage) !== SaleProformaStageEnum.WAREHOUSE_CHECKED) return undefined;
-  return [...(sale.proformaEvents || [])]
-    .reverse()
-    .find((event) => event.kind === SaleProformaEventEnum.WAREHOUSE_CHECKED && event.note !== AUTO_RECHECK_NOTE);
-}
-
-/** پیش‌فاکتورِ «آماده‌ی پرداخت»ی که دانه‌هایش در فروشِ حضوری اسکن و رزرو شده‌اند. */
+/** پیش‌فاکتورِ «آماده‌ی پرداخت»ی که حضوری ثبت شده (دانه‌ها جلوی مشتری اسکن و رزرو شده‌اند، `isInPerson`). */
 export function isInPersonProforma(sale) {
-  return lastWarehouseCheck(sale)?.note === IN_PERSON_CHECK_NOTE;
+  return Number(sale?.proformaStage) === SaleProformaStageEnum.WAREHOUSE_CHECKED && Boolean(sale?.isInPerson);
 }
 
+/** رویدادهایی که چرخه‌ی تأیید را از نو شروع می‌کنند؛ تغییرِ انبارِ پیش از آن‌ها مالِ دورِ قبلی است. */
+const CYCLE_STARTS = new Set([
+  SaleProformaEventEnum.CUSTOMER_APPROVED,
+  SaleProformaEventEnum.RESET_BY_EDIT,
+  SaleProformaEventEnum.RESERVATION_EXPIRED,
+  SaleProformaEventEnum.RESERVATION_RELEASED,
+]);
+
 /**
- * دلیلی که انباردار هنگامِ تغییرِ اقلام نوشت (`{ note, userName }`)، یا `null` — یادداشت‌های ثابتِ فروشِ حضوری
- * و تأییدِ خودکار دلیلِ تغییر نیستند.
+ * دلیلی که انباردار هنگامِ کم‌کردنِ اقلام در همین دورِ تأیید نوشت (`{ note, userName }`، رویدادِ
+ * `WAREHOUSE_ADJUSTED`)، یا `null`.
  */
 export function warehouseChangeNote(sale) {
-  const check = lastWarehouseCheck(sale);
-  if (!check?.note || check.note === IN_PERSON_CHECK_NOTE) return null;
-  return { note: check.note, userName: check.userName };
+  if (Number(sale?.proformaStage) !== SaleProformaStageEnum.WAREHOUSE_CHECKED) return null;
+  for (const event of [...(sale.proformaEvents || [])].reverse()) {
+    if (CYCLE_STARTS.has(event.kind)) return null;
+    if (event.kind === SaleProformaEventEnum.WAREHOUSE_ADJUSTED && event.note) {
+      return { note: event.note, userName: event.userName };
+    }
+  }
+  return null;
 }

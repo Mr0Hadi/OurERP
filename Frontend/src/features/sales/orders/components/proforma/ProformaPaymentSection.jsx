@@ -6,6 +6,7 @@ import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusChoice from "@/shared/components/forms/StatusChoice";
 import PaymentsCard from "@/shared/components/payments/PaymentsCard";
 import { SALE_TERMS_LABEL } from "../../domain/proformaFlow";
+import CreditInvoiceAction from "./CreditInvoiceAction";
 import { SALE_PAYMENT_SIDE } from "../../domain/salePayments";
 
 /** «شیوه‌ی پرداخت» هنگامِ دریافت: یکجا (نقد/نسیه) یا اقساطی (قرارداد با پیش‌پرداخت). */
@@ -40,23 +41,28 @@ export default function ProformaPaymentSection({ sale, payment, payments }) {
       )}
       <FormSection name="payment">
         {!payment.isInstallment ? (
-          <PaymentsCard
-            title="دریافت‌ها"
-            draft={payments}
-            side={SALE_PAYMENT_SIDE}
-            allocations={sale.paymentAllocations}
-            total={sale.totalAmount}
-            payable={sale.payableAmount}
-            canManage={allows("SalePayment")}
-            allowRefund={false}
-            posPayment={payment.paymentPos}
-            emptyText="هنوز دریافتی ثبت نشده است."
-            notice={
-              payment.inPerson
-                ? "فروشِ حضوری: با دریافتِ کلِ مبلغ کالا همین‌جا تحویل می‌شود؛ با دریافتِ کمتر فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند."
-                : "فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مانده بدهیِ مشتری است."
-            }
-          />
+          <>
+            <PaymentsCard
+              title="دریافت‌ها"
+              draft={payments}
+              side={SALE_PAYMENT_SIDE}
+              allocations={sale.paymentAllocations}
+              total={sale.totalAmount}
+              payable={sale.payableAmount}
+              canManage={allows("SalePayment")}
+              allowRefund={false}
+              posPayment={payment.paymentPos}
+              emptyText="هنوز دریافتی ثبت نشده است."
+              notice={
+                payment.inPerson
+                  ? "فروشِ حضوری: با دریافتِ کلِ مبلغ کالا همین‌جا تحویل می‌شود؛ با دریافتِ کمتر فاکتور صادر و کالا برای ارسالِ انبار رزرو می‌ماند."
+                  : "فاکتورِ فروش با اولین دریافت صادر می‌شود؛ مانده بدهیِ مشتری است."
+              }
+            />
+            {payment.creditInvoice && (
+              <CreditInvoiceAction action={payment.creditInvoice} total={sale.totalAmount} disabled={busy} />
+            )}
+          </>
         ) : payment.existingPlan ? (
           <ProformaPlanNotice plan={payment.existingPlan} />
         ) : (
