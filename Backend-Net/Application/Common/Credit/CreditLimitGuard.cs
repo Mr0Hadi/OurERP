@@ -107,6 +107,25 @@ namespace Application.Common.Credit
             return new CreditExposure(balance, cheques);
         }
 
+        /// <summary>Uncleared received cheques of many customers in one query, for a list page. Absent = 0.</summary>
+        public static async Task<Dictionary<int, decimal>> UnclearedChequesByCustomerAsync(IWMSDbContext context, IReadOnlyCollection<int> customerIds, CancellationToken cancellationToken)
+        {
+            if (customerIds.Count == 0)
+                return new Dictionary<int, decimal>();
+
+            var rows = await context.PaymentDetails.AsNoTracking()
+                .Where(x => x.Type == PaymentTypeEnum.CHECK
+                            && x.Direction == PaymentDirectionEnum.IN
+                            && x.VoidedAt == null
+                            && (x.CheckStatus == PaymentCheckStatusEnum.PENDING || x.CheckStatus == PaymentCheckStatusEnum.ENDORSED))
+                .Select(x => new { CustomerId = x.CustomerId ?? (x.SaleId != null ? (int?)x.Sale!.CustomerId : null), x.Amount })
+                .Where(x => x.CustomerId != null && customerIds.Contains(x.CustomerId.Value))
+                .GroupBy(x => x.CustomerId!.Value)
+                .Select(g => new { CustomerId = g.Key, Total = g.Sum(x => x.Amount) })
+                .ToListAsync(cancellationToken);
+            return rows.ToDictionary(x => x.CustomerId, x => x.Total);
+        }
+
         private static IQueryable<PaymentDetail> UnclearedChequesQuery(IWMSDbContext context, int customerId) =>
             context.PaymentDetails.AsNoTracking().Where(x =>
                 x.Type == PaymentTypeEnum.CHECK

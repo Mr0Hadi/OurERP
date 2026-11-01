@@ -743,12 +743,17 @@ Authorization: Bearer {accessToken}
 خاموش کنید. این بررسی در `WMSDbContext.SaveChangesAsync` است، پس هیچ endpointی آن را جا نمی‌اندازد. ابطال پرداخت، برگشت چک و
 مانده‌ی اول دوره اصلاحِ واقعیت‌اند و رد نمی‌شوند.
 
-**پاسخ رد:** ۴۰۰ با پیام فارسیِ کامل (سقف، بدهی فعلی، افزایش، مازاد) و `data`:
+**پاسخ رد:** ۴۰۰ با پیام فارسیِ کامل (سقف، بدهی فعلی، افزایش، مازاد). بدنه‌ی خطا را `ExceptionHandlingMiddleware` با
+`System.Text.Json` بدونِ camelCase می‌نویسد، پس **کلیدها PascalCase‌اند** (مثلِ همه‌ی پاسخ‌های خطا):
 ```json
-{ "creditLimitExceeded": true, "customerId": 7, "customerName": "علی رضایی", "creditLimit": 5000,
-  "currentExposure": 0, "unclearedCheques": 0, "addedAmount": 8000, "exposure": 8000, "excess": 3000 }
+{ "Message": "این فروش از سقف اعتبار «علی رضایی» بیشتر است. ...", "ResponseMessageType": "Danger",
+  "Data": { "CreditLimitExceeded": true, "CustomerId": 7, "CustomerName": "علی رضایی", "CreditLimit": 5000,
+            "CurrentExposure": 0, "UnclearedCheques": 0, "AddedAmount": 8000, "Exposure": 8000, "Excess": 3000 } }
 ```
 هیچ چیزی از آن درخواست ذخیره نمی‌شود (پیش‌فاکتور پیش‌فاکتور می‌ماند).
+
+`GetCustomerList` هم روی هر ردیف `creditLimit`، `creditExposure` و `creditAvailable` دارد (چک‌های وصول‌نشده‌ی کلِ صفحه با یک
+پرس‌وجو)، برای نشانِ «بالای سقف» در فهرست.
 
 `GetCustomerDetail` حالا `creditLimit` را nullable می‌فرستد (قبلاً `null` را `0` نشان می‌داد) و `creditExposure`،
 `unclearedCheques` و `creditAvailable` (= سقف − بدهی مؤثر، منفی یعنی بالای سقف، `null` بی‌سقف) دارد.

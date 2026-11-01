@@ -2423,7 +2423,9 @@ claim `UnitPrice` is the line's untaxed unit price). Provisional - the user may 
   decision: raise/clear the limit or switch the setting off. Voids, bounces and opening balances are never blocked.
 - `CreditLimit`: null = no limit, 0 = cash only. Migration `20261101133936_credit-limit-zero-to-null` turns every stored 0 into
   null (the frontend used to send 0 for an empty field). `CustomerDto.CreditLimit` is now nullable; detail adds `CreditExposure`,
-  `UnclearedCheques`, `CreditAvailable` (`CreditLimitGuard.SavedExposureAsync`).
+  `UnclearedCheques`, `CreditAvailable` (`CreditLimitGuard.SavedExposureAsync`); `CustomerListDto` gained `CreditLimit`,
+  `CreditExposure`, `CreditAvailable` (page-wide cheque sums via `UnclearedChequesByCustomerAsync`).
+- The refusal body is PascalCase (`Data.CreditLimitExceeded`), as every error body is. Frontend tasks: `Frontend/FEATURE-GAPS.fa.md` GAP-06.
 - Setting `Sale.CreditLimitEnforced` (BOOLEAN, default true, public).
 - Tests: `Integration/CreditLimitTests.cs`.
 

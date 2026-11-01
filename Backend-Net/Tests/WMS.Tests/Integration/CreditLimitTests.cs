@@ -143,6 +143,13 @@ namespace WMS.Tests.Integration
                 Assert.Equal(4_000, exposure.UnclearedCheques);
             }
 
+            // The list reads the same cheques (GetCustomerList's creditExposure).
+            using (var verify = db.NewContext())
+            {
+                var cheques = await CreditLimitGuard.UnclearedChequesByCustomerAsync(verify, new[] { first.Customer.Id }, Ct);
+                Assert.Equal(4_000, cheques[first.Customer.Id]);
+            }
+
             // 2,000 more on credit: 4,000 (cheque) + 2,000 > 5,000.
             var second = NextProforma(scope, first, total: 3_000);
             var error = await Assert.ThrowsAsync<ValidationCustomException>(() => Pay(mediator, second.Sale.Id, 1_000));

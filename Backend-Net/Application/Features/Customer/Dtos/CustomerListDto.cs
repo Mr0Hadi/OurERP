@@ -15,5 +15,14 @@ namespace Application.Features.Customer.Dtos
         /// payment and on-account return settlement since the ledger started. Unlike Balance/BalanceType, which are typed by hand.
         /// </summary>
         public decimal LedgerBalance { get; set; }
+
+        /// <summary>Null = no limit; 0 = cash only (GAP-06).</summary>
+        public UInt64? CreditLimit { get; set; }
+
+        /// <summary>LedgerBalance + received cheques not cleared yet - what the credit limit is checked against.</summary>
+        public decimal CreditExposure { get; set; }
+
+        /// <summary>CreditLimit - CreditExposure (negative = over the limit). Null when there is no limit.</summary>
+        public decimal? CreditAvailable { get; set; }
     }
 }
