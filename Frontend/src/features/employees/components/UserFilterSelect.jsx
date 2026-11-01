@@ -1,31 +1,27 @@
 import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { useAllUsersQuery } from "../services/queries";
-import { MAX_PAGE_SIZE } from "@/shared/services/api/contract";
+import { useUserOptionsQuery } from "../services/queries";
 
-const ALL_ROWS = { take: MAX_PAGE_SIZE };
 const NO_USERS = [];
 
-const nameOf = (user) => `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.username || "بدون نام";
+const labelOf = (user) => `${user.fullName || "بدون نام"}${user.isActive ? "" : " · غیرفعال"}`;
 
 /**
- * انتخابِ کارمندِ ثبت‌کننده (فروشنده، کارمندِ خرید، ثبت‌کننده‌ی پرداخت). کارمندانِ غیرفعال هم
- * هستند: سندهای قدیمی‌شان هنوز در دفترند. فهرست به `UserView` بسته است؛ بی آن خالی می‌ماند و
- * بقیه‌ی فیلترها کار می‌کنند.
+ * انتخابِ کارمندِ ثبت‌کننده (فروشنده، کارمندِ خرید، ثبت‌کننده‌ی پرداخت). کارمندانِ غیرفعال هم هستند: سندهای
+ * قدیمی‌شان هنوز در دفترند. فهرستِ سبکِ `GetUserOptions` برای هر کاربرِ واردشده باز است (۲۱.۴).
  */
 export default function UserFilterSelect({ label, value, onSelect }) {
-  const { data, isLoading } = useAllUsersQuery(ALL_ROWS, { retry: false });
-  const users = data?.userList ?? NO_USERS;
+  const { data, isLoading } = useUserOptionsQuery({ includeInactive: true });
 
   return (
     <EntitySelect
       label={label}
       placeholder="همه"
       emptyText="کارمندی یافت نشد"
-      items={users}
+      items={data ?? NO_USERS}
       value={value}
       onSelect={onSelect}
       isLoading={isLoading}
-      getLabel={nameOf}
+      getLabel={labelOf}
     />
   );
 }

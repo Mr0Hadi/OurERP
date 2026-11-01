@@ -1,9 +1,11 @@
-import { useQueries, useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import {
   fetchSaleReport,
   fetchPurchaseReport,
   fetchScopePerformance,
   fetchQueueCount,
+  fetchMyDashboardLayout,
+  saveMyDashboardLayout,
 } from "./api-v1";
 import { reportKeys, dashboardKeys } from "./queryKeys";
 
@@ -109,5 +111,25 @@ export function useQueueCountsQuery(queues) {
       isError: own.some((e) => e.result.isError),
       refetch: () => own.forEach((e) => e.result.refetch()),
     };
+  });
+}
+
+/** چیدمانِ ذخیره‌شده روی سرور (رشته‌ی JSON یا `null`)؛ شکست به چیدمانِ مرورگر برمی‌گردد. */
+export function useMyDashboardLayoutQuery({ enabled = true } = {}) {
+  return useQuery({
+    queryKey: dashboardKeys.layout(),
+    queryFn: fetchMyDashboardLayout,
+    staleTime: Infinity,
+    retry: false,
+    enabled,
+  });
+}
+
+/** ذخیره‌ی چیدمان روی سرور؛ کش همان لحظه عوض می‌شود تا داشبورد منتظرِ پاسخ نماند. */
+export function useSaveDashboardLayoutMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: saveMyDashboardLayout,
+    onMutate: (layout) => queryClient.setQueryData(dashboardKeys.layout(), layout),
   });
 }

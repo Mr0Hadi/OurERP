@@ -96,3 +96,14 @@ export async function fetchQueueCount(source, status, params) {
   });
   return normalizeListResponse(data).total ?? 0;
 }
+
+/** چیدمانِ داشبوردِ کاربرِ واردشده (`GetMyDashboardLayout`): رشته‌ی JSON یا `null`. */
+export async function fetchMyDashboardLayout() {
+  const { data } = await axiosInstance.get("/User/GetMyDashboardLayout");
+  return data?.layout ?? null;
+}
+
+/** ذخیره‌ی چیدمانِ خودِ کاربر (`SaveMyDashboardLayout`، حداکثر ۴۰۰۰ نویسه)؛ `null` پاکش می‌کند. */
+export async function saveMyDashboardLayout(layout) {
+  await axiosInstance.put("/User/SaveMyDashboardLayout", { layout });
+}

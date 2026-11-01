@@ -16,7 +16,7 @@ export default function CreditInvoiceAction({ action, total, disabled }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed px-3 py-2.5">
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed px-3 py-2.5">
       <p className="text-xs text-muted-foreground">
         {action.blockedReason || "بی دریافت هم می‌شود فاکتور را صادر کرد؛ کلِ مبلغ بدهیِ مشتری می‌شود."}
       </p>

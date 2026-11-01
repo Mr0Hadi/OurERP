@@ -7,6 +7,7 @@ import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 import {
   PRODUCT_SORT_COLUMNS,
   fetchProducts,
+  fetchBrands,
   fetchProductById,
 } from "./api-v1";
 import { useProductFilterStore } from "../store/productFilterStore";
@@ -209,4 +210,16 @@ export function useDocumentProducts(productIds) {
       return { productMap, isLoading: results.some((result) => result.isLoading) };
     },
   });
+}
+
+/** پیشنهادِ برند برای فیلدِ متنیِ برند (`BrandSuggestions`)، با تأخیرِ تایپ. */
+export function useBrandOptionsQuery(search) {
+  const debounced = useDebouncedValue((search || "").trim());
+  const { data } = useQuery({
+    queryKey: productKeys.brands(debounced),
+    queryFn: () => fetchBrands(debounced),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+  });
+  return data ?? [];
 }

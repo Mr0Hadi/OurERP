@@ -13,6 +13,7 @@ import { useScanProductMutation } from "../../services/mutations";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import ProductCodeSearchField from "./ProductCodeSearchField";
 import { useVehiclesQuery } from "@/features/warehouse/vehicles/services/queries";
+import BrandSuggestions from "../BrandSuggestions";
 import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 
 // سرور فقط `isLowOnStock` دارد: «کم‌موجود» یعنی موجودی ≤ آستانه‌ی هشدار (ناموجودها هم جزوش‌اند).
@@ -112,7 +113,10 @@ export default function ProductFilters() {
           placeholder="مثلاً بوش"
           value={brand}
           onChange={(event) => setBrand(event.target.value)}
+          list="brand-filter-suggestions"
+          autoComplete="off"
         />
+        <BrandSuggestions id="brand-filter-suggestions" value={brand} />
         <CategorySelect value={productCategoryId} onSelect={setProductCategoryId} />
         <EntitySelect
           label="خودرو"

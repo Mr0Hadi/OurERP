@@ -108,7 +108,7 @@ export default function InstallmentPlanDraftCard({
             ]}
           />
           <p className="text-[11px] leading-5 text-muted-foreground">
-            پیش‌نمایش است؛ مبالغِ نهایی را سرور هنگامِ ثبت از جمعِ فاکتور حساب می‌کند
+            محاسبه‌ی خودِ سرور برای همین قرارداد؛ تا ثبت، چیزی ذخیره نمی‌شود
             {taxUnknown && " (مالیاتِ کالاهای تازه هنوز در این جمع نیست)"}.
           </p>
           {preview.installments.length > 0 && (

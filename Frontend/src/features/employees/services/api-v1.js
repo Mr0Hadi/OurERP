@@ -60,6 +60,15 @@ export async function getUserList(params = {}) {
  * توکن) و `GetUserUpdate` (یک کاربر مشخص، مخصوص پر کردن فرم ویرایش).
  * صفحه‌ی مدیریت همیشه دومی را می‌خواهد.
  */
+/**
+ * `GET GetUserOptions` — فهرستِ سبکِ کاربران برای فیلترها `[{ id, fullName, isActive }]`؛ برای هر کاربرِ واردشده،
+ * بی دسترسیِ `UserView`.
+ */
+export async function getUserOptions({ includeInactive = false } = {}) {
+  const { data } = await axiosInstance.get("/User/GetUserOptions", { params: { includeInactive } });
+  return data ?? [];
+}
+
 export async function getUserUpdate(id) {
   const { data } = await axiosInstance.get("/User/GetUserUpdate", {
     params: { id },
