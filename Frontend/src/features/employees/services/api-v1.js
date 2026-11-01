@@ -68,10 +68,8 @@ export async function getUserUpdate(id) {
 }
 
 export async function createUser(payload) {
-  // `fisrtName` غلط املایی است ولی همان چیزی است که سرور می‌پذیرد.
-  // اصلاحش اینجا یعنی نام خالی ذخیره شود.
   const { data } = await axiosInstance.post("/User/CreateUser", {
-    fisrtName: payload.fisrtName,
+    firstName: payload.firstName,
     lastName: payload.lastName,
     username: payload.username,
     password: payload.password,

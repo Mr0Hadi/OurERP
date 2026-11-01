@@ -257,7 +257,7 @@ export const navigationData = {
       ],
     },
     {
-      // مشتری و تامین‌کننده هر دو «طرف‌حساب» هستند. (نیاز به یک ROUTES.PARTIES یا استفاده از ROUTES.CUSTOMERS)
+      // مشتری و تامین‌کننده هر دو «طرف‌حساب» هستند؛ مسیرِ گروه همان فهرستِ مشتریان است.
       title: "اشخاص",
       url: ROUTES.CUSTOMERS,
       icon: Users,

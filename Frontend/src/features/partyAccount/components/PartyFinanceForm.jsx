@@ -63,6 +63,9 @@ export default function PartyFinanceForm({ errors, balanceType, control, side })
           />
         )}
       </div>
+      <p className="text-xs text-muted-foreground">
+        این مبلغ در گردش حساب ردیفِ «مانده‌ی اول دوره» است؛ ویرایشِ آن فقط تفاوت را ثبت می‌کند.
+      </p>
 
       {side === "customer" && (
         <FormPriceField name="creditLimit" control={control} label="سقف اعتبار (ریال)" icon={ShieldCheck} />

@@ -13,6 +13,10 @@ export const PartyLedgerEntryTypeEnum = Object.freeze({
   /** ردیفی که ردیفِ دیگری را پس می‌گیرد (لغوِ فاکتور، ابطالِ پرداخت). */
   REVERSAL: 7,
   PURCHASE_SHORT_CLOSE: 8,
+  /** جریمه‌ی دیرکردِ قسط؛ همراهِ پرداختِ همان قسط ثبت می‌شود. */
+  LATE_PENALTY: 9,
+  /** مانده‌ی دستیِ مشتری/تامین‌کننده؛ ویرایشِ مانده تفاوت را با همین نوع می‌نویسد. */
+  OPENING_BALANCE: 10,
 });
 
 export const PARTY_LEDGER_ENTRY_TYPE_LABELS = Object.freeze({
@@ -24,6 +28,8 @@ export const PARTY_LEDGER_ENTRY_TYPE_LABELS = Object.freeze({
   [PartyLedgerEntryTypeEnum.RETURN_SETTLEMENT]: "تسویه‌ی مرجوعی",
   [PartyLedgerEntryTypeEnum.REVERSAL]: "برگشت",
   [PartyLedgerEntryTypeEnum.PURCHASE_SHORT_CLOSE]: "کسریِ خرید",
+  [PartyLedgerEntryTypeEnum.LATE_PENALTY]: "جریمه‌ی دیرکرد",
+  [PartyLedgerEntryTypeEnum.OPENING_BALANCE]: "مانده‌ی اول دوره",
 });
 
 /** جهتِ ردیف: بدهکار یعنی طرف به ما بدهکارتر شد، بستانکار یعنی برعکس. */

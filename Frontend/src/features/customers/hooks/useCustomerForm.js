@@ -14,7 +14,7 @@ import { useImageUpload } from "@/shared/hooks/useImageUpload";
  * ۱. `phone` → سرور `PhoneNumber` می‌خواند. **شماره تماس مشتری اصلاً
  *    ذخیره نمی‌شد** — و این تنها راه تماس با مشتری است.
  * ۲. `lat`/`lng` → سرور `Latitude`/`Longitude` می‌خواند.
- * ۳. `referralCode` → ستون در بکند `RefferalCode` است (با غلط املایی).
+ * ۳. `referralCode` → سرور تا ۲۰۲۶-۱۰-۳۰ `RefferalCode` (با غلط املایی) می‌خواند.
  * ۴. پنج فیلدِ سرور اصلاً در فرم نبودند: کد اقتصادی، شناسه ملی، شماره
  *    ثبت، استان و شهر.
  *
@@ -61,9 +61,7 @@ function buildDefaultValues(data) {
     registrationNumber: data.registrationNumber || "",
     latitude: asText(data.latitude),
     longitude: asText(data.longitude),
-    // نامِ فیلدِ فرم املای درست را دارد؛ نگاشت به املای بکند فقط در
-    // مرزِ payload انجام می‌شود (پایین‌تر).
-    referralCode: data.refferalCode || "",
+    referralCode: data.referralCode || "",
     creditLimit: asText(data.creditLimit),
     description: data.description || "",
     balanceType: data.balanceType ?? BalanceTypeEnum.BALANCED,
@@ -107,9 +105,7 @@ export function buildCustomerPayload(data, imageKey) {
     economicCode: textOrNull(data.economicCode),
     nationalId: textOrNull(data.nationalId),
     registrationNumber: textOrNull(data.registrationNumber),
-    // غلطِ املاییِ بکند (`RefferalCode`)؛ درخواستِ اصلاح: بندِ ۷.۲ سندِ
-    // frontend-requests.fa.md. بعد از آن فقط همین یک خط عوض می‌شود.
-    refferalCode: textOrNull(data.referralCode),
+    referralCode: textOrNull(data.referralCode),
     creditLimit: data.creditLimit ? Number(data.creditLimit) : 0,
     description: textOrNull(data.description),
     balance,

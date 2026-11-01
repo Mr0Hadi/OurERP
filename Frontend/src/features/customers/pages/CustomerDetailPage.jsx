@@ -15,10 +15,7 @@ import PartyAddressForm from "@/features/partyAccount/components/PartyAddressFor
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
-import {
-  openingBalanceOf,
-  partyBalanceOf,
-} from "@/features/partyAccount/domain/partyBalance";
+import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
@@ -149,13 +146,12 @@ function CustomerDetailForm({ customerData }) {
         <PartyOnAccountBar customerId={customerData.id} />
       </div>
 
-      {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی بالای فرم «مانده‌ی اولیه»ِ دستی است. */}
+      {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی دستیِ فرم ردیفِ «مانده‌ی اول دوره» در همین دفتر است. */}
       {canViewStatement && (
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
           <PartyStatementCard
             customerId={customerData.id}
             totalBalance={partyBalanceOf(customerData)}
-            openingBalance={openingBalanceOf(customerData)}
           />
         </div>
       )}
