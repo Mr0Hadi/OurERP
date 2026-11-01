@@ -2335,6 +2335,47 @@ claim `UnitPrice` is the line's untaxed unit price). Provisional - the user may 
   1051/1054 - the 3 documented environmental failures (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder). This also
   ran the 10-24 tests left unrun by the SQL hang; they pass.
 
+**Frontend requests 13 and 14: rules the frontend had copied (2026-11-01, branch `claude/dreamy-darwin-b0gk3p`).** Sections 13.1-13.5 and
+14.1-14.6 of `docs/frontend-requests.fa.md`. API: `docs/api-guide.fa.md` section 16, table "2026-11-01". No schema change, no migration.
+
+- **One function per rule, read by the command and by the flag.** `Application/Common/Documents/PurchaseDocumentRules` and `SaleDocumentRules`
+  return the Persian refusal or null for delete, status change (`StatusChangeBlocker` + `AllowedStatuses`), create-return, and (purchase) close /
+  reopen a line. `DeletePurchase`/`DeleteSale`, `ChangePurchaseStatus`/`ChangeSaleStatus`, `Close`/`ReopenPurchaseItem` and both `Create*Return`
+  throw them; `PurchaseDetailReader`/`SaleDetailReader` turn them into `canDelete`/`canCancel`/`allowedStatuses`/`canCreateReturn` (+
+  `items[].canClose/canReopen`). `SaleProformaPipeline.ReadyForPaymentBlocker` is the non-throwing half of `EnsureReadyForPayment`. The readers
+  rebuild the few entity facts the rules read (sale: a throwaway `Sale` with status/stage/reservation/shipped quantities; purchase: payment rows
+  through the same `DocumentPayments.NetPaid`) rather than duplicating the conditions.
+- **Behaviour change:** `CreatePurchaseReturn` now refuses a purchase where nothing arrived (no line `ReceivedQuantity`, no `ProductUnit` with
+  this `PurchaseId`) with its own message - before, such a request failed on a quota with a less useful one. It runs after the claim-shape checks,
+  so a claim naming a wrong line still gets that error. `PurchaseDocumentRules.IsReturnable` is the SQL twin, behind `GetPurchaseList?returnable=true`
+  (sale: `SaleDocumentRules.IsReturnable` = the three shipped statuses, the set `CreateSaleReturn` used to keep privately).
+- **13.2 optimistic concurrency** is the existing `UpdatedAt`, not a rowversion: `UpdatePurchase`/`UpdateSale` take an optional `UpdatedAt`,
+  `DocumentVersion.Ensure` compares to the millisecond (a JS `Date` keeps no more) and throws the new `ConflictCustomException` (409, `data.updatedAt`).
+  Null skips the check, so old clients keep working. `PurchaseDto.UpdatedAt` is new (`SaleDto` had it).
+- **13.4 preview.** `{Purchase,Sale}ResolutionChecks.PrepareAsync` (in the two `AddClaimResolutionCommand.cs` files) holds every check and the
+  expansion `AddClaimResolution` ran before mutating; the command and `PreviewClaimResolutionQuery` (`POST *Return/PreviewResolution`, named
+  *Query so it carries no audit action) both call it. The preview runs the command's validator itself (no validator is registered for the query,
+  so `ValidationBehavior` cannot turn a refusal into a 400), maps FluentValidation paths to `goods[0].quantity`, and catches
+  `ValidationCustomException` from the handler checks as a `field = null` error. Nothing is saved; the tracked graph is discarded with the scope.
+  `ResolutionPreviewDto`/`ResolutionPreview` live in `Application/Common/Dtos/Returns` and `Application/Common/Returns`.
+- **14.4** `PurchaseResolutionChecks.FreeQuarantineAsync` is the quarantine availability the decision check uses, now also behind
+  `claims[].freeQuarantinedQuantity`. **14.3** `ReturnLifecycleRules.ResolutionRemoveBlocker` (both `RemoveClaimResolution`s + `resolutions[].canRemove`)
+  and `CreditNoteBlocker` (`InvoiceDocumentBuilder.SaleReturnCreditNoteAsync` + `canPrintCreditNote`); `lifecycleBlocker` is
+  `GetLifecycleBlocker(CANCEL)`. **14.5** `PendingWarehouseWorkDto.Of` sums PENDING goods effects' remaining quantity, zero once the return is not open.
+- **14.1** `OtherReturnClaimDto` on receiving-info lines/unlisted rows and `SaleItemDto`: claims of live (not deleted, not rejected/cancelled)
+  returns. **14.6** `GetPurchaseReceivingInfo.SuggestedClaims` is built from the same free numbers the response already carries, problem = the most
+  frequent recorded discrepancy; a test feeds it straight back into `CreatePurchaseReturn`.
+- **13.5** `GetProductList.Search`: OR over name words, code, barcode and a scanned code/unit barcode (`IProductCodeService.Parse`, now injected
+  into the handler - tests construct it with `scope.ProductCodeService`); exact matches lead unless `SortBy` is sent (`ProductListDto.IsExactMatch`).
+  The export path calls `ApplyFiltersAsync` without the code service, so there `Search` skips the scanned-unit match. **14.2** `GetSaleList.Search`
+  (`GetPurchaseList.Search` already existed).
+- **Environment note:** built and tested on Linux with the Ubuntu `dotnet-sdk-10.0` package and SQL Server 2022 in Docker. Two local-only edits
+  were needed and are **not committed**: `builder.Services.Configure<IISServerOptions>` in `WMS/Program.cs` does not compile against the Linux
+  ASP.NET ref pack, and the test fixtures' `Server=.;Trusted_Connection` was pointed at `localhost` with SQL auth.
+- **Tests:** `Integration/FrontendRequests13And14Tests.cs` (14); `GetProductListQueryHandler` call sites in four test files gained the code
+  service. **Verified:** build clean, suite 1067/1068 - the one failure is the long-documented `"***"` object-storage placeholder (the two
+  LibreOffice `InvoicePdfTests` pass on this machine). Baseline before the change: 1053/1054, same failure.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.

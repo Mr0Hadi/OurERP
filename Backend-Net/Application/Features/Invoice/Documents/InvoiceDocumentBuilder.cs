@@ -110,8 +110,9 @@ namespace Application.Features.Invoice.Documents
                 .Where(x => x.effect.Direction == ReturnEffectDirectionEnum.MONEY_OUT)
                 .ToList();
 
-            if (settledEffects.Count == 0)
-                throw new ValidationCustomException("این مرجوعی هیچ اثر مالی (استرداد وجه) ندارد.");
+            var creditNoteBlocker = Application.Common.Returns.ReturnLifecycleRules.CreditNoteBlocker(settledEffects.Select(x => x.effect.Direction));
+            if (creditNoteBlocker != null)
+                throw new ValidationCustomException(creditNoteBlocker);
 
             var lines = settledEffects.Select((x, index) =>
             {

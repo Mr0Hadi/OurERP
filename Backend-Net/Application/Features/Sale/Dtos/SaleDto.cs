@@ -73,6 +73,19 @@ namespace Application.Features.Sale.Dtos
         public List<SaleDriverDto> Drivers { get; set; } = new();
         public List<SaleShippingNoteDto> ShippingNotes { get; set; } = new();
         public List<DocumentAttachmentDto> Attachments { get; set; } = new();
+
+        // What the server allows now (SaleDocumentRules, the same calls the commands make; frontend-requests 13.1).
+        /// <summary>DeleteSale: a proforma with no installment plan.</summary>
+        public bool CanDelete { get; set; }
+        /// <summary>ChangeSaleStatus to CANCELLED: nothing shipped, no active installment plan.</summary>
+        public bool CanCancel { get; set; }
+        /// <summary>
+        /// The other ChangeSaleStatus targets accepted now: PROCESSING (issue a credit invoice on a warehouse-checked proforma
+        /// whose reservation holds) and DELIVERED (once SHIPPED). CANCELLED and the current status excluded.
+        /// </summary>
+        public List<SalesStatusEnum> AllowedStatuses { get; set; } = new();
+        /// <summary>CreateSaleReturn: something has left for the customer.</summary>
+        public bool CanCreateReturn { get; set; }
     }
 
     public class SaleDriverDto

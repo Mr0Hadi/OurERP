@@ -126,51 +126,7 @@ namespace Application.Features.SaleReturn.Commands
         {
             var res = new ResponseDto();
 
-            var saleReturn = await _context.SaleReturns.Where(x => x.Claims.Any(c => c.Id == request.ClaimId))
-                .WhereNotDeleted()
-                .WithReturnGraph()
-                .WithSaleItems()
-                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
-
-            if (_saleReturnCalculationService.IsTerminal(saleReturn.Status) || saleReturn.Status == ReturnStatusEnum.SETTLED)
-                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(saleReturn.Status));
-
-            var claim = saleReturn.Claims.First(x => x.Id == request.ClaimId);
-
-            if (request.Composition.Quantity > claim.RemainingQuantity)
-                throw new ValidationCustomException("مقدار تصمیم از باقیمانده ادعا بیشتر است.");
-
-            var now = DateTime.Now;
-            var effects = _saleReturnCalculationService.ExpandComposition(request.Composition, now);
-            await ReturnMoneyAccounts.EnsureAsync(_context, effects.Where(e => ReturnEffectDirections.IsMoney(e.Direction))
-                .SelectMany(e => ReturnMoneyAccounts.Of(e.Method, e.BankAccountId, e.Status == ReturnEffectStatusEnum.APPLIED, e.MoneyParts.Select(p => (p.Method, p.BankAccountId))))
-                .ToList(), cancellationToken);
-
-            // ProductId defaults to the claim's own product and is resolved once, here, so every
-            // later reader (ExecuteGoodsRound, the read DTOs) sees a non-null value and none of them
-            // has to re-apply the default.
-            foreach (var effect in effects)
-            {
-                if (ReturnEffectDirections.IsGoods(effect.Direction))
-                    effect.ProductId ??= claim.ProductId;
-            }
-
-            // A product id that does not exist used to go unchecked and only surface as a NotFound at
-            // the goods round - at the warehouse, long after the decision was accepted.
-            var overriddenProductIds = effects
-                .Where(e => e.ProductId.HasValue && e.ProductId.Value != claim.ProductId)
-                .Select(e => e.ProductId!.Value)
-                .Distinct()
-                .ToList();
-
-            if (overriddenProductIds.Count > 0)
-            {
-                var foundCount = await _context.Products
-                    .CountAsync(p => overriddenProductIds.Contains(p.Id), cancellationToken);
-
-                if (foundCount != overriddenProductIds.Count)
-                    throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
-            }
+            var (saleReturn, claim, effects, now) = await SaleResolutionChecks.PrepareAsync(_context, _saleReturnCalculationService, request, cancellationToken);
 
             // Every check above runs before anything below touches tracked state or the cost ledger,
             // so a refused request leaves the loaded graph exactly as it was read.
@@ -216,6 +172,65 @@ namespace Application.Features.SaleReturn.Commands
             res.Message = "تصمیم با موفقیت ثبت شد.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
+        }
+    }
+
+    /// <summary>
+    /// Everything AddClaimResolution checks before it touches tracked state or the cost ledger, on its own so
+    /// PreviewResolution (frontend-requests 13.4) runs exactly the same checks and expansion without saving.
+    /// </summary>
+    public static class SaleResolutionChecks
+    {
+        public static async Task<(Domain.Entities.SaleReturn SaleReturn, Domain.Entities.SaleReturnClaim Claim, List<Domain.Entities.SaleReturnEffect> Effects, DateTime Now)> PrepareAsync(
+            IWMSDbContext context, ISaleReturnCalculationService calc, AddClaimResolutionCommand request, CancellationToken cancellationToken)
+        {
+            var saleReturn = await context.SaleReturns.Where(x => x.Claims.Any(c => c.Id == request.ClaimId))
+                .WhereNotDeleted()
+                .WithReturnGraph()
+                .WithSaleItems()
+                .FirstOrDefaultAsync(cancellationToken) ?? throw new NotFoundCustomException("مرجوعی مورد نظر یافت نشد.");
+
+            if (calc.IsTerminal(saleReturn.Status) || saleReturn.Status == ReturnStatusEnum.SETTLED)
+                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(saleReturn.Status));
+
+            var claim = saleReturn.Claims.First(x => x.Id == request.ClaimId);
+
+            if (request.Composition.Quantity > claim.RemainingQuantity)
+                throw new ValidationCustomException("مقدار تصمیم از باقیمانده ادعا بیشتر است.");
+
+            var now = DateTime.Now;
+            var effects = calc.ExpandComposition(request.Composition, now);
+            await ReturnMoneyAccounts.EnsureAsync(context, effects.Where(e => ReturnEffectDirections.IsMoney(e.Direction))
+                .SelectMany(e => ReturnMoneyAccounts.Of(e.Method, e.BankAccountId, e.Status == ReturnEffectStatusEnum.APPLIED, e.MoneyParts.Select(p => (p.Method, p.BankAccountId))))
+                .ToList(), cancellationToken);
+
+            // ProductId defaults to the claim's own product and is resolved once, here, so every
+            // later reader (ExecuteGoodsRound, the read DTOs) sees a non-null value and none of them
+            // has to re-apply the default.
+            foreach (var effect in effects)
+            {
+                if (ReturnEffectDirections.IsGoods(effect.Direction))
+                    effect.ProductId ??= claim.ProductId;
+            }
+
+            // A product id that does not exist used to go unchecked and only surface as a NotFound at
+            // the goods round - at the warehouse, long after the decision was accepted.
+            var overriddenProductIds = effects
+                .Where(e => e.ProductId.HasValue && e.ProductId.Value != claim.ProductId)
+                .Select(e => e.ProductId!.Value)
+                .Distinct()
+                .ToList();
+
+            if (overriddenProductIds.Count > 0)
+            {
+                var foundCount = await context.Products
+                    .CountAsync(p => overriddenProductIds.Contains(p.Id), cancellationToken);
+
+                if (foundCount != overriddenProductIds.Count)
+                    throw new ValidationCustomException("کالای انتخاب‌شده برای اثر یافت نشد.");
+            }
+
+            return (saleReturn, claim, effects, now);
         }
     }
 }

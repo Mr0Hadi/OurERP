@@ -65,14 +65,14 @@ namespace Application.Features.PurchaseReturn.Commands
             // No SETTLED gate here (unlike Add/lifecycle commands): a money-only resolution can
             // settle the return immediately with nothing physically moved yet, and removing it must
             // stay legal in that case - the frontend's only rule is "no goods effect has AppliedQuantity > 0".
-            if (_purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status))
-                throw new ValidationCustomException(ReturnLifecycleRules.NotEditableMessage(purchaseReturn.Status));
 
             var claim = purchaseReturn.Claims.First(c => c.Resolutions.Any(r => r.Id == request.Id));
             var resolution = claim.Resolutions.First(r => r.Id == request.Id);
 
-            if (resolution.Effects.Any(e => ReturnEffectDirections.IsGoods(e.Direction) && e.AppliedQuantity > 0))
-                throw new ValidationCustomException("بخشی از کالای این تصمیم جابه‌جا شده و دیگر قابل لغو نیست.");
+            var blocker = ReturnLifecycleRules.ResolutionRemoveBlocker(purchaseReturn.Status, _purchaseReturnCalculationService.IsTerminal(purchaseReturn.Status),
+                resolution.Effects.Select(e => (e.Direction, e.AppliedQuantity)));
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
             // Fully-settled resolutions (no PENDING effect) already bumped SettledQuantity when
             // they were created - roll that back since nothing has physically moved yet.

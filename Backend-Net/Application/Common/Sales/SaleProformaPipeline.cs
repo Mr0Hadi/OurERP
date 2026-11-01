@@ -29,13 +29,22 @@ namespace Application.Common.Sales
         /// </summary>
         public static void EnsureReadyForPayment(Sale sale)
         {
+            var blocker = ReadyForPaymentBlocker(sale, DateTime.Now);
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
+        }
+
+        /// <summary>The reason <see cref="EnsureReadyForPayment"/> refuses, or null; also read by SaleDocumentRules for allowedStatuses.</summary>
+        public static string? ReadyForPaymentBlocker(Sale sale, DateTime now)
+        {
             if (sale.Status != SalesStatusEnum.PROFORMA)
-                return;
+                return null;
 
             if (sale.ProformaStage != SaleProformaStageEnum.WAREHOUSE_CHECKED)
-                throw new ValidationCustomException("پیش‌فاکتور هنوز تأیید مشتری و انبار را نگرفته است؛ تا پیش از آن پرداختی پذیرفته نمی‌شود.");
-            if (IsReservationExpired(sale, DateTime.Now))
-                throw new ValidationCustomException("مهلت رزرو کالای این پیش‌فاکتور تمام شده است؛ انبار باید کالا را دوباره بررسی و رزرو کند.");
+                return "پیش‌فاکتور هنوز تأیید مشتری و انبار را نگرفته است؛ تا پیش از آن پرداختی پذیرفته نمی‌شود.";
+            if (IsReservationExpired(sale, now))
+                return "مهلت رزرو کالای این پیش‌فاکتور تمام شده است؛ انبار باید کالا را دوباره بررسی و رزرو کند.";
+            return null;
         }
 
         /// <summary>The deadline of a reservation made at <paramref name="reservedAt"/>; null (never expires) when the setting is 0.</summary>

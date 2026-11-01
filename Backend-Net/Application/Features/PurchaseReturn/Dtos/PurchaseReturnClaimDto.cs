@@ -20,6 +20,11 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string? Note { get; set; }
         public int DecidedQuantity { get; set; }
         public int RemainingQuantity { get; set; }
+        /// <summary>
+        /// Units of the claim's product free in its quarantine group for a new release, scrap or return-from-quarantine: held,
+        /// minus what other decisions on the purchase's open returns reserve - the number AddClaimResolution checks (14.4).
+        /// </summary>
+        public int FreeQuarantinedQuantity { get; set; }
         public List<PurchaseReturnResolutionDto> Resolutions { get; set; } = new();
     }
 }

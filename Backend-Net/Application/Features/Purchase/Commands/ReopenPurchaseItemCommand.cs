@@ -11,6 +11,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Application.Common.Audit;
+using Application.Common.Documents;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -50,11 +51,9 @@ namespace Application.Features.Purchase.Commands
             var purchase = await PurchaseItemLines.LoadPurchaseAsync(_context, request.PurchaseItemId, cancellationToken);
             var item = purchase.Items.First(x => x.Id == request.PurchaseItemId);
 
-            if (purchase.Status == PurchaseStatusEnum.CANCELLED)
-                throw new ValidationCustomException("قلمِ خرید لغوشده قابل بازگشایی نیست.");
-
-            if (item.ShortClosedQuantity == 0)
-                throw new ValidationCustomException("این قلم بسته نشده است.");
+            var blocker = PurchaseDocumentRules.ReopenItemBlocker(purchase.Status, item.ShortClosedQuantity);
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
             var now = DateTime.Now;
             item.ShortClosedQuantity = 0;
