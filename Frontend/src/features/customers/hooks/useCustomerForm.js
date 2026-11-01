@@ -110,7 +110,8 @@ export function buildCustomerPayload(data, imageKey) {
     // غلطِ املاییِ بکند (`RefferalCode`)؛ درخواستِ اصلاح: بندِ ۷.۲ سندِ
     // frontend-requests.fa.md. بعد از آن فقط همین یک خط عوض می‌شود.
     refferalCode: textOrNull(data.referralCode),
-    creditLimit: data.creditLimit ? Number(data.creditLimit) : 0,
+    // خالی = بی‌سقف (`null`)؛ صفر = فقط فروشِ نقدی — سرور سقف را اعمال می‌کند (GAP-06).
+    creditLimit: numberOrNull(data.creditLimit),
     description: textOrNull(data.description),
     balance,
     balanceType,

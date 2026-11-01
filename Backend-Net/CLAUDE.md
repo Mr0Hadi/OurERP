@@ -2413,6 +2413,22 @@ claim `UnitPrice` is the line's untaxed unit price). Provisional - the user may 
 - **Seed data available**: `scripts/seed-mock-data.sql` loads the frontend's mock fixtures (products, customers, suppliers, purchases, sales, and a coherent set of both kinds of return) into a migrated DB. It refuses to run against non-empty tables unless `@ResetExisting = 1`. Validated end-to-end against a throwaway migrated database.
 - **`SalesStatusEnum.RETURNED` is now reachable** (unlike its still-dead `PurchaseStatusEnum.RETURNED` counterpart) — `RecomputeSaleStatus` sets it once every shipped unit of a sale is settled through return decisions.
 
+**Customer credit limit - GAP-06 (2026-11-01, branch `claude/relaxed-einstein-ejm3yf`).** API: `docs/api-guide.fa.md` section 4
+("سقف اعتبار") and the settings table in section 22.
+- `Application/Common/Credit/CreditLimitGuard.EnsureAsync`, called by `WMSDbContext.SaveChangesAsync` on every save (after the
+  payment stamping, before audit capture) - so no command can skip it. Triggered only by a staged customer DEBIT of type
+  `SALE_INVOICE` or `INSTALLMENT_CHARGE`. Exposure = ledger balance + received cheques PENDING/ENDORSED (saved rows, plus the
+  save's staged ledger rows and cheque changes). Refused (`ValidationCustomException`, Data `CreditLimitExceededDto`) when the
+  setting is on, `CreditLimit` is not null, and exposure after > limit AND > before. No override permission, by the user's
+  decision: raise/clear the limit or switch the setting off. Voids, bounces and opening balances are never blocked.
+- `CreditLimit`: null = no limit, 0 = cash only. Migration `20261101133936_credit-limit-zero-to-null` turns every stored 0 into
+  null (the frontend used to send 0 for an empty field). `CustomerDto.CreditLimit` is now nullable; detail adds `CreditExposure`,
+  `UnclearedCheques`, `CreditAvailable` (`CreditLimitGuard.SavedExposureAsync`); `CustomerListDto` gained `CreditLimit`,
+  `CreditExposure`, `CreditAvailable` (page-wide cheque sums via `UnclearedChequesByCustomerAsync`).
+- The refusal body is PascalCase (`Data.CreditLimitExceeded`), as every error body is. Frontend tasks: `Frontend/FEATURE-GAPS.fa.md` GAP-06.
+- Setting `Sale.CreditLimitEnforced` (BOOLEAN, default true, public).
+- Tests: `Integration/CreditLimitTests.cs`.
+
 ## 6b. System settings and feature toggles - the standing rule
 
 Agreed with the user 2026-10-19; applies to every setting and every feature switch added from now on.

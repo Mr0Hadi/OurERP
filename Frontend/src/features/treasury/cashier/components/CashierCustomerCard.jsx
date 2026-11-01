@@ -50,9 +50,13 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
   }
 
   const balance = partyBalanceOf(customer);
+  // `null` = بی‌سقف؛ صفر = فقط نقدی (GAP-06).
+  const hasLimit = customer.creditLimit != null;
   const creditLimit = Number(customer.creditLimit) || 0;
+  // بدهیِ مؤثر از سرور: مانده + چک‌های وصول‌نشده (اقساطِ باقی در مانده هست).
+  const exposure = customer.creditExposure ?? Math.max(0, balance);
   // اعتبارِ مانده اگر همین فروش کامل نسیه بماند.
-  const creditLeft = creditLimit > 0 ? creditLimit - Math.max(0, balance) - (Number(saleTotal) || 0) : null;
+  const creditLeft = hasLimit ? creditLimit - Math.max(0, Number(exposure)) - (Number(saleTotal) || 0) : null;
   const place = [customer.province, customer.city].filter(Boolean).join("، ");
   // ستونِ کناری باریک است: ردیفِ «برچسب / مقدار».
 
@@ -77,7 +81,7 @@ export default function CashierCustomerCard({ customerId, customerName, saleTota
         <InfoRow label="مانده‌ی حساب" value={<LedgerBalanceBadge balance={balance} />} />
         <InfoRow
           label="سقفِ اعتبار"
-          value={creditLimit > 0 ? formatRial(creditLimit) : "تعریف نشده"}
+          value={!hasLimit ? "تعریف نشده" : creditLimit === 0 ? "فقط نقدی" : formatRial(creditLimit)}
           valueClassName="font-medium"
         />
         <InfoRow
