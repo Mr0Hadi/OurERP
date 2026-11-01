@@ -63,6 +63,9 @@ namespace Infrastructure.Persistence
 
             ClearEmptyDates();
 
+            // Customer credit limit (GAP-06): here, so no command can issue credit past a limit by not asking.
+            await Application.Common.Credit.CreditLimitGuard.EnsureAsync(this, cancellationToken);
+
             var recorder = AuditRecorder.Capture(this);
 
             // Without accepting, the saved rows stay Added/Modified and the audit save would write them a second time.
