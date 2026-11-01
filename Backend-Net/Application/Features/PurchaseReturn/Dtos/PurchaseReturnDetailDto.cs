@@ -29,6 +29,13 @@ namespace Application.Features.PurchaseReturn.Dtos
         public bool CanCancel { get; set; }
         public bool CanReject { get; set; }
         public bool CanReopen { get; set; }
+        /// <summary>
+        /// Why Cancel is refused now (ReturnLifecycleRules.GetBlocker), null when it is allowed - show it when no lifecycle
+        /// button is offered (frontend-requests 14.3).
+        /// </summary>
+        public string? LifecycleBlocker { get; set; }
+        /// <summary>Remaining quantity of pending goods effects by direction (frontend-requests 14.5).</summary>
+        public Application.Common.Dtos.Returns.PendingWarehouseWorkDto PendingWarehouseWork { get; set; } = new();
         public List<PurchaseReturnClaimDto> Claims { get; set; } = new();
 
         /// <summary>Supplier/customer receipts, photos of the goods - replaced wholesale by Update*ReturnAttachments.</summary>

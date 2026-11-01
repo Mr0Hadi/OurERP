@@ -3725,6 +3725,29 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
 
+### تغییرات قرارداد — ۲۰۲۶-۱۱-۰۱ (درخواست‌های فرانت: بخش‌های ۱۳ و ۱۴ — قاعده‌هایی که فرانت از سرور کپی کرده بود)
+
+همه‌ی پرچم‌ها با **همان تابعی** ساخته می‌شوند که دستورِ مربوط هنگامِ اجرا چک می‌کند (`PurchaseDocumentRules`، `SaleDocumentRules`،
+`ReturnLifecycleRules`، `PurchaseResolutionChecks`/`SaleResolutionChecks`)، پس دکمه‌ای که سرور رد کند نشان داده نمی‌شود. هیچ‌کدام شکستنی نیست.
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `PurchaseDto` (جزئیات و پاسخِ همه‌ی نوشتن‌های خرید) | — | `updatedAt`، `canDelete`، `canCancel`، `allowedStatuses: int[]` (مقصدهای `ChangePurchaseStatus` غیر از وضعیتِ فعلی و `CANCELLED`)، `canCreateReturn` |
+| `PurchaseDto.items[]` | — | `canClose`، `canReopen` |
+| `SaleDto` (جزئیات و پاسخِ نوشتن‌ها) | — | `canDelete`، `canCancel`، `allowedStatuses: int[]` (`PROCESSING` برای صدورِ نسیه‌ی پیش‌فاکتورِ تأییدشده با رزروِ معتبر، `DELIVERED` بعد از `SHIPPED`)، `canCreateReturn` |
+| `CreatePurchaseReturn` | خریدی که هیچ کالایی‌اش نرسیده بود با خطای سقف رد می‌شد | ۴۰۰ «هنوز هیچ کالایی از این خرید دریافت نشده…» — همان قاعده‌ی `canCreateReturn` (لغو نشده، و چیزی رسیده: روی قلم یا دانه‌ای از این خرید در قرنطینه) |
+| `UpdatePurchase`، `UpdateSale` | آخرین ذخیره برنده بود | فیلدِ اختیاریِ **`updatedAt`** (همانی که جزئیات داده). اگر سند در این فاصله عوض شده باشد **۴۰۹** با `data.updatedAt` (نسخه‌ی فعلی). مقایسه تا میلی‌ثانیه. نفرستید = بی‌چک (رفتارِ قبلی) |
+| `GetPurchaseList`، `GetSaleList` | — | `returnable=true`: فقط سندهایی که `CreatePurchaseReturn`/`CreateSaleReturn` می‌پذیرد |
+| `GetSaleList` | `invoiceNumber` و `customerName` با «و» | به‌علاوه‌ی `search`: شماره‌ی فاکتور **یا** نامِ کاملِ مشتری (`GetPurchaseList.search` از قبل همین کار را روی شماره یا نامِ تامین‌کننده می‌کرد) |
+| `GetProductList` | `name`/`code`/`barCode` جدا و با «و» | به‌علاوه‌ی `search`: با «یا» روی نام (هر کلمه، فارسی یا انگلیسی)، کد، بارکدِ کالا و بارکدِ دانه/کدِ اسکن‌شده (مثلِ `ScanBarcode` نرمال می‌شود). بی `sortBy`، تطبیقِ دقیق اول می‌آید؛ ردیف‌ها `isExactMatch` دارند |
+| `POST api/PurchaseReturn/PreviewResolution`، `POST api/SaleReturn/PreviewResolution` | — | تازه (دسترسیِ `*ReturnDecide`): همان بدنه‌ی `AddClaimResolution`، بی‌ذخیره ⇒ `{ isValid, errors: [{ field, message }], effects: [{ direction, quantity, source, productId, unitPrice, amount, method, status }], suggestedMoneyAmount }`. ردِ validator با `field` (`goods[0].quantity`)، ردِ handler (سقفِ قرنطینه، باقیمانده‌ی ادعا، …) با `field = null`. رد جزوِ پاسخ است، نه ۴۰۰؛ ادعای ناموجود ۴۰۴. `suggestedMoneyAmount` = مقدار × قیمتِ ادعا (فقط پیشنهاد) |
+| `GetPurchaseReceivingInfo` → `items[]` و `unlistedItems[]`، `SaleDto.items[]` | — | `otherReturnClaims: [{ returnId, returnNumber, status, offScopeKind, quantity }]`: ادعاهای مرجوعی‌های این سند روی همین قلم (روی `unlistedItems` ادعاهای `UNLISTED` همان کالا). مرجوعیِ ردشده/لغوشده نمی‌آید؛ مرجوعیِ فعلی را خودتان کنار بگذارید |
+| `GetPurchaseReceivingInfo` | — | `suggestedClaims` به شکلِ `claims[]`ِ `CreatePurchaseReturn`: قرنطینه‌ی آزادِ هر قلم (حداکثر `claimableQuantity`)، مازادِ آزاد، و کالای خارج از سفارشِ آزاد (`unitPrice = 0`). نوعِ مشکل پرتکرارترین مشکلی است که انبار ثبت کرده، وگرنه `DEFECTIVE`/`OVER_SHIPPED`/`UNLISTED_ITEM` |
+| `resolutions[]` در جزئیاتِ هر دو مرجوعی | — | `canRemove` (قاعده‌ی `RemoveClaimResolution`: مرجوعیِ پایان‌یافته نیست و هیچ اثرِ کالایی جابه‌جا نشده) |
+| جزئیاتِ هر دو مرجوعی | — | `lifecycleBlocker: string \| null` — دلیلِ ردِ «لغو» (همان متنِ خطای `Cancel*Return`)؛ `pendingWarehouseWork: { goodsIn, goodsOut, quarantineExit }` — باقیمانده‌ی اثرهای کالاییِ `PENDING` (آزادسازی + اسقاط در `quarantineExit`، فقط خرید)؛ وقتی مرجوعی باز نیست همه صفر |
+| جزئیاتِ مرجوعیِ فروش | — | `canPrintCreditNote`: اثرِ `MONEY_OUT` دارد (شرطِ `GetSaleReturnCreditNotePdf`/`Document`) |
+| `claims[]` جزئیاتِ مرجوعیِ خرید | — | `freeQuarantinedQuantity`: دانه‌های آزادِ قرنطینه‌ی همین ادعا برای آزادسازی/اسقاط/عودت از قرنطینه — همان عددی که `AddClaimResolution` چک می‌کند |
+
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۳۰ (بقیه‌ی درخواست‌های فرانت: بخش‌های ۶.۳، ۷، ۸، ۹، ۱۵، ۱۷، ۱۹، ۲۰، ۲۱، ۲۳، ۲۸، ۲۹)
 
 | کجا | قبل | بعد |

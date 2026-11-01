@@ -65,6 +65,14 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        /// <summary>The AddClaimResolution body, checked and expanded without saving (frontend-requests 13.4).</summary>
+        [HasPermission(PermissionEnum.PurchaseReturnDecide)]
+        [HttpPost("PreviewResolution")]
+        public async Task<ActionResult<ResponseDto>> PreviewResolution([FromBody] PreviewClaimResolutionQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.PurchaseReturnDecide)]
         [HttpPost("AddClaimResolution")]
         public async Task<ActionResult<ResponseDto>> AddClaimResolution([FromBody] AddClaimResolutionCommand request)

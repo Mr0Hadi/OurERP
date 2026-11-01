@@ -232,7 +232,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.AddRange(low, healthy);
             scope.Context.SaveChanges();
 
-            var handler = new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance);
+            var handler = new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.ProductCodeService);
             var res = await handler.Handle(new GetProductListQuery { IsLowOnStock = true }, CancellationToken.None);
 
             var data = res.Data!;

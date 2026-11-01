@@ -35,5 +35,8 @@ namespace Application.Features.Product.Dtos
 
         /// <summary>Short-lived signed URL, filled in after the page is materialized.</summary>
         public string? ImageUrl { get; set; }
+
+        /// <summary>With GetProductList's Search: the text is this product's code or barcode, or a scanned code/unit barcode of it.</summary>
+        public bool IsExactMatch { get; set; }
     }
 }

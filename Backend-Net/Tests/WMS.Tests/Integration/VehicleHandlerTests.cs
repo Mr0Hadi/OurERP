@@ -83,7 +83,7 @@ namespace WMS.Tests.Integration
             scope.Context.Products.AddRange(forPride, forPeugeot, universal);
             scope.Context.SaveChanges();
 
-            var res = await new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance)
+            var res = await new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.ProductCodeService)
                 .Handle(new GetProductListQuery { VehicleId = pride.Id, Take = 50 }, CancellationToken.None);
             var names = ((System.Collections.IEnumerable)DataOf(res.Data!, "ProductList")!).Cast<object>()
                 .Select(x => (string)DataOf(x, "Name")!).OrderBy(x => x).ToList();

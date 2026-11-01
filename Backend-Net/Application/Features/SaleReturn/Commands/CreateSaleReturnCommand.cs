@@ -80,13 +80,6 @@ namespace Application.Features.SaleReturn.Commands
             _unitOfWork = unitOfWork;
         }
 
-        private static readonly HashSet<SalesStatusEnum> ClaimableSaleStatuses = new()
-        {
-            SalesStatusEnum.SHIPPED,
-            SalesStatusEnum.PARTIALLY_DELIVERED,
-            SalesStatusEnum.DELIVERED,
-        };
-
         public async Task<ResponseDto> Handle(CreateSaleReturnCommand request, CancellationToken cancellationToken)
         {
             var res = new ResponseDto();
@@ -96,8 +89,9 @@ namespace Application.Features.SaleReturn.Commands
                     .ThenInclude(x => x.Product)
                 .FirstOrDefaultAsync(x => x.Id == request.SaleId, cancellationToken) ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            if (!ClaimableSaleStatuses.Contains(sale.Status))
-                throw new ValidationCustomException("فقط فروش‌های ارسال‌شده یا تحویل‌شده قابل مرجوع کردن هستند.");
+            var returnBlocker = Application.Common.Documents.SaleDocumentRules.CreateReturnBlocker(sale.Status);
+            if (returnBlocker != null)
+                throw new ValidationCustomException(returnBlocker);
 
             var activeReturns = await _saleReturnRepository.GetActiveBySaleIdAsync(request.SaleId, cancellationToken);
             var saleItems = sale.Items.ToDictionary(x => x.Id);

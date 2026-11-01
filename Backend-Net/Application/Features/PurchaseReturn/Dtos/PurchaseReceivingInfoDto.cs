@@ -21,6 +21,14 @@ namespace Application.Features.PurchaseReturn.Dtos
 
         /// <summary>Every photo taken across all receiving rounds for this purchase, oldest first.</summary>
         public List<PurchaseReceivingImageDto> ReceivingImages { get; set; } = new();
+
+        /// <summary>
+        /// Claims to prefill the purchase-return form from what is in quarantine (frontend-requests 14.6), in the shape of
+        /// CreatePurchaseReturn's claims: per line the free quarantined ordered goods (capped by ClaimableQuantity) and the free
+        /// excess, per unlisted product its free quantity. Quantities come from the units, the problem from the most frequent one
+        /// the warehouse recorded (Discrepancies), else DEFECTIVE / OVER_SHIPPED / UNLISTED_ITEM. A suggestion only.
+        /// </summary>
+        public List<Application.Common.Dtos.Returns.CreateReturnClaimDto> SuggestedClaims { get; set; } = new();
     }
 
     public class PurchaseReceivingUnlistedInfoDto
@@ -43,6 +51,9 @@ namespace Application.Features.PurchaseReturn.Dtos
         /// AcceptPurchaseExcess can still take. The same number both handlers enforce.
         /// </summary>
         public int FreeQuantity { get; set; }
+
+        /// <summary>UNLISTED claims of other returns of this purchase on this product (frontend-requests 14.1).</summary>
+        public List<Application.Common.Dtos.Returns.OtherReturnClaimDto> OtherReturnClaims { get; set; } = new();
     }
 
     public class PurchaseReceivingDiscrepancyDto
@@ -90,6 +101,9 @@ namespace Application.Features.PurchaseReturn.Dtos
 
         /// <summary>The most a new ON_ORDER claim on this line can take (received, minus settled, minus open claims).</summary>
         public int ClaimableQuantity { get; set; }
+
+        /// <summary>Claims of this purchase's returns on this line, ON_ORDER and EXCESS (frontend-requests 14.1).</summary>
+        public List<Application.Common.Dtos.Returns.OtherReturnClaimDto> OtherReturnClaims { get; set; } = new();
 
         public int PurchaseItemId { get; set; }
         public int ProductId { get; set; }

@@ -43,12 +43,10 @@ namespace Application.Features.Sale.Commands
             var sale = await _context.Sales.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            if (sale.Status != SalesStatusEnum.PROFORMA)
-                throw new ValidationCustomException("فقط پیش‌فاکتور حذف می‌شود؛ فروش صادرشده را لغو کنید.");
-
             var hasPlan = await _context.SaleInstallmentPlans.AnyAsync(x => x.SaleId == sale.Id && x.IsActive, cancellationToken);
-            if (hasPlan)
-                throw new ValidationCustomException("این پیش‌فاکتور قرارداد اقساطی دارد؛ ابتدا قرارداد را حذف کنید.");
+            var blocker = Application.Common.Documents.SaleDocumentRules.DeleteBlocker(sale.Status, hasPlan);
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
             // Units the warehouse reserved for this proforma go back on the shelf.
             await SaleProformaPipeline.ReleaseAsync(_context, _productUnitService, sale, sale.Items.Select(i => i.Id), cancellationToken);

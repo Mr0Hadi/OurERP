@@ -4,6 +4,7 @@ using Application.Common.Contracts.Storage;
 using Application.Common.Documents;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Common.Returns;
 using Application.Features.PurchaseReturn.Dtos;
 using Application.Features.PurchaseReturn.Mappings;
 using Common.Exceptions;
@@ -51,7 +52,22 @@ public static class PurchaseReturnDetailReader
 
         var totalAmount = checked((ulong)purchaseReturn.Claims.Sum(c => checked((long)c.Quantity * (long)c.UnitPrice)));
 
-        return new PurchaseReturnDetailDto
+        // 14.4: the free quarantine per claim, by the same function AddClaimResolution checks with.
+        var openReturns = await context.PurchaseReturns.AsNoTracking()
+            .Where(x => x.PurchaseId == purchaseReturn.PurchaseId)
+            .WhereNotDeleted()
+            .WhereOpen()
+            .WithReturnGraph()
+            .ToListAsync(cancellationToken);
+        var freeQuarantine = new Dictionary<int, int>();
+        foreach (var claim in purchaseReturn.Claims)
+            freeQuarantine[claim.Id] = (await Application.Features.PurchaseReturn.Commands.PurchaseResolutionChecks.FreeQuarantineAsync(
+                context, calc, claim, claim.ProductId, purchaseReturn.PurchaseId, openReturns, cancellationToken)).Available;
+
+        var isTerminal = calc.IsTerminal(purchaseReturn.Status);
+        var effects = purchaseReturn.Claims.SelectMany(c => c.Resolutions).SelectMany(r => r.Effects).ToList();
+
+        var dto = new PurchaseReturnDetailDto
         {
             Id = purchaseReturn.Id,
             ReturnNumber = purchaseReturn.ReturnNumber,
@@ -75,9 +91,23 @@ public static class PurchaseReturnDetailReader
             CanCancel = calc.CanPerform(purchaseReturn, ReturnLifecycleActionEnum.CANCEL),
             CanReject = calc.CanPerform(purchaseReturn, ReturnLifecycleActionEnum.REJECT),
             CanReopen = calc.CanPerform(purchaseReturn, ReturnLifecycleActionEnum.REOPEN),
+            LifecycleBlocker = calc.GetLifecycleBlocker(purchaseReturn, ReturnLifecycleActionEnum.CANCEL),
+            PendingWarehouseWork = Application.Common.Dtos.Returns.PendingWarehouseWorkDto.Of(
+                purchaseReturn.Status is Domain.Enums.ReturnStatusEnum.OPEN or Domain.Enums.ReturnStatusEnum.IN_PROGRESS,
+                effects.Select(e => (e.Direction, e.Status, e.RemainingQuantity))),
             ReceivingImages = [.. purchaseReturn.ReceivingImages.Select(i => i.ToDto(storage))],
             Claims = [.. purchaseReturn.Claims.Select(c => c.ToDto(storage))],
             Attachments = attachments,
         };
+
+        foreach (var (claimDto, claim) in dto.Claims.Zip(purchaseReturn.Claims))
+        {
+            claimDto.FreeQuarantinedQuantity = freeQuarantine[claim.Id];
+            foreach (var (resolutionDto, resolution) in claimDto.Resolutions.Zip(claim.Resolutions))
+                resolutionDto.CanRemove = ReturnLifecycleRules.ResolutionRemoveBlocker(purchaseReturn.Status, isTerminal,
+                    resolution.Effects.Select(e => (e.Direction, e.AppliedQuantity))) == null;
+        }
+
+        return dto;
     }
 }

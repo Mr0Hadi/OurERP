@@ -40,6 +40,12 @@ namespace Application.Features.Purchase.Commands
         /// a current line not in the list = deleted.</summary>
         public List<UpdatePurchaseItemDto> ProductItemList { get; set; } = new();
         public List<DocumentAttachmentInputDto> Attachments { get; set; } = new();
+
+        /// <summary>
+        /// The UpdatedAt the edit form read (GetXDetail). When sent and the server copy has changed since, the edit is refused
+        /// with 409 so two people editing one proforma do not silently overwrite each other (frontend-requests 13.2).
+        /// </summary>
+        public DateTime? UpdatedAt { get; set; }
     }
 
     public class UpdatePurchaseCommandValidator : AbstractValidator<UpdatePurchaseCommand>
@@ -100,6 +106,7 @@ namespace Application.Features.Purchase.Commands
                 ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
             DocumentLockRules.EnsureDraft(purchase.Status);
+            DocumentVersion.Ensure(purchase.UpdatedAt, request.UpdatedAt, "این پیش‌فاکتور را کسِ دیگری پس از باز شدنِ این صفحه تغییر داده است؛ صفحه را تازه کنید.");
 
             var lines = purchase.Items.ToDictionary(x => x.Id);
             if (request.ProductItemList.Any(i => i.Id.HasValue && !lines.ContainsKey(i.Id.Value)))
