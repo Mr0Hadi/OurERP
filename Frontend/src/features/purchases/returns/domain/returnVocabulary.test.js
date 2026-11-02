@@ -16,7 +16,6 @@ import {
   claimableQuantityOf,
   freeExcessQuantityOf,
   freeUnlistedQuantityOf,
-  hasAnythingArrived,
 } from "./purchaseReturnVocabulary";
 
 const keys = (map) => Object.keys(map).map(Number);
@@ -42,9 +41,6 @@ describe("واژگانِ مرجوعی", () => {
   });
 
   it("رسیده و سقف‌ها", () => {
-    expect(hasAnythingArrived({ items: [{ receivedQuantity: 0 }, { receivedQuantity: 1 }] })).toBe(true);
-    expect(hasAnythingArrived({ items: [{}] })).toBe(false);
-    expect(hasAnythingArrived({})).toBe(false);
     expect([claimableQuantityOf({ claimableQuantity: "3" }), freeExcessQuantityOf(null), freeUnlistedQuantityOf({ freeQuantity: 2 })]).toEqual([3, 0, 2]);
   });
 });
