@@ -16,7 +16,7 @@ import { getErrorMessage } from "@/shared/lib/errorMessage";
  * دانه‌ها) باطل می‌شود. عملیاتِ تجمعی (ثبتِ مرجوعی، تصمیم، دورِ کالا، پرداخت) کلیدِ
  * ایدمپوتنسی می‌گیرد: تکرارِ یک درخواست یعنی دو بار جابه‌جاییِ کالا یا پول.
  *
- * @param config.api         `{ create, addResolution, removeResolution, executeGoodsRound,
+ * @param config.api         `{ create, addResolution, previewResolution, removeResolution, executeGoodsRound,
  *                           executeMoneyEffect, reject, cancel, reopen, remove, updateAttachments }`
  * @param config.detailKey   `(id) => queryKey`ِ جزئیاتِ مرجوعی
  * @param config.invalidate  `(queryClient, documentId, { freshReturnId }) => void`ِ اکوسیستمِ همان سمت
@@ -149,6 +149,8 @@ export function createReturnMutations({ api, detailKey, invalidate, documentIdOf
         (mutation) => mutation.isPending,
       ),
       onAddResolution: (claim, composition) => add.mutate({ claim, composition }),
+      // پیش‌نمایشِ سرور (۱۳.۴) — تابعِ خام برای `useResolutionPreview`، نه mutation.
+      previewResolution: api.previewResolution,
       onRemoveResolution: (claimId, resolutionId) => removeResolution.mutate({ claimId, resolutionId }),
       onExecuteMoney: (effect) => executeMoney.mutate({ effectId: effect.id }),
       // `options.onSuccess` دیالوگِ دلیل را بعد از موفقیت می‌بندد.

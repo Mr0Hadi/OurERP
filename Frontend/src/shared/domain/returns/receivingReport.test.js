@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 import { OFF_SCOPE_KINDS } from "./scopes";
-import { claimQuarantinedQuantity, claimReceivingReport, totalQuarantined } from "./receivingReport";
+import { claimReceivingReport, totalQuarantined } from "./receivingReport";
 
 const info = {
   items: [{
@@ -19,16 +19,6 @@ const info = {
     { purchaseItemId: null, productId: 50, custodyReason: UnitCustodyReasonEnum.UNLISTED },
   ],
 };
-
-describe("claimQuarantinedQuantity — سقفِ AddClaimResolution", () => {
-  it("روی سفارش: قرنطینه‌ی آزاد؛ مازاد و سفارش‌نداده: کلِ دسته", () => {
-    expect(claimQuarantinedQuantity(info, { orderLineId: 7, offScopeKind: null })).toBe(1);
-    expect(claimQuarantinedQuantity(info, { orderLineId: 7, offScopeKind: OFF_SCOPE_KINDS.EXCESS })).toBe(3);
-    expect(claimQuarantinedQuantity(info, { productId: 50, offScopeKind: OFF_SCOPE_KINDS.UNLISTED })).toBe(4);
-    expect(claimQuarantinedQuantity(info, { orderLineId: 99 })).toBe(0);
-    expect(claimQuarantinedQuantity(null, { orderLineId: 7 })).toBe(null);
-  });
-});
 
 describe("claimReceivingReport", () => {
   it("روی سفارش بی بخشِ مازاد، مازاد فقط مازاد، سفارش‌نداده فقط همان کالا", () => {

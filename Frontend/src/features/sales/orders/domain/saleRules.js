@@ -1,5 +1,4 @@
 import { SaleStatusEnum, SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
-import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
@@ -13,35 +12,18 @@ export function hasAnythingShipped(sale) {
   return (sale?.items || []).some((item) => (Number(item.shippedQuantity) || 0) > 0);
 }
 
-/** وضعیت‌هایی که بکند روی آن‌ها مرجوعی می‌پذیرد (`CreateSaleReturn`). */
-export const RETURNABLE_SALE_STATUSES = [
-  SaleStatusEnum.PARTIALLY_DELIVERED,
-  SaleStatusEnum.SHIPPED,
-  SaleStatusEnum.DELIVERED,
-];
-
 /**
- * لغو فقط پیش از هر ارسالی و بی قرارداد اقساطیِ جاری (`ChangeSaleStatus` آن را ۴۰۰ می‌دهد؛
- * اول قرارداد ابطال شود).
- */
-export const canCancelSale = (sale) =>
-  sale.status !== SaleStatusEnum.CANCELLED &&
-  sale.status !== SaleStatusEnum.DELIVERED &&
-  sale.installmentSummary?.status !== SaleInstallmentPlanStatusEnum.ACTIVE &&
-  !hasAnythingShipped(sale);
-
-/**
- * گزینه‌های وضعیتِ فروشِ صادرشده. `ChangeSaleStatus` دستی فقط «ارسال شده → تحویل
- * کامل» و لغو را می‌پذیرد؛ «ارسال ناقص/ارسال شده» را ارسالِ انبار می‌گذارد.
+ * گزینه‌های وضعیتِ فروشِ صادرشده: فعلی، مقصدهای مجازِ سرور (`allowedStatuses`، مثلاً «ارسال شده → تحویل
+ * کامل»)، و لغو اگر سرور اجازه می‌دهد (`canCancel`: پیش از هر ارسالی و بی قراردادِ اقساطیِ جاری) — ۱۳.۱.
  */
 export function saleStatusOptions(sale) {
   const current = sale.status;
   return [
     { value: current, label: SALE_STATUS_LABELS[current] },
-    ...(current === SaleStatusEnum.SHIPPED
-      ? [{ value: SaleStatusEnum.DELIVERED, label: SALE_STATUS_LABELS[SaleStatusEnum.DELIVERED] }]
-      : []),
-    ...(canCancelSale(sale) ? [{ value: SaleStatusEnum.CANCELLED, label: "لغو فروش" }] : []),
+    ...(sale.allowedStatuses || [])
+      .filter((target) => target !== current && target !== SaleStatusEnum.CANCELLED)
+      .map((target) => ({ value: target, label: SALE_STATUS_LABELS[target] })),
+    ...(sale.canCancel ? [{ value: SaleStatusEnum.CANCELLED, label: "لغو فروش" }] : []),
   ];
 }
 

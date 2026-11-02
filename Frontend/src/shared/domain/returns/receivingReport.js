@@ -7,39 +7,6 @@ import { OFF_SCOPE_KINDS } from "./scopes";
  */
 
 /**
- * سقفِ برداشت از قرنطینه برای یک تصمیمِ تازه روی این ادعا — همان عددی که
- * `AddClaimResolution` چک می‌کند.
- *
- *  - ادعای روی سفارش: `freeQuarantinedOnOrderQuantity` — قرنطینه‌ی
- *    پرداخت‌شده‌ی قلم (خرابِ دریافت، برگشتیِ معیوبِ مشتری، نگهداشتِ انبار)
- *    منهای آنچه تصمیم‌های مرجوعی‌های باز رزرو کرده‌اند.
- *  - مازاد و سفارش‌نداده: خودِ ادعا از لحظه‌ی ثبت مقدارش را رزرو کرده و
- *    تصمیم‌های زیرش از همان رزرو برمی‌دارند، پس سقف کلِ قرنطینه‌ی همان
- *    دسته است.
- *
- * `null` یعنی گزارشِ دریافت هنوز نیامده.
- *
- * TODO(بکند): `freeQuarantinedQuantity` روی خودِ ادعا (بندِ ۱۴.۴).
- */
-export function claimQuarantinedQuantity(receivingInfo, claim) {
-  if (!receivingInfo || !claim) return null;
-
-  if (claim.offScopeKind === OFF_SCOPE_KINDS.UNLISTED) {
-    return (
-      (receivingInfo.unlistedItems || []).find((entry) => entry.productId === claim.productId)
-        ?.quarantinedQuantity ?? 0
-    );
-  }
-
-  const item = (receivingInfo.items || []).find(
-    (entry) => entry.purchaseItemId === (claim.orderLineId ?? null),
-  );
-  return claim.offScopeKind === OFF_SCOPE_KINDS.EXCESS
-    ? item?.quarantinedExcessQuantity ?? 0
-    : item?.freeQuarantinedOnOrderQuantity ?? 0;
-}
-
-/**
  * گزارشِ یک قلمِ سفارش: خرابیِ سهمِ سفارش و مازادِ همان قلم. هر ردیفِ
  * قرنطینه `kind` دارد تا بخشِ مازاد جدا شود (`withoutExcess`/`onlyExcess`).
  */

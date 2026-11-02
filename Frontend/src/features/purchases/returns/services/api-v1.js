@@ -6,7 +6,6 @@ import {
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiPurchaseReturn } from "@/shared/domain/returns/claimsApi";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
-import { RETURNABLE_PURCHASE_STATUSES } from "@/features/purchases/orders/domain/purchaseRules";
 
 /** `PurchaseReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
 export const PURCHASE_RETURN_SORT_COLUMNS = {
@@ -68,16 +67,14 @@ export async function fetchPurchaseReturnById(id) {
 }
 
 /**
- * فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم — قرینه‌ی سمتِ فروش.
- * فیلترِ وضعیت با `statuses` در خودِ سرور است؛ قبلاً ۳۰ خریدِ آخر گرفته و بعد
- * فیلتر می‌شد، پس وقتی خریدهای اخیر پیش‌فاکتور/در انتظار بودند فهرست کوتاه یا
- * خالی می‌ماند.
+ * فهرست کوتاهِ خریدهای قابل‌مرجوع برای انتخابگر فرم — قرینه‌ی سمتِ فروش. `returnable` همان قاعده‌ی
+ * `CreatePurchaseReturn` است و `search` شماره‌ی فاکتور یا نامِ تامین‌کننده (۱۳.۳، ۱۴.۲).
  */
 export async function fetchReturnablePurchases(search = "") {
   const { data } = await axiosInstance.get("/Purchase/GetPurchaseList", {
     params: {
-      invoiceNumber: search || undefined,
-      statuses: RETURNABLE_PURCHASE_STATUSES,
+      search: search || undefined,
+      returnable: true,
       take: 30,
     },
   });
@@ -89,7 +86,7 @@ export async function fetchReturnablePurchases(search = "") {
  *
  * سقف‌ها با `claimableQuantityOf` / `freeExcessQuantityOf` /
  * `freeUnlistedQuantityOf` در `purchaseReturnVocabulary` خوانده می‌شوند و
- * سقفِ برداشت از قرنطینه برای یک تصمیم با `claimQuarantinedQuantity`.
+ * سقفِ برداشت از قرنطینه برای یک تصمیم روی خودِ ادعا است (`freeQuarantinedQuantity`).
  */
 export async function fetchPurchaseForReturn(purchaseId) {
   const { data } = await axiosInstance.get("/PurchaseReturn/GetPurchaseReceivingInfo", {
@@ -121,7 +118,7 @@ export async function createPurchaseReturn(payload, { idempotencyKey } = {}) {
  * `composition` همان چهار اسلاتِ ساختاریِ بک‌اند است —
  * `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` (`EffectCompositionDto`،
  * از ۲۰۲۶-۰۹-۰۷). شکلِ فرم یک لایه با آن فرق دارد و `toApiComposition`
- * همان‌جا کنارِ `expandComposition` این فاصله را پر می‌کند: `enabled`
+ * این فاصله را پر می‌کند: `enabled`
  * فیلدی است که فقط فرم دارد، اسلاتِ کالا در فرم شیء است و در دستور
  * آرایه، و پیش‌فرضِ «همان کالای ادعا» باید قبل از ارسال باز شود چون
  * بکند روی آرایه‌ی خالی هیچ اثری نمی‌سازد.
@@ -144,6 +141,18 @@ export async function addClaimResolution(
     idempotent(idempotencyKey),
   );
   return fromApiPurchaseReturn(data);
+}
+
+/**
+ * پیش‌نمایشِ یک تصمیم بی‌ذخیره (`PreviewResolution`، ۱۳.۴) با همان بدنه‌ی `AddClaimResolution`:
+ * `{ isValid, errors: [{ field, message }], effects, suggestedMoneyAmount }`. رد جزوِ پاسخ است، نه ۴۰۰.
+ */
+export async function previewClaimResolution(claim, composition) {
+  const { data } = await axiosInstance.post("/PurchaseReturn/PreviewResolution", {
+    claimId: claim.id,
+    composition: toApiComposition(composition, claim),
+  });
+  return data;
 }
 
 /** بکند فقط شناسه‌ی *تصمیم* (`resolutionId`) می‌خواهد؛ `returnId`/`claimId` فقط برای رفرشِ کش فرانت لازم بودند. */

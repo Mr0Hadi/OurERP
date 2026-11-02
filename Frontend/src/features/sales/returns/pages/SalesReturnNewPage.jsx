@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/shared/components/ui/button";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
+import { claimsElsewhereOf } from "@/shared/domain/returns/otherReturnClaims";
 import { ROUTES } from "@/shared/constants/routes";
 import { SALE_STATUS_LABELS } from "@/shared/domain/enums/saleStatus";
 import { OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
@@ -58,7 +58,7 @@ export default function SalesReturnNewPage() {
 
   const { data: saleForReturn, isLoading, isError, error } = useSaleForReturnQuery(selectedSaleId);
   // ادعاهای مرجوعی‌های قبلیِ همین فروش، کنارِ هر کالا.
-  const claimsElsewhere = useClaimsInOtherReturns("sale", selectedSaleId);
+  const claimsElsewhere = useMemo(() => claimsElsewhereOf(saleForReturn), [saleForReturn]);
 
   // `?previousReturnId=` — از «ثبت مرجوعیِ بعدی» روی یک مرجوعیِ تسویه‌شده؛
   // فقط برای همان فروشی که در آدرس آمده، نه فروشی که کاربر بعداً عوض کرد.
@@ -151,7 +151,6 @@ export default function SalesReturnNewPage() {
             <OrderInvoiceCard
               order={saleForReturn}
               partyName={saleForReturn.customerName}
-              claimsSource={{ side: "sale", documentId: selectedSaleId }}
               // هر ادعا مقدارِ تحویل‌شده‌ی خودش را کنارش دارد؛ فاکتورِ کامل فقط مرجع است.
               defaultOpen={false}
             />

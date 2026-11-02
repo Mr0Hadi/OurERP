@@ -113,11 +113,10 @@ flowchart TD
 
   **جهتِ عادی:** هر فیچر → `auth` (هوکِ مجوز)؛ اسناد → داده‌ی پایه (`sales`/`purchases` → `warehouse`، `customers`، `suppliers`)؛ `customers`/`suppliers` → `partyAccount`؛ گزارش‌ها (`dashboard`، `accounting`) → هر فیچری که می‌خوانند؛ صفحه‌های جزئیات → `audit` (فقط `AuditHistoryButton`/`UserActivityButton`).
   **جهتِ غیرمنتظره — اضافه نکنید:** داده‌ی پایه → اسناد یا گزارش. نمونه‌های موجود: `warehouse` → `purchases`/`sales` (کلید و `sharedInvalidation` و mutationهای مرجوعی، برای صفِ دریافت/ارسال)، `sales/installments/services/mutations.js` → `dashboardKeys` از `@/features/dashboard/services/queryKeys`، `partyAccount/services/queries.js` → `customerKeys`/`supplierKeys` (چرخه‌ی دوطرفه با `customers`/`suppliers` در سطحِ فیچر)، `customers`/`suppliers` → `treasury` (فقط `PartyOnAccountBar`) در برابرِ `treasury` → `customers`/`suppliers`، و `employees` ↔ `organization` دوطرفه. هیچ‌کدام در سطحِ فایل حلقه نمی‌سازند (madge).
-- **`shared/` در ۶ فایل از `features/` import می‌کند** (خلافِ قاعده‌ی لایه‌ها؛ پیشنهادِ رفع هر کدام در [14](14-dependency-graph-and-health.md)):
+- **`shared/` در ۵ فایل از `features/` import می‌کند** (خلافِ قاعده‌ی لایه‌ها؛ پیشنهادِ رفع هر کدام در [14](14-dependency-graph-and-health.md)):
   - `src/shared/services/api/axios.js` → `@/features/auth/...`
   - `src/shared/components/forms/PartyPickerCard.jsx` → `@/features/partyAccount/...`
   - `src/shared/components/forms/ProductSearchPanel.jsx`، `src/shared/components/products/ProductPicker.jsx`، `src/shared/components/products/useReturnedNewProduct.js` → `@/features/warehouse/...`
-  - `src/shared/hooks/useClaimsInOtherReturns.js` → `@/features/purchases/returns/...` و `@/features/sales/returns/...`
 - **زیرماژول‌ها:** در `organization`، `purchases`، `sales`، `warehouse`، و بخشی از `accounting`، هر زیرپوشه خودش چیدمانِ استاندارد را دارد و فقط یک `routes.jsx` در ریشه‌ی فیچر است:
   - `src/features/organization/` → `departments/`، `teams/` (+ `components/`، `hooks/` مشترکِ دو زیرماژول)
   - `src/features/purchases/` → `orders/`، `returns/`

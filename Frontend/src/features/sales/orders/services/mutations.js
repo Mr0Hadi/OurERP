@@ -27,6 +27,7 @@ import {
   settleProforma,
 } from "./proformaWorkflow";
 import { saleKeys, warehouseIssueKeys } from "./queryKeys";
+import { reportCreditRefusal } from "@/features/customers/store/creditRefusalStore";
 import { invalidateSalesEcosystem } from "./sharedInvalidation";
 
 /**
@@ -159,6 +160,7 @@ export const useSettleProformaMutation = (sale) => {
     },
     onError: (error) => {
       invalidateSalesEcosystem(queryClient, sale.id);
+      if (reportCreditRefusal(error)) return;
       toast.error(partialSaveMessage(error, getErrorMessage(error, "ثبتِ دریافت انجام نشد")));
     },
   });
@@ -176,6 +178,7 @@ export const useIssueOnCreditMutation = (sale) => {
     },
     onError: (error) => {
       invalidateSalesEcosystem(queryClient, sale.id);
+      if (reportCreditRefusal(error)) return;
       toast.error(partialSaveMessage(error, getErrorMessage(error, "صدورِ فاکتورِ نسیه انجام نشد")));
     },
   });
@@ -223,6 +226,7 @@ export const useSaleChangesSaver = (saleId) => {
     },
     onError: (error) => {
       invalidateSalesEcosystem(queryClient, saleId);
+      if (reportCreditRefusal(error)) return;
       toast.error(partialSaveMessage(error, getErrorMessage(error, "ذخیره‌ی تغییرات انجام نشد")));
     },
   });
@@ -248,8 +252,8 @@ export const useSalePosActions = () => {
   return {
     prepare: async (sale, { paymentType, info }) => {
       try {
-        await ensureProformaPaymentType(sale, paymentType);
-        await saveProformaInfo(sale.id, info);
+        const latest = await ensureProformaPaymentType(sale, paymentType);
+        await saveProformaInfo(sale.id, info, latest?.updatedAt);
       } catch (error) {
         toast.error(getErrorMessage(error, "آماده‌سازیِ پیش‌فاکتور انجام نشد"));
         throw error;

@@ -2,7 +2,6 @@ import axiosInstance from "@/shared/services/api/axios";
 import {
   idempotent,
   normalizeListResponse,
-  documentVersion,
   toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
@@ -77,13 +76,13 @@ export function fromApiPurchase(dto) {
     attachments: dto.attachments || [],
   };
 
-  // `GetPurchaseDetail` هنوز `updatedAt` نمی‌دهد؛ بدون کلیدِ نسخه، فرم
-  // بعد از بازگشت به همان خرید روی داده‌ی کهنه می‌ماند.
-  return { ...purchase, updatedAt: documentVersion(purchase) };
+  return purchase;
 }
 
 function toApiPurchasePayload(purchaseData) {
   return {
+    // نسخه‌ای که فرم خوانده (۱۳.۲): اگر سند در این فاصله عوض شده باشد سرور ۴۰۹ می‌دهد. روی ساخت خالی است.
+    updatedAt: purchaseData.updatedAt || undefined,
     supplierId: purchaseData.supplierId,
     invoiceNumber: purchaseData.invoiceNumber,
     invoiceDate: purchaseData.invoiceDate || null,

@@ -49,7 +49,7 @@ node scripts/check-docs-paths.mjs
 - `src/app/` — فقط سیم‌کشی: providerها، پوسته‌ها (`AppLayout`، `AuthLayout`)، روتر، `protectedLoader`، `PermissionGate`.
 - `src/features/<f>/` — یک حوزه‌ی کسب‌وکار: `routes.jsx`، `pages/`، `components/`، `hooks/`، `services/` (`api-v1.js`، `queryKeys.js`، `queries.js`، `mutations.js`)، `store/`، `domain/`. فیچرهای بزرگ زیرماژول دارند (`sales/orders`، `warehouse/receiving`، …).
 - `src/shared/` — بی‌مالک و چندبارمصرف: `components/`، `domain/` (enum و منطقِ خالص)، `services/`، `hooks/`، `lib/`، `store/`، `constants/` (`routes.js`، `navigationData.js`).
-- import با aliasِ `@/` (= `src/`). `shared/` نباید از `features/` import کند (۶ استثنای فعلی در `docs/architecture/14-dependency-graph-and-health.md`).
+- import با aliasِ `@/` (= `src/`). `shared/` نباید از `features/` import کند (۵ استثنای فعلی در `docs/architecture/14-dependency-graph-and-health.md`).
 
 جای کدِ تازه: `docs/architecture/02-folder-structure.md`. فهرستِ فیچرها: `docs/architecture/12-features/README.md`.
 

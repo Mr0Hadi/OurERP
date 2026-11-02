@@ -45,8 +45,8 @@ enumهای فقط-فرانت (بدونِ معادلِ بکند) صریحاً ک�
 
 قاعده‌هایی که UI با آن تصمیم می‌گیرد چه دکمه‌ای فعال باشد، کنارِ فیچر:
 
-- `src/features/sales/orders/domain/saleRules.js` — `canCancelSale`، `saleStatusOptions`، `RETURNABLE_SALE_STATUSES`، `missingSaleInvoiceFields`، `saleFormProblem`، `hasAnythingShipped`، `scannedBarcodesOf`
-- `src/features/purchases/orders/domain/purchaseRules.js` — `canCancelPurchase`، `purchaseStatusTargets`، `canClosePurchaseItem`، `canReopenPurchaseItem`، `stillOwedOf`
+- `src/features/sales/orders/domain/saleRules.js` — `saleStatusOptions` (از `allowedStatuses`/`canCancel`ِ سرور)، `missingSaleInvoiceFields`، `saleFormProblem`، `hasAnythingShipped`، `scannedBarcodesOf`
+- `src/features/purchases/orders/domain/purchaseRules.js` — `stillOwedOf`، `missingInvoiceFields`، `purchaseFormProblem` — «مجاز است؟» (`canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `items[].canClose/canReopen`) پرچمِ خودِ سند است (۱۳.۱)
 - `src/features/sales/installments/domain/installmentPlan.js` — `planPreviewRequestOf` (بدنه‌ی پیش‌نمایشِ سرور، `PreviewSaleInstallmentPlan`)، `planDraftErrors`، `EMPTY_PLAN_DRAFT`، `overdueOf`، `installmentPayableToday`، `grossPenaltyOf`، `penaltyWaiveErrors`
 - `src/features/warehouse/receiving/domain/receivingVocabulary.js`، `src/features/warehouse/shipping/domain/shippingVocabulary.js` — کدام وضعیت‌ها در صفِ دریافت/ارسال‌اند
 - `src/features/warehouse/units/domain/unitVocabulary.js`، `labelTemplate.js` — بخش‌بندیِ دانه‌ها و قالبِ برچسب
@@ -115,7 +115,6 @@ flowchart LR
 
 ## سؤال‌های باز / بدهی
 
-- `src/features/purchases/orders/domain/purchaseRules.js` `MANUAL_PurchaseStatusEnum` export می‌کند که در واقع آرایه‌ی وضعیت‌هاست (`PROFORMA`، `PENDING`، `SHIPPED`) نه enum؛ نامش با قراردادِ `<NAME>_STATUSES` (مثل `RETURNABLE_PURCHASE_STATUSES` در همان فایل) نمی‌خواند.
 - وارسیِ enumِ ناشناخته فقط برای مرجوعی هست (`verifyReturnEnums`)؛ برای وضعیتِ خرید/فروش/دانه نیست.
 - `lineMath.js` قاعده‌ی سرور را تکرار می‌کند؛ هیچ تستی هم‌خوانی‌شان را تضمین نمی‌کند.
 - `scopes.js` در لایه‌ی دامنه به `tone.js` (UI) وابسته است.

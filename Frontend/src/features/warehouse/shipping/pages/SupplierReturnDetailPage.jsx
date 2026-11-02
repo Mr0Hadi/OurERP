@@ -6,13 +6,11 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import {
   usePurchaseReturnQuery,
-  usePurchaseForReturnQuery,
 } from "@/features/purchases/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
-import { claimQuarantinedQuantity } from "@/shared/domain/returns/receivingReport";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -57,12 +55,14 @@ const SECTIONS = [
 // قرنطینه است، قرنطینه، وگرنه انتخاب با انباردار. آزادسازی مبدأ ندارد.
 const sourceRequired = (line) =>
   line.source == null && (line.direction === GOODS_OUT || line.direction === GOODS_SCRAP);
-const suggestSource = (line, receivingInfo) => {
+const suggestSource = (line, purchaseReturn) => {
   if (line.source != null) return line.source;
   if (line.direction === GOODS_SCRAP) return ProductUnitStatusEnum.QUARANTINED;
   if (line.direction !== GOODS_OUT) return null;
   if (line.scope === CLAIM_SCOPES.OFF_ORDER) return ProductUnitStatusEnum.QUARANTINED;
-  const quarantined = claimQuarantinedQuantity(receivingInfo, line) ?? 0;
+  // قرنطینه‌ی آزادِ همین ادعا از سرور (`freeQuarantinedQuantity`، ۱۴.۴).
+  const claim = (purchaseReturn.claims || []).find((candidate) => candidate.id === line.claimId);
+  const quarantined = Number(claim?.freeQuarantinedQuantity) || 0;
   return quarantined >= line.remainingQuantity ? ProductUnitStatusEnum.QUARANTINED : null;
 };
 
@@ -92,11 +92,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   const productMap = useMemo(() => documentProductMap(returnEffectsOf(purchaseReturn)), [purchaseReturn]);
   const isTracked = useMemo(() => trackedLookup(productMap), [productMap]);
 
-  const { data: receivingInfo } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
-  const defaultSource = useCallback(
-    (line) => suggestSource(line, receivingInfo),
-    [receivingInfo],
-  );
+  const defaultSource = useCallback((line) => suggestSource(line, purchaseReturn), [purchaseReturn]);
 
   // اسکن فقط وقتی الزامی است که کالای ردیابی‌پذیر از *قفسه* برمی‌گردد: باید
   // معلوم شود دقیقاً کدام دانه‌ی برچسب‌خورده رفت. دانه‌ی قرنطینه هنگامِ

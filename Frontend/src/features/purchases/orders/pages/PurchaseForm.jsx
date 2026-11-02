@@ -146,6 +146,7 @@ export default function PurchaseForm({ purchase }) {
       paymentType: paymentTypeOf(isInvoice ? payments.rows : []),
       status,
       attachments: attachments.filesPayload,
+      updatedAt: purchase?.updatedAt,
     };
 
     if (isNew) {
@@ -187,10 +188,10 @@ export default function PurchaseForm({ purchase }) {
   };
 
   const canEdit = isNew || allows("PurchaseUpdate");
-  // این فرم فقط پیش‌فاکتور را باز می‌کند و حذف فقط برای پیش‌فاکتور است. پیش‌فاکتوری که
-  // پیش‌پرداختِ زنده دارد حذف نمی‌شود (سرور ۴۰۰ می‌دهد)؛ لغو می‌شود.
-  const deletable = !isNew && !hasPrepayments && allows("PurchaseDelete");
-  const cancellable = !isNew && hasPrepayments && canEdit;
+  // این فرم فقط پیش‌فاکتور را باز می‌کند؛ حذف/لغو را سرور می‌گوید (`canDelete`/`canCancel`، ۱۳.۱):
+  // پیش‌فاکتوری که پیش‌پرداختِ زنده دارد حذف نمی‌شود، لغو می‌شود.
+  const deletable = !isNew && Boolean(purchase?.canDelete) && allows("PurchaseDelete");
+  const cancellable = !isNew && !deletable && Boolean(purchase?.canCancel) && canEdit;
 
   const submitLabel = isNew
     ? isInvoice

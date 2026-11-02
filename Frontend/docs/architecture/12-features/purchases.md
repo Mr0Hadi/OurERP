@@ -18,7 +18,7 @@
 
 ## سرویس‌ها
 
-- `src/features/purchases/orders/services/api-v1.js` روی `/Purchase/*`: `fetchPurchases`، `fetchPurchaseById`، `createPurchase`، `updatePurchase`، `changePurchaseStatus`، `updatePurchaseAttachments`، `updatePurchasePaymentDate`، `addPurchasePayment`، `editPurchasePayment`، `voidPurchasePayment`، `removePurchase`، و مخصوصِ خرید: `closePurchaseItem`، `reopenPurchaseItem`، `acceptPurchaseExcess`. `fromApiPurchase` با `documentVersion` فیلدِ `updatedAt` را می‌سازد ([08](../08-client-state-zustand.md)).
+- `src/features/purchases/orders/services/api-v1.js` روی `/Purchase/*`: `fetchPurchases`، `fetchPurchaseById`، `createPurchase`، `updatePurchase`، `changePurchaseStatus`، `updatePurchaseAttachments`، `updatePurchasePaymentDate`، `addPurchasePayment`، `editPurchasePayment`، `voidPurchasePayment`، `removePurchase`، و مخصوصِ خرید: `closePurchaseItem`، `reopenPurchaseItem`، `acceptPurchaseExcess`. `updatedAt` از سرور می‌آید و با `updatePurchase` برمی‌گردد (۴۰۹ برای ویرایشِ هم‌زمان، [08](../08-client-state-zustand.md)).
 - `src/features/purchases/returns/services/api-v1.js` روی `/PurchaseReturn/*` (همان فعل‌های مرجوعیِ فروش)؛ `fetchPurchaseForReturn` → `GET /PurchaseReturn/GetPurchaseReceivingInfo`، `fetchReturnablePurchases` → `GET /Purchase/GetPurchaseList`.
 - mutationها: `useCreatePurchaseMutation`، `useChangePurchaseStatusMutation`، `useRemovePurchaseMutation`، `useClosePurchaseItemMutation`، `useReopenPurchaseItemMutation`، `useAcceptPurchaseExcessMutation`، `usePurchaseChangesSaver`؛ مرجوعی: `useCreatePurchaseReturnMutation`، `useExecuteGoodsRoundMutation`، `useUpdatePurchaseReturnAttachmentsMutation`، `usePurchaseReturnActions` (از `createReturnMutations`).
 - کلیدها: `purchaseKeys` (`['purchases']`)، `purchaseReturnKeys` (`['purchaseReturns']`). invalidation: `invalidatePurchaseEcosystem` در `src/features/purchases/orders/services/sharedInvalidation.js` (جزئیات/لیستِ خرید، `receivingKeys`، مرجوعی‌ها، `productKeys.all`، `productUnitKeys.all`).
@@ -32,7 +32,7 @@
 
 ## state و دامنه
 
-`usePurchaseFormStore` (`createDocumentFormStore`)، `usePurchaseFilterStore`، `usePurchaseReturnFormStore` (+ `offScopeCapKey`)، `usePurchaseReturnFilterStore`؛ `src/features/purchases/returns/hooks/usePurchaseReturnForm.js`. دامنه: `src/features/purchases/orders/domain/purchaseRules.js` (`canCancelPurchase`، `purchaseStatusTargets`، `canClosePurchaseItem`، `purchaseFormProblem`، `PURCHASE_SHIPPING_CHOICES`، …)، `purchasePayments.js`، `src/features/purchases/returns/domain/purchaseReturnVocabulary.js` (`claimableQuantityOf`، `freeExcessQuantityOf`، …).
+`usePurchaseFormStore` (`createDocumentFormStore`)، `usePurchaseFilterStore`، `usePurchaseReturnFormStore` (+ `offScopeCapKey`)، `usePurchaseReturnFilterStore`؛ `src/features/purchases/returns/hooks/usePurchaseReturnForm.js`. دامنه: `src/features/purchases/orders/domain/purchaseRules.js` (`stillOwedOf`، `purchaseFormProblem`، `PURCHASE_SHIPPING_CHOICES`، …؛ «مجاز است؟» پرچمِ سرور روی سند است)، `purchasePayments.js`، `src/features/purchases/returns/domain/purchaseReturnVocabulary.js` (`claimableQuantityOf`، `freeExcessQuantityOf`، …).
 
 ## جریان: خرید → دریافت در انبار
 

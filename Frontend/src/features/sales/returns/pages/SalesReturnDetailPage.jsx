@@ -20,14 +20,8 @@ import { UNIT_SEGMENTS } from "@/features/warehouse/units/domain/unitVocabulary"
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
-import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
-import {
-  hasEffect,
-  hasPendingGoodsIn,
-  hasPendingGoodsOut,
-} from "@/shared/domain/returns/resolutions";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import Notice from "@/shared/components/feedback/Notice";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
@@ -54,13 +48,14 @@ const VOCABULARY = {
 /** کارِ انبارِ مانده روی این مرجوعی: تحویل‌گرفتن از مشتری، و ارسالِ جایگزین. */
 function warehouseLinksOf(salesReturn) {
   const links = [];
-  if (hasPendingGoodsIn(salesReturn)) {
+  const work = salesReturn.pendingWarehouseWork ?? {};
+  if (work.goodsIn > 0) {
     links.push({
       to: routeWithId(ROUTES.WAREHOUSE_RECEIVING_RETURN_DETAIL, salesReturn.id),
       label: "تحویل‌گرفتنِ کالا از مشتری",
     });
   }
-  if (hasPendingGoodsOut(salesReturn)) {
+  if (work.goodsOut > 0) {
     // فقط جایگزینِ همین مرجوعی (`?returnId=`)؛ بی آن فرمِ کاملِ ارسالِ فروش باز
     // می‌شد و باقیمانده‌ی فاکتور هم برای ارسال پیش‌پر بود.
     links.push({
@@ -82,9 +77,9 @@ function SalesReturnDetailContent({ salesReturn }) {
   const actions = useSalesReturnActions(salesReturn.id);
   const attachmentsMutation = useUpdateSalesReturnAttachmentsMutation(salesReturn.id);
   const { can, isError: permissionsUnknown } = usePermission();
-  // برگه‌ی طلبکاری فقط برای مرجوعی‌ای ساخته می‌شود که پولی به مشتری برگردانده؛
-  // بدونِ آن سرور ۴۰۰ می‌دهد و دکمه‌ی چاپ فقط خطا می‌ساخت.
-  const hasRefund = hasEffect(salesReturn, EFFECT_DIRECTIONS.MONEY_OUT);
+  // برگه‌ی طلبکاری فقط برای مرجوعی‌ای که پولی به مشتری برگردانده (`canPrintCreditNote`ِ سرور، ۱۴.۳)؛
+  // بدونِ آن سرور ۴۰۰ می‌دهد.
+  const hasRefund = Boolean(salesReturn.canPrintCreditNote);
 
   return (
     <div className="container max-w-3xl mx-auto px-4 space-y-3 animate-in fade-in zoom-in-95 duration-300">
@@ -102,7 +97,7 @@ function SalesReturnDetailContent({ salesReturn }) {
           partyName={salesReturn.customerName}
           defaultOpen={false}
           // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین فروش ثبت شده (فقط با بازکردنِ کارت).
-          claimsSource={{ side: "sale", documentId: salesReturn.saleId, excludeReturnId: salesReturn.id }}
+          excludeReturnId={salesReturn.id}
         />
       )}
 

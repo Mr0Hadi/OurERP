@@ -2,7 +2,16 @@ import DataTable from "@/shared/components/table/DataTable";
 import { detailsColumn } from "@/shared/components/table/columns";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import LedgerBalanceBadge from "@/features/partyAccount/components/LedgerBalanceBadge";
+import StatusBadge from "@/shared/components/status/StatusBadge";
 import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
+
+/** «فقط نقدی» برای سقفِ صفر، «بالای سقف» وقتی بدهیِ مؤثر از سقف گذشته؛ بی‌سقف چیزی نشان نمی‌دهد. */
+function CreditLimitBadge({ customer }) {
+  if (customer.creditLimit == null) return null;
+  if (Number(customer.creditLimit) === 0) return <StatusBadge tone="neutral">فقط نقدی</StatusBadge>;
+  if (Number(customer.creditAvailable) < 0) return <StatusBadge tone="danger">بالای سقفِ اعتبار</StatusBadge>;
+  return null;
+}
 
 // ستون‌ها به هیچ state ای وابسته نیستند، پس یک بار بیرون از کامپوننت ساخته می‌شوند.
 const COLUMNS = [
@@ -22,7 +31,7 @@ const COLUMNS = [
     cell: (info) => <span className="font-light text-lg">{info.getValue()}</span>,
   },
   {
-    // مانده‌ی دفتر حساب اشخاص (یا مانده‌ی دستی، اگر سرور هنوز دفتر ندارد).
+    // مانده‌ی دفتر حساب اشخاص، و نشانِ سقفِ اعتبار (GAP-06: `creditLimit`/`creditAvailable` روی ردیف).
     // سرور روی آن مرتب نمی‌کند.
     id: "ledgerBalance",
     meta: { mobile: "highlight" },
@@ -30,10 +39,13 @@ const COLUMNS = [
     header: "مانده حساب",
     enableSorting: false,
     cell: (info) => (
-      <LedgerBalanceBadge
-        balance={info.getValue()}
-        className="font-light text-lg px-3 py-4 rounded-full"
-      />
+      <span className="inline-flex flex-col items-start gap-1">
+        <LedgerBalanceBadge
+          balance={info.getValue()}
+          className="font-light text-lg px-3 py-4 rounded-full"
+        />
+        <CreditLimitBadge customer={info.row.original} />
+      </span>
     ),
   },
   detailsColumn((customer) => routeWithId(ROUTES.CUSTOMERS_DETAIL, customer.id)),

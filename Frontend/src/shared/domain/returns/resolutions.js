@@ -1,17 +1,10 @@
 import {
-  EFFECT_DIRECTIONS,
   EFFECT_STATUSES,
-  createEffect,
   observationsOf,
   summarizeEffects,
 } from "./effects";
-import {
-  PaymentTypeEnum,
-  RETURN_PAYMENT_METHODS,
-  SPLITTABLE_PAYMENT_TYPES,
-} from "@/shared/domain/enums/paymentType";
+import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
-import { formatNumber } from "@/shared/lib/numberFormat";
 import { nowLocalIso } from "@/shared/lib/dateUtils";
 
 /**
@@ -39,9 +32,6 @@ import { nowLocalIso } from "@/shared/lib/dateUtils";
  *          └─ resolutions[] ← تصمیم‌ها برای بخش‌هایی از آن تعداد
  *               └─ effects[]← اثرهای پایه (effects.js)
  */
-
-const { GOODS_IN, GOODS_OUT, MONEY_IN, MONEY_OUT, GOODS_RELEASE, GOODS_SCRAP } =
-  EFFECT_DIRECTIONS;
 
 // ─── جهت پول ────────────────────────────────────────────────────────────────
 
@@ -99,11 +89,6 @@ const GOODS_SOURCES = {
   IN_STOCK: ProductUnitStatusEnum.IN_STOCK,
   QUARANTINED: ProductUnitStatusEnum.QUARANTINED,
 };
-
-/** اسلاتی که از قرنطینه برمی‌دارد و سقفش را می‌خورد: فقط آزادسازی (عودت و اسقاط خودشان تقسیم می‌شوند). */
-function takesFromQuarantine(composition) {
-  return Boolean(composition.goodsRelease?.enabled);
-}
 
 /**
  * سهمِ قرنطینه و قفسه برای عودت/اسقاطِ همان کالای ادعا: قرنطینه‌ی آزادِ ادعا
@@ -213,86 +198,6 @@ function goodsItemsOf(slot, claim, quantity) {
 }
 
 /**
- * مبلغِ پیشنهادیِ پول: ارزشِ همین تعداد از ادعا به قیمتِ ادعا. فقط
- * پیشنهاد است — کارمند بعد از گفت‌وگو با طرف حساب هر مبلغی را ثبت
- * می‌کند و هیچ قاعده‌ای آن را با کالا تراز نمی‌کند.
- */
-export function suggestedMoneyAmount(composition, claim) {
-  const quantity = Number(composition?.quantity) || 0;
-  return quantity * (Number(claim?.unitPrice) || 0);
-}
-
-/** ترکیب را به فهرست اثرهای پایه باز می‌کند — فقط برای پیش‌نمایش. */
-export function expandComposition(composition, claim) {
-  if (!composition || composition.writeOff) return [];
-
-  const effects = [];
-  const quantity = Number(composition.quantity) || 0;
-  const note = composition.note || "";
-
-  const pushGoods = (slot, direction) => {
-    if (!slot?.enabled) return;
-    goodsItemsOf(slot, claim, quantity).forEach((item) => {
-      effects.push(
-        createEffect({
-          direction,
-          quantity: Number(item.quantity) || 0,
-          productId: item.productId,
-          productCode: item.productCode,
-          productName: item.productName,
-          unit: item.unit,
-          unitPrice: hasValue(item.unitPrice) ? Number(item.unitPrice) : null,
-          note,
-        }),
-      );
-    });
-  };
-
-  const pushQuarantine = (slot, direction) => {
-    if (!slot?.enabled || quantity <= 0 || !claim) return;
-    effects.push(
-      createEffect({
-        direction,
-        quantity,
-        productId: claim.productId,
-        productCode: claim.productCode,
-        productName: claim.productName,
-        unit: claim.unit,
-        note,
-      }),
-    );
-  };
-
-  pushGoods(composition.goodsIn, GOODS_IN);
-  pushGoods(composition.goodsOut, GOODS_OUT);
-  pushQuarantine(composition.goodsRelease, GOODS_RELEASE);
-  pushQuarantine(composition.goodsScrap, GOODS_SCRAP);
-
-  const pushMoney = (slot, direction) => {
-    if (!slot?.enabled) return;
-    const amount = moneyAmountOf(slot);
-    if (amount <= 0) return;
-    const isMixed = slot.method === PaymentTypeEnum.MIXED;
-    effects.push(
-      createEffect({
-        direction,
-        amount,
-        method: slot.method,
-        reference: isMixed ? "" : slot.reference,
-        parts: isMixed ? validMoneyParts(slot) : [],
-        paidAt: slot.paidNow ? nowLocalIso() : null,
-        note,
-      }),
-    );
-  };
-
-  pushMoney(composition.moneyIn, MONEY_IN);
-  pushMoney(composition.moneyOut, MONEY_OUT);
-
-  return effects;
-}
-
-/**
  * ترکیبِ فرم → بدنه‌ی `EffectCompositionDto`ی بکند.
  *
  * تفاوت‌های شکلیِ فرم و دستور، همه واقعی‌اند، نه اختلافِ نام‌گذاری:
@@ -386,109 +291,6 @@ export function toApiComposition(composition, claim) {
   };
 }
 
-// ─── اعتبارسنجی ─────────────────────────────────────────────────────────────
-
-/**
- * فهرست خطاها را برمی‌گرداند (خالی یعنی معتبر) تا فرم و لایه‌ی داده از یک
- * منبع بخوانند. فقط شکلِ تصمیم را می‌سنجد، نه «درستیِ» توافق: هیچ قیمت یا
- * ترازی الزامی نیست.
- *
- * `allowQuarantine` فقط در مرجوعی خرید روشن است — سرور روی مرجوعی فروش
- * آزادسازی و اسقاط را رد می‌کند، و همان‌جا عودت منبعِ الزامی دارد.
- * `quarantineAvailable` سقفِ برداشت از قرنطینه برای این ادعاست
- * (`claimQuarantinedQuantity`؛ `null` یعنی نامعلوم، پس سنجیده نمی‌شود).
- */
-export function validateComposition(
-  composition,
-  claim,
-  { remainingQuantity, allowQuarantine = false, quarantineAvailable = null } = {},
-) {
-  const errors = [];
-  if (!composition) return ["تصمیمی وارد نشده است"];
-
-  const quantity = Number(composition.quantity) || 0;
-  if (quantity <= 0 || !Number.isInteger(quantity)) {
-    errors.push("تعداد باید یک عدد صحیح بزرگ‌تر از صفر باشد");
-  } else if (remainingQuantity != null && quantity > remainingQuantity) {
-    errors.push(
-      `تعداد این تصمیم از باقیمانده‌ی ادعا (${remainingQuantity}) بیشتر است`,
-    );
-  }
-
-  const activeSlot = activeMoneySlotOf(composition);
-  const activeMoney = activeSlot ? composition[activeSlot] : null;
-
-  const hasGoods = composition.goodsIn?.enabled || composition.goodsOut?.enabled;
-  const hasQuarantine =
-    composition.goodsRelease?.enabled || composition.goodsScrap?.enabled;
-
-  if (composition.writeOff) {
-    if (hasGoods || hasQuarantine || activeMoney) {
-      errors.push("بخشش با هیچ جابه‌جایی کالا یا پولی همراه نمی‌شود");
-    }
-    return errors;
-  }
-
-  if (!hasGoods && !hasQuarantine && !activeMoney) {
-    errors.push(
-      "این تصمیم هیچ اقدامی ندارد؛ یکی از جابه‌جایی کالا یا پول را انتخاب کنید، یا این تعداد را صریحاً ببخشید",
-    );
-  }
-
-  if (hasQuarantine && !allowQuarantine) {
-    errors.push("آزادسازی و اسقاطِ قرنطینه فقط در مرجوعی خرید ممکن است");
-  }
-
-  // یک تصمیم برای همان کالاهای ادعا فقط یک سرنوشت دارد: عودت، آزادسازی یا
-  // اسقاط. هر سه به‌طور پیش‌فرض کلِ تعدادِ تصمیم را برمی‌دارند، پس فعال‌بودنِ
-  // دوتا یعنی یک دانه‌ی قرنطینه دو بار خرج می‌شود. برای تقسیم، چند تصمیم با
-  // تعدادهای جدا ثبت کنید.
-  if (allowQuarantine) {
-    const fates = [
-      composition.goodsOut?.enabled,
-      composition.goodsRelease?.enabled,
-      composition.goodsScrap?.enabled,
-    ].filter(Boolean).length;
-    if (fates > 1) {
-      errors.push(
-        "عودت، آزادسازی و اسقاط را در یک تصمیم ترکیب نکنید؛ برای تقسیم، چند تصمیم با تعداد جدا ثبت کنید",
-      );
-    }
-  }
-
-  // هر اثری که از قرنطینه برمی‌دارد همان لحظه با قرنطینه‌ی آزادِ این ادعا
-  // سنجیده و رزرو می‌شود (همان قاعده‌ی `AddClaimResolution`).
-  if (
-    allowQuarantine &&
-    takesFromQuarantine(composition) &&
-    quarantineAvailable != null &&
-    quantity > quarantineAvailable
-  ) {
-    errors.push(
-      `برای این ادعا فقط ${formatNumber(quarantineAvailable)} عدد کالای آزاد در قرنطینه است`,
-    );
-  }
-
-  if (activeMoney) {
-    // روش‌های مجاز برای هر دو جهتِ پول یکی‌اند (`ReturnPaymentMethodEnum`).
-    if (!RETURN_PAYMENT_METHODS.includes(activeMoney.method)) {
-      errors.push("روش پرداخت برای مرجوعی مجاز نیست");
-    } else if (activeMoney.method === PaymentTypeEnum.MIXED) {
-      if (validMoneyParts(activeMoney).length === 0) {
-        errors.push("برای پرداخت ترکیبی، حداقل یک ردیف با مبلغ بیشتر از صفر لازم است");
-      }
-      const badPart = validMoneyParts(activeMoney).find(
-        (part) => !SPLITTABLE_PAYMENT_TYPES.includes(part.method),
-      );
-      if (badPart) errors.push("روش یکی از ردیف‌های پرداخت ترکیبی نامعتبر است");
-    } else if (!(moneyAmountOf(activeMoney) > 0)) {
-      errors.push("مبلغ باید بزرگ‌تر از صفر باشد");
-    }
-  }
-
-  return errors;
-}
-
 // ─── محاسبات روی ادعا و مرجوعی ──────────────────────────────────────────────
 
 export function claimDecidedQuantity(claim) {
@@ -505,14 +307,6 @@ export function claimRemainingQuantity(claim) {
 function allEffectsOf(returnDoc) {
   return (returnDoc?.claims || []).flatMap((claim) =>
     (claim.resolutions || []).flatMap((res) => res.effects || []),
-  );
-}
-
-function hasPendingEffect(returnDoc, directions) {
-  return allEffectsOf(returnDoc).some(
-    (effect) =>
-      directions.includes(effect.direction) &&
-      effect.status === EFFECT_STATUSES.PENDING,
   );
 }
 
@@ -575,24 +369,6 @@ export function buildGoodsLines(returnDoc, directions, { onlyPending = true } = 
   });
 
   return lines;
-}
-
-/** آیا تصمیمی روی این مرجوعی اثری با این جهت دارد (معلق یا اجراشده)؟ */
-export function hasEffect(returnDoc, direction) {
-  return allEffectsOf(returnDoc).some((effect) => effect.direction === direction);
-}
-
-export function hasPendingGoodsIn(returnDoc) {
-  return hasPendingEffect(returnDoc, [GOODS_IN]);
-}
-
-export function hasPendingGoodsOut(returnDoc) {
-  return hasPendingEffect(returnDoc, [GOODS_OUT]);
-}
-
-/** آزادسازی یا اسقاطِ قرنطینه‌ای که انبار هنوز اجرا نکرده. */
-export function hasPendingQuarantineExit(returnDoc) {
-  return hasPendingEffect(returnDoc, [GOODS_RELEASE, GOODS_SCRAP]);
 }
 
 export function summarizeReturn(returnDoc, options) {

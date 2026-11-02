@@ -101,53 +101,37 @@ export function useProductsOptionsQuery({ enabled = true } = {}) {
 
 /** سرور هر درخواست را به همین تعداد نزدیک‌ترین نتیجه محدود می‌کنیم. */
 export const PRODUCT_SEARCH_LIMIT = 200;
-const SECONDARY_SEARCH_LIMIT = 30;
-const HAS_DIGIT = /\d/;
+const BRAND_SEARCH_LIMIT = 30;
 
-const searchParams = (filters, take) =>
-  listQuery({
-    filters,
-    pagination: { pageIndex: 0, pageSize: take },
-    sorting: OPTIONS_SORTING,
-    sortColumns: PRODUCT_SORT_COLUMNS,
-  });
+/** بی `sortBy`: سرور تطبیقِ دقیقِ کد/بارکد را اول می‌گذارد (`isExactMatch`). */
+const searchParams = (filters, take) => listQuery({ filters, pagination: { pageIndex: 0, pageSize: take } });
 
 /**
- * جست‌وجوی سمتِ سرور: فیلترهای `Name`، `Code`، `BarCode` و `Brand` در `GetProductList`
- * با «و» ترکیب می‌شوند، پس برای «یا» هر کدام جدا پرسیده و اینجا ادغام می‌شوند.
- * تطبیقِ دقیقِ کد/بارکد اول می‌آید (سرور خودش وقتی کدِ کامل باشد فقط همان را می‌دهد)،
- * بعد نزدیک‌ترین نام‌ها (تا ۲۰۰ ردیف) و بعد برند.
+ * جست‌وجوی سمتِ سرور: `search`ِ `GetProductList` با «یا» روی نام (هر کلمه)، کد، بارکدِ کالا و بارکدِ دانه
+ * می‌گردد و تطبیقِ دقیق را اول می‌آورد (۱۳.۵). برند در آن نیست، پس برند جدا پرسیده و پشتِ نتیجه می‌آید.
  *
- * TODO(بکند): با پارامترِ واحدِ `Search` (بندِ ۱۳.۵ frontend-requests.fa.md) این چند
- * درخواست یکی می‌شود.
+ * TODO(بکند): `search` نامِ برند را هم بگردد (بخشِ ۳۰.۳ frontend-requests.fa.md) تا این دو درخواست یکی شود.
  */
 export async function searchProducts(term, categoryId = "") {
   const text = term.trim();
   const category = categoryId ? { productCategoryId: categoryId } : {};
   if (!text) {
-    return (await fetchProducts(searchParams(category, PRODUCT_SEARCH_LIMIT))).items;
+    // مرورِ یک دسته یا «همه‌ی کالاها»: به ترتیبِ نام.
+    const params = listQuery({
+      filters: category,
+      pagination: { pageIndex: 0, pageSize: PRODUCT_SEARCH_LIMIT },
+      sorting: OPTIONS_SORTING,
+      sortColumns: PRODUCT_SORT_COLUMNS,
+    });
+    return (await fetchProducts(params)).items;
   }
 
-  const byName = fetchProducts(searchParams({ ...category, name: text }, PRODUCT_SEARCH_LIMIT));
-  const byBrand = fetchProducts(searchParams({ ...category, brand: text }, SECONDARY_SEARCH_LIMIT));
-  const byCode = HAS_DIGIT.test(text)
-    ? fetchProducts(searchParams({ ...category, code: text }, SECONDARY_SEARCH_LIMIT))
-    : null;
-  const byBarcode = HAS_DIGIT.test(text)
-    ? fetchProducts(searchParams({ ...category, barCode: text }, SECONDARY_SEARCH_LIMIT))
-    : null;
-
-  const results = await Promise.all([byCode, byBarcode, byName, byBrand].map((p) => p ?? { items: [] }));
-  const seen = new Set();
-  const merged = [];
-  for (const { items } of results) {
-    for (const product of items) {
-      if (seen.has(product.id)) continue;
-      seen.add(product.id);
-      merged.push(product);
-    }
-  }
-  return merged;
+  const [matched, byBrand] = await Promise.all([
+    fetchProducts(searchParams({ ...category, search: text }, PRODUCT_SEARCH_LIMIT)),
+    fetchProducts(searchParams({ ...category, brand: text }, BRAND_SEARCH_LIMIT)),
+  ]);
+  const seen = new Set(matched.items.map((product) => product.id));
+  return [...matched.items, ...byBrand.items.filter((product) => !seen.has(product.id))];
 }
 
 /**

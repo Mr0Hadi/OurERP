@@ -18,9 +18,8 @@ import { ACTION_BUTTON_CLASS } from "./actionButtonClass";
 /**
  * یک تصمیمِ ثبت‌شده روی یک ادعا، به‌همراه اثرهایش.
  *
- * حذف فقط تا وقتی مجاز است که هیچ کالایی جابه‌جا نشده باشد — همان قاعده‌ی
- * `RemoveClaimResolution` (TODO(بکند): `canRemove` روی تصمیم، بندِ ۱۴.۳). اثر مالیِ اجراشده مانع نیست؛ سرور ردیفِ معکوسش
- * را می‌نویسد.
+ * حذف را سرور می‌گوید (`canRemove`، قاعده‌ی `RemoveClaimResolution`: هیچ کالایی جابه‌جا نشده و مرجوعی
+ * پایان نیافته — ۱۴.۳). اثر مالیِ اجراشده مانع نیست؛ سرور ردیفِ معکوسش را می‌نویسد.
  *
  * وعده‌ی پرداخت (اثر مالیِ معلق) همین‌جا دکمه‌ی «ثبت پرداخت» دارد: کار
  * مالی است و به صف انبار نمی‌رود.
@@ -40,15 +39,12 @@ export default function ResolutionLineRow({
   const effects = resolution.effects || [];
   const summary = summarizeEffects(effects, { includePending: true });
 
-  const hasMovedGoods = effects.some(
-    (effect) => isGoodsEffect(effect.direction) && (Number(effect.appliedQuantity) || 0) > 0,
-  );
   const awaitsWarehouse = effects.some(
     (effect) =>
       isGoodsEffect(effect.direction) && effect.status === EFFECT_STATUSES.PENDING,
   );
   const pendingMoney = effects.filter(isPendingMoneyEffect);
-  const canRemove = Boolean(onRemove) && !hasMovedGoods;
+  const canRemove = Boolean(onRemove) && Boolean(resolution.canRemove);
   const hasAppliedMoney = effects.some(
     (effect) => !isGoodsEffect(effect.direction) && effect.status === EFFECT_STATUSES.APPLIED,
   );

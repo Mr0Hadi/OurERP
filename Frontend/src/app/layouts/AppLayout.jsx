@@ -20,6 +20,7 @@ import { useHideOnScroll } from "@/shared/hooks/useHideOnScroll";
 import { ROUTES } from "@/shared/constants/routes";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import PermissionGate from "../routes/PermissionGate";
+import CreditLimitRefusalDialog from "@/features/customers/components/CreditLimitRefusalDialog";
 
 function ContentSpinner() {
   return (
@@ -95,6 +96,8 @@ export default function AppLayout() {
               </PermissionGate>
             </Suspense>
           </div>
+          {/* ردِ «سقفِ اعتبار» از هر مسیرِ صدورِ فاکتور (`reportCreditRefusal`). */}
+          <CreditLimitRefusalDialog />
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

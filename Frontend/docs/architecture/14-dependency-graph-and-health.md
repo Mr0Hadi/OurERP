@@ -101,10 +101,9 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 | R6 | نامِ مجوزها با بکند خودکار سنجیده نمی‌شود | نام‌ها رشته‌اند؛ مرجع `../Backend-Net/Domain/Enums/PermissionEnum.cs` | اسکریپتی شبیهِ `scripts/check-docs-paths.mjs` که نام‌های `permission:`/`can(`/`allows(` را با enum مقایسه کند |
 | R8 | وارسیِ enumِ ناشناخته فقط برای مرجوعی | `verifyReturnEnums` در `src/shared/domain/returns/apiEnums.js` | همان الگو برای وضعیتِ خرید/فروش/دانه |
 | R9 | `isEnvelope` با هر شیءِ `{ Data, Message }` پوشش فرض می‌کند | `src/shared/services/api/axios.js` | `ResponseMessageType` را هم شرط کنید |
-| R10 | `useDocumentFormDraft` نسخه را از `doc.updatedAt` می‌سازد | `src/shared/hooks/useDocumentFormDraft.js`؛ پرکردنش در `fromApiPurchase`/`fromApiSale` | مستقیم `documentVersion(doc)` از `src/shared/services/api/contract.js` |
-| R12 | `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند | `src/features/warehouse/products/services/queries.js` (TODOِ خودش) | جست‌وجوی سمتِ سرور (بندِ ۱۳.۵ `frontend-requests.fa.md`) |
+| R12 | `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند | `src/features/warehouse/products/services/queries.js` (TODOِ خودش) | `search`ِ سرورِ `GetProductList` آمده (۱۳.۵)؛ این فیلتر را هم به جست‌وجوی سرور ببرید |
 
-### مرزِ لایه‌ها: `shared/` → `features/` (۶ فایل)
+### مرزِ لایه‌ها: `shared/` → `features/` (۵ فایل)
 
 | فایل | چه چیزی import می‌کند | پیشنهاد |
 | --- | --- | --- |
@@ -113,7 +112,6 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 | `src/shared/components/forms/ProductSearchPanel.jsx` | `useDocumentProducts`، `useProductDetailLoader`، `useProductCategoriesQuery` | وارونه‌سازی: داده را با props/render-prop بگیرد؛ یا انتقال به `src/features/warehouse/products/components/` |
 | `src/shared/components/products/ProductPicker.jsx` | `useProductDetailLoader` | همان |
 | `src/shared/components/products/useReturnedNewProduct.js` | `useProductDetailLoader` | همان |
-| `src/shared/hooks/useClaimsInOtherReturns.js` | `fetch*ReturnById`، `useRelated*ReturnsQuery`، `*ReturnKeys` از هر دو `returns` | تابع‌ها را به عنوانِ پارامتر بگیرد (مثل `createReturnQueries` در `src/shared/services/returns/`)؛ کامنتش می‌گوید با بندِ ۱۴.۱ `frontend-requests.fa.md` حذف می‌شود |
 
 ### جهت‌های غیرمنتظره بینِ فیچرها
 

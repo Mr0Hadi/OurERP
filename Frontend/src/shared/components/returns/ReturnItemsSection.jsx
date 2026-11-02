@@ -11,7 +11,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
 import { OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
 import { unitLabelOf } from "@/shared/domain/enums/productUnit";
-import { claimLineKey } from "@/shared/hooks/useClaimsInOtherReturns";
+import { claimLineKey } from "@/shared/domain/returns/otherReturnClaims";
 import ClaimRow from "./ClaimRow";
 import { ReceivingReportLines } from "./ReceivingReport";
 import { withoutExcess } from "@/shared/domain/returns/receivingReport";
@@ -180,7 +180,7 @@ function LineCard({
  * قبلاً این دو در دو کارتِ جدا («مشکلات اقلام» و «کالای خارج از سفارش»)
  * بودند و کاربر نمی‌دانست مازادِ یک کالا را کجا ثبت کند.
  *
- * @param claimsElsewhere خروجیِ `useClaimsInOtherReturns` — مقدارِ ادعاشده
+ * @param claimsElsewhere خروجیِ `claimsElsewhereOf` — مقدارِ ادعاشده
  *   در مرجوعی‌های دیگرِ همین سند برای هر خط.
  */
 export default function ReturnItemsSection({

@@ -8,19 +8,14 @@ import {
   buildGoodsLines,
   claimRemainingQuantity,
   emptyComposition,
-  expandComposition,
-  hasPendingGoodsIn,
-  hasPendingQuarantineExit,
   moneyDirectionOf,
   resolveSources,
   sourceSplit,
-  suggestedMoneyAmount,
   summarizeReturn,
   toApiComposition,
-  validateComposition,
 } from "./resolutions";
 
-const { CASH, CREDIT, CHECK, MIXED, INSTALLMENT } = PaymentTypeEnum;
+const { CASH, CHECK, MIXED } = PaymentTypeEnum;
 const claim = { id: 1, productId: 10, productCode: "P10", productName: "لنت", unit: "عدد", unitPrice: 1500, quantity: 5 };
 
 const composition = (patch = {}) => {
@@ -60,10 +55,6 @@ describe("جهتِ پول", () => {
     expect(moneyDirectionOf(composition({ moneyIn: { enabled: true } }))).toBe(MONEY_DIRECTIONS.RECEIVE);
     expect(activeMoneySlotOf(composition({ moneyOut: { enabled: true } }))).toBe("moneyOut");
   });
-
-  it("مبلغِ پیشنهادی = تعداد × قیمتِ ادعا", () => {
-    expect(suggestedMoneyAmount(composition({ quantity: 3 }), claim)).toBe(4500);
-  });
 });
 
 describe("toApiComposition", () => {
@@ -99,50 +90,6 @@ describe("toApiComposition", () => {
   });
 });
 
-describe("validateComposition", () => {
-  const errorsOf = (patch, options) => validateComposition(composition(patch), claim, options);
-
-  it("تعداد صحیحِ مثبت و نه بیش از باقیمانده", () => {
-    expect(errorsOf({ quantity: 0, goodsIn: { enabled: true } })[0]).toContain("عدد صحیح");
-    expect(errorsOf({ quantity: 1.5, goodsIn: { enabled: true } })[0]).toContain("عدد صحیح");
-    expect(errorsOf({ quantity: 4, goodsIn: { enabled: true } }, { remainingQuantity: 3 })[0]).toContain("باقیمانده");
-  });
-
-  it("تصمیمِ بی‌اقدام و بخششِ همراهِ اقدام", () => {
-    expect(errorsOf({})).toHaveLength(1);
-    expect(errorsOf({ writeOff: true })).toEqual([]);
-    expect(errorsOf({ writeOff: true, goodsIn: { enabled: true } })[0]).toContain("بخشش");
-  });
-
-  it("قرنطینه فقط در مرجوعی خرید و یک سرنوشت برای هر تصمیم", () => {
-    expect(errorsOf({ goodsScrap: { enabled: true } })).toContain("آزادسازی و اسقاطِ قرنطینه فقط در مرجوعی خرید ممکن است");
-    expect(errorsOf({ goodsOut: { enabled: true }, goodsScrap: { enabled: true } }, { allowQuarantine: true })[0]).toContain("ترکیب نکنید");
-    expect(errorsOf({ quantity: 3, goodsRelease: { enabled: true } }, { allowQuarantine: true, quarantineAvailable: 2 })[0]).toContain("۲");
-    expect(errorsOf({ quantity: 2, goodsRelease: { enabled: true } }, { allowQuarantine: true, quarantineAvailable: 2 })).toEqual([]);
-  });
-
-  it("روش و مبلغِ پول", () => {
-    expect(errorsOf({ moneyIn: { enabled: true, method: CASH, amount: "" } })).toEqual(["مبلغ باید بزرگ‌تر از صفر باشد"]);
-    expect(errorsOf({ moneyIn: { enabled: true, method: INSTALLMENT, amount: 10 } })).toEqual(["روش پرداخت برای مرجوعی مجاز نیست"]);
-    expect(errorsOf({ moneyIn: { enabled: true, method: MIXED, parts: [] } })[0]).toContain("حداقل یک ردیف");
-    expect(errorsOf({ moneyIn: { enabled: true, method: MIXED, parts: [{ method: CREDIT, amount: 5 }] } })).toEqual([
-      "روش یکی از ردیف‌های پرداخت ترکیبی نامعتبر است",
-    ]);
-    expect(errorsOf({ moneyIn: { enabled: true, method: CREDIT, amount: 10 } })).toEqual([]);
-  });
-});
-
-describe("پیش‌نمایشِ اثرها", () => {
-  it("expandComposition: کالا معلق، پولِ پرداخت‌شده اعمال‌شده", () => {
-    const effects = expandComposition(composition({ quantity: 2, goodsIn: { enabled: true }, moneyOut: { enabled: true, amount: 3000 } }), claim);
-    expect(effects.map((e) => [e.direction, e.status, e.quantity, e.amount])).toEqual([
-      [EFFECT_DIRECTIONS.GOODS_IN, EFFECT_STATUSES.PENDING, 2, 0],
-      [EFFECT_DIRECTIONS.MONEY_OUT, EFFECT_STATUSES.APPLIED, 0, 3000],
-    ]);
-    expect(expandComposition(composition({ writeOff: true }), claim)).toEqual([]);
-  });
-});
-
 describe("روی خودِ مرجوعی", () => {
   const effect = (direction, status, extra = {}) => ({ id: `${direction}-${status}`, direction, status, quantity: 2, appliedQuantity: 0, ...extra });
   const doc = {
@@ -160,11 +107,6 @@ describe("روی خودِ مرجوعی", () => {
   it("باقیمانده‌ی ادعا", () => {
     expect(claimRemainingQuantity(doc.claims[0])).toBe(2);
     expect(claimRemainingQuantity({ quantity: 1, resolutions: [{ quantity: 3 }] })).toBe(0);
-  });
-
-  it("پرچم‌های انتظار", () => {
-    expect(hasPendingGoodsIn(doc)).toBe(true);
-    expect(hasPendingQuarantineExit(doc)).toBe(false);
   });
 
   it("ردیف‌های انبار فقط اثرهای معلقِ همان جهت، با کد و واحدِ ادعا", () => {

@@ -203,33 +203,6 @@ export function idempotent(key) {
 // ─── نسخه‌ی سند ─────────────────────────────────────────────────────────────
 
 /**
- * کلیدِ نسخه‌ی یک سند — چیزی که فرم‌های جزئیات با آن تشخیص می‌دهند
- * «داده‌ی روی سرور عوض شده، فرم را از نو پر کن».
- *
- * فرم‌ها تا امروز `updatedAt` را می‌خواندند، ولی `GetPurchaseDetail`
- * اصلاً چنین فیلدی برنمی‌گرداند؛ نتیجه‌اش کلیدِ ثابتِ `"5:undefined"`
- * بود، یعنی بعد از هر بازگشت به همان سند، فرم روی مقادیرِ ویرایش‌شده‌ی
- * قبلی می‌ماند و پاسخِ تازه‌ی سرور نادیده گرفته می‌شد. وقتی سرور
- * `updatedAt` می‌دهد همان استفاده می‌شود؛ وگرنه یک اثرِ انگشتِ محتوایی
- * ساخته می‌شود که با هر تغییرِ معنادارِ سند عوض می‌شود.
- */
-export function documentVersion(doc) {
-  if (!doc) return null;
-  if (doc.updatedAt) return doc.updatedAt;
-
-  return [
-    doc.status,
-    doc.invoiceNumber,
-    doc.invoiceDate,
-    doc.totalAmount,
-    doc.paidAmount,
-    doc.paymentType,
-    (doc.items || []).length,
-    (doc.attachments || []).length,
-  ].join("|");
-}
-
-/**
  * پیوست‌های یک سند (`DocumentAttachmentDto` در بدنه‌ی نوشتن):
  * `{objectKey, fileName?, note?}` — همان شکلی که `useInvoiceAttachments` در
  * `filesPayload` می‌دهد؛ فقط ردیفِ بدونِ فایل و فیلدهای خالی کنار می‌روند.

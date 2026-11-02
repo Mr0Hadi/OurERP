@@ -1,39 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
-import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { SALE_PAYMENT_SIDE } from "./salePayments";
 import { SALE_PRICE_MODES, salePriceOf } from "./salePricing";
 import {
-  RETURNABLE_SALE_STATUSES,
-  canCancelSale,
   hasAnythingShipped,
   saleFormProblem,
   saleStatusOptions,
   scannedBarcodesOf,
 } from "./saleRules";
 
-const { PROCESSING, PARTIALLY_DELIVERED, SHIPPED, DELIVERED, CANCELLED } = SaleStatusEnum;
+const { PROCESSING, SHIPPED, DELIVERED, CANCELLED } = SaleStatusEnum;
 const sale = (patch) => ({ status: PROCESSING, items: [{ shippedQuantity: 0 }], ...patch });
 
-describe("لغوِ فروش", () => {
-  it("پیش از هر ارسال و بی قراردادِ اقساطیِ جاری", () => {
-    expect(canCancelSale(sale())).toBe(true);
-    expect(canCancelSale(sale({ items: [{ shippedQuantity: 1 }] }))).toBe(false);
-    expect(canCancelSale(sale({ status: CANCELLED }))).toBe(false);
-    expect(canCancelSale(sale({ status: DELIVERED }))).toBe(false);
-    expect(canCancelSale(sale({ installmentSummary: { status: SaleInstallmentPlanStatusEnum.ACTIVE } }))).toBe(false);
-    expect(canCancelSale(sale({ installmentSummary: { status: SaleInstallmentPlanStatusEnum.CANCELLED } }))).toBe(true);
-    expect(hasAnythingShipped({ items: [{ shippedQuantity: "2" }] })).toBe(true);
-    expect(hasAnythingShipped(null)).toBe(false);
-  });
-
-  it("گزینه‌های وضعیت: فقط «ارسال شده → تحویل کامل» و لغو", () => {
-    expect(saleStatusOptions(sale({ status: SHIPPED, items: [{ shippedQuantity: 1 }] })).map((o) => o.value)).toEqual([SHIPPED, DELIVERED]);
-    expect(saleStatusOptions(sale()).map((o) => [o.value, o.label])).toEqual([
+describe("وضعیتِ فروشِ صادرشده از پرچم‌های سرور", () => {
+  it("فعلی، مقصدهای مجاز و لغو فقط با canCancel", () => {
+    expect(saleStatusOptions(sale({ status: SHIPPED, allowedStatuses: [DELIVERED] })).map((o) => o.value)).toEqual([SHIPPED, DELIVERED]);
+    expect(saleStatusOptions(sale({ canCancel: true })).map((o) => [o.value, o.label])).toEqual([
       [PROCESSING, expect.any(String)],
       [CANCELLED, "لغو فروش"],
     ]);
-    expect(RETURNABLE_SALE_STATUSES).toEqual([PARTIALLY_DELIVERED, SHIPPED, DELIVERED]);
+    expect(saleStatusOptions(sale({ allowedStatuses: [PROCESSING, CANCELLED] })).map((o) => o.value)).toEqual([PROCESSING]);
+    expect(hasAnythingShipped({ items: [{ shippedQuantity: "2" }] })).toBe(true);
+    expect(hasAnythingShipped(null)).toBe(false);
   });
 });
 

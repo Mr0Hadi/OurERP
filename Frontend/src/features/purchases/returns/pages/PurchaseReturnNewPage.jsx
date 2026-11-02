@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
 import { useGoBack } from "@/shared/hooks/useGoBack";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
+import { claimsElsewhereOf } from "@/shared/domain/returns/otherReturnClaims";
 import { ROUTES } from "@/shared/constants/routes";
 import { PURCHASE_STATUS_LABELS } from "@/shared/domain/enums/purchaseStatus";
 import { OFF_SCOPE_KINDS, OFF_SCOPE_KIND_STYLES } from "@/shared/domain/returns/scopes";
@@ -71,7 +71,7 @@ export default function PurchaseReturnNewPage() {
     error,
   } = usePurchaseForReturnQuery(selectedPurchaseId);
   // ادعاهای مرجوعی‌های قبلیِ همین خرید، کنارِ هر کالا.
-  const claimsElsewhere = useClaimsInOtherReturns("purchase", selectedPurchaseId);
+  const claimsElsewhere = useMemo(() => claimsElsewhereOf(purchaseForReturn), [purchaseForReturn]);
 
   // `?previousReturnId=` — از «ثبت مرجوعیِ بعدی» روی یک مرجوعیِ تسویه‌شده؛
   // فقط برای همان خریدی که در آدرس آمده، نه خریدی که کاربر بعداً عوض کرد.
@@ -244,7 +244,6 @@ export default function PurchaseReturnNewPage() {
             <OrderInvoiceCard
               order={purchaseForReturn}
               partyName={purchaseForReturn.supplierName}
-              claimsSource={{ side: "purchase", documentId: selectedPurchaseId }}
               // هر ادعا مقدارِ تحویل‌شده‌ی خودش را کنارش دارد؛ فاکتورِ کامل فقط مرجع است.
               defaultOpen={false}
             />

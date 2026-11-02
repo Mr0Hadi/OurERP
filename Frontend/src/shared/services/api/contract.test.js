@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   compactParams,
-  documentVersion,
   fetchAllPages,
   idempotencyKeyFor,
   idempotent,
@@ -100,15 +99,7 @@ describe("کلیدِ ایدمپوتنسی", () => {
   });
 });
 
-describe("نسخه‌ی سند و پیوست‌ها", () => {
-  it("updatedAt اگر هست؛ وگرنه اثرِ انگشتِ محتوا", () => {
-    expect(documentVersion({ updatedAt: "t1", status: 1 })).toBe("t1");
-    const doc = { status: 1, invoiceNumber: "A", totalAmount: 10, items: [1], attachments: [] };
-    expect(documentVersion(doc)).not.toBe(documentVersion({ ...doc, totalAmount: 11 }));
-    expect(documentVersion({ ...doc })).toBe(documentVersion(doc));
-    expect(documentVersion(null)).toBe(null);
-  });
-
+describe("پیوست‌ها", () => {
   it("پیوستِ بی‌فایل حذف، فیلدِ خالی undefined", () => {
     expect(toApiAttachments([{ objectKey: "k", fileName: "", note: "n" }, { fileName: "x" }, null])).toEqual([
       { objectKey: "k", fileName: undefined, note: "n" },

@@ -136,6 +136,7 @@ export default function SaleForm({ sale }) {
     items,
     paymentType: proformaPaymentType(isInstallment, sale),
     attachments: attachments.filesPayload,
+    updatedAt: sale?.updatedAt,
   });
 
   const afterSave = (latest) => {

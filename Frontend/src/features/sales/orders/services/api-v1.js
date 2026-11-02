@@ -2,7 +2,6 @@ import axiosInstance from "@/shared/services/api/axios";
 import {
   idempotent,
   normalizeListResponse,
-  documentVersion,
   toApiAttachments,
 } from "@/shared/services/api/contract";
 import { toDateOnly } from "@/shared/lib/dateUtils";
@@ -86,20 +85,15 @@ export function fromApiSale(dto) {
     warehouseIssues: dto.warehouseIssues || [],
   };
 
-  // نسخه‌ی سند `updatedAt`ِ سرور است (هر مرحله و پرداخت آن را عوض می‌کند، ۲۴.۲)؛ ترکیبِ زیر فقط برای
-  // سندِ قدیمیِ بی `updatedAt`.
-  const version = [
-    documentVersion(sale),
-    sale.revision,
-    sale.proformaStage,
-    sale.items.map((item) => `${item.id}:${item.quantity}:${item.unitPrice}`).join(","),
-  ].join("|");
-  return { ...sale, updatedAt: sale.updatedAt || version };
+  // نسخه‌ی سند `updatedAt`ِ سرور است: هر مرحله و پرداخت آن را عوض می‌کند (۲۴.۲).
+  return sale;
 }
 
 /** بدنه‌ی مشترکِ Create/Update. شماره‌ی فاکتور را همیشه سرور می‌سازد. */
 function toApiSalePayload(saleData) {
   return {
+    // نسخه‌ای که فرم خوانده (۱۳.۲): اگر سند در این فاصله عوض شده باشد سرور ۴۰۹ می‌دهد. روی ساخت خالی است.
+    updatedAt: saleData.updatedAt || undefined,
     customerId: saleData.customerId,
     invoiceDate: saleData.invoiceDate || null,
     paymentDate: saleData.paymentDate || null,

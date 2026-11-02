@@ -22,7 +22,7 @@ import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
 import { useIssuedDocumentDraft } from "@/shared/hooks/useIssuedDocumentDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedSalesReturnsQuery } from "@/features/sales/returns/services/queries";
-import { RETURNABLE_SALE_STATUSES, hasAnythingShipped, saleStatusOptions } from "../domain/saleRules";
+import { hasAnythingShipped, saleStatusOptions } from "../domain/saleRules";
 import { SALE_PAYMENT_SIDE } from "../domain/salePayments";
 import { SALE_STATUS_LABELS, SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import SaleStatusHint from "../components/forms/SaleStatusHint";
@@ -191,7 +191,7 @@ export default function SaleIssuedView({ sale }) {
               onCancel={draft.count ? draft.discard : undefined}
               cancelLabel="برگرداندنِ تغییرات"
               footer={
-                RETURNABLE_SALE_STATUSES.includes(Number(sale.status)) && (
+                sale.canCreateReturn && (
                   <Button
                     type="button"
                     variant="ghost"

@@ -15,8 +15,6 @@ import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 import { ROUTES } from "@/shared/constants/routes";
 import {
   stillOwedOf,
-  canClosePurchaseItem,
-  canReopenPurchaseItem,
 } from "../../domain/purchaseRules";
 import {
   useClosePurchaseItemMutation,
@@ -73,7 +71,7 @@ export default function PurchaseItemsCard({ purchase }) {
 
   const renderActions = (item) => (
     <>
-      {canClosePurchaseItem(purchase, item) && (
+      {item.canClose && (
         <Button
           type="button"
           size="sm"
@@ -86,7 +84,7 @@ export default function PurchaseItemsCard({ purchase }) {
           بستن قلم
         </Button>
       )}
-      {canReopenPurchaseItem(purchase, item) && (
+      {item.canReopen && (
         <Button
           type="button"
           size="sm"
@@ -159,7 +157,7 @@ export default function PurchaseItemsCard({ purchase }) {
             )}
           </>
         }
-        description={purchase.items?.some((item) => canClosePurchaseItem(purchase, item)) ? "قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید." : undefined}
+        description={purchase.items?.some((item) => item.canClose) ? "قلمی را که تامین‌کننده بقیه‌اش را نمی‌فرستد می‌توانید ببندید." : undefined}
         columns={[
           { key: "received", label: "رسیده", render: (item) => formatNumber(item.receivedQuantity) },
           { key: "remaining", label: "مانده", render: (item) => <RemainingCell item={item} /> },

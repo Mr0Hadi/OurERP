@@ -6,7 +6,6 @@ import {
 } from "@/shared/services/api/contract";
 import { toApiClaim, fromApiSaleReturn } from "@/shared/domain/returns/claimsApi";
 import { toApiComposition } from "@/shared/domain/returns/resolutions";
-import { RETURNABLE_SALE_STATUSES } from "@/features/sales/orders/domain/saleRules";
 
 /** `SaleReturnListSortEnum`ِ بکند، بر اساسِ شناسه‌ی ستونِ جدول. */
 export const SALE_RETURN_SORT_COLUMNS = {
@@ -45,14 +44,14 @@ export async function fetchSalesReturnById(id) {
 }
 
 /**
- * فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم — فقط وضعیت‌هایی که
- * `CreateSaleReturn` می‌پذیرد (چیزی ارسال شده باشد).
+ * فهرست کوتاهِ فروش‌های قابل‌مرجوع برای انتخابگر فرم — `returnable` همان قاعده‌ی `CreateSaleReturn`، و
+ * `search` شماره‌ی فاکتور یا نامِ مشتری (۱۳.۳، ۱۴.۲).
  */
 export async function fetchReturnableSales(search = "") {
   const { data } = await axiosInstance.get("/Sale/GetSaleList", {
     params: {
-      invoiceNumber: search || undefined,
-      statuses: RETURNABLE_SALE_STATUSES,
+      search: search || undefined,
+      returnable: true,
       take: 30,
     },
   });
@@ -94,7 +93,7 @@ export async function createSalesReturn(payload, { idempotencyKey } = {}) {
  * `composition` همان چهار اسلاتِ ساختاریِ بک‌اند است —
  * `goodsIn`/`goodsOut`/`moneyIn`/`moneyOut` (`EffectCompositionDto`،
  * از ۲۰۲۶-۰۹-۰۷). شکلِ فرم یک لایه با آن فرق دارد و `toApiComposition`
- * همان‌جا کنارِ `expandComposition` این فاصله را پر می‌کند: `enabled`
+ * این فاصله را پر می‌کند: `enabled`
  * فیلدی است که فقط فرم دارد، اسلاتِ کالا در فرم شیء است و در دستور
  * آرایه، و پیش‌فرضِ «همان کالای ادعا» باید قبل از ارسال باز شود چون
  * بکند روی آرایه‌ی خالی هیچ اثری نمی‌سازد.
@@ -114,6 +113,18 @@ export async function addClaimResolution(
     idempotent(idempotencyKey),
   );
   return fromApiSaleReturn(data);
+}
+
+/**
+ * پیش‌نمایشِ یک تصمیم بی‌ذخیره (`PreviewResolution`، ۱۳.۴) با همان بدنه‌ی `AddClaimResolution`:
+ * `{ isValid, errors: [{ field, message }], effects, suggestedMoneyAmount }`. رد جزوِ پاسخ است، نه ۴۰۰.
+ */
+export async function previewClaimResolution(claim, composition) {
+  const { data } = await axiosInstance.post("/SaleReturn/PreviewResolution", {
+    claimId: claim.id,
+    composition: toApiComposition(composition, claim),
+  });
+  return data;
 }
 
 /** بکند فقط شناسه‌ی *تصمیم* (`resolutionId`) می‌خواهد؛ `returnId`/`claimId` فقط برای رفرشِ کش فرانت لازم بودند. */

@@ -1,46 +1,5 @@
 import { PURCHASE_STATUS_LABELS, PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 
-/**
- * لغو (`ChangePurchaseStatus` → `CANCELLED`) از پیش‌فاکتور، «در انتظار
- * ارسال» و «ارسال‌شده»، تا وقتی هیچ کالایی دریافت نشده. لغو نهایی است و
- * پرداخت‌ها روی خرید می‌مانند.
- */
-export function canCancelPurchase(purchase) {
-  if (!purchase) return false;
-  if (!MANUAL_PurchaseStatusEnum.includes(purchase.status)) return false;
-  return (purchase.items || []).every((item) => !(item.receivedQuantity > 0));
-}
-
-/**
- * مقصدهای مجازِ `ChangePurchaseStatus` از وضعیتِ فعلی (به‌جز «لغو» که
- * دکمه و دیالوگِ خودش را دارد). خروج از پیش‌فاکتور شماره و تاریخِ
- * فاکتورِ ذخیره‌شده را لازم دارد.
- */
-export function purchaseStatusTargets(purchase) {
-  switch (purchase?.status) {
-    case PurchaseStatusEnum.PROFORMA:
-      return purchase.invoiceNumber && purchase.invoiceDate
-        ? [PurchaseStatusEnum.PENDING, PurchaseStatusEnum.SHIPPED]
-        : [];
-    case PurchaseStatusEnum.PENDING:
-      return [PurchaseStatusEnum.SHIPPED];
-    case PurchaseStatusEnum.SHIPPED:
-      return [PurchaseStatusEnum.PENDING];
-    default:
-      return [];
-  }
-}
-
-/**
- * وضعیت‌هایی که مرجوعی رویشان معنا دارد (`CreatePurchaseReturn`): پیش‌فاکتور، «در
- * انتظار ارسال» و لغوشده چیزی برای ادعا ندارند.
- */
-export const RETURNABLE_PURCHASE_STATUSES = [
-  PurchaseStatusEnum.SHIPPED,
-  PurchaseStatusEnum.PARTIALLY_RECEIVED,
-  PurchaseStatusEnum.RECEIVED,
-];
-
 // ─── قلم‌های خرید پس از ثبت ─────────────────────────────────────────────────
 
 /** همان `PurchaseItem.StillOwedQuantity`ِ بکند: سفارش − رسیده − بسته‌شده. */
@@ -50,42 +9,6 @@ export function stillOwedOf(item) {
   const shortClosed = Number(item?.shortClosedQuantity) || 0;
   return Math.max(0, ordered - received - shortClosed);
 }
-
-/**
- * بستنِ قلم (`ClosePurchaseItem`) — همان شرط‌های بکند: خرید لغو نشده،
- * چیزی از *کلِ* خرید رسیده، قلم قبلاً بسته نشده و هنوز بدهکار است.
- */
-export function canClosePurchaseItem(purchase, item) {
-  if (!purchase || !item) return false;
-  if (purchase.status === PurchaseStatusEnum.CANCELLED) return false;
-  const anythingArrived = (purchase.items || []).some(
-    (line) => (Number(line.receivedQuantity) || 0) > 0,
-  );
-  if (!anythingArrived) return false;
-  if ((Number(item.shortClosedQuantity) || 0) > 0) return false;
-  return stillOwedOf(item) > 0;
-}
-
-/** بازگشاییِ قلم (`ReopenPurchaseItem`) — فقط قلمِ بسته‌شده‌ی خریدِ لغونشده. */
-export function canReopenPurchaseItem(purchase, item) {
-  if (!purchase || !item) return false;
-  if (purchase.status === PurchaseStatusEnum.CANCELLED) return false;
-  return (Number(item.shortClosedQuantity) || 0) > 0;
-}
-
-// ─── وضعیتِ دستی ────────────────────────────────────────────────────────────
-
-/**
- * وضعیت‌هایی که واحد خرید دستی انتخاب می‌کند — مراحلِ پیش از رسیدنِ کالا،
- * و همان سه وضعیتی که `CreatePurchase`/`UpdatePurchase` می‌پذیرند.
- * «تحویل ناقص/کامل» را فقط دریافتِ انبار تعیین می‌کند (سرور بعد از هر دورِ
- * دریافت از نو حسابش می‌کند) و «لغو» دکمه و دیالوگِ خودش را دارد.
- */
-export const MANUAL_PurchaseStatusEnum = [
-  PurchaseStatusEnum.PROFORMA,
-  PurchaseStatusEnum.PENDING,
-  PurchaseStatusEnum.SHIPPED,
-];
 
 /**
  * خروج از پیش‌فاکتور یعنی فاکتورِ رسمیِ تامین‌کننده رسیده، پس شماره و

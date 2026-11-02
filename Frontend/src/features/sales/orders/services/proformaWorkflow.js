@@ -55,8 +55,9 @@ export async function ensureProformaPaymentType(sale, paymentType) {
  * تغییرهای بی‌اثر بر چرخه‌ی تأیید، پیش از دریافت: `update` (بدنه‌ی کاملِ `UpdateSale` با همان شرایطِ
  * ذخیره‌شده — مثلاً توضیحِ تازه) یا فقط `attachments`. هیچ‌کدام ⇒ کاری نمی‌کند.
  */
-export async function saveProformaInfo(saleId, { update, attachments } = {}) {
-  if (update) await updateSale(saleId, update);
+export async function saveProformaInfo(saleId, { update, attachments } = {}, version) {
+  // قدمِ قبل (شیوه‌ی پرداخت) نسخه را عوض کرده باشد، همان نسخه‌ی تازه فرستاده می‌شود، نه نسخه‌ی فرم.
+  if (update) await updateSale(saleId, version ? { ...update, updatedAt: version } : update);
   else if (attachments) await updateSaleAttachments(saleId, attachments);
 }
 
@@ -88,8 +89,8 @@ export async function settleProforma(
   sale,
   { paymentType, info, plan = null, payments, deliver = false, paymentDate },
 ) {
-  await ensureProformaPaymentType(sale, paymentType);
-  await saveProformaInfo(sale.id, info);
+  const latest = await ensureProformaPaymentType(sale, paymentType);
+  await saveProformaInfo(sale.id, info, latest?.updatedAt);
 
   if (plan) {
     const result = await recordProformaPlan(sale.id, plan, { deliver });
@@ -189,8 +190,8 @@ export function releaseReservation(sale) {
  * پیش‌فاکتور است (نه بعد از امروز)، وگرنه امروز. سررسیدِ تازه بعد از صدور.
  */
 export async function issueOnCredit(sale, { paymentType, info, paymentDate }) {
-  await ensureProformaPaymentType(sale, paymentType);
-  await saveProformaInfo(sale.id, info);
+  const latest = await ensureProformaPaymentType(sale, paymentType);
+  await saveProformaInfo(sale.id, info, latest?.updatedAt);
   const issued = await changeSaleStatus(sale.id, SaleStatusEnum.PROCESSING);
   if (paymentDate !== undefined) return updateSalePaymentDate(sale.id, paymentDate);
   return issued;

@@ -10,10 +10,10 @@ import {
   resolveSources,
   sourceSplit,
   emptyComposition,
-  expandComposition,
-  suggestedMoneyAmount,
-  validateComposition,
 } from "@/shared/domain/returns/resolutions";
+import { createEffect } from "@/shared/domain/returns/effects";
+import { useResolutionPreview } from "@/shared/hooks/useResolutionPreview";
+import { getErrorMessage } from "@/shared/lib/errorMessage";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { useSyncedComputedValue } from "@/shared/hooks/useSyncedComputedValue";
 import GoodsItemsPicker from "./GoodsItemsPicker";
@@ -57,6 +57,9 @@ function SourceNote({ quantity, quarantineAvailable, offScope }) {
  * ترازی بین کالا و پول اجبار نمی‌شود. فقط مبلغِ پول با «تعداد × قیمتِ
  * ادعا» پیشنهاد می‌شود و قابل تغییر است.
  *
+ * اعتبارسنجی، اثرهایی که ثبت می‌شوند و مبلغِ پیشنهادی را سرور می‌دهد (`preview` = `PreviewResolution`، ۱۳.۴)؛
+ * فرم قاعده‌ای از خودش ندارد.
+ *
  * `quarantineAvailable` (فقط خرید): سقفِ برداشت از قرنطینه برای این ادعا
  * (قرنطینه‌ی آزاد، منهای رزروِ تصمیم‌های دیگر)؛ `null` یعنی نامعلوم.
  */
@@ -66,6 +69,7 @@ export default function ResolutionComposer({
   onAdd,
   isBusy,
   side,
+  preview,
   quarantineAvailable = null,
 }) {
   const [composition, setComposition] = useState(() =>
@@ -115,9 +119,15 @@ export default function ResolutionComposer({
   const activeMoneySlotName = activeMoneySlotOf(composition);
   const activeMoney = activeMoneySlotName ? composition[activeMoneySlotName] : null;
 
-  // فقط پیشنهاد: وقتی کاربر جهتِ پول را باز می‌کند، مبلغ با همین پر می‌شود
+  const offScope = claim.scope === CLAIM_SCOPES.OFF_ORDER;
+  // همان بدنه‌ای که ثبت می‌شود: در خرید سهمِ قرنطینه/قفسه‌ی عودت و اسقاط روی اسلات نوشته می‌شود.
+  const toSubmit = allowQuarantine ? resolveSources(composition, { quarantineAvailable, offScope }) : composition;
+  const checked = useResolutionPreview(preview, claim, toSubmit);
+  const result = checked.data;
+
+  // فقط پیشنهاد (سرور: تعداد × قیمتِ ادعا): وقتی کاربر جهتِ پول را باز می‌کند، مبلغ با همین پر می‌شود
   // و تا وقتی دستی عوضش نکرده با تعداد همگام می‌ماند.
-  const defaultMoneyAmount = suggestedMoneyAmount(composition, claim);
+  const defaultMoneyAmount = Number(result?.suggestedMoneyAmount) || 0;
 
   useSyncedComputedValue(
     defaultMoneyAmount,
@@ -139,26 +149,34 @@ export default function ResolutionComposer({
       moneyParts.length === 1,
   );
 
-  const previewEffects = useMemo(
-    () => expandComposition(composition, claim),
-    [composition, claim],
-  );
+  // اثرهای سرور برای نمایش: نام/واحدِ کالا از ادعا یا از کالایی که در همین ترکیب انتخاب شده.
+  const previewEffects = useMemo(() => {
+    const picked = [composition.goodsIn, composition.goodsOut].flatMap((slot) => slot?.items ?? []);
+    const productOf = (productId) =>
+      productId === claim.productId ? claim : picked.find((item) => item.productId === productId) ?? {};
+    return (result?.effects ?? []).map((effect) => {
+      const product = productOf(effect.productId);
+      return {
+        ...createEffect({
+          ...effect,
+          productCode: product.productCode,
+          productName: product.productName,
+          unit: product.unit,
+        }),
+        status: effect.status,
+        source: effect.source,
+      };
+    });
+  }, [result, composition.goodsIn, composition.goodsOut, claim]);
 
-  const errors = useMemo(
-    () =>
-      validateComposition(composition, claim, {
-        remainingQuantity: remaining,
-        allowQuarantine,
-        quarantineAvailable,
-      }),
-    [composition, claim, remaining, allowQuarantine, quarantineAvailable],
-  );
-
-  const offScope = claim.scope === CLAIM_SCOPES.OFF_ORDER;
+  const errors = checked.error
+    ? [getErrorMessage(checked.error, "بررسیِ این تصمیم انجام نشد")]
+    : (result?.errors ?? []).map((error) => error.message);
+  const canSubmit = Boolean(result?.isValid) && !checked.isChecking && errors.length === 0;
 
   const handleSubmit = () => {
-    if (errors.length > 0) return;
-    onAdd(allowQuarantine ? resolveSources(composition, { quarantineAvailable, offScope }) : composition);
+    if (!canSubmit) return;
+    onAdd(toSubmit);
     setComposition(emptyComposition(remaining));
   };
 
@@ -331,7 +349,7 @@ export default function ResolutionComposer({
         size="sm"
         className={`w-full ${ACTION_BUTTON_CLASS}`}
         onClick={handleSubmit}
-        disabled={isBusy || errors.length > 0}
+        disabled={isBusy || !canSubmit}
       >
         <Plus className="h-3.5 w-3.5" />
         {composition.writeOff ? "بخشیدنِ" : "ثبت این تصمیم برای"} {formatNumber(quantity)} عدد

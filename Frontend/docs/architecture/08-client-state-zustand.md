@@ -79,7 +79,7 @@ storeِ فیلتر در حافظه است: رفتن به صفحه‌ی جزئی�
 
 `baseline` فرم در لحظه‌ی پر شدن است؛ سلکتورهای `src/features/sales/orders/store/saleFormStore.js` (`isSaleCoreChanged`، …) تغییرِ کاربر را با آن می‌سنجند.
 
-**نکته‌ی `updatedAt`:** سرور برای خرید `updatedAt` نمی‌دهد؛ `src/features/purchases/orders/services/api-v1.js` با `documentVersion(purchase)` از `contract.js` آن را می‌سازد و `src/features/sales/orders/services/api-v1.js` هم اگر نبود. سندی که این کار را نکند `version`ِ ثابتِ `"id:undefined"` می‌گیرد و فرم بعد از تغییرِ سرور دوباره پر نمی‌شود.
+**نکته‌ی `updatedAt`:** نسخه‌ی سند `updatedAt`ِ خودِ سرور است (خرید و فروش، هر مرحله و پرداخت آن را عوض می‌کند). همان با `UpdatePurchase`/`UpdateSale` برگردانده می‌شود و اگر سند در این فاصله عوض شده باشد سرور ۴۰۹ می‌دهد (۱۳.۲)؛ mutation کش را باطل می‌کند تا فرم با نسخه‌ی تازه پر شود.
 
 ### ۳. فرم‌های کوچک: react-hook-form + پیش‌نویسِ یک‌بارمصرف
 
@@ -134,6 +134,5 @@ usePageHeader({ title, showBack: true, onBack: () => {...} });
 
 ## سؤال‌های باز / بدهی
 
-- `useDocumentFormDraft` نسخه را از `doc.updatedAt` می‌سازد و به اینکه `api-v1` آن را پر کرده باشد تکیه دارد؛ بهتر است مستقیم `documentVersion(doc)` را صدا بزند.
 - چهار store فرمِ مرجوعی/انبار factoryِ مشترک ندارند؛ این فقط توصیف است، نه پیشنهاد — منطقِ هر کدام متفاوت است.
 - `unit-label-template` بعد از خروج می‌ماند (فایل ۰۴).

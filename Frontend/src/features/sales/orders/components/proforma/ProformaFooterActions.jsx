@@ -38,7 +38,7 @@ export default function ProformaFooterActions({ sale, disabled, onDeleted }) {
           آزاد کردن رزرو
         </Button>
       )}
-      {allows("SaleDelete") && (
+      {allows("SaleDelete") && sale.canDelete && (
         <Button
           type="button"
           variant="ghost"

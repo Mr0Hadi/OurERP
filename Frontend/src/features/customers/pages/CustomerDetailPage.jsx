@@ -21,6 +21,7 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
 import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 import PartyOnAccountBar from "@/features/treasury/partyPayments/components/PartyOnAccountBar";
+import CustomerCreditCard from "../components/CustomerCreditCard";
 import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 
 function CustomerDetailForm({ customerData }) {
@@ -144,6 +145,10 @@ function CustomerDetailForm({ customerData }) {
 
       <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
         <PartyOnAccountBar customerId={customerData.id} />
+      </div>
+
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+        <CustomerCreditCard customer={customerData} />
       </div>
 
       {/* گردش حساب از دفتر حساب اشخاص؛ مانده‌ی دستیِ فرم ردیفِ «مانده‌ی اول دوره» در همین دفتر است. */}

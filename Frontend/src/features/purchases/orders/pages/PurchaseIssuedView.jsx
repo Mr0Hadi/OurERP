@@ -20,11 +20,6 @@ import PurchaseStatusBadge from "@/shared/components/status/PurchaseStatusBadge"
 import { useIssuedDocumentDraft } from "@/shared/hooks/useIssuedDocumentDraft";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useRelatedPurchaseReturnsQuery } from "@/features/purchases/returns/services/queries";
-import { hasAnythingArrived } from "@/features/purchases/returns/domain/purchaseReturnVocabulary";
-import {
-  canCancelPurchase,
-  purchaseStatusTargets,
-} from "@/features/purchases/orders/domain/purchaseRules";
 import { PURCHASE_PAYMENT_SIDE } from "@/features/purchases/orders/domain/purchasePayments";
 import { PURCHASE_STATUS_LABELS, PurchaseStatusEnum } from "@/shared/domain/enums/purchaseStatus";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
@@ -32,15 +27,15 @@ import { savedInvoiceTotals } from "@/shared/domain/invoice/lineMath";
 import { ROUTES } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
 
-/** گزینه‌های وضعیت: فعلی، مقصدهای مجاز، و لغو اگر ممکن است. */
+/** گزینه‌های وضعیت: فعلی، مقصدهای مجازِ سرور (`allowedStatuses`)، و لغو اگر سرور اجازه می‌دهد (`canCancel`). */
 function statusOptionsOf(purchase) {
   const current = purchase.status;
   return [
     { value: current, label: PURCHASE_STATUS_LABELS[current] },
-    ...purchaseStatusTargets(purchase)
+    ...(purchase.allowedStatuses || [])
       .filter((target) => target !== current)
       .map((target) => ({ value: target, label: PURCHASE_STATUS_LABELS[target] })),
-    ...(canCancelPurchase(purchase)
+    ...(purchase.canCancel
       ? [{ value: PurchaseStatusEnum.CANCELLED, label: "لغو خرید" }]
       : []),
   ];
@@ -160,7 +155,7 @@ export default function PurchaseIssuedView({ purchase }) {
               onCancel={draft.count ? draft.discard : undefined}
               cancelLabel="برگرداندنِ تغییرات"
               footer={
-                hasAnythingArrived(purchase) && (
+                purchase.canCreateReturn && (
                   <Button
                     type="button"
                     variant="ghost"

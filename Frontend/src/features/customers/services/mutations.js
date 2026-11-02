@@ -24,9 +24,9 @@ export const useUpdateCustomerMutation = () => {
 
   return useMutation({
     mutationFn: ({ id, data }) => updateCustomer(id, data),
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: customerKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: customerKeys.detail(variables.id) });
+    onSuccess: () => {
+      // سقفِ اعتبار هم ممکن است عوض شده باشد: صندوق و فرمِ فروش (`CreditLimitNotice`) عددِ تازه را ببینند.
+      queryClient.invalidateQueries({ queryKey: customerKeys.all });
       toast.success("اطلاعات مشتری با موفقیت ویرایش شد.");
     },
     onError: (error) => {

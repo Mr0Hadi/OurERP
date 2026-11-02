@@ -1,6 +1,7 @@
 import {
   createSalesReturn,
   addClaimResolution,
+  previewClaimResolution,
   removeClaimResolution,
   executeGoodsRound,
   executeMoneyEffect,
@@ -20,6 +21,7 @@ const mutations = createReturnMutations({
   api: {
     create: createSalesReturn,
     addResolution: addClaimResolution,
+    previewResolution: previewClaimResolution,
     removeResolution: removeClaimResolution,
     executeGoodsRound,
     executeMoneyEffect,

@@ -9,7 +9,7 @@
 | فایل | export‌های اصلی |
 | --- | --- |
 | `src/shared/services/api/axios.js` | `default` = `axiosInstance` (همه‌ی درخواست‌ها از این) |
-| `src/shared/services/api/contract.js` | `normalizeListResponse`، `compactParams`، `listQuery`، `MAX_PAGE_SIZE`، `fetchAllPages`، `idempotencyKeyFor`، `releaseIdempotencyKey`، `idempotent`، `documentVersion`، `toApiAttachments` |
+| `src/shared/services/api/contract.js` | `normalizeListResponse`، `compactParams`، `listQuery`، `MAX_PAGE_SIZE`، `fetchAllPages`، `idempotencyKeyFor`، `releaseIdempotencyKey`، `idempotent`، `toApiAttachments` |
 | `src/shared/services/api/sorting.js` | `SortDirectionEnum`، `toApiSort` |
 | `src/shared/services/api/blob.js` | `unwrapBlobError` |
 | `src/shared/lib/errorMessage.js` | `ERROR_MESSAGES`، `extractServerMessage`، `getErrorMessage`، `isUserFacingMessage` |

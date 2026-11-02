@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { CLAIM_SCOPES, OFF_SCOPE_KINDS } from "@/shared/domain/returns/scopes";
-import { RETURN_PROBLEMS } from "@/shared/domain/returns/problems";
 import { lineReceivingReport } from "@/shared/domain/returns/receivingReport";
 import {
   carryOverLineClaims,
@@ -13,7 +12,6 @@ import {
   freeUnlistedQuantityOf,
 } from "../domain/purchaseReturnVocabulary";
 import { todayIso } from "@/shared/lib/dateUtils";
-import { UnitCustodyReasonEnum } from "@/shared/domain/enums/unitStatus";
 
 // تابع است نه ثابت، تا تاریخِ پیش‌فرض همیشه «امروز»ِ لحظه‌ی ساختِ فرم باشد.
 const emptyForm = () => ({
@@ -85,94 +83,36 @@ function offScopeCapsOf(purchase) {
 }
 
 /**
- * پرتکرارترین مشکلی که انبار برای این دسته ثبت کرده — فقط پیشنهادِ فرم؛
- * کاربر می‌تواند عوضش کند.
- */
-function dominantProblem(discrepancies, matches, fallback) {
-  const totals = new Map();
-  discrepancies.filter(matches).forEach((d) => {
-    totals.set(d.problem, (totals.get(d.problem) || 0) + (Number(d.quantity) || 0));
-  });
-  let best = fallback;
-  let bestQuantity = 0;
-  totals.forEach((quantity, problem) => {
-    if (quantity > bestQuantity) {
-      best = problem;
-      bestQuantity = quantity;
-    }
-  });
-  return best;
-}
-
-/**
- * ادعاهای پیش‌پرشده از کالای در قرنطینه‌ی همین خرید (TODO(بکند): `suggestedClaims`، بندِ ۱۴.۶).
- *
- * مقدارها از شمارِ دانه‌های قرنطینه می‌آیند (همان سقفی که سرور چک
- * می‌کند)، نه از جمعِ مغایرت‌ها؛ مغایرت‌ها فقط نوعِ مشکل را پیشنهاد می‌دهند.
+ * ادعاهای پیش‌پرشده از کالای در قرنطینه‌ی همین خرید — `suggestedClaims`ِ سرور (۱۴.۶): مقدار از قرنطینه‌ی آزادِ هر
+ * دسته (تا سقفِ ادعای قلم) و نوعِ مشکل پرتکرارترین مشکلی که انبار ثبت کرده. فرم فقط آن‌ها را پیش‌نویس می‌کند؛ کاربر
+ * می‌تواند عوضشان کند.
  */
 function quarantineClaimsOf(purchase, lines) {
-  const discrepancies = purchase.discrepancies || [];
   const lineClaims = new Map();
   const offScopeClaims = [];
+  const productOf = (claim) =>
+    (purchase.items || []).find((item) => item.purchaseItemId === claim.orderLineId) ??
+    (purchase.unlistedItems || []).find((item) => item.productId === claim.productId) ??
+    {};
 
-  (purchase.items || []).forEach((item) => {
-    // قرنطینه‌ی پرداخت‌شده‌ی قلم که هنوز رزرو نشده: خرابِ دریافت، برگشتیِ
-    // معیوبِ مشتری و نگهداشتِ انبار — ادعای روی سفارش همه را برمی‌دارد.
-    const onOrder = Number(item.freeQuarantinedOnOrderQuantity) || 0;
-    const line = lines.find((l) => l.orderLineId === item.purchaseItemId);
-    if (onOrder > 0 && line) {
-      lineClaims.set(item.purchaseItemId, [
-        newClaimDraft(
-          dominantProblem(
-            discrepancies,
-            (d) =>
-              d.purchaseItemId === item.purchaseItemId &&
-              d.custodyReason === UnitCustodyReasonEnum.ON_ORDER,
-            RETURN_PROBLEMS.DEFECTIVE,
-          ),
-          Math.min(onOrder, line.maxReturnableQuantity),
-        ),
-      ]);
+  (purchase.suggestedClaims || []).forEach((claim) => {
+    const draft = newClaimDraft(claim.problem, Number(claim.quantity) || 0);
+    if (claim.offScopeKind == null) {
+      if (!lines.some((line) => line.orderLineId === claim.orderLineId)) return;
+      lineClaims.set(claim.orderLineId, [...(lineClaims.get(claim.orderLineId) || []), draft]);
+      return;
     }
-
-    // سقفِ سرور: قرنطینه منهای آنچه ادعاهای بازِ دیگر رزرو کرده‌اند.
-    const excess = freeExcessQuantityOf(item);
-    if (excess > 0) {
-      offScopeClaims.push({
-        ...newClaimDraft(
-          dominantProblem(
-            discrepancies,
-            (d) =>
-              d.purchaseItemId === item.purchaseItemId &&
-              d.custodyReason === UnitCustodyReasonEnum.EXCESS,
-            RETURN_PROBLEMS.OVER_SHIPPED,
-          ),
-          excess,
-        ),
-        offScopeKind: OFF_SCOPE_KINDS.EXCESS,
-        orderLineId: item.purchaseItemId,
-        productId: item.productId,
-        productCode: item.productCode,
-        productName: item.productName,
-        unit: item.unit,
-        unitPrice: item.unitPrice,
-      });
-    }
-  });
-
-  (purchase.unlistedItems || []).forEach((item) => {
-    const free = freeUnlistedQuantityOf(item);
-    if (free <= 0) return;
+    const product = productOf(claim);
     offScopeClaims.push({
-      ...newClaimDraft(RETURN_PROBLEMS.UNLISTED_ITEM, free),
-      offScopeKind: OFF_SCOPE_KINDS.UNLISTED,
-      orderLineId: null,
-      productId: item.productId,
-      productCode: item.productCode,
-      productName: item.productName,
-      unit: item.unit,
-      // کالای سفارش‌نداده پولی بابتش پرداخت نشده؛ قیمتِ معامله را کاربر وارد می‌کند.
-      unitPrice: 0,
+      ...draft,
+      offScopeKind: claim.offScopeKind,
+      orderLineId: claim.orderLineId ?? null,
+      productId: claim.productId,
+      productCode: product.productCode,
+      productName: product.productName,
+      unit: product.unit,
+      // کالای سفارش‌نداده پولی بابتش پرداخت نشده (`unitPrice = 0`)؛ قیمتِ معامله را کاربر وارد می‌کند.
+      unitPrice: claim.unitPrice,
     });
   });
 

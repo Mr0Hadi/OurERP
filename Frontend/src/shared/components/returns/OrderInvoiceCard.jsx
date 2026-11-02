@@ -8,7 +8,7 @@ import {
 } from "@/shared/components/ui/card";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
-import { claimLineKey, useClaimsInOtherReturns } from "@/shared/hooks/useClaimsInOtherReturns";
+import { claimLineKey, claimsElsewhereOf } from "@/shared/domain/returns/otherReturnClaims";
 import { formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
@@ -43,10 +43,8 @@ const lineTotalOf = (item) =>
  * تصمیم‌گیری است و فاکتور فقط مرجع است — باز بودنش نصف صفحه را
  * می‌گرفت.
  *
- * `claimsSource` (`{ side, documentId, excludeReturnId }`) ادعاهای مرجوعی‌های
- * دیگرِ همین سند را کنارِ «تحویل‌شده» می‌آورد. خودِ کارت آن را می‌خواند و فقط
- * وقتی باز است: این کار یک درخواست به‌ازای هر مرجوعیِ دیگر است و در صفحه‌ی
- * جزئیات (که کارت بسته است) پیش از این همیشه انجام می‌شد.
+ * ادعاهای مرجوعی‌های دیگرِ همین سند کنارِ «تحویل‌شده» از `otherReturnClaims`ِ خودِ اقلام می‌آیند (۱۴.۱)؛
+ * `excludeReturnId` مرجوعیِ همین صفحه را کنار می‌گذارد.
  */
 export default function OrderInvoiceCard({
   order,
@@ -54,7 +52,7 @@ export default function OrderInvoiceCard({
   quantityLabel = "تعداد فاکتور",
   deliveredLabel = "تحویل‌شده",
   partyName,
-  claimsSource,
+  excludeReturnId = null,
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -99,7 +97,7 @@ export default function OrderInvoiceCard({
           totalLabel={totalLabel}
           quantityLabel={quantityLabel}
           deliveredLabel={deliveredLabel}
-          claimsSource={claimsSource}
+          excludeReturnId={excludeReturnId}
         />
       )}
     </Card>
@@ -107,12 +105,8 @@ export default function OrderInvoiceCard({
 }
 
 /** اقلامِ فاکتور — فقط وقتی کارت باز است mount می‌شود (و ادعاهای دیگر را می‌خواند). */
-function InvoiceItems({ items, total, totalLabel, quantityLabel, deliveredLabel, claimsSource }) {
-  const claimsElsewhere = useClaimsInOtherReturns(
-    claimsSource?.side,
-    claimsSource?.documentId ?? null,
-    claimsSource?.excludeReturnId ?? null,
-  );
+function InvoiceItems({ items, total, totalLabel, quantityLabel, deliveredLabel, excludeReturnId }) {
+  const claimsElsewhere = claimsElsewhereOf({ items }, excludeReturnId);
 
   return (
     <CardContent>
@@ -225,7 +219,7 @@ function InvoiceItems({ items, total, totalLabel, quantityLabel, deliveredLabel,
 /**
  * «تحویل‌شده»، و در سمتِ فروش آنچه تا حالا از راهِ مرجوعی تسویه شده.
  *
- * ادعاهای بازِ مرجوعی‌های دیگر از `useClaimsInOtherReturns` می‌آیند و
+ * ادعاهای بازِ مرجوعی‌های دیگر از `otherReturnClaims`ِ اقلام می‌آیند و
  * سقفِ خودِ فرم از `claimableQuantity` (هر دو سمت).
  */
 function DeliveredCell({ item, claimsElsewhere }) {

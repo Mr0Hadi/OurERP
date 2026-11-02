@@ -30,6 +30,8 @@ const ResolutionComposer = lazy(() => import("./ResolutionComposer"));
 export default function ClaimResolutionCard({
   claim,
   onAddResolution,
+  // `(claim, composition) => Promise<preview>` — `PreviewResolution`ِ سرور.
+  previewResolution,
   onRemoveResolution,
   onExecuteMoney,
   // `(claim) => ReactNode` — گزارشِ انبار کنارِ همان ادعا (فقط مرجوعی خرید).
@@ -129,6 +131,7 @@ export default function ClaimResolutionCard({
                 remaining={remaining}
                 isBusy={isBusy}
                 side={side}
+                preview={previewResolution}
                 quarantineAvailable={quarantineOf ? quarantineOf(claim) : null}
                 onAdd={(composition) => {
                   // خودِ ادعا می‌رود، نه فقط شناسه‌اش: لایه‌ی api برای باز

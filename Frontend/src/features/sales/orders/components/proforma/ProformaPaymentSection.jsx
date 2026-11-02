@@ -7,6 +7,8 @@ import StatusChoice from "@/shared/components/forms/StatusChoice";
 import PaymentsCard from "@/shared/components/payments/PaymentsCard";
 import { SALE_TERMS_LABEL } from "../../domain/proformaFlow";
 import CreditInvoiceAction from "./CreditInvoiceAction";
+import CreditLimitNotice from "./CreditLimitNotice";
+import { settledNowOf, settlesNow } from "@/features/customers/domain/creditLimit";
 import { SALE_PAYMENT_SIDE } from "../../domain/salePayments";
 
 /** «شیوه‌ی پرداخت» هنگامِ دریافت: یکجا (نقد/نسیه) یا اقساطی (قرارداد با پیش‌پرداخت). */
@@ -25,6 +27,16 @@ const PAYMENT_TERMS_OPTIONS = [
 export default function ProformaPaymentSection({ sale, payment, payments }) {
   const { allows } = usePermission();
   const busy = payment.isPending || payment.posLocked;
+  // آنچه این صدور به بدهیِ مشتری اضافه می‌کند: قرارداد (اصل + سود − پیش‌پرداختِ نقدی) یا فاکتور منهای دریافتِ نقد/کارت.
+  const credit = payment.isInstallment
+    ? {
+        payable: Number(payment.planPreview?.totalAmount) || 0,
+        settledNow: settlesNow(payment.planDraft?.paymentType) ? Number(payment.planDraft?.downPaymentAmount) || 0 : 0,
+      }
+    : {
+        payable: Number(sale.payableAmount ?? sale.totalAmount) || 0,
+        settledNow: settledNowOf(payments.rows, SALE_PAYMENT_SIDE.direction),
+      };
 
   return (
     <>
@@ -40,6 +52,7 @@ export default function ProformaPaymentSection({ sale, payment, payments }) {
         </SectionCard>
       )}
       <FormSection name="payment">
+        {!payment.existingPlan && <CreditLimitNotice customerId={sale.customerId} {...credit} />}
         {!payment.isInstallment ? (
           <>
             <PaymentsCard

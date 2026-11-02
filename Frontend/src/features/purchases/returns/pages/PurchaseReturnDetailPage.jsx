@@ -19,15 +19,7 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { RETURN_STATUSES } from "@/shared/domain/returns/statuses";
 import { RETURN_SIDES, sideConfig } from "@/shared/domain/returns/sides";
-import {
-  hasPendingGoodsIn,
-  hasPendingGoodsOut,
-  hasPendingQuarantineExit,
-} from "@/shared/domain/returns/resolutions";
-import {
-  claimQuarantinedQuantity,
-  claimReceivingReport,
-} from "@/shared/domain/returns/receivingReport";
+import { claimReceivingReport } from "@/shared/domain/returns/receivingReport";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import ReturnPageSkeleton from "@/shared/components/returns/ReturnPageSkeleton";
 import ReturnStatusBar from "@/shared/components/returns/ReturnStatusBar";
@@ -51,10 +43,11 @@ const VOCABULARY = {
   rejectLabel: "ثبتِ ردِ تامین‌کننده",
 };
 
-/** کارِ انبارِ مانده روی این مرجوعی: دریافتِ جایگزین، و عودت/آزادسازی/اسقاط. */
+/** کارِ انبارِ مانده روی این مرجوعی (`pendingWarehouseWork`ِ سرور، ۱۴.۵): دریافتِ جایگزین، و عودت/آزادسازی/اسقاط. */
 function warehouseLinksOf(purchaseReturn) {
   const links = [];
-  if (hasPendingGoodsIn(purchaseReturn)) {
+  const work = purchaseReturn.pendingWarehouseWork ?? {};
+  if (work.goodsIn > 0) {
     // فقط جایگزینِ همین مرجوعی (`?returnId=`)؛ بی آن فرمِ کاملِ دریافتِ خرید باز
     // می‌شد و باقیمانده‌ی سفارش هم «رسیده» پیش‌پر بود.
     links.push({
@@ -63,7 +56,7 @@ function warehouseLinksOf(purchaseReturn) {
     });
   }
   // عودت و خروج از قرنطینه هر دو در صفحه‌ی انبارِ همین مرجوعی اجرا می‌شوند.
-  if (hasPendingGoodsOut(purchaseReturn) || hasPendingQuarantineExit(purchaseReturn)) {
+  if (work.goodsOut > 0 || work.quarantineExit > 0) {
     links.push({
       to: routeWithId(ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL, purchaseReturn.id),
       label: "عودت / تعیین تکلیفِ قرنطینه",
@@ -103,7 +96,7 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
           partyName={purchaseReturn.supplierName}
           defaultOpen={false}
           // روی هر کالا، چقدر در مرجوعی‌های دیگرِ همین خرید ثبت شده (فقط با بازکردنِ کارت).
-          claimsSource={{ side: "purchase", documentId: purchaseReturn.purchaseId, excludeReturnId: purchaseReturn.id }}
+          excludeReturnId={purchaseReturn.id}
         />
       )}
 
@@ -129,7 +122,7 @@ function PurchaseReturnDetailContent({ purchaseReturn }) {
         vocabulary={VOCABULARY}
         warehouseLinks={warehouseLinksOf(purchaseReturn)}
         renderClaimReport={(claim) => <ReceivingReportLines {...claimReceivingReport(purchase, claim)} />}
-        quarantineOf={(claim) => claimQuarantinedQuantity(purchase, claim)}
+        quarantineOf={(claim) => Number(claim.freeQuarantinedQuantity) || 0}
       />
 
       {/* سند و پیوست بعد از کارِ اصلیِ صفحه (ادعاها و تصمیم‌ها) می‌آید. */}

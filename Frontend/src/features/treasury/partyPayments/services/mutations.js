@@ -15,6 +15,7 @@ import {
   removePartyPaymentAllocation,
   voidPartyPayment,
 } from "./api-v1";
+import { reportCreditRefusal } from "@/features/customers/store/creditRefusalStore";
 import { partyPaymentKeys } from "./queryKeys";
 
 /**
@@ -38,7 +39,11 @@ function usePartyPaymentMutation({ mutationFn, success, failure }) {
       queryClient.invalidateQueries({ queryKey: accountingKeys.all });
       toast.success(success);
     },
-    onError: (error) => toast.error(getErrorMessage(error, failure)),
+    onError: (error) => {
+      // تخصیصِ علی‌الحساب به پیش‌فاکتور فاکتور را صادر می‌کند و ممکن است سقفِ اعتبار ردش کند (GAP-06).
+      if (reportCreditRefusal(error)) return;
+      toast.error(getErrorMessage(error, failure));
+    },
   });
 }
 

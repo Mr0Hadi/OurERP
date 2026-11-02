@@ -33,7 +33,7 @@ export default function ReturnResolutionSection({
   renderClaimReport,
   quarantineOf,
 }) {
-  const { status, statusReason, canReject, canCancel, canReopen } = returnDoc;
+  const { status, statusReason, canReject, canCancel, canReopen, lifecycleBlocker } = returnDoc;
   const claims = returnDoc.claims || [];
   const isClosed = isTerminalStatus(status);
   const { isBusy } = actions;
@@ -102,6 +102,7 @@ export default function ReturnResolutionSection({
             key={claim.id}
             claim={claim}
             onAddResolution={actions.onAddResolution}
+            previewResolution={actions.previewResolution}
             onRemoveResolution={actions.onRemoveResolution}
             onExecuteMoney={actions.onExecuteMoney}
             renderReport={renderClaimReport}
@@ -144,6 +145,10 @@ export default function ReturnResolutionSection({
               </Button>
             )}
           </div>
+        )}
+        {!canReject && !canCancel && !isClosed && lifecycleBlocker && (
+          // چرا «رد» و «لغو» نیست — همان متنی که سرور برای ردِ لغو می‌دهد (۱۴.۳).
+          <p className="border-t border-border pt-3 text-xs text-muted-foreground">{lifecycleBlocker}</p>
         )}
 
         <ReturnStatusReasonDialog
