@@ -10,6 +10,7 @@ import {
 } from "@/features/sales/installments/domain/installmentPlan";
 import { useInstallmentPlanPreviewQuery } from "@/features/sales/installments/services/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 import { todayIso } from "@/shared/lib/dateUtils";
@@ -127,10 +128,10 @@ export function useProformaPayment({
     );
   };
 
-  // فاکتورِ نسیه بی دریافت (`ChangeSaleStatus PROCESSING`): فقط غیراقساطی، و نه وقتی دریافتِ ثبت‌نشده هست
-  // (آن‌وقت همان دکمه‌ی اصلی فاکتور را با دریافت صادر می‌کند).
+  // فاکتورِ نسیه بی دریافت (`ChangeSaleStatus PROCESSING`): سرور می‌گوید کی مجاز است (`allowedStatuses`: تأییدِ انبار،
+  // رزروِ معتبر، غیراقساطی)؛ و نه وقتی دریافتِ ثبت‌نشده هست (آن‌وقت دکمه‌ی اصلی فاکتور را با دریافت صادر می‌کند).
   const creditInvoice =
-    !isInstallment && allows("SaleUpdate")
+    !isInstallment && allows("SaleUpdate") && (sale?.allowedStatuses ?? []).includes(SaleStatusEnum.PROCESSING)
       ? {
           blockedReason: payments.hasChanges ? "دریافت‌های ثبت‌نشده را با دکمه‌ی اصلی ثبت کنید یا بردارید." : null,
           isPending: credit.isPending,
