@@ -52,11 +52,13 @@ namespace Application.Features.Purchase.Commands
         {
             var res = new ResponseDto();
 
-            var exists = await _context.Purchases.AnyAsync(x => x.Id == request.Id && x.IsActive, cancellationToken);
-            if (!exists)
-                throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
+            var purchase = await _context.Purchases.FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
+                ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
             await DocumentAttachmentWriter.ReplaceAsync(_context, _objectStorageService, DocumentKindEnum.PURCHASE, request.Id, request.Attachments, cancellationToken);
+            // UpdatePurchase replaces the attachment list wholesale, so this is an edit of the document too: a proforma opened
+            // before it must get 409 instead of dropping the new attachments (frontend-requests 31.2).
+            purchase.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Data = await PurchaseDetailReader.ReadAsync(_context, _objectStorageService, request.Id, cancellationToken);

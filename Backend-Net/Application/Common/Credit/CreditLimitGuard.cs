@@ -24,6 +24,11 @@ namespace Application.Common.Credit
     /// the save leaves exposure above the limit AND higher than before it. So 0 means cash only, and a customer already
     /// over the limit can still buy if they pay in full (in cash, card or transfer - a cheque is not cash yet).
     /// There is no override: raise the customer's limit, clear it, or turn the setting off.
+    ///
+    /// Inside IUnitOfWork.ExecuteInTransactionAsync the check runs once, on the final state, just before commit (a
+    /// <see cref="Batch"/>): CompleteInPersonSale and AddSalePayments save one payment row at a time, and the first save
+    /// issues the invoice with only that row paid, so a per-save check refused a sale paid in full in two cash rows
+    /// (frontend-requests 31.1). Each save of the batch only records the customer's exposure before it was first touched.
     /// </summary>
     public static class CreditLimitGuard
     {
@@ -34,6 +39,35 @@ namespace Application.Common.Credit
             && payment.VoidedAt == null
             && payment.CheckStatus is null or PaymentCheckStatusEnum.PENDING or PaymentCheckStatusEnum.ENDORSED;
 
+        /// <summary>The customers a save gives new credit: staged DEBITs of type SALE_INVOICE or INSTALLMENT_CHARGE.</summary>
+        private static List<int> TriggeringCustomers(IWMSDbContext context) =>
+            context.ChangeTracker.Entries<PartyLedgerEntry>()
+                .Where(x => x.State == EntityState.Added && x.Entity.CustomerId != null
+                            && x.Entity.Direction == PartyLedgerDirectionEnum.DEBIT
+                            && x.Entity.EntryType is PartyLedgerEntryTypeEnum.SALE_INVOICE or PartyLedgerEntryTypeEnum.INSTALLMENT_CHARGE)
+                .Select(x => x.Entity.CustomerId!.Value)
+                .Distinct()
+                .ToList();
+
+        private sealed record LimitRow(int Id, string FirstName, string LastName, ulong Limit);
+
+        /// <summary>The customers among <paramref name="customerIds"/> that have a limit, or none when the setting is off.</summary>
+        private static async Task<List<LimitRow>> LimitsAsync(IWMSDbContext context, List<int> customerIds, CancellationToken cancellationToken)
+        {
+            if (customerIds.Count == 0)
+                return new List<LimitRow>();
+            var limits = await context.Customers.AsNoTracking()
+                .Where(x => customerIds.Contains(x.Id) && x.CreditLimit != null)
+                .Select(x => new LimitRow(x.Id, x.FirstName, x.LastName, x.CreditLimit!.Value))
+                .ToListAsync(cancellationToken);
+            if (limits.Count == 0)
+                return limits;
+            return await SystemSettingValues.GetBooleanAsync(context, SystemSettingCatalog.SaleCreditLimitEnforced, cancellationToken)
+                ? limits
+                : new List<LimitRow>();
+        }
+
+        /// <summary>One save, outside a unit-of-work transaction: before = saved rows, after = before + what this save stages.</summary>
         public static async Task EnsureAsync(IWMSDbContext context, CancellationToken cancellationToken)
         {
             var staged = context.ChangeTracker.Entries<PartyLedgerEntry>()
@@ -41,59 +75,71 @@ namespace Application.Common.Credit
                 .Select(x => x.Entity)
                 .ToList();
 
-            var customerIds = staged
-                .Where(x => x.Direction == PartyLedgerDirectionEnum.DEBIT
-                            && x.EntryType is PartyLedgerEntryTypeEnum.SALE_INVOICE or PartyLedgerEntryTypeEnum.INSTALLMENT_CHARGE)
-                .Select(x => x.CustomerId!.Value)
-                .Distinct()
-                .ToList();
-            if (customerIds.Count == 0)
-                return;
-
-            var limits = await context.Customers.AsNoTracking()
-                .Where(x => customerIds.Contains(x.Id) && x.CreditLimit != null)
-                .Select(x => new { x.Id, x.FirstName, x.LastName, Limit = x.CreditLimit!.Value })
-                .ToListAsync(cancellationToken);
-            if (limits.Count == 0)
-                return;
-
-            if (!await SystemSettingValues.GetBooleanAsync(context, SystemSettingCatalog.SaleCreditLimitEnforced, cancellationToken))
-                return;
-
-            foreach (var customer in limits)
+            foreach (var customer in await LimitsAsync(context, TriggeringCustomers(context), cancellationToken))
             {
                 var before = await SavedExposureAsync(context, customer.Id, cancellationToken);
                 var after = before.Total
                             + staged.Where(x => x.CustomerId == customer.Id)
                                 .Sum(x => x.Direction == PartyLedgerDirectionEnum.DEBIT ? (decimal)x.Amount : -(decimal)x.Amount)
                             + await StagedChequeChangeAsync(context, customer.Id, cancellationToken);
-
-                if (after <= customer.Limit || after <= before.Total)
-                    continue;
-
-                var name = $"{customer.FirstName} {customer.LastName}".Trim();
-                var added = after - before.Total;
-                var excess = after - customer.Limit;
-                var message = customer.Limit == 0
-                    ? $"سقف اعتبار «{name}» صفر است و فقط فروش نقدی دارد؛ این فاکتور {Rial(added)} نسیه (یا چک وصول‌نشده) به حسابش اضافه می‌کند. " +
-                      "مبلغ را کامل نقد، کارت یا انتقال دریافت کنید، یا سقف اعتبار مشتری را تغییر دهید."
-                    : $"این فروش از سقف اعتبار «{name}» بیشتر است. سقف اعتبار: {Rial(customer.Limit)}، " +
-                      $"بدهی فعلی (با چک‌های وصول‌نشده و اقساط باقی): {Rial(before.Total)}، افزایش با این فاکتور: {Rial(added)}، " +
-                      $"مازاد بر سقف: {Rial(excess)}. بخشی از مبلغ را نقد دریافت کنید، یا سقف اعتبار مشتری را افزایش دهید.";
-
-                throw new ValidationCustomException(message, new CreditLimitExceededDto
-                {
-                    CreditLimitExceeded = true,
-                    CustomerId = customer.Id,
-                    CustomerName = name,
-                    CreditLimit = customer.Limit,
-                    CurrentExposure = before.Total,
-                    UnclearedCheques = before.UnclearedCheques,
-                    AddedAmount = added,
-                    Exposure = after,
-                    Excess = excess,
-                });
+                ThrowIfOver(customer, before, after);
             }
+        }
+
+        /// <summary>
+        /// The state of one unit-of-work transaction (see the class remarks): each customer's exposure before the first save
+        /// that gave them credit.
+        /// </summary>
+        public sealed class Batch
+        {
+            internal Dictionary<int, CreditExposure> Before { get; } = new();
+        }
+
+        /// <summary>A save inside a batch: remember the exposure of newly touched customers, check nothing yet.</summary>
+        public static async Task RecordAsync(IWMSDbContext context, Batch batch, CancellationToken cancellationToken)
+        {
+            foreach (var customerId in TriggeringCustomers(context).Where(id => !batch.Before.ContainsKey(id)))
+                batch.Before[customerId] = await SavedExposureAsync(context, customerId, cancellationToken);
+        }
+
+        /// <summary>End of a batch, before commit: every save is in the database, so after = the saved exposure now.</summary>
+        public static async Task EnsureBatchAsync(IWMSDbContext context, Batch batch, CancellationToken cancellationToken)
+        {
+            foreach (var customer in await LimitsAsync(context, batch.Before.Keys.ToList(), cancellationToken))
+            {
+                var before = batch.Before[customer.Id];
+                var after = (await SavedExposureAsync(context, customer.Id, cancellationToken)).Total;
+                ThrowIfOver(customer, before, after);
+            }
+        }
+
+        /// <summary>The rule: refused when the exposure ends above the limit AND higher than it was.</summary>
+        private static void ThrowIfOver(LimitRow customer, CreditExposure before, decimal after)
+        {
+            if (after <= customer.Limit || after <= before.Total)
+                return;
+
+            var name = $"{customer.FirstName} {customer.LastName}".Trim();
+            var added = after - before.Total;
+            var excess = after - customer.Limit;
+            var message = customer.Limit == 0
+                ? $"سقف اعتبار «{name}» صفر است و فقط فروش نقدی دارد؛ این فاکتور {Rial(added)} نسیه (یا چک وصول‌نشده) به حسابش اضافه می‌کند. " +
+                  "مبلغ را کامل نقد، کارت یا انتقال دریافت کنید، یا سقف اعتبار مشتری را تغییر دهید."
+                : $"این فروش از سقف اعتبار «{name}» بیشتر است. سقف اعتبار: {Rial(customer.Limit)}، " +
+                  $"بدهی فعلی (با چک‌های وصول‌نشده و اقساط باقی): {Rial(before.Total)}، افزایش با این فاکتور: {Rial(added)}، " +
+                  $"مازاد بر سقف: {Rial(excess)}. بخشی از مبلغ را نقد دریافت کنید، یا سقف اعتبار مشتری را افزایش دهید.";
+            throw new ValidationCustomException(message, new CreditLimitExceededDto
+            {
+                CreditLimitExceeded = true,
+                CustomerId = customer.Id,
+                CustomerName = name,
+                CreditLimit = customer.Limit,
+                CurrentExposure = before.Total,
+                UnclearedCheques = before.UnclearedCheques,
+                AddedAmount = added,
+                Exposure = after,
+                Excess = excess,
+            });
         }
 
         /// <summary>

@@ -37,6 +37,30 @@ namespace Application.Features.Sale.Commands
         /// today. Omitted = the date on the proforma, else now. Ignored on an invoice already issued.
         /// </summary>
         public DateTime? InvoiceDate { get; set; }
+
+        /// <summary>
+        /// One IN row of a multi-row payment (CompleteInPersonSale, AddSalePayments), every PaymentInput field copied - the
+        /// cheque's due date, bank and drawer included. <paramref name="invoiceDate"/> is read by the row that issues the invoice.
+        /// </summary>
+        public static AddSalePaymentCommand For(int saleId, PaymentInput row, DateTime? invoiceDate) => new()
+        {
+            SaleId = saleId,
+            Direction = DocumentPayments.SaleDirection,
+            InvoiceDate = invoiceDate,
+            Type = row.Type,
+            Amount = row.Amount,
+            PaidAt = row.PaidAt,
+            CheckNumber = row.CheckNumber,
+            TransferRef = row.TransferRef,
+            CheckDueDate = row.CheckDueDate,
+            CheckBankName = row.CheckBankName,
+            CheckDrawerName = row.CheckDrawerName,
+            BankAccountId = row.BankAccountId,
+            PosTerminalId = row.PosTerminalId,
+            MaskedCardNumber = row.MaskedCardNumber,
+            ApprovalCode = row.ApprovalCode,
+            TraceNumber = row.TraceNumber,
+        };
     }
 
     public class AddSalePaymentCommandValidator : AbstractValidator<AddSalePaymentCommand>

@@ -63,8 +63,12 @@ namespace Infrastructure.Persistence
 
             ClearEmptyDates();
 
-            // Customer credit limit (GAP-06): here, so no command can issue credit past a limit by not asking.
-            await Application.Common.Credit.CreditLimitGuard.EnsureAsync(this, cancellationToken);
+            // Customer credit limit (GAP-06): here, so no command can issue credit past a limit by not asking. Inside a
+            // unit-of-work transaction it is checked once before commit, on the final state (frontend-requests 31.1).
+            if (_creditBatch != null)
+                await Application.Common.Credit.CreditLimitGuard.RecordAsync(this, _creditBatch, cancellationToken);
+            else
+                await Application.Common.Credit.CreditLimitGuard.EnsureAsync(this, cancellationToken);
 
             var recorder = AuditRecorder.Capture(this);
 
@@ -217,10 +221,25 @@ namespace Infrastructure.Persistence
         public DbSet<StocktakeScan> StocktakeScans => Set<StocktakeScan>();
         public DbSet<StocktakeSnapshotUnit> StocktakeSnapshotUnits => Set<StocktakeSnapshotUnit>();
 
-        public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
+        /// <summary>The credit-limit batch of the current unit-of-work transaction, or null outside one.</summary>
+        private Application.Common.Credit.CreditLimitGuard.Batch? _creditBatch;
+
+        public async Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken)
         {
-            return Database.BeginTransactionAsync(cancellationToken);
+            var transaction = await Database.BeginTransactionAsync(cancellationToken);
+            _creditBatch = new Application.Common.Credit.CreditLimitGuard.Batch();
+            return transaction;
         }
+
+        public async Task EnsureDeferredChecksAsync(CancellationToken cancellationToken)
+        {
+            var batch = _creditBatch;
+            _creditBatch = null;
+            if (batch != null)
+                await Application.Common.Credit.CreditLimitGuard.EnsureBatchAsync(this, batch, cancellationToken);
+        }
+
+        public void AbandonDeferredChecks() => _creditBatch = null;
 
         public async Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default)
         {

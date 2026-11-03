@@ -129,6 +129,13 @@ namespace WMS.Controllers
         }
 
         [HasPermission(PermissionEnum.SalePayment)]
+        [HttpPost("AddSalePayments")]
+        public async Task<ActionResult<ResponseDto>> AddSalePayments([FromBody] AddSalePaymentsCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.SalePayment)]
         [HttpPost("EditSalePayment")]
         public async Task<ActionResult<ResponseDto>> EditSalePayment([FromBody] EditSalePaymentCommand request)
         {

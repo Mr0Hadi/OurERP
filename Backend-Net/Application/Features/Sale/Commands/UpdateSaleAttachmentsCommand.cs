@@ -55,11 +55,13 @@ namespace Application.Features.Sale.Commands
         {
             var res = new ResponseDto();
 
-            var exists = await _context.Sales.AnyAsync(x => x.Id == request.Id && x.IsActive, cancellationToken);
-            if (!exists)
-                throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
+            var sale = await _context.Sales.FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
+                ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
             await DocumentAttachmentWriter.ReplaceAsync(_context, _objectStorageService, DocumentKindEnum.SALE, request.Id, request.Attachments, cancellationToken);
+            // UpdateSale replaces the attachment list wholesale, so this is an edit of the document too: a proforma opened before
+            // it must get 409 instead of dropping the new attachments (frontend-requests 31.2).
+            sale.UpdatedAt = DateTime.Now;
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, request.Id, cancellationToken);

@@ -106,26 +106,9 @@ namespace Application.Features.Sale.Commands
                 }
                 else
                 {
+                    // InvoiceDate is read by the first payment only - the one that issues the invoice.
                     foreach (var payment in request.Payments)
-                    {
-                        await _mediator.Send(new AddSalePaymentCommand
-                        {
-                            SaleId = sale.Id,
-                            Direction = DocumentPayments.SaleDirection,
-                            // Read by the first payment only - the one that issues the invoice.
-                            InvoiceDate = request.InvoiceDate,
-                            Type = payment.Type,
-                            Amount = payment.Amount,
-                            PaidAt = payment.PaidAt,
-                            CheckNumber = payment.CheckNumber,
-                            TransferRef = payment.TransferRef,
-                            BankAccountId = payment.BankAccountId,
-                            PosTerminalId = payment.PosTerminalId,
-                            MaskedCardNumber = payment.MaskedCardNumber,
-                            ApprovalCode = payment.ApprovalCode,
-                            TraceNumber = payment.TraceNumber,
-                        }, ct);
-                    }
+                        await _mediator.Send(AddSalePaymentCommand.For(sale.Id, payment, request.InvoiceDate), ct);
                 }
 
                 // The units were scanned and reserved at the warehouse check; shipping takes exactly those.

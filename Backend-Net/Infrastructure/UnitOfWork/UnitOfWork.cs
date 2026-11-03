@@ -19,11 +19,20 @@ namespace Infrastructure.UnitOfWork
 
         public async Task<T> ExecuteInTransactionAsync<T>(Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken)
         {
-            // Disposing an uncommitted transaction rolls it back, so a throw anywhere in work leaves the database untouched.
+            // Disposing an uncommitted transaction rolls it back, so a throw anywhere in work - or in the deferred checks, which
+            // see the final state of every save (the customer credit limit) - leaves the database untouched.
             await using var transaction = await _context.BeginTransactionAsync(cancellationToken);
-            var result = await work(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-            return result;
+            try
+            {
+                var result = await work(cancellationToken);
+                await _context.EnsureDeferredChecksAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return result;
+            }
+            finally
+            {
+                _context.AbandonDeferredChecks();
+            }
         }
 
         public void Dispose()

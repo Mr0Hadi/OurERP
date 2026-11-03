@@ -2221,6 +2221,58 @@ PDFِ رسمی مثلِ قبل کار می‌کند.
 غلط می‌شود. **درخواست:** `POST Invoice/PreviewLines` با `{ items: [{ productId, quantity, unitPrice, discount }] }` ⇒ همان مبالغِ
 `InvoiceLineMath.Stamp` برای هر قلم و جمع (بی‌ذخیره)، مثلِ `PreviewSaleInstallmentPlan`. فرانت با تأخیرِ کوتاه صدایش می‌زند.
 
+## بخشِ ۳۲ — بازبینیِ شاخه‌ی `feat/server-rules` و ادغام با `main` (۲۰۲۶-۱۱-۰۳)
+
+**درخواست:** این شاخه را بازبینی کنید و اگر درست بود خودتان با `main` ادغام (merge) کنید. ۳۱.۱ و ۳۱.۲ را فرانت با اجازه‌ی
+مالکِ پروژه **در خودِ بکند** نوشته (برخلافِ روالِ همیشه)، چون تغییر کوچک بود و باگِ ۳۱.۱ جلوی فروشِ حضوری را می‌گرفت.
+هر چیزی را که با معماری یا سلیقه‌ی بکند جور نیست عوض کنید؛ این نسخه پیشنهاد است.
+
+**چه چیزی در شاخه است:**
+- سه کامیتِ فرانت (`bb94ed2c`، `6c61c85d`، `2efdf8b0`): فرانت قاعده‌های کپی‌شده‌ی ۱۳ و ۱۴ را برداشت و پرچم‌های سرور را
+  می‌خواند (`canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `canClose`/`canReopen`، `updatedAt` در Update*،
+  `PreviewClaimResolution`، ...) و GAP-06 (سقفِ اعتبار) را نشان می‌دهد. این‌ها به کامیت‌های بکندِ `cedbe332`، `b9ea06f3` و
+  `c61db157` تکیه دارند؛ پس **بعد از ادغام، بکند و فرانت با هم روی سرورِ تست بروند**، وگرنه فرانت پرچم‌هایی می‌خواند که سرور
+  هنوز نمی‌فرستد.
+- یک کامیتِ بکند برای ۳۱.۱ و ۳۱.۲ (پایین).
+
+**۳۱.۲ — `UpdatedAt` روی پیوست‌ها**
+- `UpdateSaleAttachmentsCommand` و `UpdatePurchaseAttachmentsCommand`: به‌جای `AnyAsync` خودِ سند را می‌خوانند و بعد از
+  `DocumentAttachmentWriter.ReplaceAsync` مقدارِ `UpdatedAt = DateTime.Now` می‌گذارند.
+- **چرا:** `UpdateSale`/`UpdatePurchase` فهرستِ پیوست را کامل جایگزین می‌کنند؛ بی این، ذخیره‌ی نسخه‌ی کهنه پیوستِ تازه‌ی کاربرِ
+  دیگر را بی ۴۰۹ پاک می‌کرد. حالا `DocumentVersion.Ensure` آن را رد می‌کند.
+
+**۳۱.۱ — سقفِ اعتبار روی وضعیتِ نهایی، نه هر `SaveChanges`**
+- **مشکل:** `CreditLimitGuard` در هر `SaveChangesAsync` اجرا می‌شد. ردیفِ اولِ پرداخت فاکتور را صادر و کلِ مبلغ را بدهکار
+  می‌کند ولی فقط همان ردیف را بستانکار؛ پس مشتریِ «فقط نقدی» (سقفِ ۰) که با ۵۰۰ نقد + ۵۰۰ کارت کلِ فاکتور را می‌پردازد،
+  در ردیفِ اول رد می‌شد (`CompleteInPersonSale` و گامِ دریافتِ پیش‌فاکتور در فرانت).
+- **`CreditLimitGuard.cs`:** منطقِ قبلی به چند تکه شکست، بی تغییرِ فرمول و پیام و `CreditLimitExceededDto`:
+  - `TriggeringCustomers` — مشتری‌هایی که ردیفِ بدهکارِ `SALE_INVOICE`/`INSTALLMENT_CHARGE` تازه دارند (همان شرطِ قبل).
+  - `LimitsAsync` — سقفِ همان مشتری‌ها (اگر `Sale.CreditLimitEnforced` خاموش باشد، هیچ).
+  - `EnsureAsync` — مسیرِ قبلی برای ذخیره‌ی بیرون از تراکنش، بی تغییرِ رفتار.
+  - `Batch` + `RecordAsync` — درونِ تراکنش، هر ذخیره فقط **بدهیِ پیش از اولین تغییرِ** هر مشتری را یادداشت می‌کند.
+  - `EnsureBatchAsync` — پیش از commit، بدهیِ ذخیره‌شده‌ی نهایی را با سقف و بدهیِ آغاز می‌سنجد.
+  - `ThrowIfOver` — همان قاعده: فقط وقتی رد کن که از سقف بالاتر **و** از بدهیِ پیشین بیشتر شده باشد.
+- **`IWMSDbContext` / `WMSDbContext`:** `BeginTransactionAsync` یک `Batch` باز می‌کند؛ `SaveChangesAsync` اگر batch باز باشد
+  `RecordAsync` و وگرنه `EnsureAsync` را صدا می‌زند؛ دو متدِ تازه `EnsureDeferredChecksAsync` و `AbandonDeferredChecks`.
+- **`UnitOfWork.ExecuteInTransactionAsync`:** پیش از `CommitAsync`، `EnsureDeferredChecksAsync`؛ در `finally`،
+  `AbandonDeferredChecks`. خطای سقف تراکنش را برمی‌گرداند، پس هیچ ردیفی ذخیره نمی‌شود.
+- **`AddSalePaymentCommand.For(saleId, row, invoiceDate)`:** ساختنِ دستور از یک `PaymentInput`. `CompleteInPersonSale` هنگامِ
+  ساختنِ دستی سه فیلدِ چک (`CheckDueDate`، `CheckBankName`، `CheckDrawerName`) را **دور می‌ریخت**؛ حالا هر دو مسیر همه‌ی
+  فیلدها را می‌برند.
+- **endpointِ تازه `POST Sale/AddSalePayments`** (`AddSalePaymentsCommand.cs`): `{ saleId, invoiceDate?, payments: PaymentInput[] }`
+  — هر ردیف یک `AddSalePaymentCommand` از راهِ MediatR (validator و قاعده‌هایش اجرا می‌شوند) درونِ یک تراکنش؛ همه یا هیچ؛
+  پاسخ `SaleDto`. مجوز `SalePayment`، تاریخچه `AuditActionEnum.AddSalePayments = 417`. فرانت گامِ دریافتِ پیش‌فاکتور را بعد
+  از ادغام به این می‌برد (الان ردیف‌ها را یکی‌یکی با `AddSalePayment` می‌فرستد).
+- **تست:** دو تستِ تازه در `CreditLimitTests` (سقفِ ۰، فاکتورِ ۱۰۰۰: ۵۰۰ نقد + ۵۰۰ نقد پذیرفته؛ ۵۰۰ نقد + ۵۰۰ چک رد و چیزی
+  ذخیره نمی‌شود). سمتِ فرانت SQL Server نیست، پس **تست‌های یکپارچه اجرا نشده‌اند** — لطفاً `CreditLimitTests` و بقیه‌ی
+  Integration را اجرا کنید. بیلد بی‌خطا؛ تست‌های Unit ۴۲۱/۴۲۴ (سه `PagginationTests` همان سه تستی‌اند که SQL Server می‌خواهند).
+
+**جاهایی که نظرِ بکند لازم است:**
+- batch روی خودِ `DbContext` (scoped) نگه داشته می‌شود. `ExecuteInTransactionAsync`ِ تودرتو پشتیبانی نمی‌شود (قبلاً هم
+  `BeginTransaction`ِ دوم خطا می‌داد).
+- هر دستوری که بیرون از `ExecuteInTransactionAsync` چند `SaveChanges` پشتِ هم دارد هنوز در هر ذخیره سنجیده می‌شود؛ اگر
+  جای دیگری هم چنین است، به unit of work ببرید.
+
 ## پاسخِ بکند به بندهای باز (۲۰۲۶-۱۰-۳۰)
 
 همه‌ی تغییرِ قرارداد در `api-guide.fa.md` بخش ۱۶، جدولِ «۲۰۲۶-۱۰-۳۰». این‌جا فقط کاری که فرانت باید بکند:
@@ -2295,3 +2347,4 @@ PDFِ رسمی مثلِ قبل کار می‌کند.
 - [x] ۲۸ — پیشنهادِ خرید: کالای پوشش‌داده‌شده تا هدف دوباره پیشنهاد نشود (۲۸.۱) (۲۰۲۶-۱۰-۳۰)
 - [x] ۲۹ — بررسیِ انبار: کالای بدونِ ردیابیِ دانه‌ای بی‌اسکن، رزروِ FIFO سمتِ سرور (۲۹.۱) (۲۰۲۶-۱۰-۳۰)
 - [ ] ۳۱ — بازبینیِ ۱۳/۱۴/GAP-06: سقفِ اعتبار در پرداختِ چندردیفی (۳۱.۱، باگ)، `UpdatedAt` روی پیوست‌ها (۳۱.۲)، `allowedActions` دانه (۳۱.۳)، پرچم‌های چک (۳۱.۴)، `canVoid` علی‌الحساب (۳۱.۵)، پیش‌نمایشِ مبالغِ فاکتور (۳۱.۶، اختیاری)
+- [ ] ۳۲ — بازبینی و ادغامِ شاخه‌ی `feat/server-rules` (۳۱.۱ و ۳۱.۲ نوشته‌ی فرانت، `Sale/AddSalePayments`) با `main`

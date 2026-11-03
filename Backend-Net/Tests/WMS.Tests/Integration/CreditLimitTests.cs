@@ -298,5 +298,53 @@ namespace WMS.Tests.Integration
             }
             AssertNotIssued(db, saleId);
         }
+    
+        private static Task<Application.Common.Dtos.ResponseDto> PayAll(IMediator mediator, int saleId, params (ulong Amount, PaymentTypeEnum Type)[] rows) =>
+            mediator.Send(new AddSalePaymentsCommand
+            {
+                SaleId = saleId,
+                Payments = rows.Select(row => new SalePaymentRowDto
+                {
+                    Type = row.Type,
+                    Amount = row.Amount,
+                    CheckNumber = row.Type == PaymentTypeEnum.CHECK ? "123456" : null,
+                    CheckDueDate = row.Type == PaymentTypeEnum.CHECK ? DateTime.Today.AddDays(30) : null,
+                }).ToList(),
+            }, Ct);
+
+        [Fact]
+        public async Task ACashOnlyCustomer_PayingInFullInTwoRows_IsNotRefusedAtTheFirstRow()
+        {
+            // frontend-requests 31.1: the first row issues the invoice with half unpaid; the limit is checked on the final state.
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var scenario = Proforma(scope, total: 1_000, limit: 0);
+
+            await PayAll(Mediator(scope), scenario.Sale.Id, (500, PaymentTypeEnum.CASH), (500, PaymentTypeEnum.CASH));
+
+            using var verify = db.NewContext();
+            var sale = verify.Sales.Single(x => x.Id == scenario.Sale.Id);
+            Assert.Equal(SalesStatusEnum.PROCESSING, sale.Status);
+            Assert.Equal(1_000UL, sale.PaidAmount);
+            Assert.Equal(0, (await CreditLimitGuard.SavedExposureAsync(verify, scenario.Customer.Id, Ct)).Total);
+        }
+
+        [Fact]
+        public async Task SeveralRows_StillOverTheLimitAtTheEnd_AreRefused_AndNoneIsSaved()
+        {
+            using var db = new TestDatabase();
+            int saleId;
+            using (var scope = db.NewScope())
+            {
+                var scenario = Proforma(scope, total: 1_000, limit: 0);
+                saleId = scenario.Sale.Id;
+
+                var error = await Assert.ThrowsAsync<ValidationCustomException>(() =>
+                    PayAll(Mediator(scope), saleId, (500, PaymentTypeEnum.CASH), (500, PaymentTypeEnum.CHECK)));
+                var data = Assert.IsType<CreditLimitExceededDto>(error.Data);
+                Assert.Equal(500, data.Exposure);
+            }
+            AssertNotIssued(db, saleId);
+        }
     }
 }

@@ -75,8 +75,17 @@ namespace Application.Common.Contracts.Context
 
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 
-        /// <summary>Only for IUnitOfWork.ExecuteInTransactionAsync - handlers compose atomic work through the unit of work.</summary>
+        /// <summary>
+        /// Only for IUnitOfWork.ExecuteInTransactionAsync - handlers compose atomic work through the unit of work. Also starts
+        /// deferring the end-of-work checks (the customer credit limit) until <see cref="EnsureDeferredChecksAsync"/>.
+        /// </summary>
         Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken);
+
+        /// <summary>Only for IUnitOfWork.ExecuteInTransactionAsync, just before commit: runs and ends the deferred checks.</summary>
+        Task EnsureDeferredChecksAsync(CancellationToken cancellationToken);
+
+        /// <summary>Only for IUnitOfWork.ExecuteInTransactionAsync, when the work threw: drops the deferred checks.</summary>
+        void AbandonDeferredChecks();
 
         Task<int> ExecuteSqlRawAsync(string sql, CancellationToken cancellationToken = default);
 

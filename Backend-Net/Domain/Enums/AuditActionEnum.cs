@@ -260,6 +260,9 @@ namespace Domain.Enums
         [Description("آزادسازی دستی رزرو پیش‌فاکتور")]
         ReleaseSaleReservation = 416,
 
+        [Description("ثبت چند دریافت فروش با هم")]
+        AddSalePayments = 417,
+
         // --- اقساط ---
         [Description("ایجاد طرح اقساط")]
         CreateSaleInstallmentPlan = 500,
