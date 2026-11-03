@@ -129,6 +129,17 @@ export function lineFilterCounts(lines) {
 export const acceptsManualCount = (line) => line.countMode !== StocktakeCountModeEnum.SCAN;
 
 /**
+ * عددهای دستیِ ثبت‌نشده: `drafts` نگاشتِ `productId` → عدد (یا `null` = پاک کردنِ شمارش). فقط آن‌هایی که با عددِ
+ * سرور (`manualCount`) فرق دارند و ردیفشان هنوز عددِ دستی می‌پذیرد، به ترتیبِ ردیف‌ها.
+ */
+export function pendingCounts(lines, drafts) {
+  return lines
+    .filter((line) => line.productId in drafts && acceptsManualCount(line))
+    .filter((line) => drafts[line.productId] !== (line.manualCount ?? null))
+    .map((line) => ({ productId: line.productId, quantity: drafts[line.productId] }));
+}
+
+/**
  * دامنه‌ی یک انبارگردانی در یک خط («دسته‌ی لنت · برندِ بوش»). سرور نامِ دسته را نمی‌فرستد؛ `categoryName` از
  * فهرستِ دسته‌ها می‌آید. بی دسته/برند/قفسه یعنی کالاهای انتخابی.
  */

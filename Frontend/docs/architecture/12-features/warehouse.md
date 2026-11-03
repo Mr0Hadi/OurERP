@@ -19,7 +19,7 @@
 | `WAREHOUSE_SHIPPING` (+ `_DETAIL`) | `/warehouse/shipping`، `/:id` | `SaleShip` | `src/features/warehouse/shipping/pages/ShippingListPage.jsx`، `ShippingDetailPage.jsx` |
 | `WAREHOUSE_SALE_CHECK` (+ `_DETAIL`) | `/warehouse/sale-check`، `/:id` | `SaleWarehouseCheck` | `src/features/warehouse/saleCheck/pages/SaleCheckListPage.jsx`، `SaleCheckPage.jsx` (اسکن و رزروِ دانه‌ها، کم‌کردنِ اقلام با دلیل و تأیید، گزارشِ معیوب/مفقود) |
 | `WAREHOUSE_SHIPPING_RETURN_DETAIL` | `/warehouse/shipping/returns/:id` | `PurchaseReturnExecute` | `src/features/warehouse/shipping/pages/SupplierReturnDetailPage.jsx` (عودت به تامین‌کننده در **مرجوعیِ خرید**) |
-| `WAREHOUSE_STOCKTAKE` (+ `_DETAIL`) | `/warehouse/stocktake`، `/:id` | `["StocktakeView", "StocktakeCount", "StocktakeApprove"]` | `src/features/warehouse/stocktake/pages/StocktakeListPage.jsx`، `StocktakeDetailPage.jsx` (اسکن و شمارشِ دستی، مغایرت پس از پایانِ شمارش، پایان/بازگشایی/تأیید/لغو) |
+| `WAREHOUSE_STOCKTAKE` (+ `_DETAIL`) | `/warehouse/stocktake`، `/:id` | `["StocktakeView", "StocktakeCount", "StocktakeApprove"]` | `src/features/warehouse/stocktake/pages/StocktakeListPage.jsx`، `StocktakeDetailPage.jsx` (اسکن و شمارشِ دستی با دکمه‌ی «ثبتِ شمارش» — `hooks/useStocktakeCountDrafts.js`، مغایرت پس از پایانِ شمارش، پایان/بازگشایی/تأیید/لغو) |
 
 `CategoriesPage` و `VehiclesPage` فهرست/جزئیات در یک کامپوننت‌اند؛ `:id` فقط انتخاب است.
 

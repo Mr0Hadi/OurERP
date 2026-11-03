@@ -10,7 +10,9 @@ import ConfirmDialog from "@/shared/components/feedback/ConfirmDialog";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import Notice from "@/shared/components/feedback/Notice";
 import ProgressStat from "@/shared/components/feedback/ProgressStat";
+import UnsavedChangesDialog from "@/shared/components/feedback/UnsavedChangesDialog";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
+import { useUnsavedChangesGuard } from "@/shared/hooks/useUnsavedChangesGuard";
 import { ROUTES } from "@/shared/constants/routes";
 import { STOCKTAKE_STATUS_LABELS, STOCKTAKE_STATUS_TONES, StocktakeStatusEnum } from "@/shared/domain/enums/stocktake";
 import { gregorianToPersianDateTime } from "@/shared/lib/dateUtils";
@@ -20,6 +22,7 @@ import AuditHistoryButton from "@/features/audit/components/AuditHistoryButton";
 import { useStocktakeQuery } from "../services/queries";
 import { useStocktakeTransitionMutation } from "../services/mutations";
 import { stocktakeActions } from "../domain/stocktake";
+import { useStocktakeCountDrafts } from "../hooks/useStocktakeCountDrafts";
 import StocktakeScopeText from "../components/StocktakeScopeText";
 import StocktakeScanPanel from "../components/StocktakeScanPanel";
 import StocktakeLines from "../components/StocktakeLines";
@@ -77,15 +80,7 @@ function approveDescription(stocktake) {
 export default function StocktakeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { allows } = usePermission();
   const query = useStocktakeQuery(id);
-  const [confirm, setConfirm] = useState(null);
-
-  const submit = useStocktakeTransitionMutation("SubmitStocktake");
-  const reopen = useStocktakeTransitionMutation("ReopenStocktake");
-  const approve = useStocktakeTransitionMutation("ApproveStocktake");
-  const cancel = useStocktakeTransitionMutation("CancelStocktake");
-  const mutations = { SubmitStocktake: submit, ReopenStocktake: reopen, ApproveStocktake: approve, CancelStocktake: cancel };
 
   usePageHeader({ title: "انبارگردانی", showBack: true, onBack: () => navigate(ROUTES.WAREHOUSE_STOCKTAKE) });
 
@@ -101,10 +96,26 @@ export default function StocktakeDetailPage() {
     );
   }
 
-  const stocktake = query.data;
+  return <StocktakeView stocktake={query.data} />;
+}
+
+function StocktakeView({ stocktake }) {
+  const { allows } = usePermission();
+  const [confirm, setConfirm] = useState(null);
+  const counts = useStocktakeCountDrafts(stocktake);
+  const blocker = useUnsavedChangesGuard(counts.pending > 0);
+
+  const submit = useStocktakeTransitionMutation("SubmitStocktake");
+  const reopen = useStocktakeTransitionMutation("ReopenStocktake");
+  const approve = useStocktakeTransitionMutation("ApproveStocktake");
+  const cancel = useStocktakeTransitionMutation("CancelStocktake");
+  const mutations = { SubmitStocktake: submit, ReopenStocktake: reopen, ApproveStocktake: approve, CancelStocktake: cancel };
+
   const actions = stocktakeActions(stocktake, allows);
   const submitted = stocktake.status === StocktakeStatusEnum.SUBMITTED;
   const pending = Object.values(mutations).some((mutation) => mutation.isPending);
+  // پایان/لغو با عددهای ثبت‌نشده آن‌ها را دور می‌ریزد؛ اول ثبت یا انصراف.
+  const unsaved = counts.pending > 0 || counts.saving;
   const active = confirm && mutations[confirm];
   const confirmText =
     confirm === "ApproveStocktake"
@@ -158,7 +169,7 @@ export default function StocktakeDetailPage() {
         {(actions.canSubmit || actions.canReopen || actions.canApprove || actions.canCancel) && (
           <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             {actions.canSubmit && (
-              <Button type="button" size="sm" className="gap-1.5" disabled={pending} onClick={() => setConfirm("SubmitStocktake")}>
+              <Button type="button" size="sm" className="gap-1.5" disabled={pending || unsaved} onClick={() => setConfirm("SubmitStocktake")}>
                 <ClipboardCheck className="size-3.5" />
                 پایانِ شمارش
               </Button>
@@ -181,7 +192,7 @@ export default function StocktakeDetailPage() {
                 size="sm"
                 variant="ghost"
                 className="gap-1.5 text-destructive hover:text-destructive"
-                disabled={pending}
+                disabled={pending || unsaved}
                 onClick={() => setConfirm("CancelStocktake")}
               >
                 <Ban className="size-3.5" />
@@ -190,10 +201,13 @@ export default function StocktakeDetailPage() {
             )}
           </div>
         )}
+        {unsaved && actions.canSubmit && (
+          <p className="text-xs text-muted-foreground">برای پایانِ شمارش، اول عددهای ثبت‌نشده را ثبت کنید.</p>
+        )}
       </SectionCard>
 
       {actions.canCount && <StocktakeScanPanel stocktake={stocktake} />}
-      <StocktakeLines stocktake={stocktake} canCount={actions.canCount} />
+      <StocktakeLines stocktake={stocktake} canCount={actions.canCount} counts={counts} />
 
       <ConfirmDialog
         open={Boolean(confirm)}
@@ -210,6 +224,7 @@ export default function StocktakeDetailPage() {
           active.mutate(stocktake.id, { onSuccess: () => setConfirm(null) });
         }}
       />
+      <UnsavedChangesDialog blocker={blocker} />
     </div>
   );
 }

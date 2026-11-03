@@ -6,6 +6,7 @@ import {
   acceptsManualCount,
   emptyStocktakeDraft,
   lineFilterCounts,
+  pendingCounts,
   scanOutcome,
   scanOutcomeMessage,
   scopeSummary,
@@ -106,5 +107,26 @@ describe("دامنه در یک خط", () => {
     expect(scopeSummary({ productCategoryId: 4 })).toBe("دسته‌ی #4");
     expect(scopeSummary({ binLocationPrefix: "A-1" })).toBe("قفسه‌ی A-1");
     expect(scopeSummary({})).toBe("کالاهای انتخابی");
+  });
+});
+
+describe("pendingCounts", () => {
+  const lines = [
+    { productId: 1, countMode: StocktakeCountModeEnum.MANUAL, manualCount: 5 },
+    { productId: 2, countMode: StocktakeCountModeEnum.NONE, manualCount: null },
+    { productId: 3, countMode: StocktakeCountModeEnum.SCAN, manualCount: null },
+    { productId: 4, countMode: StocktakeCountModeEnum.NONE },
+  ];
+
+  it("keeps only drafts that differ from the server", () => {
+    expect(pendingCounts(lines, { 1: 5, 2: 0, 4: null })).toEqual([{ productId: 2, quantity: 0 }]);
+  });
+
+  it("sends clearing a saved count as null", () => {
+    expect(pendingCounts(lines, { 1: null })).toEqual([{ productId: 1, quantity: null }]);
+  });
+
+  it("drops lines that became scan-counted", () => {
+    expect(pendingCounts(lines, { 3: 2 })).toEqual([]);
   });
 });

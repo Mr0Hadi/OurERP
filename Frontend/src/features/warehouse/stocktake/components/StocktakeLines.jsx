@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { Save, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import SectionCard from "@/shared/components/forms/SectionCard";
-import QuantityField from "@/shared/components/forms/QuantityField";
+import QuantityStepper from "@/shared/components/forms/QuantityStepper";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { STOCKTAKE_COUNT_MODE_LABELS, StocktakeCountModeEnum } from "@/shared/domain/enums/stocktake";
@@ -12,7 +13,6 @@ import { useIsMobile } from "@/shared/hooks/useIsMobile";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
-import { useCountStocktakeLineMutation } from "../services/mutations";
 import { LINE_FILTER, acceptsManualCount, lineFilterCounts, visibleLines } from "../domain/stocktake";
 
 /** ردیف‌های هر صفحه؛ دامنه‌ی یک دسته ممکن است صدها کالا باشد. */
@@ -29,17 +29,18 @@ const differenceTone = (value) => toneText(value > 0 ? "success" : value < 0 ? "
 
 /**
  * ردیف‌های انبارگردانی: هر کالای دامنه با شیوه‌ی شمارش، تعدادِ شمرده‌شده و — وقتی شمارش کور نیست — موجودیِ سیستم،
- * مغایرت و ارزشِ ریالیِ آن. دسکتاپ جدول، موبایل کارت. در شمارش، کالای بی‌اسکن عددِ دستی می‌گیرد
- * (`CountStocktakeLine`). پس از پایانِ شمارش بارکدهای مفقود/ناخواسته و نتیجه‌ی اعمال زیرِ هر ردیف می‌آیند.
+ * مغایرت و ارزشِ ریالیِ آن. دسکتاپ جدول، موبایل کارت. در شمارش، کالای بی‌اسکن عددِ دستی می‌گیرد؛ عددها تا زدنِ
+ * «ثبت» در صفحه می‌مانند (`counts` از `useStocktakeCountDrafts`). پس از پایانِ شمارش بارکدهای مفقود/ناخواسته و
+ * نتیجه‌ی اعمال زیرِ هر ردیف می‌آیند.
  */
-export default function StocktakeLines({ stocktake, canCount }) {
+export default function StocktakeLines({ stocktake, canCount, counts }) {
   const isMobile = useIsMobile();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState(LINE_FILTER.ALL);
   const [shown, setShown] = useState(PAGE);
   const blind = stocktake.isBlind;
   const allLines = stocktake.lines ?? [];
-  const counts = lineFilterCounts(allLines);
+  const tabCounts = lineFilterCounts(allLines);
 
   const tabs = [
     { value: LINE_FILTER.ALL, label: "همه" },
@@ -62,7 +63,7 @@ export default function StocktakeLines({ stocktake, canCount }) {
               <TabsTrigger key={tab.value} value={tab.value} className="flex-1 gap-1.5 sm:flex-none">
                 {tab.label}
                 <span className="rounded-full bg-muted px-1.5 text-[11px] tabular-nums text-muted-foreground">
-                  {formatNumber(counts[tab.value])}
+                  {formatNumber(tabCounts[tab.value])}
                 </span>
               </TabsTrigger>
             ))}
@@ -77,11 +78,11 @@ export default function StocktakeLines({ stocktake, canCount }) {
       ) : isMobile ? (
         <ul className="space-y-2">
           {page.map((line) => (
-            <LineCard key={line.id} line={line} stocktakeId={stocktake.id} blind={blind} canCount={canCount} />
+            <LineCard key={line.id} line={line} counts={canCount ? counts : null} blind={blind} />
           ))}
         </ul>
       ) : (
-        <LinesTable lines={page} stocktakeId={stocktake.id} blind={blind} canCount={canCount} />
+        <LinesTable lines={page} counts={canCount ? counts : null} blind={blind} />
       )}
 
       {lines.length > shown && (
@@ -89,11 +90,13 @@ export default function StocktakeLines({ stocktake, canCount }) {
           نمایشِ {formatNumber(Math.min(PAGE, lines.length - shown))} کالای دیگر
         </Button>
       )}
+
+      {canCount && (counts.pending > 0 || counts.saving) && <SaveBar counts={counts} />}
     </SectionCard>
   );
 }
 
-function LinesTable({ lines, stocktakeId, blind, canCount }) {
+function LinesTable({ lines, counts, blind }) {
   const columns = blind ? 3 : 6;
   return (
     <div className="overflow-hidden rounded-lg border">
@@ -112,7 +115,10 @@ function LinesTable({ lines, stocktakeId, blind, canCount }) {
           {lines.map((line) => {
             const details = !blind && lineDetails(line);
             return [
-              <TableRow key={line.id} className={cn("hover:bg-muted/40", details && "border-b-0")}>
+              <TableRow
+                key={line.id}
+                className={cn("hover:bg-muted/40", details && "border-b-0", counts?.changedIds.has(line.productId) && "bg-warning/5")}
+              >
                 <TableCell className="max-w-72 py-2.5 whitespace-normal">
                   <ProductName line={line} />
                 </TableCell>
@@ -121,7 +127,7 @@ function LinesTable({ lines, stocktakeId, blind, canCount }) {
                 </TableCell>
                 {!blind && <TableCell className="text-center tabular-nums">{formatNumber(line.systemQuantity)}</TableCell>}
                 <TableCell className="text-center">
-                  <CountedCell line={line} stocktakeId={stocktakeId} canCount={canCount} size="sm" />
+                  <CountedCell line={line} counts={counts} size="sm" />
                 </TableCell>
                 {!blind && (
                   <TableCell className="text-center">
@@ -149,10 +155,11 @@ function LinesTable({ lines, stocktakeId, blind, canCount }) {
   );
 }
 
-function LineCard({ line, stocktakeId, blind, canCount }) {
+function LineCard({ line, counts, blind }) {
   const details = !blind && lineDetails(line);
+  const changed = counts?.changedIds.has(line.productId);
   return (
-    <li className="space-y-3 rounded-xl border border-border bg-card p-3">
+    <li className={cn("space-y-3 rounded-xl border border-border bg-card p-3", changed && "border-warning/60 bg-warning/5")}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <ProductName line={line} />
@@ -162,7 +169,7 @@ function LineCard({ line, stocktakeId, blind, canCount }) {
       <dl className={cn("grid gap-2 rounded-lg bg-muted/40 p-2 text-center", blind ? "grid-cols-1" : "grid-cols-3")}>
         {!blind && <CardStat label="سیستم">{formatNumber(line.systemQuantity)}</CardStat>}
         <CardStat label="شمرده‌شده">
-          <CountedCell line={line} stocktakeId={stocktakeId} canCount={canCount} />
+          <CountedCell line={line} counts={counts} />
         </CardStat>
         {!blind && (
           <CardStat label="مغایرت">
@@ -213,10 +220,20 @@ function Difference({ value, bold = false }) {
   return <span className={cn("tabular-nums", bold && "font-semibold", differenceTone(value))}>{signed(value)}</span>;
 }
 
-/** شمرده‌شده: عددِ دستی (قابلِ ویرایش در شمارش)، یا تعدادِ اسکن‌ها. */
-function CountedCell({ line, stocktakeId, canCount, size = "md" }) {
-  if (canCount && acceptsManualCount(line)) {
-    return <ManualCountInput line={line} stocktakeId={stocktakeId} size={size} />;
+/**
+ * شمرده‌شده: عددِ دستی (قابلِ ویرایش در شمارش، با `QuantityStepper`ِ مشترک)، یا تعدادِ اسکن‌ها. خانه‌ی خالی یعنی
+ * شمرده‌نشده؛ صفر یعنی «شمردم، هیچ نبود».
+ */
+function CountedCell({ line, counts, size = "md" }) {
+  if (counts && acceptsManualCount(line)) {
+    return (
+      <QuantityStepper
+        size={size}
+        value={counts.valueOf(line)}
+        placeholder="—"
+        onChange={(quantity) => counts.setCount(line.productId, quantity)}
+      />
+    );
   }
   if (line.countedQuantity == null) return <span className="text-muted-foreground">—</span>;
   return <span className="tabular-nums">{formatNumber(line.countedQuantity)}</span>;
@@ -259,92 +276,23 @@ function Barcodes({ label, barcodes }) {
   );
 }
 
-/** مکث پس از آخرین کلیکِ +/− تا ثبت؛ چند کلیکِ پشتِ‌سرهم یک درخواست می‌شوند. */
-const STEP_SAVE_DELAY = 700;
-
-/**
- * عددِ دستی با `QuantityField` (همان فیلدِ تعدادِ فرمِ خرید/فروش). تایپ با Enter یا ترکِ فیلد ثبت می‌شود و +/− خودشان
- * پس از مکثی کوتاه. خالی کردنِ فیلد شمارش را پاک می‌کند. ثبتِ تایپ فقط از `onBlur` است و Enter فیلد را blur می‌کند —
- * وگرنه Enter یک بار ثبت می‌کرد و blurِ بعدی بارِ دوم. تا درخواستی در راه است، ثبتِ بعدی پس از پاسخ می‌رود.
- */
-function ManualCountInput({ line, stocktakeId, size }) {
-  const count = useCountStocktakeLineMutation();
-  const server = line.manualCount ?? null;
-  // پیش‌نویسِ کاربر تا وقتی سرور همان را پذیرفته؛ `null` یعنی همان عددِ سرور نشان داده شود.
-  const [draft, setDraftState] = useState(null);
-  const draftRef = useRef(null);
-  const timer = useRef(null);
-  const queued = useRef(false);
-  // ref، نه `count.isPending`: تایمر تابعِ رندرِ قبلی را صدا می‌زند و آن مقدار کهنه است.
-  const inFlight = useRef(false);
-  // آخرین عددی که سرور پذیرفت؛ ref چون ثبتِ صف‌شده از تابعِ رندرِ قبلی اجرا می‌شود و `server`ِ آن کهنه است.
-  const confirmed = useRef(server);
-
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  const setDraft = (next) => {
-    draftRef.current = next;
-    setDraftState(next);
-  };
-
-  const commit = () => {
-    clearTimeout(timer.current);
-    if (draftRef.current == null) return;
-    const trimmed = draftRef.current.trim();
-    const quantity = trimmed === "" ? null : Number(trimmed);
-    if (quantity !== null && (!Number.isInteger(quantity) || quantity < 0)) return;
-    if (inFlight.current) {
-      queued.current = true;
-      return;
-    }
-    if (quantity === confirmed.current) return setDraft(null);
-    inFlight.current = true;
-    count.mutate(
-      { stocktakeId, productId: line.productId, quantity },
-      {
-        onSuccess: () => {
-          confirmed.current = quantity;
-          // اگر در این فاصله عددِ دیگری زده نشده، پیش‌نویس تمام است و عددِ سرور نشان داده می‌شود.
-          if (!queued.current && draftRef.current === trimmed) setDraft(null);
-        },
-        onError: () => setDraft(null),
-        onSettled: () => {
-          inFlight.current = false;
-          if (!queued.current) return;
-          queued.current = false;
-          commit();
-        },
-      },
-    );
-  };
-
-  const handleChange = (next) => {
-    setDraft(String(next));
-    // عددِ دکمه‌ها (نه متنِ تایپ‌شده) پس از مکث ثبت می‌شود.
-    if (typeof next === "number") {
-      clearTimeout(timer.current);
-      timer.current = setTimeout(commit, STEP_SAVE_DELAY);
-    }
-  };
-
-  const value = draft ?? (server == null ? "" : String(server));
-
+/** نوارِ «ثبت»: تعدادِ تغییرهای ثبت‌نشده، ثبت و دور ریختن؛ پایینِ صفحه می‌چسبد تا در فهرستِ بلند هم دیده شود. */
+function SaveBar({ counts }) {
   return (
-    <QuantityField
-      min={0}
-      size={size}
-      value={value}
-      onChange={handleChange}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.currentTarget.blur();
-        }
-      }}
-      placeholder="—"
-      aria-label={`تعدادِ شمرده‌شده‌ی ${line.productName}`}
-      className={cn("mx-auto", size === "sm" ? "w-28" : "w-full max-w-36", count.isPending && "opacity-70")}
-    />
+    <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-warning/60 bg-card p-2.5 shadow-lg">
+      <p className="min-w-0 flex-1 text-sm">
+        {counts.saving
+          ? `در حالِ ثبت؛ ${formatNumber(counts.pending)} کالا مانده`
+          : `${formatNumber(counts.pending)} کالا شمرده شده و هنوز ثبت نشده`}
+      </p>
+      <Button type="button" size="sm" variant="outline" className="gap-1.5" disabled={counts.saving} onClick={counts.discard}>
+        <X className="size-3.5" />
+        انصراف
+      </Button>
+      <Button type="button" size="sm" className="gap-1.5" disabled={counts.saving} onClick={counts.save}>
+        <Save className="size-3.5" />
+        {counts.saving ? "در حالِ ثبت..." : "ثبتِ شمارش"}
+      </Button>
+    </div>
   );
 }

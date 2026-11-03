@@ -1,11 +1,48 @@
-import { Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { PriceInput } from "@/shared/components/ui/price-input";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import ScannedUnitCodes from "./ScannedUnitCodes";
-import QuantityField from "./QuantityField";
+
+/** تعداد با دکمه‌های +/− — روی موبایل تایپِ عدد کُند است. */
+function QuantityField({ value, onChange }) {
+  const current = Number(value) || 0;
+  return (
+    <div className="flex h-9 items-stretch overflow-hidden rounded-md border border-input bg-background">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-full w-9 shrink-0 rounded-none"
+        disabled={current <= 1}
+        onClick={() => onChange(current - 1)}
+        aria-label="یکی کمتر"
+      >
+        <Minus className="h-3.5 w-3.5" />
+      </Button>
+      <Input
+        type="number"
+        min={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="تعداد"
+        className="h-full min-w-0 flex-1 rounded-none border-0 border-x border-input px-1 text-center text-sm tabular-nums shadow-none focus-visible:ring-0"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className="h-full w-9 shrink-0 rounded-none"
+        onClick={() => onChange(current + 1)}
+        aria-label="یکی بیشتر"
+      >
+        <Plus className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
 
 /**
  * اقلامِ انتخاب‌شده در عرضِ کم — هر قلم یک کارت. قرینه‌ی `SelectedItemsTable`
@@ -67,7 +104,6 @@ export default function SelectedItemsCards({
                 <label className="space-y-1">
                   <span className="text-[11px] text-muted-foreground">تعداد</span>
                   <QuantityField
-                    size="md"
                     value={item.quantity}
                     onChange={(next) => onFieldChange(item.productId, "quantity", next)}
                   />

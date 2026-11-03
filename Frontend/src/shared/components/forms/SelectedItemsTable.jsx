@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -7,7 +7,42 @@ import { PriceInput } from "@/shared/components/ui/price-input";
 import { invoiceLineAmounts } from "@/shared/domain/invoice/lineMath";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import ScannedUnitCodes from "./ScannedUnitCodes";
-import QuantityField from "./QuantityField";
+
+/** تعداد با +/− در یک خانه‌ی جمع‌وجور. */
+function QuantityCell({ value, onChange }) {
+  const current = Number(value) || 0;
+  return (
+    <div className="flex h-8 items-stretch overflow-hidden rounded-md border border-input bg-background">
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-full w-7 shrink-0 rounded-none p-0"
+        onClick={() => onChange(current + 1)}
+        aria-label="یکی بیشتر"
+      >
+        <Plus className="size-3.5" />
+      </Button>
+      <Input
+        type="number"
+        min={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label="تعداد"
+        className="h-full min-w-0 flex-1 rounded-none border-0 border-x border-input px-0.5 text-center text-sm tabular-nums shadow-none focus-visible:ring-0"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        className="h-full w-7 shrink-0 rounded-none p-0"
+        disabled={current <= 1}
+        onClick={() => onChange(current - 1)}
+        aria-label="یکی کمتر"
+      >
+        <Minus className="size-3.5" />
+      </Button>
+    </div>
+  );
+}
 
 /**
  * اقلامِ انتخاب‌شده به‌شکلِ جدول، وقتی ظرفِ انتخابگر (`@container/picker`) جا
@@ -59,8 +94,7 @@ export default function SelectedItemsTable({
                     </p>
                   </td>
                   <td className="px-2 py-2">
-                    <QuantityField
-                      size="sm"
+                    <QuantityCell
                       value={item.quantity}
                       onChange={(next) => onFieldChange(item.productId, "quantity", next)}
                     />
