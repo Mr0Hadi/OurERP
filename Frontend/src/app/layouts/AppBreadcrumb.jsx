@@ -70,6 +70,9 @@ const ROUTE_TITLES = {
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال کالا",
   [ROUTES.WAREHOUSE_SALE_CHECK]: "بررسی انبارِ پیش‌فاکتور",
   [ROUTES.WAREHOUSE_STOCKTAKE]: "انبارگردانی",
+  [ROUTES.WAREHOUSE_WAREHOUSES]: "انبارها",
+  [ROUTES.WAREHOUSE_TRANSFERS]: "حواله‌ی بین انبار",
+  [ROUTES.WAREHOUSE_TRANSFERS_NEW]: "حواله‌ی تازه",
 
   [ROUTES.ACCOUNTING]: "دفتر حساب‌ها",
   [ROUTES.ACCOUNTING_PARTIES]: "حساب اشخاص",
@@ -124,6 +127,7 @@ const DETAIL_TITLES = {
   [ROUTES.WAREHOUSE_SHIPPING]: "ارسال فروش",
   [ROUTES.WAREHOUSE_SALE_CHECK]: "بررسی پیش‌فاکتور",
   [ROUTES.WAREHOUSE_STOCKTAKE]: "جزئیات انبارگردانی",
+  [ROUTES.WAREHOUSE_TRANSFERS]: "جزئیات حواله",
   "/warehouse/receiving/returns": "دریافت کالای مرجوعی",
   // عودت، آزادسازی و اسقاطِ قرنطینه — نه فقط عودت.
   "/warehouse/shipping/returns": "کار انبار روی مرجوعی خرید",

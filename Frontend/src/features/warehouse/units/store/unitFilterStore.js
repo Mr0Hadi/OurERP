@@ -12,6 +12,7 @@ export const URL_FILTER_KEYS = Object.freeze([
   "custodyReason",
   "labelFilter",
   "binLocation",
+  "warehouseId",
 ]);
 
 export const EMPTY_UNIT_FILTERS = Object.freeze({
@@ -30,6 +31,8 @@ export const EMPTY_UNIT_FILTERS = Object.freeze({
   toSerial: "",
   // شروعِ کدِ قفسه — `A-03` همه‌ی `A-03-*` را می‌آورد.
   binLocation: "",
+  // GAP-08: فقط دانه‌های یک انبار.
+  warehouseId: "",
 });
 
 /**
@@ -68,6 +71,7 @@ export const useProductUnitFilterStore = createFilterStore({
         fromSerial: "",
         toSerial: "",
         binLocation: "",
+        warehouseId: "",
       }),
     /** پیوندِ ورودی: همه‌ی فیلترها از نو، فقط با همین مقادیر. */
     openWith: (values) => applyFilters({ ...EMPTY_UNIT_FILTERS, ...values }),

@@ -14,6 +14,8 @@ import ProductSelect from "@/features/warehouse/products/components/ProductSelec
 
 import { UNIT_SEGMENTS } from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
+import WarehouseSelect from "@/features/warehouse/warehouses/components/WarehouseSelect";
+import { useWarehousesQuery } from "@/features/warehouse/warehouses/services/queries";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { optionsFromLabels } from "@/shared/lib/options";
 import PartySelect from "@/features/partyAccount/components/PartySelect";
@@ -44,6 +46,8 @@ export default function UnitFilterBar({ store, search }) {
   const supplier = useSupplierQuery(store.supplierId || null).data;
   const customer = useCustomerQuery(store.customerId || null).data;
   const isQuarantine = store.segment === UNIT_SEGMENTS.QUARANTINE;
+  // فیلترِ انبار با بیش از یک انبار معنا دارد؛ مستقل از سوییچ، چون دانه‌های دورانِ روشن سرِ جایشان می‌مانند.
+  const manyWarehouses = (useWarehousesQuery().data?.length ?? 0) > 1;
 
   const advancedActive = [
     store.supplierId,
@@ -51,6 +55,7 @@ export default function UnitFilterBar({ store, search }) {
     store.fromDate || store.toDate,
     store.fromSerial || store.toSerial,
     store.binLocation,
+    store.warehouseId,
     isQuarantine && store.custodyReason,
   ].filter(Boolean).length;
 
@@ -157,6 +162,16 @@ export default function UnitFilterBar({ store, search }) {
             className="h-9 font-mono"
           />
         </Field>
+        {manyWarehouses && (
+          <Field label="انبار">
+            <WarehouseSelect
+              always
+              value={store.warehouseId || null}
+              onChange={(id) => store.setWarehouseId(id ?? "")}
+              emptyLabel="همه‌ی انبارها"
+            />
+          </Field>
+        )}
         {isQuarantine && (
           <Field label="علت قرنطینه">
             <FilterSelect

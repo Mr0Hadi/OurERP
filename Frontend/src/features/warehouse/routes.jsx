@@ -20,9 +20,15 @@ const SaleCheckPage = lazy(() => import("./saleCheck/pages/SaleCheckPage"));
 const SupplierReturnDetailPage = lazy(() => import("./shipping/pages/SupplierReturnDetailPage"));
 const StocktakeListPage = lazy(() => import("./stocktake/pages/StocktakeListPage"));
 const StocktakeDetailPage = lazy(() => import("./stocktake/pages/StocktakeDetailPage"));
+const WarehousesPage = lazy(() => import("./warehouses/pages/WarehousesPage"));
+const StockTransfersPage = lazy(() => import("./warehouses/pages/StockTransfersPage"));
+const StockTransferNewPage = lazy(() => import("./warehouses/pages/StockTransferNewPage"));
+const StockTransferDetailPage = lazy(() => import("./warehouses/pages/StockTransferDetailPage"));
 
 // دیدنِ انبارگردانی با هر کدام از سه دسترسی (همان `GetStocktakeList`/`Detail`).
 const STOCKTAKE_PERMISSIONS = ["StocktakeView", "StocktakeCount", "StocktakeApprove"];
+// فهرست و جزئیاتِ حواله با هر کدام (همان `GetStockTransferList`/`Detail`).
+const TRANSFER_PERMISSIONS = ["StockTransferView", "StockTransferManage"];
 
 export const warehouseRoutes = [
   // «انبار» در سایدبار به این مسیر لینک می‌دهد ولی صفحه‌ی مرورِ کلی
@@ -128,5 +134,26 @@ export const warehouseRoutes = [
     path: ROUTES.WAREHOUSE_STOCKTAKE_DETAIL,
     handle: { permission: STOCKTAKE_PERMISSIONS },
     element: <StocktakeDetailPage />,
+  },
+  // فهرستِ انبارها برای هر کاربر باز است؛ صفحه برای کسی است که با انبارها و دانه‌ها کار دارد.
+  {
+    path: ROUTES.WAREHOUSE_WAREHOUSES,
+    handle: { permission: ["WarehouseManage", "ProductUnitView", ...TRANSFER_PERMISSIONS] },
+    element: <WarehousesPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_TRANSFERS,
+    handle: { permission: TRANSFER_PERMISSIONS },
+    element: <StockTransfersPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_TRANSFERS_NEW,
+    handle: { permission: "StockTransferManage" },
+    element: <StockTransferNewPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_TRANSFERS_DETAIL,
+    handle: { permission: TRANSFER_PERMISSIONS },
+    element: <StockTransferDetailPage />,
   },
 ];

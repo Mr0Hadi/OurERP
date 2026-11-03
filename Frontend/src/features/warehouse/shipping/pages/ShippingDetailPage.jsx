@@ -21,6 +21,8 @@ import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { documentProductMap, trackedLookup, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
+import ShipmentWarehouseCard from "../../warehouses/components/ShipmentWarehouseCard";
+import { withWarehouse } from "../../warehouses/domain/warehouse";
 
 /**
  * یک محموله‌ی خروجی برای مشتری: اقلامِ فروش (با مازاد و اسکن)، و کالای
@@ -89,6 +91,8 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   });
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // انبارِ این دور؛ `null` = پیش‌فرضِ سرور (و با چندانبارِ خاموش همیشه همین).
+  const [warehouseId, setWarehouseId] = useState(null);
 
   useEffect(() => {
     return () => resetForm();
@@ -102,6 +106,13 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
   );
 
   const isBusy = dispatchMutation.isPending;
+  // آیا این دور دانه‌ای را آزادانه (بی رزرو) برمی‌دارد: قلمِ بی‌رزرو، مازاد یا کالای جایگزین.
+  const picksFreely =
+    replacement.hasSomethingToRecord ||
+    items.some(
+      (item) =>
+        (item.reservedQuantity === 0 && Number(item.shippedQuantity) > 0) || Number(item.excessQuantity) > 0,
+    );
   const hasSomething = replacementOnly
     ? replacement.hasSomethingToRecord
     : hasSomethingToShip || replacement.hasSomethingToRecord;
@@ -123,14 +134,17 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
       vehiclePlate: formData.vehiclePlate,
       note: formData.shippingNote,
     };
-    const command = {
-      sale: replacementOnly ? null : buildCommand(),
-      saleReturnRounds: replacement.buildCommandsByReturn(
-        shipmentHeader,
-        "saleReturnId",
-      ),
-      purchaseReturnRounds: [],
-    };
+    const command = withWarehouse(
+      {
+        sale: replacementOnly ? null : buildCommand(),
+        saleReturnRounds: replacement.buildCommandsByReturn(
+          shipmentHeader,
+          "saleReturnId",
+        ),
+        purchaseReturnRounds: [],
+      },
+      picksFreely ? warehouseId : null,
+    );
     dispatchMutation.mutate(command, {
       onSuccess: () => {
         setShowConfirmDialog(false);
@@ -182,6 +196,11 @@ function ShippingDetailForm({ sale, replacementReturnId }) {
             onFormChange={setFormData}
             replacementOnly={replacementOnly}
           />
+
+          {/* دانه‌های رزروشده همان‌هایی‌اند که رزرو شدند؛ انتخابِ انبار فقط برای برداشتِ آزاد معنا دارد. */}
+          {picksFreely && (
+            <ShipmentWarehouseCard direction="out" value={warehouseId} onChange={setWarehouseId} disabled={isBusy} />
+          )}
 
           <WarehouseSubmitBar
             label={

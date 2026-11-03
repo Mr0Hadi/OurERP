@@ -5,6 +5,15 @@ import StatusBadge from "@/shared/components/status/StatusBadge";
 import { LABELABLE_STATUSES, formatDate, whereaboutsOf, daysSince } from "../domain/unitVocabulary";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import { cn } from "@/shared/lib/utils";
+import { useWarehousesQuery } from "@/features/warehouse/warehouses/services/queries";
+import { ProductUnitStatusEnum } from "@/shared/domain/enums/unitStatus";
+
+/** وضعیت‌هایی که دانه هنوز در یکی از انبارهای ماست. */
+const HELD_STATUSES = new Set([
+  ProductUnitStatusEnum.IN_STOCK,
+  ProductUnitStatusEnum.QUARANTINED,
+  ProductUnitStatusEnum.RESERVED,
+]);
 
 /**
  * خانه‌های مشترکِ جدول، کارت‌ها و برگه‌ی جزئیاتِ دانه — یک شکل در همه‌جا.
@@ -18,6 +27,13 @@ import { cn } from "@/shared/lib/utils";
  */
 export function UnitWhereabouts({ unit, detailOnly = false, stacked = false }) {
   const where = whereaboutsOf(unit);
+  // با بیش از یک انبار، دانه‌ای که هنوز مالِ ماست نامِ انبارش را دارد: روی قفسه خودِ نامِ انبار، قرنطینه و رزرو
+  // «قرنطینه · شعبه‌ی ۲».
+  const manyWarehouses = (useWarehousesQuery().data?.length ?? 0) > 1;
+  if (manyWarehouses && unit.warehouseName && HELD_STATUSES.has(unit.status)) {
+    where.place =
+      unit.status === ProductUnitStatusEnum.IN_STOCK ? unit.warehouseName : `${where.place} · ${unit.warehouseName}`;
+  }
   const documentText = where.document && (
     where.documentRoute ? (
       <Link to={where.documentRoute} className="font-mono underline-offset-2 hover:underline">

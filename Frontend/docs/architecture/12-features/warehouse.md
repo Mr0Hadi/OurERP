@@ -1,6 +1,6 @@
 # warehouse — کالا، دسته، دانه، خودرو، دریافت و ارسال
 
-هشت زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/` (بررسیِ انبارِ پیش‌فاکتورِ فروش)، `stocktake/` (انبارگردانی، GAP-01)؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
+نه زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/` (بررسیِ انبارِ پیش‌فاکتورِ فروش)، `stocktake/` (انبارگردانی، GAP-01)، `warehouses/` (انبارها و حواله‌ی بین انبار، GAP-08)؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
 
 ## مسیرها
 
@@ -20,6 +20,8 @@
 | `WAREHOUSE_SALE_CHECK` (+ `_DETAIL`) | `/warehouse/sale-check`، `/:id` | `SaleWarehouseCheck` | `src/features/warehouse/saleCheck/pages/SaleCheckListPage.jsx`، `SaleCheckPage.jsx` (اسکن و رزروِ دانه‌ها، کم‌کردنِ اقلام با دلیل و تأیید، گزارشِ معیوب/مفقود) |
 | `WAREHOUSE_SHIPPING_RETURN_DETAIL` | `/warehouse/shipping/returns/:id` | `PurchaseReturnExecute` | `src/features/warehouse/shipping/pages/SupplierReturnDetailPage.jsx` (عودت به تامین‌کننده در **مرجوعیِ خرید**) |
 | `WAREHOUSE_STOCKTAKE` (+ `_DETAIL`) | `/warehouse/stocktake`، `/:id` | `["StocktakeView", "StocktakeCount", "StocktakeApprove"]` | `src/features/warehouse/stocktake/pages/StocktakeListPage.jsx`، `StocktakeDetailPage.jsx` (اسکن و شمارشِ دستی با دکمه‌ی «ثبتِ شمارش» — `hooks/useStocktakeCountDrafts.js`، مغایرت پس از پایانِ شمارش، پایان/بازگشایی/تأیید/لغو) |
+| `WAREHOUSE_WAREHOUSES` | `/warehouse/warehouses` | `["WarehouseManage", "ProductUnitView", "StockTransferView", "StockTransferManage"]` | `src/features/warehouse/warehouses/pages/WarehousesPage.jsx` (کارتِ هر انبار با شمارِ دانه‌ها؛ افزودن/ویرایش/غیرفعال با `WarehouseManage`؛ کدِ تازه با `suggestWarehouseCode` پیشنهاد می‌شود، `W1`، `W2`، …؛ نشانیِ کامل منتظرِ بکند §۳۸) |
+| `WAREHOUSE_TRANSFERS` (+ `_NEW`، `_DETAIL`) | `/warehouse/transfers`، `/new`، `/:id` | `["StockTransferView", "StockTransferManage"]` (ساخت: `StockTransferManage`) | `StockTransfersPage.jsx`، `StockTransferNewPage.jsx` (مبدأ/مقصد، کالا با سقفِ موجودیِ مبدأ، اسکنِ اختیاری یا الزامی برای کالای ردیابی‌دار)، `StockTransferDetailPage.jsx` (تحویل/لغو) |
 
 `CategoriesPage` و `VehiclesPage` فهرست/جزئیات در یک کامپوننت‌اند؛ `:id` فقط انتخاب است.
 
@@ -33,6 +35,7 @@
 | vehicles | `/Vehicle/GetVehicleList` (take ۵۰۰)، `GetVehicleProductList`، `CreateVehicle`، `UpdateVehicle`، `DeleteVehicle`، `AddProductsToVehicle`، `RemoveProductFromVehicle` | `vehicleKeys` (`["vehicles"]`) |
 | receiving | `fetchReceivablePurchases` GET `/Purchase/GetPurchaseList`، `fetchPurchaseReceivingInfo` GET `/PurchaseReturn/GetPurchaseReceivingInfo`، `fetchPurchaseReturnPendingEffects`، `receiveShipment` POST `/Shipment/ReceiveShipment` | `receivingKeys` (`['receiving']`) |
 | saleCheck | `useProformaQueueQuery(CUSTOMER_APPROVED)` و فیلترهای `ProformaQueueFilters` از `sales/orders`، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useWarehouseApproveMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
+| warehouses | `fetchWarehouses` GET `/Warehouse/GetWarehouseList` (برای هر کاربر؛ انتخابگرها هم همین)، `fetchProductWarehouseStock`، `createWarehouse`/`updateWarehouse`/`deactivateWarehouse`، `fetchStockTransfers`/`fetchStockTransfer`، `createStockTransfer` (ایدمپوتنت)، `changeStockTransferStatus(action, id)` برای `Receive`/`CancelStockTransfer`؛ حواله `productKeys` و `productUnitKeys` را هم باطل می‌کند | `warehouseKeys` (`["warehouses"]`، حواله‌ها هم زیرِ همین) |
 | stocktake | `fetchStocktakes` GET `/Stocktake/GetStocktakeList`، `fetchStocktake` GET `GetStocktakeDetail`، `createStocktake` (ایدمپوتنت)، `scanStocktakeUnits`، `removeStocktakeScan`، `countStocktakeLine`، `changeStocktakeStatus(action, id)` برای `Submit`/`Reopen`/`Approve` (ایدمپوتنت)/`CancelStocktake`؛ هر دستور سندِ کامل برمی‌گرداند و در کشِ جزئیات می‌نشیند؛ تأیید `productKeys` و `productUnitKeys` را هم باطل می‌کند | `stocktakeKeys` (`["stocktakes"]`) |
 | shipping | `fetchShippableSales` GET `/Sale/GetSaleList`، `fetchSaleForShipping` GET `/Sale/GetSaleDetail`، `fetchSaleReturnPendingEffects`، `dispatchShipment` POST `/Shipment/DispatchShipment` | `shippingKeys` (`['shipping']`) |
 
@@ -46,6 +49,7 @@
 - `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`؛ `src/features/warehouse/units/store/labelTemplateStore.js`: `useLabelTemplateStore` (persist `unit-label-template`).
 - `useReceivingFormStore`، `useShippingFormStore`، `useReceivingFilterStore`، `useShippingFilterStore`؛ hookها `useReceivingForm`، `useShippingForm`.
 - دامنه: `src/features/warehouse/units/domain/unitVocabulary.js` (`UNIT_SEGMENTS`، `UnitActionEnum`، `REASONS_BY_ACTION`، `allowedActionsOf`، `canApply`، …؛ `DocumentKindEnum`/`documentRouteOf` از `src/shared/domain/enums/documentKind.js`)، `labelTemplate.js` (هندسه‌ی برگه و قالب)، `receivingVocabulary.js`، `shippingVocabulary.js`.
+- چندانبار (GAP-08): سوییچِ `Warehouse.MultiWarehouseEnabled` با `useMultiWarehouse` (`src/features/warehouse/warehouses/hooks/useMultiWarehouse.js`)؛ `useWarehouseChoice` یعنی «روشن و بیش از یک انبارِ فعال». انتخابگرِ انبار `WarehouseSelect` و کارتِ `ShipmentWarehouseCard` (دریافت، ارسال و دو صفحه‌ی دورِ مرجوعی) فقط در این حالت دیده می‌شوند؛ `withWarehouse` در `src/features/warehouse/warehouses/domain/warehouse.js` `warehouseId` را روی سند و همه‌ی دورهای یک محموله می‌گذارد (`null` = پیش‌فرضِ سرور). فیلترِ انبار در دانه‌ها و انبارگردانی و `ProductWarehouseStockCard` در جزئیاتِ کالا با بیش از یک انبار دیده می‌شوند، مستقل از سوییچ (داده‌ی دورانِ روشن می‌ماند). حواله‌ی تازه و منوی حواله فقط با سوییچِ روشن؛ تحویل/لغوِ حواله‌ی در راه همیشه.
 - انبارگردانی: `useStocktakeFilterStore` (`src/features/warehouse/stocktake/store/stocktakeFilterStore.js`)؛ دامنه در `src/features/warehouse/stocktake/domain/stocktake.js` (`STOCKTAKE_SCOPE`، `toApiStocktake`، `stocktakeActions`، `scanOutcome` — پیامِ اسکن از تفاوتِ سند پیش و پس، چون interceptor پیامِ سرور را برنمی‌گرداند — و `visibleLines`)؛ enumها در `src/shared/domain/enums/stocktake.js`. شمارشِ کور (`isBlind`، تنظیمِ `Stocktake.BlindCount`) را سرور اعمال می‌کند؛ صفحه فقط فیلدهای `null` را پنهان می‌کند.
 - `src/features/warehouse/shared/`: `useQueueRows.js`، `queueFilters.js`، `shipmentCache.js` (`applyShipmentResult`)، `productInfo.js`، `QueueTable.jsx`، `QueueFilters.jsx`، `NothingPending.jsx`، `WarehouseSubmitBar.jsx`، `returnRowCells.jsx`.
 

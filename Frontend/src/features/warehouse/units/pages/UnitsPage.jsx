@@ -109,6 +109,7 @@ export default function UnitsPage() {
         fromSerial,
         toSerial,
         binLocation: binLocation.trim(),
+        warehouseId: store.warehouseId,
       }),
     [
       store.segment,
@@ -125,6 +126,7 @@ export default function UnitsPage() {
       fromSerial,
       toSerial,
       binLocation,
+      store.warehouseId,
     ],
   );
 
@@ -292,6 +294,7 @@ export default function UnitsPage() {
       store.fromSerial ||
       store.toSerial ||
       store.binLocation ||
+      store.warehouseId ||
       store.custodyReason,
   );
 

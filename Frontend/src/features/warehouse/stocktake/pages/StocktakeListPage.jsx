@@ -22,7 +22,7 @@ export default function StocktakeListPage() {
   const listState = useStocktakeFilterStore();
   const filters = useDebouncedFilters(useStocktakeFilterStore, {
     text: ["search"],
-    instant: ["statuses", "fromDate", "toDate"],
+    instant: ["statuses", "fromDate", "toDate", "warehouseId"],
   });
   const query = useStocktakesQuery(filters, listState.pagination, listState.sorting);
 

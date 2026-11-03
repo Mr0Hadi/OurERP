@@ -5,12 +5,16 @@ import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import { STOCKTAKE_STATUS_LABELS } from "@/shared/domain/enums/stocktake";
 import { optionsFromLabels } from "@/shared/lib/options";
 import { useStocktakeFilterStore } from "../store/stocktakeFilterStore";
+import FilterSelect from "@/shared/components/filters/FilterSelect";
+import { useWarehousesQuery } from "@/features/warehouse/warehouses/services/queries";
 
 const STATUS_OPTIONS = optionsFromLabels(STOCKTAKE_STATUS_LABELS, { numeric: true });
 
 /** فیلترهای فهرستِ انبارگردانی: جست‌وجوی شماره/عنوان، وضعیت (چندتایی)، بازه‌ی تاریخِ ساخت. */
 export default function StocktakeFilters() {
   const store = useStocktakeFilterStore();
+  // فیلترِ انبار با بیش از یک انبار؛ مستقل از سوییچ، چون انبارگردانی‌های دورانِ روشن می‌مانند.
+  const { data: warehouses = [] } = useWarehousesQuery({ includeInactive: true });
 
   return (
     <FilterPanel
@@ -38,6 +42,16 @@ export default function StocktakeFilters() {
         onChange={store.setStatuses}
         allLabel="همه‌ی وضعیت‌ها"
       />
+      {warehouses.length > 1 && (
+        <FilterSelect
+          label="انبار"
+          value={store.warehouseId}
+          onChange={store.setWarehouseId}
+          options={warehouses.map((w) => ({ value: w.id, label: w.name }))}
+          allLabel="همه‌ی انبارها"
+          numeric
+        />
+      )}
     </FilterPanel>
   );
 }

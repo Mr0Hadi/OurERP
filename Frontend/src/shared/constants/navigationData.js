@@ -193,12 +193,20 @@ export const navigationData = {
       ],
     },
     {
-      // اول عملیات روزانه به ترتیب گردش کالا، بعد اطلاعات پایه‌ی کالا که کم تغییر می‌کنند.
+      // سه گروه، مثلِ منوی انبارِ ERPهای رایج: عملیاتِ روزانه به ترتیبِ گردشِ کالا (دریافت، بررسی/برداشتن، ارسال، حواله)، کنترلِ موجودی
+      // (انبارگردانی، دانه‌ها) و اطلاعاتِ پایه که کم تغییر می‌کنند (کالا، دسته، خودرو، انبار).
       title: "انبار",
       url: ROUTES.WAREHOUSE,
       icon: Warehouse,
       isActive: false,
       items: [
+        {
+          title: "دریافت کالا",
+          url: ROUTES.WAREHOUSE_RECEIVING,
+          permission: "PurchaseReceive",
+          icon: ClipboardList,
+          description: "مشاهده و تأیید کالاهای دریافتی",
+        },
         {
           title: "بررسی پیش‌فاکتورها",
           url: ROUTES.WAREHOUSE_SALE_CHECK,
@@ -214,18 +222,12 @@ export const navigationData = {
           description: "مشاهده و تأیید کالاهای ارسالی",
         },
         {
-          title: "دریافت کالا",
-          url: ROUTES.WAREHOUSE_RECEIVING,
-          permission: "PurchaseReceive",
-          icon: ClipboardList,
-          description: "مشاهده و تأیید کالاهای دریافتی",
-        },
-        {
-          title: "دانه‌ها و برچسب‌ها",
-          url: ROUTES.WAREHOUSE_UNITS,
-          permission: "ProductUnitView",
-          icon: Barcode,
-          description: "ردیابی هر دانه (انبار، قرنطینه، مشتری، اسقاط)، چاپ برچسب و شمارش",
+          title: "حواله‌ی بین انبار",
+          url: ROUTES.WAREHOUSE_TRANSFERS,
+          permission: ["StockTransferView", "StockTransferManage"],
+          featureFlag: "Warehouse.MultiWarehouseEnabled",
+          icon: ArrowLeftRight,
+          description: "جابه‌جاییِ دانه‌ها بینِ انبارها، تحویل و لغو",
         },
         {
           title: "انبارگردانی",
@@ -233,6 +235,13 @@ export const navigationData = {
           permission: ["StocktakeView", "StocktakeCount", "StocktakeApprove"],
           icon: ClipboardCheck,
           description: "شمارشِ موجودیِ قفسه، مقایسه با سیستم و اعمالِ مغایرت",
+        },
+        {
+          title: "دانه‌ها و برچسب‌ها",
+          url: ROUTES.WAREHOUSE_UNITS,
+          permission: "ProductUnitView",
+          icon: Barcode,
+          description: "ردیابی هر دانه (انبار، قرنطینه، مشتری، اسقاط)، چاپ برچسب و شمارش",
         },
         {
           title: "لیست کالاها",
@@ -261,6 +270,14 @@ export const navigationData = {
           permission: ["VehicleView", "ProductCategoryView"],
           icon: Car,
           description: "خودروها و کالاهای مربوط به هر خودرو",
+        },
+        {
+          // تعریفِ انبار با چندانبارِ خاموش هم مجاز است، پس سوییچ ندارد.
+          title: "انبارها",
+          url: ROUTES.WAREHOUSE_WAREHOUSES,
+          permission: ["WarehouseManage", "ProductUnitView", "StockTransferView", "StockTransferManage"],
+          icon: Warehouse,
+          description: "تعریفِ انبارها، انبارِ پیش‌فرض و شمارِ دانه‌های هر انبار",
         },
       ],
     },

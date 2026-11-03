@@ -7,6 +7,7 @@ export const useStocktakeFilterStore = createFilterStore({
     statuses: [],
     fromDate: "",
     toDate: "",
+    warehouseId: "",
   },
   defaultSorting: { id: "createdAt", desc: true },
 });

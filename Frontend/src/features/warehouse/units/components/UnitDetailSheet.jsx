@@ -290,6 +290,11 @@ export default function UnitDetailSheet({ unit, open, onOpenChange, onPrint, onA
                   )}
                 </InfoRow>
               )}
+              {unit.warehouseName && (
+                <InfoRow label="انبار">
+                  <span className="text-xs">{unit.warehouseName}</span>
+                </InfoRow>
+              )}
               <InfoRow label="کد کالا">
                 <span className="font-mono text-xs">{unit.productCode ?? "—"}</span>
               </InfoRow>
