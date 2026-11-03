@@ -8,12 +8,21 @@ import { Switch } from "@/shared/components/ui/switch";
 import FormField from "@/shared/components/forms/FormField";
 import DialogActions from "@/shared/components/feedback/DialogActions";
 import { useCreateWarehouseMutation, useUpdateWarehouseMutation } from "../services/mutations";
-import { emptyWarehouseDraft, toApiWarehouse, warehouseDraftErrors, warehouseDraftOf } from "../domain/warehouse";
+import { useWarehousesQuery } from "../services/queries";
+import {
+  emptyWarehouseDraft,
+  suggestWarehouseCode,
+  toApiWarehouse,
+  warehouseDraftErrors,
+  warehouseDraftOf,
+} from "../domain/warehouse";
 
 /** بدنه‌ی فرم — با `key` روی هر بازشدن از نو mount می‌شود تا پیش‌نویسِ قبلی نماند. */
-function FormBody({ warehouse, onClose }) {
+function FormBody({ warehouse, existingCodes, onClose }) {
   const isEdit = Boolean(warehouse);
-  const [draft, setDraft] = useState(() => (isEdit ? warehouseDraftOf(warehouse) : emptyWarehouseDraft()));
+  const [draft, setDraft] = useState(() =>
+    isEdit ? warehouseDraftOf(warehouse) : emptyWarehouseDraft(suggestWarehouseCode(existingCodes)),
+  );
   const [showErrors, setShowErrors] = useState(false);
   const create = useCreateWarehouseMutation();
   const update = useUpdateWarehouseMutation();
@@ -43,7 +52,7 @@ function FormBody({ warehouse, onClose }) {
 
       <fieldset disabled={isPending} className="min-w-0 space-y-3">
         <div className="grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)]">
-          <FormField label="کد" htmlFor="warehouse-code" required error={errorOf("code")}>
+          <FormField label="کد" htmlFor="warehouse-code" required error={errorOf("code")} hint="شناسه‌ی کوتاه برای حواله و برچسب">
             <Input
               id="warehouse-code"
               dir="ltr"
@@ -51,7 +60,6 @@ function FormBody({ warehouse, onClose }) {
               onChange={(e) => patch({ code: e.target.value.toUpperCase() })}
               placeholder="B2"
               maxLength={30}
-              autoFocus={!isEdit}
               className="font-mono"
             />
           </FormField>
@@ -62,6 +70,7 @@ function FormBody({ warehouse, onClose }) {
               onChange={(e) => patch({ name: e.target.value })}
               placeholder="مثلاً انبارِ شعبه‌ی ۲"
               maxLength={100}
+              autoFocus={!isEdit}
             />
           </FormField>
         </div>
@@ -113,10 +122,17 @@ function FormBody({ warehouse, onClose }) {
  * @param warehouse ردیفِ `GetWarehouseList` برای ویرایش؛ خالی = افزودن
  */
 export default function WarehouseFormDialog({ open, onOpenChange, warehouse }) {
+  // غیرفعال‌ها هم، چون کدشان هنوز روی سرور گرفته است.
+  const { data: all = [] } = useWarehousesQuery({ includeInactive: true });
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir="rtl" className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
-        {open && <FormBody key={warehouse?.id ?? "new"} warehouse={warehouse} onClose={() => onOpenChange(false)} />}
+        {open && <FormBody
+            key={warehouse?.id ?? "new"}
+            warehouse={warehouse}
+            existingCodes={all.map((w) => w.code)}
+            onClose={() => onOpenChange(false)}
+          />}
       </DialogContent>
     </Dialog>
   );

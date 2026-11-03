@@ -3,7 +3,16 @@
  * `CreateStockTransferCommandValidator` تا ۴۰۰ پیش از ارسال دیده شود.
  */
 
-export const emptyWarehouseDraft = () => ({ code: "", name: "", address: "", description: "", isDefault: false });
+export const emptyWarehouseDraft = (code = "") => ({ code, name: "", address: "", description: "", isDefault: false });
+
+/**
+ * کدِ پیشنهادیِ انبارِ تازه: `W` و کوچک‌ترین شماره‌ای که هنوز کدِ هیچ انباری (فعال یا غیرفعال) نیست. کد را سرور الزامی
+ * می‌داند و دستی هم عوض‌شدنی است (TODO(بکند): §۳۸، ساختِ خودکارِ کدِ خالی روی سرور).
+ */
+export function suggestWarehouseCode(existingCodes) {
+  const taken = new Set(existingCodes.map((code) => String(code).toUpperCase()));
+  for (let n = 1; ; n += 1) if (!taken.has(`W${n}`)) return `W${n}`;
+}
 
 export const warehouseDraftOf = (warehouse) => ({
   code: warehouse.code ?? "",

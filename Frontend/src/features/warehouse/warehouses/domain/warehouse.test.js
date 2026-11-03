@@ -4,6 +4,7 @@ import {
   emptyTransferDraft,
   emptyWarehouseDraft,
   toApiTransfer,
+  suggestWarehouseCode,
   toApiWarehouse,
   transferDraftErrors,
   warehouseDraftErrors,
@@ -26,6 +27,13 @@ describe("warehouse form", () => {
       description: null,
       isDefault: false,
     });
+  });
+});
+
+describe("suggestWarehouseCode", () => {
+  it("takes the first free W number, ignoring case", () => {
+    expect(suggestWarehouseCode(["MAIN", "w1", "W3"])).toBe("W2");
+    expect(suggestWarehouseCode([])).toBe("W1");
   });
 });
 

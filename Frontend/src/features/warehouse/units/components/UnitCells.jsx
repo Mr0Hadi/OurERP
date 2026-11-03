@@ -27,10 +27,12 @@ const HELD_STATUSES = new Set([
  */
 export function UnitWhereabouts({ unit, detailOnly = false, stacked = false }) {
   const where = whereaboutsOf(unit);
-  // با بیش از یک انبار، دانه‌ای که هنوز مالِ ماست نامِ انبارش را هم دارد («انبار · شعبه‌ی ۲»).
+  // با بیش از یک انبار، دانه‌ای که هنوز مالِ ماست نامِ انبارش را دارد: روی قفسه خودِ نامِ انبار، قرنطینه و رزرو
+  // «قرنطینه · شعبه‌ی ۲».
   const manyWarehouses = (useWarehousesQuery().data?.length ?? 0) > 1;
   if (manyWarehouses && unit.warehouseName && HELD_STATUSES.has(unit.status)) {
-    where.place = `${where.place} · ${unit.warehouseName}`;
+    where.place =
+      unit.status === ProductUnitStatusEnum.IN_STOCK ? unit.warehouseName : `${where.place} · ${unit.warehouseName}`;
   }
   const documentText = where.document && (
     where.documentRoute ? (
