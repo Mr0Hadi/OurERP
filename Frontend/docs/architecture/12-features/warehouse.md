@@ -36,7 +36,7 @@
 
 فرمِ کالا کارتِ `ProductReorderForm` (نقطه‌ی سفارش، `targetStock`، `minOrderQuantity`، `leadTimeDays`، `preferredSupplierId`) دارد؛ `buildProductPayload` در `src/features/warehouse/products/hooks/useProductForm.js` این‌ها را همیشه می‌فرستد، چون `UpdateProduct` نفرستاده را پاک می‌کند.
 
-هوک‌های پرکاربرد برای بقیه‌ی برنامه: `useDocumentProducts`، `useProductSearchQuery`، `useProductsOptionsQuery` (`src/features/warehouse/products/services/queries.js`)؛ `UnitsPageLink` (`src/features/warehouse/units/components/UnitsPageLink.jsx`).
+هوک‌های پرکاربرد برای بقیه‌ی برنامه: `useDocumentProducts`، `useProductSearchQuery`، `ProductSelect` (`src/features/warehouse/products/components/ProductSelect.jsx`، انتخابِ یک کالا با جست‌وجوی سرور برای فیلترها) (`src/features/warehouse/products/services/queries.js`)؛ `UnitsPageLink` (`src/features/warehouse/units/components/UnitsPageLink.jsx`).
 
 ## state و دامنه
 
@@ -71,5 +71,4 @@
 - `fetchCategoryProducts` پارامترها را دستی PascalCase می‌سازد (`ProductCategoryId`، `Page`، `Take`) به جای `listQuery`.
 - mutationهای دسته فقط `productCategoryKeys.lists()` را باطل می‌کنند.
 - `createProductCategory` وقتی سرور شناسه نمی‌دهد، فهرست را با نام می‌گردد (TODO به بکند).
-- `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند (TODOِ خودش: جست‌وجوی سمتِ سرور).
 - `useQueueRows.js` اثرهای معلقِ مرجوعیِ خرید را بدونِ `purchaseId` می‌گیرد (همه‌ی خریدها؛ ظاهراً عمدی).

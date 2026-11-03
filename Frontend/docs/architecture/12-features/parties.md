@@ -15,7 +15,7 @@
 
 ## سرویس‌ها
 
-- customers (`src/features/customers/services/api-v1.js`): `fetchCustomers` GET `/Customer/GetCustomerList`، `getCustomerById` GET `/Customer/GetCustomerDetail`، `createCustomer` POST، `updateCustomer` PUT، `deleteCustomer` DELETE. هوک‌ها: `useCustomersQuery`، `useCustomerQuery`، `useCustomersOptionsQuery`، `useCustomerSearchQuery`، `useCreate/Update/DeleteCustomerMutation`. کلید `customerKeys` (`["customers"]`).
+- customers (`src/features/customers/services/api-v1.js`): `fetchCustomers` GET `/Customer/GetCustomerList`، `getCustomerById` GET `/Customer/GetCustomerDetail`، `createCustomer` POST، `updateCustomer` PUT، `deleteCustomer` DELETE. هوک‌ها: `useCustomersQuery`، `useCustomerQuery`، `useCustomerSearchQuery`، `useCreate/Update/DeleteCustomerMutation`. کلید `customerKeys` (`["customers"]`).
 - suppliers: همان شکل روی `/Supplier/*`؛ `supplierKeys` (`["suppliers"]`).
 - partyAccount (`src/features/partyAccount/services/api-v1.js`): `fetchPartyStatement` GET `/PartyAccount/GetPartyStatement` (`customerId` یا `supplierId`، `fromDate`، `toDate`)؛ `usePartyStatementQuery` و `partyStatementKey` در `queries.js`. فایلِ `queryKeys.js` ندارد.
 
@@ -41,7 +41,8 @@
 ## نکته‌ها و بدهی
 
 - `partyAccount` ↔ `customers`/`suppliers` دوطرفه وابسته‌اند (`partyAccount/services/queries.js` کلیدهای آن دو را import می‌کند).
-- `useCreateCustomerMutation` فقط `customerKeys.lists()` را باطل می‌کند؛ چون `customerKeys.options()` = `[...lists(), "options"]` است، گزینه‌های انتخابگر هم با همین prefix تازه می‌شوند (کشِ صورت‌حساب و جزئیات نه).
+- `useCreateCustomerMutation` فقط `customerKeys.lists()` را باطل می‌کند؛ جست‌وجوی انتخابگر (`PartySelect`، `useCustomerSearchQuery`) هم زیرِ همین prefix است و تازه می‌شود (کشِ صورت‌حساب و جزئیات نه).
+- `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`) فهرستِ کامل نمی‌گیرد: با بازشدن ۲۰ ردیفِ اول و با تایپ جست‌وجوی سرور (`useCustomerSearchQuery`/`useSupplierSearchQuery`)؛ نامِ گزینه‌ی انتخاب‌شده از `useCustomerQuery`/`useSupplierQuery`.
 - TODO در `CustomerNewPage.jsx`: endpointِ ساخت هنوز شناسه‌ی رکوردِ تازه را برنمی‌گرداند.
 - نامِ فیلدِ بکند `refferalCode` (غلطِ املایی) است.
 - **سقفِ اعتبار (GAP-06):** `creditLimit` `null` = بی‌سقف، `0` = فقط نقدی؛ `buildCustomerPayload` خالی را `null` می‌فرستد (هرگز `0`).

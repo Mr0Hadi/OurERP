@@ -2,7 +2,6 @@ export const productKeys = {
   all: ['products'],
   lists: () => [...productKeys.all, 'list'],
   list: (filters) => [...productKeys.lists(), { ...filters }],
-  options: () => [...productKeys.lists(), 'options'],
   search: (term, categoryId = '') => [...productKeys.lists(), 'search', term, String(categoryId)],
   brands: (search) => [...productKeys.lists(), 'brands', search],
   details: () => [...productKeys.all, 'detail'],

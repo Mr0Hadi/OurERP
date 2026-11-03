@@ -1,6 +1,6 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { fetchAllPages, listQuery } from "@/shared/services/api/contract";
+import { listQuery } from "@/shared/services/api/contract";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 
@@ -56,46 +56,8 @@ export function useProductQuery(id) {
 
 // ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
 
-const OPTIONS_PAGE_SIZE = 200;
 const OPTIONS_SORTING = { id: "name", desc: false };
 const NO_PRODUCTS = [];
-
-async function fetchAllProductOptions() {
-  const { items } = await fetchAllPages(
-    (page) =>
-      fetchProducts(
-        listQuery({
-          filters: {},
-          pagination: { pageIndex: page - 1, pageSize: OPTIONS_PAGE_SIZE },
-          sorting: OPTIONS_SORTING,
-          sortColumns: PRODUCT_SORT_COLUMNS,
-        }),
-      ),
-    { itemsKey: "items" },
-  );
-  return items;
-}
-
-/**
- * فهرستِ همه‌ی کالاها برای فیلترِ کالا در صفحه‌ی دانه‌ها (مرتب بر اساس نام).
- * انتخابگرِ اقلامِ فاکتور از این استفاده نمی‌کند — `useProductSearchQuery`. سرور در هر درخواست حداکثر ۲۰۰ ردیف می‌دهد، پس صفحه‌به‌صفحه
- * خوانده می‌شود تا جست‌وجوی سمتِ کلاینت کلِ کالاها را ببیند.
- *
- * TODO(بکند): با رشد کاتالوگ، جست‌وجوی سمتِ سرور بهتر است (بندِ ۱۳.۵ سندِ
- * frontend-requests.fa.md).
- *
- * `enabled: false` برای انتخابگرِ تاشو: تا باز نشده، چیزی دانلود نمی‌شود.
- */
-export function useProductsOptionsQuery({ enabled = true } = {}) {
-  const { data, isLoading } = useQuery({
-    queryKey: productKeys.options(),
-    queryFn: fetchAllProductOptions,
-    gcTime: 1000 * 60 * 10,
-    staleTime: 30_000,
-    enabled,
-  });
-  return { products: data ?? NO_PRODUCTS, isLoading };
-}
 
 // ─── جست‌وجوی کالا (انتخابگرِ اقلام) ───────────────────────────────────────
 

@@ -28,6 +28,10 @@ import { isTouchDevice } from "@/shared/lib/isTouchDevice";
  *  label                         - اختیاری؛ فرم‌ها برچسبِ خودشان را دارند
  *  getKey, getLabel              - استخراج کلید و برچسب هر گزینه
  *  renderMeta                    - اطلاعات فرعی کنار هر گزینه (اختیاری)
+ *  onSearchChange                - حالتِ جست‌وجوی سرور: متنِ جست‌وجو به والد می‌رود و
+ *                                  `items` همان نتیجه‌ی سرور است (اینجا دوباره فیلتر نمی‌شود)
+ *  onOpenChange                  - باز/بسته‌شدنِ فهرست؛ تا بسته است والد چیزی نمی‌گیرد
+ *  selected                      - گزینه‌ی انتخاب‌شده وقتی شاید در `items` نباشد (جست‌وجوی سرور)
  *
  * فهرست در پورتال (`Popover`) باز می‌شود، نه `absolute` داخلِ والد؛ وگرنه
  * داخلِ کارتِ `overflow-hidden` (مثلِ بخشِ اقلامِ فرمِ خرید/فروش) بریده می‌شد.
@@ -44,24 +48,43 @@ export default function EntitySelect({
   getKey = (item) => item.id,
   getLabel = getPartyName,
   renderMeta,
+  onSearchChange,
+  onOpenChange,
+  selected,
 }) {
   const [inputValue, setInputValue] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setOpenState] = useState(false);
   const fieldRef = useRef(null);
+  const isRemote = Boolean(onSearchChange);
 
-  const selectedItem = useMemo(
-    () =>
-      value === "" || value == null
-        ? null
-        : items.find((item) => String(getKey(item)) === String(value)) || null,
-    [items, value, getKey],
+  const setSearch = useCallback(
+    (text) => {
+      setInputValue(text);
+      onSearchChange?.(text);
+    },
+    [onSearchChange],
   );
+
+  const setIsOpen = useCallback(
+    (open) => {
+      setOpenState(open);
+      onOpenChange?.(open);
+    },
+    [onOpenChange],
+  );
+
+  const selectedItem = useMemo(() => {
+    if (value === "" || value == null) return null;
+    const inItems = items.find((item) => String(getKey(item)) === String(value));
+    if (inItems) return inItems;
+    return selected && String(getKey(selected)) === String(value) ? selected : null;
+  }, [items, value, getKey, selected]);
 
   const filtered = useMemo(() => {
     const search = (inputValue || "").trim().toLowerCase();
-    if (!search) return items;
+    if (!search || isRemote) return items;
     return items.filter((item) => getLabel(item).toLowerCase().includes(search));
-  }, [inputValue, items, getLabel]);
+  }, [inputValue, items, getLabel, isRemote]);
 
   // انتخابِ گزینه‌ی فعلی یعنی «برداشتنِ فیلتر» — همان رفتاری که کلیک
   // دوباره روی یک رادیو انتظار می‌رود، و راهِ برگشت به «همه» بدون
@@ -71,19 +94,19 @@ export default function EntitySelect({
     (key, item) => {
       const isUnset = allowClear && String(key) === String(value);
       onSelect(isUnset ? "" : key, isUnset ? null : item);
-      setInputValue("");
+      setSearch("");
       setIsOpen(false);
     },
-    [onSelect, value, allowClear],
+    [onSelect, value, allowClear, setSearch, setIsOpen],
   );
 
   const handleClear = useCallback(
     (e) => {
       e?.stopPropagation();
-      setInputValue("");
+      setSearch("");
       onSelect("", null);
     },
-    [onSelect],
+    [onSelect, setSearch],
   );
 
   return (
@@ -149,7 +172,7 @@ export default function EntitySelect({
               <Input
                 placeholder="جستجو..."
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 className="pr-8 h-8"
                 autoFocus={!isTouchDevice()}
               />

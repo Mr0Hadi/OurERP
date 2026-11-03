@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { reorderPage, supplierNameOf } from "./reorderList";
+import { reorderPage } from "./reorderList";
 
 const row = (productName, patch = {}) => ({ productName, stock: 0, onOrder: 0, reorderPoint: 5, suggestedQuantity: 1, ...patch });
 
@@ -29,10 +29,3 @@ describe("reorderPage — مرتب‌سازی و صفحه‌بندیِ سمتِ 
   });
 });
 
-describe("supplierNameOf", () => {
-  it("از ردیفِ پیشنهاد، وگرنه از گزینه‌ها", () => {
-    expect(supplierNameOf(1, [{ supplierId: 1, supplierName: "پارس" }], [])).toBe("پارس");
-    expect(supplierNameOf(2, [], [{ id: 2, companyName: "ایران" }])).toBe("ایران");
-    expect(supplierNameOf(3, [], [])).toBeUndefined();
-  });
-});

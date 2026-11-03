@@ -75,13 +75,13 @@ flowchart LR
 | `FilterPanel` / `ResponsiveFilters` | پوسته‌ی فیلترها؛ موبایل: `primary`/`secondary` همیشه‌پیدا + پنلِ بازشونده با شمارِ فیلترِ فعال (`store`) | ۱۷ |
 | `FilterSearchInput` | جست‌وجوی متنی | ۱۵ |
 | `FilterSelect` | انتخابِ تکیِ کم‌گزینه با ردیفِ «همه» (روی `OptionSelect`) | ۱۸ |
-| `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند | ۱۲ |
+| `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند. حالتِ جست‌وجوی سرور: `onSearchChange` (متن به والد، `items` همان نتیجه)، `onOpenChange` (تا بسته است نگیرد)، `selected` (گزینه‌ی انتخاب‌شده‌ای که در نتیجه نیست) | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
 | `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
 | `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
 | `filterUtils.js` | `getPartyName` (برچسبِ پیش‌فرضِ `EntitySelect`) | — |
 
-انتخابگرهای موجودیتِ هر فیچر روی `EntitySelect` و خودشان فهرست را می‌گیرند؛ صفحه فهرست را برای فیلتر واکشی و پاس نمی‌دهد: `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`، `side="customer"|"supplier"`، ۲۰ مصرف)، `CategorySelect` (`src/features/warehouse/categories/components/CategorySelect.jsx`، ۷)، `UserFilterSelect` (`src/features/employees/components/UserFilterSelect.jsx`). `label={null}` برای فرمی که برچسبِ خودش را دارد. فایلِ `shared/` که انتخابگرِ طرف‌حساب لازم دارد (`ReturnFilters`) آن را از صفحه می‌گیرد (`partySelect`)، نه با importِ تازه از features.
+انتخابگرهای موجودیتِ هر فیچر روی `EntitySelect` و خودشان فهرست را می‌گیرند؛ صفحه فهرست را برای فیلتر واکشی و پاس نمی‌دهد: `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`، `side="customer"|"supplier"`، ۲۰ مصرف)، جست‌وجوی سرور)، `ProductSelect` (`src/features/warehouse/products/components/ProductSelect.jsx`، جست‌وجوی سرور)، `CategorySelect` (`src/features/warehouse/categories/components/CategorySelect.jsx`، ۷)، `UserFilterSelect` (`src/features/employees/components/UserFilterSelect.jsx`). `label={null}` برای فرمی که برچسبِ خودش را دارد. فایلِ `shared/` که انتخابگرِ طرف‌حساب لازم دارد (`ReturnFilters`) آن را از صفحه می‌گیرد (`partySelect`)، نه با importِ تازه از features.
 
 ### `feedback/`
 
