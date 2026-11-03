@@ -87,6 +87,8 @@ export const ROUTES = {
   WAREHOUSE_SHIPPING: "/warehouse/shipping",
   // بررسیِ انبارِ پیش‌فاکتورِ فروش (اسکن و رزرو، پیش از پرداخت).
   WAREHOUSE_SALE_CHECK: "/warehouse/sale-check",
+  WAREHOUSE_STOCKTAKE: "/warehouse/stocktake",
+  WAREHOUSE_STOCKTAKE_DETAIL: "/warehouse/stocktake/:id",
   WAREHOUSE_SALE_CHECK_DETAIL: "/warehouse/sale-check/:id",
   WAREHOUSE_SHIPPING_DETAIL: "/warehouse/shipping/:id",
   WAREHOUSE_RECEIVING_RETURN_DETAIL: "/warehouse/receiving/returns/:id",

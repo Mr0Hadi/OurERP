@@ -1,6 +1,5 @@
-import { Link } from "react-router-dom";
-
 import DataTable from "@/shared/components/table/DataTable";
+import { detailsColumn } from "@/shared/components/table/columns";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { PaymentDirectionEnum } from "@/shared/domain/enums/paymentDirection";
@@ -14,14 +13,7 @@ const COLUMNS = [
     accessorKey: "partyName",
     meta: { mobile: "title" },
     header: "طرف حساب",
-    cell: ({ row }) => (
-      <Link
-        to={routeWithId(ROUTES.TREASURY_PARTY_PAYMENTS_DETAIL, row.original.id)}
-        className="font-medium text-primary hover:underline"
-      >
-        {row.original.partyName}
-      </Link>
-    ),
+    cell: ({ row }) => <span className="font-medium">{row.original.partyName}</span>,
   },
   {
     accessorKey: "paidAt",
@@ -69,6 +61,7 @@ const COLUMNS = [
       </span>
     ),
   },
+  detailsColumn((row) => routeWithId(ROUTES.TREASURY_PARTY_PAYMENTS_DETAIL, row.id)),
 ];
 
 /** فهرستِ دریافت/پرداخت‌های علی‌الحساب (`ServerTable`؛ صفحه‌بندی و مرتب‌سازی سمتِ سرور). */

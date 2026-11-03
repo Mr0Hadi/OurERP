@@ -10,7 +10,7 @@ export default function FilterSearchInput({
   ...inputProps
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+    <div className="flex min-w-0 flex-col sm:flex-row sm:items-center gap-2">
       <Label className="whitespace-nowrap font-medium text-foreground text-sm">
         {label}
       </Label>

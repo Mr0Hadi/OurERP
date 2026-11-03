@@ -110,9 +110,9 @@ export default function EntitySelect({
   );
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+    <div className="flex min-w-0 flex-col sm:flex-row sm:items-center gap-2">
       {label && (
-        <Label className="whitespace-nowrap font-medium text-foreground text-sm sm:pt-2">
+        <Label className="whitespace-nowrap font-medium text-foreground text-sm">
           {label}
         </Label>
       )}
@@ -121,14 +121,14 @@ export default function EntitySelect({
         <PopoverAnchor asChild>
           <div
             ref={fieldRef}
-            className="flex-1 bg-transparent rounded-lg border border-input px-3 py-2 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
+            className="flex h-8 min-w-0 flex-1 items-center bg-transparent rounded-lg border border-input px-3 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
             onClick={() => setIsOpen(!isOpen)}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               {selectedItem ? (
-                <span className="flex-1 truncate">{getLabel(selectedItem)}</span>
+                <span className="min-w-0 flex-1 truncate">{getLabel(selectedItem)}</span>
               ) : (
-                <span className="flex-1 text-muted-foreground">{placeholder}</span>
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">{placeholder}</span>
               )}
 
               <div className="flex items-center gap-1 flex-shrink-0">
