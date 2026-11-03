@@ -32,6 +32,8 @@ import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { documentProductMap, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
+import ShipmentWarehouseCard from "../../warehouses/components/ShipmentWarehouseCard";
+import { withWarehouse } from "../../warehouses/domain/warehouse";
 
 // سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
 // ندارد، این فقط یک حدِ عملی برای فرم است.
@@ -113,6 +115,8 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
   });
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // انبارِ این محموله؛ `null` = انبارِ پیش‌فرض (و با چندانبارِ خاموش همیشه همین).
+  const [warehouseId, setWarehouseId] = useState(null);
 
   useEffect(() => {
     return () => resetForm();
@@ -148,14 +152,17 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
       vehiclePlate: formData.vehiclePlate,
       note: formData.receivingNote,
     };
-    const command = {
-      purchase: replacementOnly ? null : buildCommand(images.filesPayload),
-      purchaseReturnRounds: replacement.buildCommandsByReturn(
-        shipmentHeader,
-        "purchaseReturnId",
-      ),
-      saleReturnRounds: [],
-    };
+    const command = withWarehouse(
+      {
+        purchase: replacementOnly ? null : buildCommand(images.filesPayload),
+        purchaseReturnRounds: replacement.buildCommandsByReturn(
+          shipmentHeader,
+          "purchaseReturnId",
+        ),
+        saleReturnRounds: [],
+      },
+      warehouseId,
+    );
     receiveMutation.mutate(command, {
       onSuccess: () => {
         setShowConfirmDialog(false);
@@ -286,6 +293,8 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
           {!replacementOnly && (
             <ReceivingQuarantineCard receivingInfo={receivingInfo} />
           )}
+
+          <ShipmentWarehouseCard direction="in" value={warehouseId} onChange={setWarehouseId} disabled={isBusy} />
 
           <WarehouseSubmitBar
             label={

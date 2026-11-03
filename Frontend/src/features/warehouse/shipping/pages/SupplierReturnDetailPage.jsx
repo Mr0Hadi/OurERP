@@ -25,6 +25,7 @@ import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import { documentProductMap, returnEffectsOf, trackedLookup, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
+import ShipmentWarehouseCard from "../../warehouses/components/ShipmentWarehouseCard";
 import NothingPending from "../../shared/NothingPending";
 
 const PURCHASE_SIDE = sideConfig(RETURN_SIDES.PURCHASE);
@@ -126,12 +127,14 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
   const displayRounds = useMemo(() => withProductInfo(rounds, productMap), [rounds, productMap]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // انبارِ این دور؛ `null` = پیش‌فرضِ سرور (و با چندانبارِ خاموش همیشه همین).
+  const [warehouseId, setWarehouseId] = useState(null);
 
   const isBusy = goodsRoundMutation.isPending;
 
   const handleSubmit = () => {
     const willStayPending = !isAllComplete;
-    goodsRoundMutation.mutate(buildCommand(), {
+    goodsRoundMutation.mutate({ ...buildCommand(), ...(warehouseId != null && { warehouseId }) }, {
       onSuccess: () => {
         setShowConfirmDialog(false);
         if (willStayPending) {
@@ -200,6 +203,8 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
             dateLabel="تاریخ"
             noteLabel="یادداشت"
           />
+
+          <ShipmentWarehouseCard direction="out" value={warehouseId} onChange={setWarehouseId} disabled={isBusy} />
 
           <WarehouseSubmitBar
             label={isAllComplete ? "تأیید انجام کامل" : "ثبت این دور"}

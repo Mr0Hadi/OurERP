@@ -228,6 +228,10 @@ export function whereaboutsOf(unit) {
           .filter(Boolean)
           .join(" · "),
       };
+    case UNIT_STATUSES.RESERVED:
+      return { place: "رزرو", detail: "برای یک پیش‌فاکتور" };
+    case UNIT_STATUSES.IN_TRANSIT:
+      return { place: "در راه", detail: "حواله‌ی بین انبار" };
     case UNIT_STATUSES.SOLD:
       return {
         place: "نزد مشتری",

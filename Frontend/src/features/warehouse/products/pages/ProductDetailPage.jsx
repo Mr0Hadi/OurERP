@@ -14,6 +14,7 @@ import ProductImageUpload from "../components/forms/ProductImageUpload";
 import ProductBarcodeDisplay from "../components/forms/ProductBarcodeDisplay";
 import ProductDetailLoading from "../components/forms/ProductDetailLoading";
 import UnitsPageLink from "@/features/warehouse/units/components/UnitsPageLink";
+import ProductWarehouseStockCard from "@/features/warehouse/warehouses/components/ProductWarehouseStockCard";
 import { ROUTES } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
@@ -93,6 +94,7 @@ function ProductDetailForm({ productData }) {
             </div>
             {/* بارکد را سرور می‌سازد و در فرم عوض نمی‌شود. */}
             <ProductBarcodeDisplay value={productData.barCode ?? ""} />
+            <ProductWarehouseStockCard productId={productData.id} />
             <UnitsPageLink
               params={{ productId: productData.id }}
               label="دانه‌ها، قرنطینه و برچسب‌های این کالا"

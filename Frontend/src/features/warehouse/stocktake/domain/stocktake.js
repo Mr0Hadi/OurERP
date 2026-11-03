@@ -27,6 +27,8 @@ export const emptyStocktakeDraft = () => ({
   binLocationPrefix: "",
   products: [],
   note: "",
+  // GAP-08: `null` = انبارِ پیش‌فرض (و با چندانبارِ خاموش همیشه همین).
+  warehouseId: null,
 });
 
 /** خطاهای پیش‌نویس، با پیامِ فارسی؛ `{}` یعنی قابلِ ارسال. */
@@ -41,12 +43,12 @@ export function stocktakeDraftErrors(draft) {
   return errors;
 }
 
-/** بدنه‌ی `CreateStocktake`؛ فقط فیلدهای دامنه‌ی انتخاب‌شده فرستاده می‌شوند. `warehouseId` با چندانبار (GAP-08) می‌آید. */
+/** بدنه‌ی `CreateStocktake`؛ فقط فیلدهای دامنه‌ی انتخاب‌شده فرستاده می‌شوند. */
 export function toApiStocktake(draft) {
   const text = (value) => value.trim() || null;
   return {
     title: draft.title.trim(),
-    warehouseId: null,
+    warehouseId: draft.warehouseId ?? null,
     productCategoryId:
       draft.scope === STOCKTAKE_SCOPE.CATEGORY_BRAND && draft.productCategoryId ? Number(draft.productCategoryId) : null,
     brand: draft.scope === STOCKTAKE_SCOPE.CATEGORY_BRAND ? text(draft.brand) : null,

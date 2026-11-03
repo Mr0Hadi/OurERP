@@ -11,6 +11,8 @@ import DialogActions from "@/shared/components/feedback/DialogActions";
 import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 import ProductSelect from "@/features/warehouse/products/components/ProductSelect";
 import BrandSuggestions from "@/features/warehouse/products/components/BrandSuggestions";
+import WarehouseSelect from "@/features/warehouse/warehouses/components/WarehouseSelect";
+import { useWarehouseChoice } from "@/features/warehouse/warehouses/hooks/useMultiWarehouse";
 import { useCreateStocktakeMutation } from "../services/mutations";
 import {
   STOCKTAKE_SCOPE,
@@ -31,6 +33,7 @@ function FormBody({ onClose, onSaved }) {
   const [draft, setDraft] = useState(emptyStocktakeDraft);
   const [showErrors, setShowErrors] = useState(false);
   const create = useCreateStocktakeMutation();
+  const warehouseChoice = useWarehouseChoice();
 
   const errors = stocktakeDraftErrors(draft);
   const errorOf = (field) => (showErrors ? errors[field] : undefined);
@@ -72,6 +75,16 @@ function FormBody({ onClose, onSaved }) {
             autoFocus
           />
         </FormField>
+
+        {warehouseChoice && (
+          <FormField label="انبار" hint="فقط دانه‌های همین انبار شمرده و مقایسه می‌شوند">
+            <WarehouseSelect
+              value={draft.warehouseId}
+              onChange={(warehouseId) => patch({ warehouseId })}
+              emptyLabel="انبارِ پیش‌فرض"
+            />
+          </FormField>
+        )}
 
         <StatusChoice label="دامنه" options={SCOPE_OPTIONS} value={draft.scope} onChange={(scope) => patch({ scope })} />
 

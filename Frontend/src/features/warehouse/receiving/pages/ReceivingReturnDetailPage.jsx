@@ -23,6 +23,7 @@ import { usePageHeader } from "@/shared/hooks/usePageHeader";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { documentProductMap, returnEffectsOf, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
+import ShipmentWarehouseCard from "../../warehouses/components/ShipmentWarehouseCard";
 import NothingPending from "../../shared/NothingPending";
 
 const SALES_SIDE = sideConfig(RETURN_SIDES.SALES);
@@ -83,6 +84,8 @@ function ReceivingReturnDetailForm({ salesReturn }) {
   const displayRounds = useMemo(() => withProductInfo(rounds, productMap), [rounds, productMap]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  // انبارِ این دور؛ `null` = پیش‌فرضِ سرور (و با چندانبارِ خاموش همیشه همین).
+  const [warehouseId, setWarehouseId] = useState(null);
 
   const isBusy = goodsRoundMutation.isPending;
   // انباردار به صفحه‌ی مرجوعی‌ها دسترسی ندارد (`SaleReturnView`)؛ او به صفِ انبار برمی‌گردد.
@@ -92,7 +95,7 @@ function ReceivingReturnDetailForm({ salesReturn }) {
 
   const handleSubmit = () => {
     const willStayPending = !isAllComplete;
-    goodsRoundMutation.mutate(buildCommand(), {
+    goodsRoundMutation.mutate({ ...buildCommand(), ...(warehouseId != null && { warehouseId }) }, {
       onSuccess: () => {
         setShowConfirmDialog(false);
         if (willStayPending) {
@@ -164,6 +167,8 @@ function ReceivingReturnDetailForm({ salesReturn }) {
             dateLabel="تاریخ دریافت"
             noteLabel="یادداشت دریافت"
           />
+
+          <ShipmentWarehouseCard direction="in" value={warehouseId} onChange={setWarehouseId} disabled={isBusy} />
 
           <WarehouseSubmitBar
             label={isAllComplete ? "تأیید دریافت کامل" : "ثبت این دور (باقیمانده هنوز نرسیده)"}

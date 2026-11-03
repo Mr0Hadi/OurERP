@@ -12,6 +12,10 @@ export const ProductUnitStatusEnum = Object.freeze({
   SCRAPPED: 4,
   /** در انبار ولی غیرقابل‌فروش، منتظر تصمیم — علتش در `UnitCustodyReasonEnum`. */
   QUARANTINED: 9,
+  /** رزروِ یک پیش‌فاکتور پس از بررسیِ انبار؛ روی قفسه ولی بیرون از موجودیِ آزاد. */
+  RESERVED: 10,
+  /** در راهِ یک حواله‌ی بین انبار (GAP-08)؛ بیرون از موجودی تا مقصد تحویل بگیرد. */
+  IN_TRANSIT: 11,
 });
 
 export const UNIT_STATUS_LABELS = Object.freeze({
@@ -20,6 +24,8 @@ export const UNIT_STATUS_LABELS = Object.freeze({
   [ProductUnitStatusEnum.RETURNED_TO_SUPPLIER]: "عودت به تامین‌کننده",
   [ProductUnitStatusEnum.SCRAPPED]: "اسقاط",
   [ProductUnitStatusEnum.QUARANTINED]: "قرنطینه",
+  [ProductUnitStatusEnum.RESERVED]: "رزرو",
+  [ProductUnitStatusEnum.IN_TRANSIT]: "در راه",
 });
 
 /** رنگِ معناییِ هر وضعیت برای `StatusBadge` (معناها در `shared/lib/tone.js`). */
@@ -29,6 +35,8 @@ export const UNIT_STATUS_TONES = Object.freeze({
   [ProductUnitStatusEnum.RETURNED_TO_SUPPLIER]: "neutral",
   [ProductUnitStatusEnum.SCRAPPED]: "danger",
   [ProductUnitStatusEnum.QUARANTINED]: "caution",
+  [ProductUnitStatusEnum.RESERVED]: "info",
+  [ProductUnitStatusEnum.IN_TRANSIT]: "info",
 });
 
 /**

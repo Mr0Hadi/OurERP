@@ -235,6 +235,14 @@ export const navigationData = {
           description: "شمارشِ موجودیِ قفسه، مقایسه با سیستم و اعمالِ مغایرت",
         },
         {
+          title: "حواله‌ی بین انبار",
+          url: ROUTES.WAREHOUSE_TRANSFERS,
+          permission: ["StockTransferView", "StockTransferManage"],
+          featureFlag: "Warehouse.MultiWarehouseEnabled",
+          icon: ArrowLeftRight,
+          description: "جابه‌جاییِ دانه‌ها بینِ انبارها، تحویل و لغو",
+        },
+        {
           title: "لیست کالاها",
           url: ROUTES.WAREHOUSE_PRODUCTS,
           permission: "ProductView",
@@ -261,6 +269,14 @@ export const navigationData = {
           permission: ["VehicleView", "ProductCategoryView"],
           icon: Car,
           description: "خودروها و کالاهای مربوط به هر خودرو",
+        },
+        {
+          // تعریفِ انبار با چندانبارِ خاموش هم مجاز است، پس سوییچ ندارد.
+          title: "انبارها",
+          url: ROUTES.WAREHOUSE_WAREHOUSES,
+          permission: ["WarehouseManage", "ProductUnitView", "StockTransferView", "StockTransferManage"],
+          icon: Warehouse,
+          description: "تعریفِ انبارها، انبارِ پیش‌فرض و شمارِ دانه‌های هر انبار",
         },
       ],
     },

@@ -4,6 +4,7 @@ import { getPartyName } from "@/shared/components/filters/filterUtils";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { UNIT_SEGMENTS, formatDate } from "../domain/unitVocabulary";
 import { formatDigits } from "@/shared/lib/numberFormat";
+import { useWarehousesQuery } from "@/features/warehouse/warehouses/services/queries";
 
 /** نامِ طرف از جزئیاتش؛ تا نرسیده، شناسه. */
 const partyName = (party, id) =>
@@ -31,6 +32,7 @@ function Chip({ children, onRemove }) {
  * اینجاست. `linksOnly` وقتی پنلِ فیلترها باز است و بقیه همان‌جا دیده می‌شوند.
  */
 export default function UnitActiveFilters({ store, supplier, customer, linksOnly = false }) {
+  const { data: warehouses = [] } = useWarehousesQuery();
   const range = (from, to, format = formatDigits) => `${from ? format(from) : "…"} تا ${to ? format(to) : "…"}`;
 
   const chips = [
@@ -77,6 +79,11 @@ export default function UnitActiveFilters({ store, supplier, customer, linksOnly
         store.setFromSerial("");
         store.setToSerial("");
       },
+    },
+    store.warehouseId && {
+      key: "warehouse",
+      label: `انبار: ${warehouses.find((w) => w.id === store.warehouseId)?.name ?? store.warehouseId}`,
+      clear: () => store.setWarehouseId(""),
     },
     store.binLocation && {
       key: "bin",
