@@ -1,6 +1,6 @@
 # warehouse — کالا، دسته، دانه، خودرو، دریافت و ارسال
 
-هفت زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/` (بررسیِ انبارِ پیش‌فاکتورِ فروش)؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
+هشت زیرماژول در `src/features/warehouse/`: `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/` (بررسیِ انبارِ پیش‌فاکتورِ فروش)، `stocktake/` (انبارگردانی، GAP-01)؛ به‌علاوه‌ی `shared/` (مشترکِ دریافت/ارسال). یک `routes.jsx`.
 
 ## مسیرها
 
@@ -19,6 +19,7 @@
 | `WAREHOUSE_SHIPPING` (+ `_DETAIL`) | `/warehouse/shipping`، `/:id` | `SaleShip` | `src/features/warehouse/shipping/pages/ShippingListPage.jsx`، `ShippingDetailPage.jsx` |
 | `WAREHOUSE_SALE_CHECK` (+ `_DETAIL`) | `/warehouse/sale-check`، `/:id` | `SaleWarehouseCheck` | `src/features/warehouse/saleCheck/pages/SaleCheckListPage.jsx`، `SaleCheckPage.jsx` (اسکن و رزروِ دانه‌ها، کم‌کردنِ اقلام با دلیل و تأیید، گزارشِ معیوب/مفقود) |
 | `WAREHOUSE_SHIPPING_RETURN_DETAIL` | `/warehouse/shipping/returns/:id` | `PurchaseReturnExecute` | `src/features/warehouse/shipping/pages/SupplierReturnDetailPage.jsx` (عودت به تامین‌کننده در **مرجوعیِ خرید**) |
+| `WAREHOUSE_STOCKTAKE` (+ `_DETAIL`) | `/warehouse/stocktake`، `/:id` | `["StocktakeView", "StocktakeCount", "StocktakeApprove"]` | `src/features/warehouse/stocktake/pages/StocktakeListPage.jsx`، `StocktakeDetailPage.jsx` (اسکن و شمارشِ دستی، مغایرت پس از پایانِ شمارش، پایان/بازگشایی/تأیید/لغو) |
 
 `CategoriesPage` و `VehiclesPage` فهرست/جزئیات در یک کامپوننت‌اند؛ `:id` فقط انتخاب است.
 
@@ -32,6 +33,7 @@
 | vehicles | `/Vehicle/GetVehicleList` (take ۵۰۰)، `GetVehicleProductList`، `CreateVehicle`، `UpdateVehicle`، `DeleteVehicle`، `AddProductsToVehicle`، `RemoveProductFromVehicle` | `vehicleKeys` (`["vehicles"]`) |
 | receiving | `fetchReceivablePurchases` GET `/Purchase/GetPurchaseList`، `fetchPurchaseReceivingInfo` GET `/PurchaseReturn/GetPurchaseReceivingInfo`، `fetchPurchaseReturnPendingEffects`، `receiveShipment` POST `/Shipment/ReceiveShipment` | `receivingKeys` (`['receiving']`) |
 | saleCheck | `useProformaQueueQuery(CUSTOMER_APPROVED)` و فیلترهای `ProformaQueueFilters` از `sales/orders`، `useInStockUnitsQuery` (`fetchProductUnits`)؛ نوشتن با `useWarehouseApproveMutation`ِ `sales/orders` | `saleKeys`، `productUnitKeys` |
+| stocktake | `fetchStocktakes` GET `/Stocktake/GetStocktakeList`، `fetchStocktake` GET `GetStocktakeDetail`، `createStocktake` (ایدمپوتنت)، `scanStocktakeUnits`، `removeStocktakeScan`، `countStocktakeLine`، `changeStocktakeStatus(action, id)` برای `Submit`/`Reopen`/`Approve` (ایدمپوتنت)/`CancelStocktake`؛ هر دستور سندِ کامل برمی‌گرداند و در کشِ جزئیات می‌نشیند؛ تأیید `productKeys` و `productUnitKeys` را هم باطل می‌کند | `stocktakeKeys` (`["stocktakes"]`) |
 | shipping | `fetchShippableSales` GET `/Sale/GetSaleList`، `fetchSaleForShipping` GET `/Sale/GetSaleDetail`، `fetchSaleReturnPendingEffects`، `dispatchShipment` POST `/Shipment/DispatchShipment` | `shippingKeys` (`['shipping']`) |
 
 فرمِ کالا کارتِ `ProductReorderForm` (نقطه‌ی سفارش، `targetStock`، `minOrderQuantity`، `leadTimeDays`، `preferredSupplierId`) دارد؛ `buildProductPayload` در `src/features/warehouse/products/hooks/useProductForm.js` این‌ها را همیشه می‌فرستد، چون `UpdateProduct` نفرستاده را پاک می‌کند.
@@ -44,6 +46,7 @@
 - `src/features/warehouse/units/store/unitFilterStore.js`: `useProductUnitFilterStore`؛ `src/features/warehouse/units/store/labelTemplateStore.js`: `useLabelTemplateStore` (persist `unit-label-template`).
 - `useReceivingFormStore`، `useShippingFormStore`، `useReceivingFilterStore`، `useShippingFilterStore`؛ hookها `useReceivingForm`، `useShippingForm`.
 - دامنه: `src/features/warehouse/units/domain/unitVocabulary.js` (`UNIT_SEGMENTS`، `UnitActionEnum`، `REASONS_BY_ACTION`، `allowedActionsOf`، `canApply`، …؛ `DocumentKindEnum`/`documentRouteOf` از `src/shared/domain/enums/documentKind.js`)، `labelTemplate.js` (هندسه‌ی برگه و قالب)، `receivingVocabulary.js`، `shippingVocabulary.js`.
+- انبارگردانی: `useStocktakeFilterStore` (`src/features/warehouse/stocktake/store/stocktakeFilterStore.js`)؛ دامنه در `src/features/warehouse/stocktake/domain/stocktake.js` (`STOCKTAKE_SCOPE`، `toApiStocktake`، `stocktakeActions`، `scanOutcome` — پیامِ اسکن از تفاوتِ سند پیش و پس، چون interceptor پیامِ سرور را برنمی‌گرداند — و `visibleLines`)؛ enumها در `src/shared/domain/enums/stocktake.js`. شمارشِ کور (`isBlind`، تنظیمِ `Stocktake.BlindCount`) را سرور اعمال می‌کند؛ صفحه فقط فیلدهای `null` را پنهان می‌کند.
 - `src/features/warehouse/shared/`: `useQueueRows.js`، `queueFilters.js`، `shipmentCache.js` (`applyShipmentResult`)، `productInfo.js`، `QueueTable.jsx`، `QueueFilters.jsx`، `NothingPending.jsx`، `WarehouseSubmitBar.jsx`، `returnRowCells.jsx`.
 
 ## جریان‌ها

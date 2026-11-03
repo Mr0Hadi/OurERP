@@ -22,6 +22,7 @@ import {
   Box,
   Building2,
   CalendarClock,
+  ClipboardCheck,
   ClipboardList,
   FilePlus,
   KeyRound,
@@ -225,6 +226,13 @@ export const navigationData = {
           permission: "ProductUnitView",
           icon: Barcode,
           description: "ردیابی هر دانه (انبار، قرنطینه، مشتری، اسقاط)، چاپ برچسب و شمارش",
+        },
+        {
+          title: "انبارگردانی",
+          url: ROUTES.WAREHOUSE_STOCKTAKE,
+          permission: ["StocktakeView", "StocktakeCount", "StocktakeApprove"],
+          icon: ClipboardCheck,
+          description: "شمارشِ موجودیِ قفسه، مقایسه با سیستم و اعمالِ مغایرت",
         },
         {
           title: "لیست کالاها",

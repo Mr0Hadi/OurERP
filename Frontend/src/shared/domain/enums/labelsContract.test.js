@@ -15,6 +15,8 @@ const exportsByName = Object.assign({}, ...Object.values(modules));
 /** enum → نقشه‌هایی که باید *همه‌ی* اعضایش را داشته باشند. */
 const COMPLETE_MAPS = {
   ChequeStatusEnum: ["CHEQUE_STATUS_LABELS", "CHEQUE_STATUS_TONES"],
+  StocktakeStatusEnum: ["STOCKTAKE_STATUS_LABELS", "STOCKTAKE_STATUS_TONES"],
+  StocktakeCountModeEnum: ["STOCKTAKE_COUNT_MODE_LABELS"],
   OrgRoleEnum: ["ORG_ROLE_LABELS"],
   PartyLedgerEntryTypeEnum: ["PARTY_LEDGER_ENTRY_TYPE_LABELS"],
   PartyLedgerDirectionEnum: ["PARTY_LEDGER_DIRECTION_LABELS"],

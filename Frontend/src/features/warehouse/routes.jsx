@@ -18,7 +18,11 @@ const ReceivingReturnDetailPage = lazy(() => import("./receiving/pages/Receiving
 const SaleCheckListPage = lazy(() => import("./saleCheck/pages/SaleCheckListPage"));
 const SaleCheckPage = lazy(() => import("./saleCheck/pages/SaleCheckPage"));
 const SupplierReturnDetailPage = lazy(() => import("./shipping/pages/SupplierReturnDetailPage"));
+const StocktakeListPage = lazy(() => import("./stocktake/pages/StocktakeListPage"));
+const StocktakeDetailPage = lazy(() => import("./stocktake/pages/StocktakeDetailPage"));
 
+// دیدنِ انبارگردانی با هر کدام از سه دسترسی (همان `GetStocktakeList`/`Detail`).
+const STOCKTAKE_PERMISSIONS = ["StocktakeView", "StocktakeCount", "StocktakeApprove"];
 
 export const warehouseRoutes = [
   // «انبار» در سایدبار به این مسیر لینک می‌دهد ولی صفحه‌ی مرورِ کلی
@@ -114,5 +118,15 @@ export const warehouseRoutes = [
     path: ROUTES.WAREHOUSE_SHIPPING_RETURN_DETAIL,
     handle: { permission: "PurchaseReturnExecute" },
     element: <SupplierReturnDetailPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_STOCKTAKE,
+    handle: { permission: STOCKTAKE_PERMISSIONS },
+    element: <StocktakeListPage />,
+  },
+  {
+    path: ROUTES.WAREHOUSE_STOCKTAKE_DETAIL,
+    handle: { permission: STOCKTAKE_PERMISSIONS },
+    element: <StocktakeDetailPage />,
   },
 ];
