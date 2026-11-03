@@ -78,6 +78,7 @@ flowchart LR
 | `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند. حالتِ جست‌وجوی سرور: `onSearchChange` (متن به والد، `items` همان نتیجه)، `onOpenChange` (تا بسته است نگیرد)، `selected` (گزینه‌ی انتخاب‌شده‌ای که در نتیجه نیست) | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
 | `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
+| `FilterMultiSelect` | چندانتخابی در قالبِ یک فیلدِ بازشونده با چک‌باکس (`statuses`)، تا داخلِ ردیفِ `FilterPanel` کنارِ بقیه بنشیند؛ «همه» وقتی هیچ‌کدام. `FilterMultiChoice` (دکمه‌های کنارِ هم) برای وقتی بیرونِ پنل است | ۱ |
 | `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
 | `filterUtils.js` | `getPartyName` (برچسبِ پیش‌فرضِ `EntitySelect`) | — |
 

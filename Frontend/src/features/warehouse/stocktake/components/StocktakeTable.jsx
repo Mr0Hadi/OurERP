@@ -1,6 +1,5 @@
-import { Link } from "react-router-dom";
-
 import DataTable from "@/shared/components/table/DataTable";
+import { detailsColumn } from "@/shared/components/table/columns";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { STOCKTAKE_STATUS_LABELS, STOCKTAKE_STATUS_TONES } from "@/shared/domain/enums/stocktake";
@@ -14,13 +13,9 @@ const COLUMNS = [
     meta: { mobile: "title" },
     header: "شماره",
     cell: ({ row }) => (
-      <Link
-        to={routeWithId(ROUTES.WAREHOUSE_STOCKTAKE_DETAIL, row.original.id)}
-        className="font-mono text-sm font-medium text-primary hover:underline"
-        dir="ltr"
-      >
+      <span className="font-mono text-sm font-medium" dir="ltr">
         {row.original.number}
-      </Link>
+      </span>
     ),
   },
   {
@@ -61,6 +56,7 @@ const COLUMNS = [
     header: "تاریخ ساخت",
     cell: (info) => <span className="tabular-nums text-sm">{gregorianToPersianDateTime(info.getValue())}</span>,
   },
+  detailsColumn((row) => routeWithId(ROUTES.WAREHOUSE_STOCKTAKE_DETAIL, row.id)),
 ];
 
 /** فهرستِ انبارگردانی‌ها (`ServerTable`؛ صفحه‌بندی و مرتب‌سازی سمتِ سرور). */

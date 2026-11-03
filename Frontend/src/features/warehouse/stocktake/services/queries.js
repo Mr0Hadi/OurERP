@@ -13,10 +13,15 @@ export function useStocktakesQuery(filters, pagination, sorting) {
   });
 }
 
+/**
+ * جزئیات سنگین است (سرور مغایرتِ همه‌ی ردیف‌ها را حساب می‌کند) و هر دستور سندِ تازه را خودش در کش می‌گذارد؛ پس با
+ * هر برگشتِ فوکوس به پنجره دوباره خوانده نمی‌شود.
+ */
 export function useStocktakeQuery(id) {
   return useQuery({
     queryKey: stocktakeKeys.detail(id),
     queryFn: () => fetchStocktake(id),
     enabled: Boolean(id),
+    staleTime: 30_000,
   });
 }

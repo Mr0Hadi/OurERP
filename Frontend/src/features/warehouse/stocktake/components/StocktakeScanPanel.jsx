@@ -1,20 +1,25 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
-import { Undo2 } from "lucide-react";
+import { Loader2, Undo2 } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import SectionCard from "@/shared/components/forms/SectionCard";
 import BarcodeScanField from "@/shared/components/barcode/BarcodeScanField";
 import Notice from "@/shared/components/feedback/Notice";
+import { formatNumber } from "@/shared/lib/numberFormat";
 import { useRemoveStocktakeScanMutation, useScanStocktakeMutation } from "../services/mutations";
+import { stocktakeKeys } from "../services/queryKeys";
 import { scanOutcome, scanOutcomeMessage } from "../domain/stocktake";
 
 /** چند اسکنِ آخرِ همین صفحه، برای برداشتنِ اسکنِ اشتباه. */
 const RECENT_LIMIT = 8;
 
 /**
- * اسکنِ دانه‌ها در شمارش (`ScanStocktakeUnits`). اسکنرِ دستی کد را با Enter می‌فرستد؛ هر اسکن جدا ثبت می‌شود و
- * نتیجه (ثبت/تکراری/ناشناخته) از مقایسه‌ی سند پیش و پس می‌آید. اسکنِ دانه‌ی کالای بیرون از دامنه آن کالا را با
+ * اسکنِ دانه‌ها در شمارش (`ScanStocktakeUnits`). اسکنرِ دستی کد را با Enter می‌فرستد. هر بار فقط یک درخواست در
+ * راه است: اسکن‌هایی که در این فاصله می‌رسند در صف می‌مانند و با درخواستِ بعدی یک‌جا می‌روند (سرور فهرست می‌گیرد)،
+ * تا اسکنِ پشتِ‌سرهم روی سرورِ کند درخواست‌ها را روی هم انبار نکند. نتیجه (ثبت/تکراری/ناشناخته) از مقایسه‌ی سند پیش
+ * و پس می‌آید. اسکنِ دانه‌ی کالای بیرون از دامنه آن کالا را با
  * موجودیِ سیستمِ صفر اضافه می‌کند (قاعده‌ی سرور).
  *
  * سرور بارکدهای اسکن‌شده‌ی هر ردیف را نمی‌فرستد، پس «برداشتن» فقط برای اسکن‌های همین نشست و بارکدهای ناشناخته
@@ -25,18 +30,44 @@ export default function StocktakeScanPanel({ stocktake }) {
   const remove = useRemoveStocktakeScanMutation();
   const [recent, setRecent] = useState([]);
 
-  const handleScan = (code) => {
+  const queryClient = useQueryClient();
+  const queue = useRef([]);
+  const busy = useRef(false);
+  const [queued, setQueued] = useState(0);
+
+  // سندِ تازه از کش، نه از prop: درخواستِ صف‌شده پس از پاسخِ قبلی فرستاده می‌شود.
+  const latest = () => queryClient.getQueryData(stocktakeKeys.detail(stocktake.id)) ?? stocktake;
+
+  const send = (codes) => {
+    busy.current = true;
+    const before = latest();
     scan.mutate(
-      { stocktakeId: stocktake.id, barcodes: [code] },
+      { stocktakeId: stocktake.id, barcodes: codes },
       {
         onSuccess: (after) => {
-          const outcome = scanOutcome(stocktake, after, [code]);
+          const outcome = scanOutcome(before, after, codes);
           const message = scanOutcomeMessage(outcome);
           (message.tone === "success" ? toast.success : toast.error)(message.text);
-          if (outcome.added) setRecent((list) => [code, ...list.filter((item) => item !== code)].slice(0, RECENT_LIMIT));
+          const unknown = new Set(after?.unknownBarcodes ?? []);
+          const counted = codes.filter((code) => !unknown.has(code));
+          if (outcome.added && counted.length) {
+            setRecent((list) => [...new Set([...[...counted].reverse(), ...list])].slice(0, RECENT_LIMIT));
+          }
+        },
+        onSettled: () => {
+          const next = queue.current.splice(0);
+          setQueued(0);
+          if (next.length) send(next);
+          else busy.current = false;
         },
       },
     );
+  };
+
+  const handleScan = (code) => {
+    if (!busy.current) return send([code]);
+    queue.current.push(code);
+    setQueued(queue.current.length);
   };
 
   const handleRemove = (barcode) =>
@@ -50,6 +81,12 @@ export default function StocktakeScanPanel({ stocktake }) {
   return (
     <SectionCard title="اسکنِ دانه‌ها">
       <BarcodeScanField onScan={handleScan} placeholder="بارکدِ دانه را اسکن کنید..." />
+      {(scan.isPending || queued > 0) && (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
+          <Loader2 className="size-3.5 animate-spin" />
+          در حال ثبت{queued > 0 ? `؛ ${formatNumber(queued)} اسکن در صف` : "..."}
+        </p>
+      )}
       <p className="text-xs text-muted-foreground">
         هر دانه‌ی اسکن‌شده شمرده می‌شود؛ اسکنِ دوباره بی‌اثر است. برای کالای بی‌برچسب عدد را در جدولِ پایین بنویسید.
       </p>

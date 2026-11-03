@@ -77,11 +77,14 @@ function FormBody({ onClose, onSaved }) {
 
         {draft.scope === STOCKTAKE_SCOPE.CATEGORY_BRAND && (
           <div className="grid gap-3 sm:grid-cols-2">
-            <CategorySelect
-              value={draft.productCategoryId}
-              onSelect={(productCategoryId) => patch({ productCategoryId })}
-              placeholder="بدونِ دسته (فقط برند)"
-            />
+            <FormField label="دسته‌بندی">
+              <CategorySelect
+                label={null}
+                value={draft.productCategoryId}
+                onSelect={(productCategoryId) => patch({ productCategoryId })}
+                placeholder="بدونِ دسته"
+              />
+            </FormField>
             <FormField label="برند" htmlFor="stocktake-brand">
               <Input
                 id="stocktake-brand"
