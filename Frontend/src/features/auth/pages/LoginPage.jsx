@@ -206,6 +206,7 @@ export default function LoginPage() {
 
           {/* کارت فرم شیشه‌ای */}
           <div
+            data-slot="login-card"
             className="relative rounded-3xl border border-border/60 bg-card/80 p-8 shadow-xl shadow-black/[0.03] backdrop-blur-sm"
           >
             <div className="mb-7 space-y-1.5 text-center">

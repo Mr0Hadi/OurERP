@@ -78,8 +78,8 @@ export function ClassicStatusBar() {
       <Panel className="flex-1">{status}</Panel>
       {user && <Panel>{fullNameOf(user)}</Panel>}
       <Panel className="tabular-nums">{now}</Panel>
-      <Panel className={`w-12 justify-center ${caps ? "" : "text-[#808080]"}`}>CAPS</Panel>
-      <Panel className={`w-12 justify-center ${num ? "" : "text-[#808080]"}`}>NUM</Panel>
+      <Panel className={`w-12 justify-center ${caps ? "" : "text-(--cl-gray-text)"}`}>CAPS</Panel>
+      <Panel className={`w-12 justify-center ${num ? "" : "text-(--cl-gray-text)"}`}>NUM</Panel>
       <span data-slot="classic-size-grip" aria-hidden="true" className="size-[14px] self-end" />
     </footer>
   );

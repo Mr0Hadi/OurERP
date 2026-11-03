@@ -24,7 +24,9 @@ html.theme-classic {
   --cl-highlight: #0a246a;     /* Highlight */
   --cl-highlight-text: #ffffff;
   --cl-caption: #0a246a;       /* ActiveCaption */
-  --cl-caption-2: #a6caf0;     /* GradientActiveCaption */
+  /* GradientActiveCaption: #a6caf0ِ ویندوز متنِ سفید را روی سمتِ روشن ناخوانا
+     می‌کرد (۱٫۸:۱)؛ با این آبی هر جای نوار کنتراستِ ≥ ۴٫۵:۱ دارد. */
+  --cl-caption-2: #3a6ea5;
   --cl-caption-text: #ffffff;
   --cl-info: #ffffe1;          /* InfoBk (tooltip) */
   --cl-hot: #e8eef9;           /* hot-track ردیف‌ها */
@@ -47,10 +49,11 @@ html.theme-classic {
   /* الگوی شطرنجیِ ۵۰٪ (dither) — زمینه‌ی اسکرول‌بار و پشتِ دیالوگ */
   --cl-dither: repeating-conic-gradient(var(--cl-face) 0 25%, var(--cl-hilight) 0 50%) 0 0 / 2px 2px;
 
-  /* ── رنگ‌های معنایی (tone.js) — رنگ‌های ۱۶تاییِ VGA، کمی نرم‌تر ── */
-  --success: #007a00;
-  --warning: #7a5c00;
-  --caution: #b04000;
+  /* ── رنگ‌های معنایی (tone.js) — رنگ‌های ۱۶تاییِ VGA، آن‌قدر تیره که متنِ badge
+     روی زمینه‌ی خاکستری (و ته‌رنگِ خودش) کنتراستِ ≥ ۴٫۵:۱ داشته باشد ── */
+  --success: #005c00;
+  --warning: #634e00;
+  --caution: #8a3000;
   --info: #000080;
   --special: #800080;
 
@@ -84,7 +87,7 @@ html.theme-classic {
   /* accent برای hoverهای ملایم است؛ highlightِ سرمه‌ایِ منو در کامپوننت‌ها. */
   --accent: #c1d2ee;
   --accent-foreground: var(--cl-window-text);
-  --destructive: #c00000;
+  --destructive: #a00000;
   --destructive-foreground: #ffffff;
   --border: #a19d94;
   --input: var(--cl-shadow);

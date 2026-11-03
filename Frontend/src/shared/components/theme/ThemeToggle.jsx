@@ -62,10 +62,9 @@ export function ThemeToggle() {
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
-        <DropdownMenuLabel>کلاسیک</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => setTheme("classic")}>
           <Monitor className="mr-2 h-4 w-4" />
-          کلاسیک
+          ویندوزِ کلاسیک
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />

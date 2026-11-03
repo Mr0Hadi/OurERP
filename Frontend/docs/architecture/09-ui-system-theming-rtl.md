@@ -10,7 +10,7 @@
 | --- | --- |
 | `src/index.css` | ترتیبِ لایه‌ها، `@import`ها، `@custom-variant`، `@theme inline`، توکن‌های `:root`، `.dark`، `.theme-accessible`، `.theme-rose`، `.theme-forest` |
 | `src/shared/styles/themes/material.css`، `material-tokens.css`، `material-components.css` | تمِ Material (نقش‌های `--md-*` و بازنویسیِ کامپوننت‌ها) |
-| `src/shared/styles/themes/classic.css`، `classic-components.css` | تمِ کلاسیکِ Windows Forms با ظاهرِ ویندوز ۷ (رنگ‌های سیستمیِ `--cl-*`، bevel، نوارِ عنوان، آیکن‌های رنگی، حرکتِ پله‌ای) |
+| `src/shared/styles/themes/classic.css`، `classic-components.css` | تمِ کلاسیکِ Windows Forms با ظاهرِ ویندوز ۲۰۰۰ / Classic (رنگ‌های سیستمیِ `--cl-*`، bevel، نوارِ عنوان، آیکن‌های رنگی، حرکتِ پله‌ای) |
 | `src/shared/components/charts/useChartSkin.js` | تفاوتِ هندسیِ نمودار بینِ تم‌ها (گوشه‌ی ستون، خطِ شکسته، نشانگر) |
 | `src/app/layouts/ClassicStatusBar.jsx` | نوارِ وضعیتِ پایینِ پنجره، فقط در تمِ کلاسیک |
 | `src/shared/components/theme/ThemeProvider.jsx`، `themeClasses.js`، `themeContext.js`، `ThemeToggle.jsx` | انتخاب و اعمالِ تم |
@@ -41,7 +41,7 @@ flowchart LR
 
 ### تمِ کلاسیک (Windows Forms)
 
-`classic` → کلاس `theme-classic` (فقط روشن). الگوی Material را دنبال می‌کند: `classic.css` بی‌لایه رنگ‌های سیستمیِ ویندوز (`--cl-face`، `--cl-highlight`، …) و bevelها (`--cl-raised`، `--cl-sunken`) را تعریف و توکن‌های shadcn را به آن‌ها نگاشت می‌کند؛ `classic-components.css` در `@layer classic` (آخرین لایه) با `data-slot` ظاهرِ کامپوننت‌ها را عوض می‌کند: کارت و دیالوگ پنجره با نوارِ عنوانِ سرمه‌ای، فیلد و جدول سفیدِ فرورفته (DataGridView)، Tabs مثلِ TabControl، سایدبار مثلِ درختِ Explorer، اسکرول‌بارِ ۱۶px، tooltip زردِ InfoBk، spinner ساعتِ شنی. آیکن‌های lucide با کلاسِ `lucide-<name>` رنگِ پُرِ `--ci` می‌گیرند. هدرِ `AppLayout` با `data-slot="app-header"` نوارِ عنوانِ پنجره‌ی اصلی می‌شود و `ClassicStatusBar` فقط در این تم پایینِ صفحه می‌آید.
+`classic` → کلاس `theme-classic` (فقط روشن). الگوی Material را دنبال می‌کند: `classic.css` بی‌لایه رنگ‌های سیستمیِ ویندوز (`--cl-face`، `--cl-highlight`، …) و bevelها (`--cl-raised`، `--cl-sunken`) را تعریف و توکن‌های shadcn را به آن‌ها نگاشت می‌کند؛ `classic-components.css` در `@layer classic` (آخرین لایه) با `data-slot` ظاهرِ کامپوننت‌ها را عوض می‌کند: کارت و دیالوگ پنجره با نوارِ عنوانِ سرمه‌ای، فیلد و جدول سفیدِ فرورفته (DataGridView)، Tabs مثلِ TabControl، سایدبار مثلِ درختِ Explorer، اسکرول‌بارِ ۱۶px، tooltip زردِ InfoBk، spinner ساعتِ شنی. آیکن‌های lucide با کلاسِ `lucide-<name>` رنگِ پُرِ `--ci` می‌گیرند. هدرِ `AppLayout` با `data-slot="app-header"` نوارِ عنوانِ پنجره‌ی اصلی می‌شود و `ClassicStatusBar` فقط در این تم پایینِ صفحه می‌آید. کارتِ ورود (`data-slot="login-card"` در `LoginPage.jsx`) پنجره‌ی برجسته می‌شود؛ فیلدهایی که shadcn نیستند (لنگرِ `EntitySelect`/`VehicleMultiSelect` با `data-slot="popover-anchor"` و inputِ تاریخ‌گزین) با کلاسِ `border-input` شناخته می‌شوند. رنگ‌های tone و `--destructive` این تم روی زمینه‌ی خاکستریِ `--cl-face` کنتراستِ ≥ ۴٫۵:۱ دارند؛ رنگِ تازه را با همین معیار انتخاب کنید.
 
 نمودارها: چیزی که با CSS می‌شود با `data-chart` (`grid`، `bar`، `line`، `slice`، `swatch`، `tooltip`، …) در فایلِ تم است؛ شکلِ مسیرها (`barRadius`، `linePath`، نشانگرِ مربعی) از `useChartSkin()` می‌آید.
 

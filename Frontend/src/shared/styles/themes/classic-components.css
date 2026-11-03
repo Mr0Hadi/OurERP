@@ -31,8 +31,9 @@
   .theme-classic :is(.backdrop-blur-xs, .backdrop-blur-sm, .backdrop-blur, .backdrop-blur-md) {
     backdrop-filter: none;
   }
-  /* رنگِ لینک‌ها (مثل «مشاهده همه») */
-  .theme-classic a:not([data-slot], [data-sidebar], .group\/button):hover {
+  /* رنگِ لینک‌ها (مثل «مشاهده همه»)؛ لینک‌های بلوکی (کارتِ کاملِ فهرستِ موبایل)
+     زیرخط نمی‌گیرند وگرنه همه‌ی متنِ کارت خط می‌خورد. */
+  .theme-classic a:not([data-slot], [data-sidebar], .group\/button, .block, .flex, .grid):hover {
     text-decoration: underline;
   }
 
@@ -174,6 +175,25 @@
   .theme-classic :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"], [data-slot="combobox-input-group"], [data-slot="input-group"], [data-slot="sidebar-input"]):is(:not([class*="bg-"]), [class~="bg-transparent"]) {
     background-color: var(--cl-window);
   }
+  /* فیلدهایی که shadcn نیستند ولی ظاهرِ فیلد دارند: لنگرِ EntitySelect و
+     VehicleMultiSelect، و inputِ تاریخ‌گزین. */
+  .theme-classic :is([data-slot="popover-anchor"], input:not([data-slot])).border-input {
+    border-radius: 0;
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+    background-color: var(--cl-window);
+    box-shadow: inset 1px 1px var(--cl-dkshadow), inset -1px -1px var(--cl-light);
+    transition: none;
+  }
+  .theme-classic :is([data-slot="popover-anchor"], input:not([data-slot])).border-input:is(:hover, :focus-visible) {
+    --tw-ring-shadow: 0 0 #0000;
+    outline: none;
+    border-color: var(--cl-shadow) var(--cl-hilight) var(--cl-hilight) var(--cl-shadow);
+  }
+  .theme-classic input:not([data-slot]).border-input:disabled {
+    opacity: 1;
+    background-color: var(--cl-face);
+    color: var(--cl-gray-text);
+  }
   /* inputِ داخلِ input-group قابِ خودش را نمی‌خواهد. */
   .theme-classic :is([data-slot="input-group"], [data-slot="combobox-input-group"]) [data-slot] :is([data-slot="input"], [data-slot="input-group-control"]),
   .theme-classic :is([data-slot="input-group"], [data-slot="combobox-input-group"]) > :is([data-slot="input"], [data-slot="input-group-control"]) {
@@ -288,8 +308,16 @@
     font-weight: 700;
     line-height: 18px;
   }
+  /* با دکمه روی نوار و بی‌توضیح: عنوان و دکمه وسطِ نوار، نه چسبیده به بالا. */
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]):not(:has([data-slot="card-description"])) > [data-slot="card-title"] {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) > [data-slot="card-action"] {
+    align-self: center;
+  }
   .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) :is([data-slot="card-description"], .text-muted-foreground, .text-foreground) {
-    color: #dce6f6;
+    color: #eef3fa;
   }
   .theme-classic [data-slot="card"] > [data-slot="card-header"]:first-child:has([data-slot="card-title"]) :is([data-slot="card-description"]) {
     font-size: 11px;
@@ -319,7 +347,7 @@
     --tw-ring-shadow: 0 0 #0000;
   }
   /* سربرگ «محو» می‌شود تا عنوان نوارِ عنوانِ تمام‌عرض شود و توضیح زیرِ آن بیاید. */
-  .theme-classic :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) > :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"], [data-slot="sheet-header"]):first-child {
+  .theme-classic :is([data-slot="dialog-content"], [data-slot="alert-dialog-content"], [data-slot="sheet-content"]) > :is([data-slot="dialog-header"], [data-slot="alert-dialog-header"], [data-slot="sheet-header"]):first-child:not(.sr-only) {
     display: contents;
   }
   .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-header"]:first-child > [data-slot="dialog-title"]:first-child,
@@ -335,8 +363,25 @@
     line-height: 16px;
     text-align: start;
   }
+  /* Sheet پدینگ را در سربرگ دارد (نه در content)، پس نوارِ عنوانش فقط ۲px از
+     لبه فاصله می‌گیرد و توضیح زیرِ آن پدینگِ خودش را می‌گیرد. */
+  .theme-classic [data-slot="sheet-content"] > [data-slot="sheet-header"]:first-child > [data-slot="sheet-title"] {
+    margin: 2px 2px 0;
+    padding: 4px 6px;
+    padding-inline-end: 32px;
+    background: var(--cl-caption-bg);
+    color: var(--cl-caption-text);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+  }
+  .theme-classic [data-slot="sheet-content"] > [data-slot="sheet-header"]:first-child > [data-slot="sheet-description"] {
+    padding: 6px 1rem 8px;
+    border-bottom: 1px solid var(--cl-shadow);
+    box-shadow: 0 1px var(--cl-hilight);
+  }
   /* دکمه‌ی × = دکمه‌ی کوچکِ برجسته روی نوارِ عنوان */
-  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"] {
+  .theme-classic :is([data-slot="dialog-content"] > [data-slot="dialog-close"], [data-slot="sheet-content"] > [data-slot="sheet-close"]) {
     top: 5px;
     inset-inline-end: 5px;
     width: 16px;
@@ -347,14 +392,14 @@
     color: var(--cl-window-text);
     box-shadow: var(--cl-raised);
   }
-  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"]:hover:not(:disabled) {
+  .theme-classic :is([data-slot="dialog-content"] > [data-slot="dialog-close"], [data-slot="sheet-content"] > [data-slot="sheet-close"]):hover:not(:disabled) {
     background-color: var(--cl-face);
     box-shadow: var(--cl-raised);
   }
-  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"]:active:not(:disabled) {
+  .theme-classic :is([data-slot="dialog-content"] > [data-slot="dialog-close"], [data-slot="sheet-content"] > [data-slot="sheet-close"]):active:not(:disabled) {
     box-shadow: var(--cl-pressed);
   }
-  .theme-classic [data-slot="dialog-content"] > [data-slot="dialog-close"] svg {
+  .theme-classic :is([data-slot="dialog-content"] > [data-slot="dialog-close"], [data-slot="sheet-content"] > [data-slot="sheet-close"]) svg {
     width: 10px;
     height: 10px;
     stroke-width: 3.5;
@@ -381,6 +426,10 @@
   .theme-classic :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-sub-trigger"], [data-slot="select-item"], [data-slot="combobox-item"]) {
     border-radius: 0;
     transition: none;
+  }
+  /* منوی ویندوز هرگز آیتم را دو خطی نمی‌کرد؛ فهرست پهن می‌شود. */
+  .theme-classic :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-sub-trigger"]) {
+    white-space: nowrap;
   }
   .theme-classic :is([data-slot="dropdown-menu-item"], [data-slot="dropdown-menu-checkbox-item"], [data-slot="dropdown-menu-radio-item"], [data-slot="dropdown-menu-sub-trigger"], [data-slot="select-item"], [data-slot="combobox-item"]):is([data-highlighted], :focus, [data-state="open"]) {
     background-color: var(--cl-highlight);
@@ -521,14 +570,16 @@
     background: repeating-linear-gradient(to left, var(--cl-highlight) 0 8px, transparent 8px 10px);
     transition: transform 300ms steps(6);
   }
-  /* اسکلتون: «marquee»ِ آرامِ سه بلوکِ سرمه‌ای که روی شیار جلو می‌رود */
+  /* اسکلتون: «marquee»ِ نوارِ پیشرفتِ ویندوز — سه بلوکِ کوچکِ سرمه‌ای که از
+     راست به چپ از روی شیار رد می‌شوند. پهنای بلوک‌ها ثابت است تا در
+     اسکلتون‌های پهن به یک تکه‌ی بزرگ تبدیل نشود. */
   .theme-classic [data-slot="skeleton"] {
     border-radius: 0;
     background-color: #e4e1da;
-    background-image: linear-gradient(to left, transparent 0, transparent 40%, oklch(0.32 0.11 265 / 0.16) 40%, oklch(0.32 0.11 265 / 0.16) 60%, transparent 60%);
-    background-size: 300% 100%;
+    background-image: repeating-linear-gradient(to left, oklch(0.32 0.11 265 / 0.16) 0 8px, transparent 8px 10px);
+    background-size: 30px 100%;
     background-repeat: no-repeat;
-    animation: classic-marquee 1.8s steps(18) infinite;
+    animation: classic-marquee 1.8s steps(24) infinite;
   }
 
   /* ════════════════ Spinner = ساعتِ شنی ════════════════
@@ -561,8 +612,14 @@
     border-radius: 0;
     transition: none;
   }
-  .theme-classic [data-slot="sidebar-content"] :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):is([data-size="default"], [data-size="sm"], :not([data-size])) {
+  .theme-classic [data-slot="sidebar-content"] :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):is([data-size="default"], [data-size="sm"], [data-size="md"], :not([data-size])) {
     height: 24px;
+  }
+  /* روی صفحه‌ی لمسی ۲۴px برای انگشت کم است. */
+  @media (pointer: coarse) {
+    .theme-classic [data-slot="sidebar-content"] :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):is([data-size="default"], [data-size="sm"], [data-size="md"], :not([data-size])) {
+      height: 32px;
+    }
   }
   /* hot-tracking: لینکِ زیرخط‌دار مثلِ درختِ Explorer */
   .theme-classic [data-slot="sidebar-content"] :is([data-sidebar="menu-button"], [data-sidebar="menu-sub-button"]):hover:not([data-active="true"]) {
@@ -620,6 +677,14 @@
   }
   .theme-classic [data-slot="app-header"] .group\/button[data-variant="ghost"]:hover:not(:disabled) {
     box-shadow: inset 1px 1px oklch(1 0 0 / 0.6), inset -1px -1px oklch(0 0 0 / 0.5);
+  }
+
+  /* کارتِ فرمِ ورود = پنجره‌ی برجسته‌ی «Log On to Windows» */
+  .theme-classic [data-slot="login-card"] {
+    border-radius: 0;
+    border-color: transparent;
+    background-color: var(--cl-face);
+    box-shadow: var(--cl-raised);
   }
 
   /* نوارِ وضعیت (`ClassicStatusBar`) */
@@ -795,8 +860,8 @@
   to { opacity: 1; }
 }
 @keyframes classic-marquee {
-  from { background-position: 100% 0; }
-  to { background-position: 0% 0; }
+  from { background-position: calc(100% + 30px) 0; }
+  to { background-position: -30px 0; }
 }
 @keyframes classic-hourglass {
   0%, 70% { rotate: 0deg; }
