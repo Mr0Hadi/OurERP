@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table";
 import SectionCard from "@/shared/components/forms/SectionCard";
+import QuantityField from "@/shared/components/forms/QuantityField";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import { STOCKTAKE_COUNT_MODE_LABELS, StocktakeCountModeEnum } from "@/shared/domain/enums/stocktake";
@@ -121,7 +121,7 @@ function LinesTable({ lines, stocktakeId, blind, canCount }) {
                 </TableCell>
                 {!blind && <TableCell className="text-center tabular-nums">{formatNumber(line.systemQuantity)}</TableCell>}
                 <TableCell className="text-center">
-                  <CountedCell line={line} stocktakeId={stocktakeId} canCount={canCount} />
+                  <CountedCell line={line} stocktakeId={stocktakeId} canCount={canCount} size="sm" />
                 </TableCell>
                 {!blind && (
                   <TableCell className="text-center">
@@ -214,9 +214,9 @@ function Difference({ value, bold = false }) {
 }
 
 /** شمرده‌شده: عددِ دستی (قابلِ ویرایش در شمارش)، یا تعدادِ اسکن‌ها. */
-function CountedCell({ line, stocktakeId, canCount }) {
+function CountedCell({ line, stocktakeId, canCount, size = "md" }) {
   if (canCount && acceptsManualCount(line)) {
-    return <ManualCountInput key={line.manualCount ?? "empty"} line={line} stocktakeId={stocktakeId} />;
+    return <ManualCountInput line={line} stocktakeId={stocktakeId} size={size} />;
   }
   if (line.countedQuantity == null) return <span className="text-muted-foreground">—</span>;
   return <span className="tabular-nums">{formatNumber(line.countedQuantity)}</span>;
@@ -259,32 +259,82 @@ function Barcodes({ label, barcodes }) {
   );
 }
 
-/**
- * عددِ دستی؛ با Enter یا ترکِ فیلد ثبت می‌شود و خالی کردنش شمارش را پاک می‌کند. ثبت فقط از `onBlur` است و Enter فیلد را
- * blur می‌کند — وگرنه Enter یک بار ثبت می‌کرد و blurِ بعدی (یا غیرفعال‌شدنِ فیلد حینِ درخواست) بارِ دوم.
- */
-function ManualCountInput({ line, stocktakeId }) {
-  const count = useCountStocktakeLineMutation();
-  const [value, setValue] = useState(line.manualCount == null ? "" : String(line.manualCount));
+/** مکث پس از آخرین کلیکِ +/− تا ثبت؛ چند کلیکِ پشتِ‌سرهم یک درخواست می‌شوند. */
+const STEP_SAVE_DELAY = 700;
 
-  const commit = () => {
-    const trimmed = value.trim();
-    const quantity = trimmed === "" ? null : Number(trimmed);
-    if (quantity !== null && (!Number.isInteger(quantity) || quantity < 0)) return;
-    if (quantity === (line.manualCount ?? null)) return;
-    count.mutate({ stocktakeId, productId: line.productId, quantity });
+/**
+ * عددِ دستی با `QuantityField` (همان فیلدِ تعدادِ فرمِ خرید/فروش). تایپ با Enter یا ترکِ فیلد ثبت می‌شود و +/− خودشان
+ * پس از مکثی کوتاه. خالی کردنِ فیلد شمارش را پاک می‌کند. ثبتِ تایپ فقط از `onBlur` است و Enter فیلد را blur می‌کند —
+ * وگرنه Enter یک بار ثبت می‌کرد و blurِ بعدی بارِ دوم. تا درخواستی در راه است، ثبتِ بعدی پس از پاسخ می‌رود.
+ */
+function ManualCountInput({ line, stocktakeId, size }) {
+  const count = useCountStocktakeLineMutation();
+  const server = line.manualCount ?? null;
+  // پیش‌نویسِ کاربر تا وقتی سرور همان را پذیرفته؛ `null` یعنی همان عددِ سرور نشان داده شود.
+  const [draft, setDraftState] = useState(null);
+  const draftRef = useRef(null);
+  const timer = useRef(null);
+  const queued = useRef(false);
+  // ref، نه `count.isPending`: تایمر تابعِ رندرِ قبلی را صدا می‌زند و آن مقدار کهنه است.
+  const inFlight = useRef(false);
+  // آخرین عددی که سرور پذیرفت؛ ref چون ثبتِ صف‌شده از تابعِ رندرِ قبلی اجرا می‌شود و `server`ِ آن کهنه است.
+  const confirmed = useRef(server);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const setDraft = (next) => {
+    draftRef.current = next;
+    setDraftState(next);
   };
 
+  const commit = () => {
+    clearTimeout(timer.current);
+    if (draftRef.current == null) return;
+    const trimmed = draftRef.current.trim();
+    const quantity = trimmed === "" ? null : Number(trimmed);
+    if (quantity !== null && (!Number.isInteger(quantity) || quantity < 0)) return;
+    if (inFlight.current) {
+      queued.current = true;
+      return;
+    }
+    if (quantity === confirmed.current) return setDraft(null);
+    inFlight.current = true;
+    count.mutate(
+      { stocktakeId, productId: line.productId, quantity },
+      {
+        onSuccess: () => {
+          confirmed.current = quantity;
+          // اگر در این فاصله عددِ دیگری زده نشده، پیش‌نویس تمام است و عددِ سرور نشان داده می‌شود.
+          if (!queued.current && draftRef.current === trimmed) setDraft(null);
+        },
+        onError: () => setDraft(null),
+        onSettled: () => {
+          inFlight.current = false;
+          if (!queued.current) return;
+          queued.current = false;
+          commit();
+        },
+      },
+    );
+  };
+
+  const handleChange = (next) => {
+    setDraft(String(next));
+    // عددِ دکمه‌ها (نه متنِ تایپ‌شده) پس از مکث ثبت می‌شود.
+    if (typeof next === "number") {
+      clearTimeout(timer.current);
+      timer.current = setTimeout(commit, STEP_SAVE_DELAY);
+    }
+  };
+
+  const value = draft ?? (server == null ? "" : String(server));
+
   return (
-    <Input
-      type="number"
-      inputMode="numeric"
+    <QuantityField
       min={0}
-      step={1}
-      dir="ltr"
+      size={size}
       value={value}
-      readOnly={count.isPending}
-      onChange={(e) => setValue(e.target.value)}
+      onChange={handleChange}
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
@@ -294,7 +344,7 @@ function ManualCountInput({ line, stocktakeId }) {
       }}
       placeholder="—"
       aria-label={`تعدادِ شمرده‌شده‌ی ${line.productName}`}
-      className={cn("mx-auto h-8 w-20 text-center tabular-nums", count.isPending && "opacity-60")}
+      className={cn("mx-auto", size === "sm" ? "w-28" : "w-full max-w-36", count.isPending && "opacity-70")}
     />
   );
 }

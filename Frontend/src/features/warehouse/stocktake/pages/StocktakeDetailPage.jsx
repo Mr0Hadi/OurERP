@@ -129,7 +129,7 @@ export default function StocktakeDetailPage() {
             <StocktakeScopeText stocktake={stocktake} />
           </Field>
           <Field label="انبار">{stocktake.warehouseName || "—"}</Field>
-          <Field label="عکسِ موجودی">{gregorianToPersianDateTime(stocktake.snapshotAt)}</Field>
+          <Field label="موجودیِ مبنا ثبت شد">{gregorianToPersianDateTime(stocktake.snapshotAt)}</Field>
           {stocktake.submittedAt && <Field label="پایانِ شمارش">{gregorianToPersianDateTime(stocktake.submittedAt)}</Field>}
           {stocktake.approvedAt && <Field label="تأیید">{gregorianToPersianDateTime(stocktake.approvedAt)}</Field>}
           {stocktake.cancelledAt && <Field label="لغو">{gregorianToPersianDateTime(stocktake.cancelledAt)}</Field>}

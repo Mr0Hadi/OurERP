@@ -133,6 +133,7 @@ flowchart LR
 | `DocumentFormLayout` (`main`/`payments`/`aside`، و `below` تمام‌عرض) + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
 | `StatusChoice` | انتخابِ وضعیت به‌صورتِ دکمه | ۷ |
 | `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد (`min` اختیاری)، مبلغ به حروف | ۵–۷ |
+| `QuantityField` | تعداد با +/− در یک قابِ یکپارچه («+» سمتِ راست)، `size` `sm`/`md`، `min` (۱ برای قلمِ سند، ۰ برای شمارش)؛ اقلامِ خرید/فروش (جدول و کارت) و شمارشِ انبارگردانی. `QuantityStepper` (دکمه‌های جدا با سقف) برای دریافت/ارسال | ۳ |
 | `SelectCheckbox` | چک‌باکسِ انتخابِ ردیف با ناحیه‌ی لمسِ بزرگ (`indeterminate`)؛ دانه‌ها و پیشنهادِ خرید | ۲ |
 | `OrderInfoCard`، `OrderItemsReadOnly`، `OrderLogisticsSection`، `TransporterSection`، `PartySection` | بخش‌های سندِ خرید/فروش (`OrderInfoCard`: `showInvoiceDate`/`showDueDate` برای فروش، که تاریخِ فاکتور را سرور می‌گذارد و سررسید جزوِ پیش‌فاکتور است) | ۲–۴ |
 | `ProductSearchPanel`، `PartyPickerCard`، `SelectedItemsCards`، `SelectedItemsTable`، `MixedPaymentList` | انتخابِ کالا/طرف‌حساب در فرمِ سند | ۱–۳ |

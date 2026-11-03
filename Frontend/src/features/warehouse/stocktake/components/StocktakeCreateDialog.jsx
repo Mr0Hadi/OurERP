@@ -57,7 +57,7 @@ function FormBody({ onClose, onSaved }) {
       <DialogHeader>
         <DialogTitle>انبارگردانیِ تازه</DialogTitle>
         <DialogDescription>
-          هنگامِ ساخت از موجودیِ قفسه عکس گرفته می‌شود و شمارش با همان مقایسه می‌شود؛ فروش و دریافت لازم نیست متوقف شود.
+          با ساخت، موجودیِ همین لحظه‌ی سیستم مبنای مقایسه ثبت می‌شود و شمارش با آن سنجیده می‌شود؛ فروش و دریافت لازم نیست متوقف شود.
         </DialogDescription>
       </DialogHeader>
 
