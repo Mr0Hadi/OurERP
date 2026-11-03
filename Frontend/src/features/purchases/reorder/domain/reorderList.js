@@ -1,5 +1,3 @@
-import { getPartyName } from "@/shared/components/filters/filterUtils";
-
 /**
  * فهرستِ پیشنهادِ خرید سمتِ کاربر: `GetReorderSuggestionList` صفحه‌بندی و مرتب‌سازی ندارد (کلِ فهرست یک‌جا
  * می‌آید)، پس مرتب‌سازی و صفحه‌بندی این‌جا انجام می‌شود و خروجی همان شکلِ فهرست‌های سرور است
@@ -50,19 +48,4 @@ export function reorderPage(rows, { pageIndex, pageSize }, sorting) {
     page: page + 1,
     totalPages,
   };
-}
-
-/**
- * نامِ تامین‌کننده برای پنجره‌ی نتیجه: از ردیف‌های پیشنهاد (تامین‌کننده‌ی سرور)، وگرنه از گزینه‌هایی که خریدار
- * برای کالای بی‌تامین‌کننده انتخاب کرد.
- *
- * @param {number} supplierId
- * @param {object[]} rows ردیف‌های پیشنهاد (`all`)
- * @param {object[]} suppliers گزینه‌های `useSuppliersOptionsQuery`
- */
-export function supplierNameOf(supplierId, rows, suppliers) {
-  const fromRow = rows.find((s) => s.supplierId === supplierId);
-  if (fromRow) return fromRow.supplierName;
-  const option = suppliers.find((s) => s.id === supplierId);
-  return option ? getPartyName(option) : undefined;
 }

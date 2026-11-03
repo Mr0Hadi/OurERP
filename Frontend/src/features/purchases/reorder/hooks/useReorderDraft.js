@@ -8,11 +8,12 @@ const defaultsOf = (suggestion) => ({
   selected: false,
   quantity: suggestion.suggestedQuantity,
   supplierId: suggestion.supplierId ?? null,
+  supplierName: suggestion.supplierName ?? null,
 });
 
 /**
  * پیش‌نویسِ خریدار روی فهرستِ پیشنهاد: انتخاب، تعداد (با `QuantityStepper`، همیشه عددِ صحیحِ ≥ ۱) و
- * تامین‌کننده‌ی هر کالا.
+ * تامین‌کننده‌ی هر کالا (شناسه و نام؛ نام برای پنجره‌ی نتیجه).
  * فقط «تغییرها» (بر اساسِ `productId`) نگه داشته می‌شوند و روی پیشنهادِ سرور می‌نشینند؛ پس عوض‌شدنِ صفحه،
  * مرتب‌سازی یا فیلتر انتخاب‌ها را پاک نمی‌کند.
  *
@@ -65,5 +66,8 @@ export function useReorderDraft(all = []) {
   const clear = (productIds) =>
     setEdits((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => !productIds.includes(Number(id)))));
 
-  return { lineOf, summary, update, buildPayload, clear, clearSelection };
+  /** نامِ تامین‌کننده‌ی ردیف‌های انتخاب‌شده، برای پنجره‌ی نتیجه. */
+  const supplierNameOf = (supplierId) => selected.find((line) => line.supplierId === supplierId)?.supplierName ?? undefined;
+
+  return { lineOf, summary, update, buildPayload, clear, clearSelection, supplierNameOf };
 }

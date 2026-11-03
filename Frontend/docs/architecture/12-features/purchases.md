@@ -45,7 +45,7 @@
 
 ## importهای بیرونی
 
-`suppliers` (`useSuppliersOptionsQuery`، `useSupplierQuery`، `useSupplierSearchQuery`، `supplierKeys`)، `partyAccount` (`partyName`)، `auth`، `warehouse` (`UnitsPageLink`، `LABEL_FILTERS`، `usePurchaseReceivingInfoQuery`، `receivingKeys`، `productKeys`، `productUnitKeys`)؛ `audit` (`AuditHistoryButton` در هدرِ صفحه‌ی جزئیات): `PurchaseDetailPage` و `PurchaseReturnDetailPage` با `documentKind` ۱ و ۳.
+`suppliers` (`useSupplierQuery`، `useSupplierSearchQuery`، `supplierKeys`)، `partyAccount` (`partyName`)، `auth`، `warehouse` (`UnitsPageLink`، `LABEL_FILTERS`، `usePurchaseReceivingInfoQuery`، `receivingKeys`، `productKeys`، `productUnitKeys`)؛ `audit` (`AuditHistoryButton` در هدرِ صفحه‌ی جزئیات): `PurchaseDetailPage` و `PurchaseReturnDetailPage` با `documentKind` ۱ و ۳.
 
 ## نکته‌ها و بدهی
 

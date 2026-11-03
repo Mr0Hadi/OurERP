@@ -1,6 +1,8 @@
+import { useState } from "react";
+
 import EntitySelect from "@/shared/components/filters/EntitySelect";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
+import { useCustomerQuery, useCustomerSearchQuery } from "@/features/customers/services/queries";
+import { useSupplierQuery, useSupplierSearchQuery } from "@/features/suppliers/services/queries";
 
 const TEXTS = {
   customer: { label: "مشتری", placeholder: "انتخاب مشتری...", emptyText: "مشتری‌ای یافت نشد" },
@@ -17,10 +19,10 @@ const renderPhone = (party) => {
 };
 
 /**
- * انتخابِ یک مشتری یا یک تامین‌کننده با جست‌وجو — فیلترِ فهرست‌ها و فیلدِ فرم. فهرست را
- * خودش می‌گیرد (`use*OptionsQuery`، یک کش برای همه‌ی انتخابگرهای صفحه)، پس صفحه‌ها
- * فهرستِ طرف‌حساب را برای فیلترها واکشی و دست‌به‌دست نمی‌کنند. فقط فهرستِ همان `side`
- * دانلود می‌شود.
+ * انتخابِ یک مشتری یا یک تامین‌کننده با جست‌وجوی سرور — فیلترِ فهرست‌ها و فیلدِ فرم.
+ * تا فهرست بسته است چیزی گرفته نمی‌شود؛ با بازشدن ۲۰ ردیفِ اول و با تایپ نتیجه‌ی
+ * `use*SearchQuery` می‌آید. نامِ گزینه‌ی انتخاب‌شده (مثلاً از آدرس یا فرمِ ویرایش) از
+ * جزئیاتِ همان طرف خوانده می‌شود، چون شاید در نتیجه‌ی جست‌وجو نباشد.
  *
  * @param {"customer"|"supplier"} side
  * @param {number|""} value شناسه، یا `""` برای «همه/هیچ»
@@ -39,9 +41,16 @@ export default function PartySelect({
   allowClear = true,
   enabled = true,
 }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
   const isSupplier = side === "supplier";
-  const customersQuery = useCustomersOptionsQuery({ enabled: enabled && !isSupplier });
-  const suppliersQuery = useSuppliersOptionsQuery({ enabled: enabled && isSupplier });
+  const selectedId = enabled && value !== "" && value != null ? value : null;
+
+  const customerSearch = useCustomerSearchQuery(search, { enabled: enabled && open && !isSupplier });
+  const supplierSearch = useSupplierSearchQuery(search, { enabled: enabled && open && isSupplier });
+  const customerQuery = useCustomerQuery(isSupplier ? null : selectedId);
+  const supplierQuery = useSupplierQuery(isSupplier ? selectedId : null);
+  const results = isSupplier ? supplierSearch : customerSearch;
   const texts = TEXTS[side];
 
   return (
@@ -49,10 +58,13 @@ export default function PartySelect({
       label={label === undefined ? texts.label : label ?? undefined}
       placeholder={placeholder ?? texts.placeholder}
       emptyText={emptyText ?? texts.emptyText}
-      items={isSupplier ? suppliersQuery.suppliers : customersQuery.customers}
+      items={results.results}
+      selected={(isSupplier ? supplierQuery : customerQuery).data}
       value={value ?? ""}
       onSelect={onSelect}
-      isLoading={isSupplier ? suppliersQuery.isLoading : customersQuery.isLoading}
+      onSearchChange={setSearch}
+      onOpenChange={setOpen}
+      isLoading={open && results.isSearching && results.results.length === 0}
       allowClear={allowClear}
       renderMeta={renderPhone}
     />

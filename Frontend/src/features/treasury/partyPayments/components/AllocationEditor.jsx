@@ -7,7 +7,6 @@ import StatusBadge from "@/shared/components/status/StatusBadge";
 import { gregorianToPersian } from "@/shared/lib/dateUtils";
 import { formatDigits, formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
-import { cn } from "@/shared/lib/utils";
 import { allocatedTotal, autoAllocate, documentKey } from "../domain/partyPayment";
 
 /**
@@ -49,8 +48,10 @@ export default function AllocationEditor({ documents, draft, onChange, available
         </Button>
         <p className="text-xs tabular-nums text-muted-foreground">
           تخصیص {formatNumber(total)} از {formatNumber(available)}
+          {/* جداکننده: بی آن، دو عددِ پشتِ هم در راست‌به‌چپ یک عدد خوانده می‌شدند. */}
+          {left !== 0 && "؛ "}
           {left !== 0 && (
-            <span className={cn("ms-2", toneText(left > 0 ? "info" : "danger"))}>
+            <span className={toneText(left > 0 ? "info" : "danger")}>
               {left > 0 ? `${formatNumber(left)} روی حساب می‌ماند` : `${formatNumber(-left)} بیشتر`}
             </span>
           )}

@@ -102,7 +102,6 @@ knip فایل‌ها و exportهایی را که هیچ import ندارند پی
 | R8 | وارسیِ enumِ ناشناخته فقط برای مرجوعی | `verifyReturnEnums` در `src/shared/domain/returns/apiEnums.js` | همان الگو برای وضعیتِ خرید/فروش/دانه |
 | R9 | `isEnvelope` با هر شیءِ `{ Data, Message }` پوشش فرض می‌کند | `src/shared/services/api/axios.js` | `ResponseMessageType` را هم شرط کنید |
 | R10 | `useDocumentFormDraft` نسخه را از `doc.updatedAt` می‌سازد | `src/shared/hooks/useDocumentFormDraft.js`؛ پرکردنش در `fromApiPurchase`/`fromApiSale` | مستقیم `documentVersion(doc)` از `src/shared/services/api/contract.js` |
-| R12 | `useProductsOptionsQuery` همه‌ی کالاها را صفحه‌به‌صفحه می‌خواند | `src/features/warehouse/products/services/queries.js` (TODOِ خودش) | جست‌وجوی سمتِ سرور (بندِ ۱۳.۵ `frontend-requests.fa.md`) |
 
 ### مرزِ لایه‌ها: `shared/` → `features/` (۶ فایل)
 
