@@ -120,6 +120,11 @@ export function visibleLines(lines, { search = "", filter = LINE_FILTER.ALL } = 
   });
 }
 
+/** شمارِ ردیف‌های هر فیلتر (`LINE_FILTER`)، برای عددِ کنارِ هر زبانه. */
+export function lineFilterCounts(lines) {
+  return Object.fromEntries(Object.values(LINE_FILTER).map((filter) => [filter, visibleLines(lines, { filter }).length]));
+}
+
 /** عددِ دستی فقط وقتی معنا دارد که کالا اسکن نشده (اسکن‌ها ملاک‌اند). */
 export const acceptsManualCount = (line) => line.countMode !== StocktakeCountModeEnum.SCAN;
 

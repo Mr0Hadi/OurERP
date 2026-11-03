@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ClipboardCheck, Plus } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import ServerTable from "@/shared/components/table/ServerTable";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
@@ -32,14 +31,7 @@ export default function StocktakeListPage() {
       title="انبارگردانی"
       icon={ClipboardCheck}
       description="شمارشِ موجودیِ قفسه با اسکن یا عدد، مقایسه با سیستم و اعمالِ مغایرت پس از تأیید."
-      actions={
-        allows("StocktakeCount") && (
-          <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
-            <Plus className="size-4" />
-            انبارگردانیِ تازه
-          </Button>
-        )
-      }
+      create={allows("StocktakeCount") ? { label: "انبارگردانیِ جدید", onClick: () => setCreateOpen(true) } : undefined}
     >
       <StocktakeFilters />
       <ServerTable query={query} listState={listState} table={StocktakeTable} />

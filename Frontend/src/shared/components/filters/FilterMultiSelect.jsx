@@ -7,9 +7,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/
 import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
- * فیلترِ *چندانتخابی* در قالبِ یک فیلدِ بازشونده — جای `FilterMultiChoice` وقتی فیلتر باید داخلِ ردیفِ
- * `FilterPanel` کنارِ بقیه بنشیند. همان پارامترهای فهرستیِ سرور (`statuses`، `types`). هیچ‌کدام = «همه»
- * (سرور فهرستِ خالی را بی‌فیلتر می‌فهمد).
+ * فیلترِ *چندانتخابی* در قالبِ یک فیلدِ بازشونده با چک‌باکس، هم‌قدِ بقیه‌ی فیلدهای `FilterPanel` — برای
+ * پارامترهای فهرستیِ سرور (`statuses`، `types`، `entryTypes`) که ASP.NET به‌شکلِ `?types=1&types=3` می‌خواند.
+ * هیچ‌کدام = «همه» (سرور فهرستِ خالی را بی‌فیلتر می‌فهمد)؛ معنای دقیقِ «همه» را `allLabel` می‌گوید.
  *
  * @param options `[{ value, label }]`؛ مقدارها عدد
  * @param value   آرایه‌ی مقدارهای انتخاب‌شده

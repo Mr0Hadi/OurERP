@@ -23,6 +23,9 @@
 </ListPageLayout>
 ```
 
+دکمه‌ی ساخت همیشه `create` است تا همه‌ی صفحه‌ها یک ظاهر داشته باشند (در موبایل گرد با «جدید»): `{ label, to }` برای صفحه‌ی ساخت،
+`{ label, onClick }` برای دیالوگ (انبارگردانی، علی‌الحساب)؛ بی‌دسترسی `undefined`. دکمه‌ی «جزئیاتِ» ردیف `detailsColumn` است، نه لینک روی نام/شماره.
+
 ```mermaid
 flowchart LR
   ST["ServerTable<br/>query + listState"] -->|isError| QE[QueryErrorState]
@@ -77,8 +80,8 @@ flowchart LR
 | `FilterSelect` | انتخابِ تکیِ کم‌گزینه با ردیفِ «همه» (روی `OptionSelect`) | ۱۸ |
 | `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند. حالتِ جست‌وجوی سرور: `onSearchChange` (متن به والد، `items` همان نتیجه)، `onOpenChange` (تا بسته است نگیرد)، `selected` (گزینه‌ی انتخاب‌شده‌ای که در نتیجه نیست) | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
-| `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
-| `FilterMultiSelect` | چندانتخابی در قالبِ یک فیلدِ بازشونده با چک‌باکس (`statuses`)، تا داخلِ ردیفِ `FilterPanel` کنارِ بقیه بنشیند؛ «همه» وقتی هیچ‌کدام. `FilterMultiChoice` (دکمه‌های کنارِ هم) برای وقتی بیرونِ پنل است | ۱ |
+| `FilterDateInput`، `FilterSwitch` | تاریخ، سوییچ | ۴–۶ |
+| `FilterMultiSelect` | چندانتخابی در قالبِ یک فیلدِ بازشونده با چک‌باکس (`statuses`، `types`، `entryTypes`)، داخلِ ردیفِ `FilterPanel` کنارِ بقیه؛ «همه» وقتی هیچ‌کدام (`allLabel`). فیلترها دکمه‌ی کنارِ هم ندارند؛ دکمه‌ها (`StatusChoice`) فقط برای عوض‌کردنِ نما (اقساط، تفکیکِ خرید/فروش) | ۶ |
 | `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
 | `filterUtils.js` | `getPartyName` (برچسبِ پیش‌فرضِ `EntitySelect`) | — |
 

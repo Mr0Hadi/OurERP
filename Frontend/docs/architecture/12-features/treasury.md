@@ -40,7 +40,7 @@
 
 ## چک‌ها (`cheques/`)
 
-- فهرستِ `GetCheckList` (هر ردیفِ پرداختِ `CHECK`؛ `id` = شناسه‌ی ردیفِ پرداخت): `ChequeSummary` (جمع‌های `summary`)، `ChequeFilters` (`statuses` چندتایی با `FilterMultiChoice`، پیش‌فرض «در جریان»؛ مرتب‌سازیِ پیش‌فرض سررسید صعودی)، `ChequeTable` با منوی کارها.
+- فهرستِ `GetCheckList` (هر ردیفِ پرداختِ `CHECK`؛ `id` = شناسه‌ی ردیفِ پرداخت): `ChequeSummary` (جمع‌های `summary`)، `ChequeFilters` (`statuses` چندتایی با `FilterMultiSelect` در ردیفِ دوم، پیش‌فرض «در جریان»؛ مرتب‌سازیِ پیش‌فرض سررسید صعودی)، `ChequeTable` با منوی کارها.
 - `ChequeActionDialog` (`{ kind, cheque }`): وصول (حساب الزامی مگر چک حساب داشته باشد یا خرج‌شده باشد)، برگشت (اثرش بسته به `purpose`/علی‌الحساب/خرج‌شده شرح داده می‌شود)، خرج به تامین‌کننده (خرید از `useAllocatableDocumentsQuery`ِ `partyPayments`، یا علی‌الحساب). قواعدِ مجاز بودن در `domain/cheque.js`؛ چکِ پیش‌پرداختِ قرارداد برگشت نمی‌خورد.
 - بعد از هر کار همه‌ی کش‌های پولی باطل می‌شوند (`MONEY_KEYS`).
 - ثبتِ چک در همه‌ی فرم‌های پرداخت: `ChequeFields` (سررسید، بانک، صاحب حساب) در `PaymentMethodEditor`، `InstallmentPaymentFields` و `PartyPaymentFormDialog`؛ بدنه با `toApiChequeFields` (`paymentRows.js`). `PaymentRow` وضعیتِ چک را نشان می‌دهد و چکِ سرنوشت‌دار (`isChequeSettled`) اصلاح/ابطال نمی‌شود.

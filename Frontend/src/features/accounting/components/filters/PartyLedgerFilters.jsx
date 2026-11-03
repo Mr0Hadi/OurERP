@@ -1,4 +1,4 @@
-import FilterMultiChoice from "@/shared/components/filters/FilterMultiChoice";
+import FilterMultiSelect from "@/shared/components/filters/FilterMultiSelect";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
@@ -47,16 +47,14 @@ export default function PartyLedgerFilters() {
       dateRowClassName="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-5"
       dateRow={
         <>
-          <div className="sm:col-span-2 lg:col-span-3">
-            <FilterMultiChoice
-              label="نوعِ ردیف"
-              options={ENTRY_TYPE_OPTIONS}
-              value={entryTypes}
-              onChange={setEntryTypes}
-              emptyHint="همه‌ی نوع‌ها"
-            />
-          </div>
-          <div className="self-end">
+          <FilterMultiSelect
+            label="نوعِ ردیف"
+            options={ENTRY_TYPE_OPTIONS}
+            value={entryTypes}
+            onChange={setEntryTypes}
+            allLabel="همه‌ی نوع‌ها"
+          />
+          <div className="sm:col-span-2 lg:col-span-2">
             <FilterSwitch
               label="بدونِ برگشت‌خورده‌ها"
               hint="ردیفِ برگشت‌خورده و خودِ برگشت کنار می‌روند"

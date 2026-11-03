@@ -5,6 +5,7 @@ import {
   STOCKTAKE_SCOPE,
   acceptsManualCount,
   emptyStocktakeDraft,
+  lineFilterCounts,
   scanOutcome,
   scanOutcomeMessage,
   scopeSummary,
@@ -88,6 +89,10 @@ describe("ردیف‌ها", () => {
     expect(visibleLines(lines, { search: "200" }).map((l) => l.productCode)).toEqual(["200-2"]);
     expect(visibleLines(lines, { filter: LINE_FILTER.UNCOUNTED }).map((l) => l.productCode)).toEqual(["100-1"]);
     expect(visibleLines(lines, { filter: LINE_FILTER.DIFFERENCE }).map((l) => l.productCode)).toEqual(["200-2", "300-3"]);
+  });
+
+  it("شمارِ هر زبانه", () => {
+    expect(lineFilterCounts(lines)).toEqual({ all: 3, uncounted: 1, difference: 2 });
   });
 
   it("کالای اسکن‌شده عددِ دستی نمی‌پذیرد", () => {

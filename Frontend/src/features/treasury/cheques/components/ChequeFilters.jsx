@@ -1,6 +1,6 @@
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterDateInput from "@/shared/components/filters/FilterDateInput";
-import FilterMultiChoice from "@/shared/components/filters/FilterMultiChoice";
+import FilterMultiSelect from "@/shared/components/filters/FilterMultiSelect";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import FilterSwitch from "@/shared/components/filters/FilterSwitch";
@@ -20,48 +20,47 @@ export default function ChequeFilters() {
   const { data: accounts = [] } = useBankAccountOptionsQuery();
 
   return (
-    <div className="space-y-3">
-      <FilterMultiChoice
-        label="وضعیت"
-        options={STATUS_OPTIONS}
-        value={store.statuses}
-        onChange={store.setStatuses}
-        emptyHint="هیچ‌کدام = همه‌ی وضعیت‌ها"
-      />
-      <FilterPanel
-        store={useChequeFilterStore}
-        onReset={store.resetFilters}
-        primary={
-          <FilterSearchInput
-            placeholder="شماره، صاحب حساب، بانک، طرف، فاکتور..."
-            value={store.search}
-            onChange={(e) => store.setSearch(e.target.value)}
+    <FilterPanel
+      store={useChequeFilterStore}
+      onReset={store.resetFilters}
+      resetWrapperClassName="flex items-end lg:justify-end"
+      primary={
+        <FilterSearchInput
+          placeholder="شماره، صاحب حساب، بانک، طرف، فاکتور..."
+          value={store.search}
+          onChange={(e) => store.setSearch(e.target.value)}
+        />
+      }
+      dateRow={
+        <>
+          <FilterDateInput label="سررسید از" value={store.fromDueDate} onChange={store.setFromDueDate} />
+          <FilterDateInput label="سررسید تا" value={store.toDueDate} onChange={store.setToDueDate} />
+          <FilterMultiSelect
+            label="وضعیت"
+            options={STATUS_OPTIONS}
+            value={store.statuses}
+            onChange={store.setStatuses}
+            allLabel="همه‌ی وضعیت‌ها"
           />
-        }
-        dateRow={
-          <>
-            <FilterDateInput label="سررسید از" value={store.fromDueDate} onChange={store.setFromDueDate} />
-            <FilterDateInput label="سررسید تا" value={store.toDueDate} onChange={store.setToDueDate} />
-          </>
-        }
-      >
-        <FilterSelect label="جهت" value={store.direction} onChange={store.setDirection} options={DIRECTION_OPTIONS} numeric />
-        <PartySelect side="customer" placeholder="همه مشتریان" value={store.customerId} onSelect={store.setCustomerId} />
-        <PartySelect side="supplier" placeholder="همه تامین‌کنندگان" value={store.supplierId} onSelect={store.setSupplierId} />
-        <FilterSelect
-          label="صندوق/حساب"
-          value={store.bankAccountId}
-          onChange={store.setBankAccountId}
-          options={accounts.map((a) => ({ value: a.id, label: a.title }))}
-          numeric
-        />
-        <FilterSwitch
-          label="چک‌های ابطال‌شده"
-          hint="چکِ در جریانی که اشتباهی ثبت و ابطال شد"
-          checked={store.includeVoided}
-          onChange={store.setIncludeVoided}
-        />
-      </FilterPanel>
-    </div>
+        </>
+      }
+    >
+      <FilterSelect label="جهت" value={store.direction} onChange={store.setDirection} options={DIRECTION_OPTIONS} numeric />
+      <PartySelect side="customer" placeholder="همه مشتریان" value={store.customerId} onSelect={store.setCustomerId} />
+      <PartySelect side="supplier" placeholder="همه تامین‌کنندگان" value={store.supplierId} onSelect={store.setSupplierId} />
+      <FilterSelect
+        label="صندوق/حساب"
+        value={store.bankAccountId}
+        onChange={store.setBankAccountId}
+        options={accounts.map((a) => ({ value: a.id, label: a.title }))}
+        numeric
+      />
+      <FilterSwitch
+        label="چک‌های ابطال‌شده"
+        hint="چکِ در جریانی که اشتباهی ثبت و ابطال شد"
+        checked={store.includeVoided}
+        onChange={store.setIncludeVoided}
+      />
+    </FilterPanel>
   );
 }
