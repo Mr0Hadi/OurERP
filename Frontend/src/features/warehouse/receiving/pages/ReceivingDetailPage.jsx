@@ -16,7 +16,6 @@ import {
   usePurchaseReceivingInfoQuery,
   usePurchaseReturnPendingEffectsQuery,
 } from "../services/queries";
-import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { useReceiveShipmentMutation } from "../services/mutations";
 import { useReceivingForm } from "../hooks/useReceivingForm";
 import { useGoodsRoundForm } from "@/shared/hooks/useGoodsRoundForm";
@@ -31,7 +30,7 @@ import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSk
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import DetailErrorState from "@/shared/components/feedback/DetailErrorState";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { withProductInfo } from "../../shared/productInfo";
+import { documentProductMap, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 
 // سقفِ عکس‌های یک دورِ دریافت — `ReceivePurchaseCommand.Images` سقفی
@@ -101,10 +100,10 @@ function ReceivingDetailForm({ receivingInfo, replacementReturnId }) {
     startEmpty: !replacementOnly,
   });
 
-  const { productMap } = useDocumentProducts([
-    ...items.map((item) => item.productId),
-    ...replacementLines.map((line) => line.productId),
-  ]);
+  const productMap = useMemo(
+    () => documentProductMap(receivingInfo.items || [], receivingInfo.unlistedItems || [], pendingEffects),
+    [receivingInfo, pendingEffects],
+  );
 
   // عکس‌های همین دور. `filesPayload` دقیقاً شکلِ
   // `ReceivePurchaseImageDto` است (`{objectKey, fileName?, note?}`).

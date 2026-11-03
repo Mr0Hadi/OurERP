@@ -27,21 +27,24 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PurchaseReturnView)]
+        // Also the warehouse executing the return's goods effects, without the returns pages (frontend-requests 23).
+        [HasPermission(PermissionEnum.PurchaseReturnView, PermissionEnum.PurchaseReturnExecute)]
         [HttpGet("GetPurchaseReturnDetail")]
         public async Task<ActionResult<ResponseDto>> GetPurchaseReturnDetail([FromQuery] GetPurchaseReturnDetailQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PurchaseReturnView)]
+        // Also the warehouse executing the return's goods effects, without the returns pages (frontend-requests 23).
+        [HasPermission(PermissionEnum.PurchaseReturnView, PermissionEnum.PurchaseReturnExecute)]
         [HttpGet("GetPurchaseReceivingInfo")]
         public async Task<ActionResult<ResponseDto>> GetPurchaseReceivingInfo([FromQuery] GetPurchaseReceivingInfoQuery request)
         {
             return await _mediator.Send(request);
         }
 
-        [HasPermission(PermissionEnum.PurchaseReturnView)]
+        // Also the warehouse executing the return's goods effects, without the returns pages (frontend-requests 23).
+        [HasPermission(PermissionEnum.PurchaseReturnView, PermissionEnum.PurchaseReturnExecute)]
         [HttpGet("GetPurchaseReturnPendingEffects")]
         public async Task<ActionResult<ResponseDto>> GetPurchaseReturnPendingEffects([FromQuery] GetPurchaseReturnPendingEffectsQuery request)
         {
@@ -58,6 +61,14 @@ namespace WMS.Controllers
         [HasPermission(PermissionEnum.PurchaseReturnCreate)]
         [HttpPut("UpdatePurchaseReturnAttachments")]
         public async Task<ActionResult<ResponseDto>> UpdatePurchaseReturnAttachments([FromBody] UpdatePurchaseReturnAttachmentsCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        /// <summary>The AddClaimResolution body, checked and expanded without saving (frontend-requests 13.4).</summary>
+        [HasPermission(PermissionEnum.PurchaseReturnDecide)]
+        [HttpPost("PreviewResolution")]
+        public async Task<ActionResult<ResponseDto>> PreviewResolution([FromBody] PreviewClaimResolutionQuery request)
         {
             return await _mediator.Send(request);
         }

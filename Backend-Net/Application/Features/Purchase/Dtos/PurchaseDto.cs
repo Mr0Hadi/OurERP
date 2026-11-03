@@ -30,6 +30,19 @@ namespace Application.Features.Purchase.Dtos
         public List<PurchaseDriverDto> Drivers { get; set; } = new();
         public List<PurchaseReceivingNoteDto> ReceivingNotes { get; set; } = new();
         public List<DocumentAttachmentDto> Attachments { get; set; } = new();
+
+        /// <summary>When anything on the purchase last changed. Send it back on UpdatePurchase: a newer server copy answers 409.</summary>
+        public DateTime UpdatedAt { get; set; }
+
+        // What the server allows now (PurchaseDocumentRules, the same calls the commands make; frontend-requests 13.1).
+        /// <summary>DeletePurchase: a proforma with no live payment of its own.</summary>
+        public bool CanDelete { get; set; }
+        /// <summary>ChangePurchaseStatus to CANCELLED.</summary>
+        public bool CanCancel { get; set; }
+        /// <summary>The other ChangePurchaseStatus targets accepted now (PENDING/SHIPPED), current status and CANCELLED excluded.</summary>
+        public List<PurchaseStatusEnum> AllowedStatuses { get; set; } = new();
+        /// <summary>CreatePurchaseReturn: not cancelled, and something has arrived (on a line, or held in quarantine).</summary>
+        public bool CanCreateReturn { get; set; }
     }
 
     public class PurchaseDriverDto

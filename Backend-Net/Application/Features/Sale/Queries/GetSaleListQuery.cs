@@ -33,6 +33,13 @@ namespace Application.Features.Sale.Queries
         public string? CustomerName { get; set; }
         /// <summary>Exact customer, so two customers with the same name are not mixed (the mirror of GetPurchaseList's SupplierId).</summary>
         public int? CustomerId { get; set; }
+        /// <summary>
+        /// Matches the invoice number OR the customer's full name (frontend-requests 14.2), like GetPurchaseList's Search.
+        /// InvoiceNumber/CustomerName stay and combine by AND as before.
+        /// </summary>
+        public string? Search { get; set; }
+        /// <summary>true: only sales CreateSaleReturn accepts (SaleDocumentRules, frontend-requests 13.3).</summary>
+        public bool? Returnable { get; set; }
         public SalesStatusEnum? Status { get; set; }
         /// <summary>
         /// Any of these statuses (?statuses=1&amp;statuses=2) - e.g. the warehouse shipping queue, which wants PROCESSING and
@@ -75,6 +82,18 @@ namespace Application.Features.Sale.Queries
             {
                 query = query.Where(x =>
                     (x.Customer.FirstName + " " + x.Customer.LastName).Contains(request.CustomerName));
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Search))
+            {
+                var search = request.Search.Trim();
+                query = query.Where(x => x.InvoiceNumber.Contains(search)
+                    || (x.Customer.FirstName + " " + x.Customer.LastName).Contains(search));
+            }
+
+            if (request.Returnable == true)
+            {
+                query = query.Where(Application.Common.Documents.SaleDocumentRules.IsReturnable);
             }
 
             if (request.CustomerId.HasValue)

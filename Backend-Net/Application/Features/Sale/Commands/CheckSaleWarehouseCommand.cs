@@ -1,4 +1,4 @@
-using Application.Common.Audit;
+﻿using Application.Common.Audit;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductCode;
@@ -27,7 +27,10 @@ namespace Application.Features.Sale.Commands
     /// <summary>
     /// The warehouse's check of a customer-approved proforma (docs/proforma-approval-pipeline.md). The employee scans every
     /// unit they pick for each line; the scanned units are RESERVED for that line and leave Product.Stock. Lines still fully
-    /// reserved from an earlier check need no scan.
+    /// reserved from an earlier check need no scan. A line of a product that does not require unit tracking may be sent with
+    /// no barcodes: the server then reserves its oldest free units (FIFO by serial - which physical unit, not a costing
+    /// method; a reservation writes nothing to the cost ledger), or records a shortage when there are not enough
+    /// (frontend-requests 29.1).
     ///
     /// A unit found damaged, defective, expired or missing is reported in <see cref="Issues"/>: the exact unit barcode, a reason
     /// and a mandatory description, with the employee and time recorded. It goes to quarantine (custody WAREHOUSE_HOLD, at the
@@ -180,8 +183,17 @@ namespace Application.Features.Sale.Commands
             if (scanned.Values.SelectMany(b => b).Select(_productCodeService.ToPayload).Any(reportedPayloads.Contains))
                 throw new ValidationCustomException("دانه‌ای که معیوب یا مفقود گزارش شده نمی‌تواند برای فروش اسکن شود.");
 
+            // Free units of each product not already spoken for in this request: the shelf (Stock) minus the units reported
+            // in Issues and the units scanned for any line. What is left is what a line sent without barcodes can be given.
+            var scannedPerProduct = sale.Items
+                .GroupBy(l => l.ProductId)
+                .ToDictionary(g => g.Key, g => g.Sum(l => scanned.TryGetValue(l.Id, out var b) ? b.Count : 0));
+            var freeLeft = sale.Items.Select(l => l.Product).DistinctBy(p => p.Id).ToDictionary(
+                p => p.Id,
+                p => p.Stock - issueUnits.Count(u => u.Product.Id == p.Id) - scannedPerProduct[p.Id]);
+
             var shortages = new List<string>();
-            var toReserve = new List<(SaleItem Line, List<string> Barcodes)>();
+            var toReserve = new List<(SaleItem Line, int Count, List<string>? Barcodes)>();
             foreach (var line in sale.Items)
             {
                 var reserved = await _productUnitService.CountReservedAsync(line.Id, cancellationToken);
@@ -193,10 +205,28 @@ namespace Application.Features.Sale.Commands
                         ? $"کالای «{line.Product.Name}» از قبل رزرو است و اسکن تازه لازم ندارد."
                         : $"برای «{line.Product.Name}» {needed} دانه لازم است، {barcodes.Count} دانه اسکن شده.");
 
+                if (needed <= 0)
+                    continue;
+
+                // A product that does not require unit tracking (bulk goods with no label on each unit) may be approved by
+                // quantity alone: the server reserves its oldest free units, as shipping already does (frontend-requests 29.1).
+                if (barcodes.Count == 0 && !line.Product.RequiresUnitTracking)
+                {
+                    var free = Math.Max(0, freeLeft[line.ProductId]);
+                    if (free < needed)
+                        shortages.Add($"«{line.Product.Name}»: {free + reserved} از {line.Quantity}");
+                    else
+                    {
+                        freeLeft[line.ProductId] -= needed;
+                        toReserve.Add((line, needed, null));
+                    }
+                    continue;
+                }
+
                 if (barcodes.Count < needed)
                     shortages.Add($"«{line.Product.Name}»: {barcodes.Count + reserved} از {line.Quantity}");
-                else if (barcodes.Count > 0)
-                    toReserve.Add((line, barcodes));
+                else
+                    toReserve.Add((line, needed, barcodes));
             }
 
             // ── Reported units go to quarantine whatever the outcome: they are facts about the shelf. ─────────────
@@ -234,9 +264,9 @@ namespace Application.Features.Sale.Commands
             }
             else
             {
-                foreach (var (line, barcodes) in toReserve)
+                foreach (var (line, count, barcodes) in toReserve)
                 {
-                    var units = await _productUnitService.ReserveAsync(line.Product, line.Id, barcodes,
+                    var units = await _productUnitService.ReserveAsync(line.Product, line.Id, count, barcodes,
                         new UnitMovementContext(ProductUnitMovementReasonEnum.SALE_RESERVED, now, DocumentKindEnum.SALE, sale.Id, CustomerId: sale.CustomerId),
                         cancellationToken);
                     line.Product.Stock -= units.Count;

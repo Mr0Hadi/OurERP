@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -12,13 +12,10 @@ namespace WMS.Ioc
     /// IP, so every employee's morning login counts against the same window. The cap is there to
     /// stop scripted guessing across many usernames, not to slow down people.
     ///
-    /// Partitioned on <c>Connection.RemoteIpAddress</c>, never on a client-supplied header such as
-    /// X-Forwarded-For (anyone can send one with a fresh value per request). Behind IIS that address
-    /// is the real client: in-process hosting hands it over directly, and out-of-process hosting's
-    /// IIS integration only trusts the forwarded header from IIS on the same machine. If IIS itself
-    /// is ever put behind a CDN or another proxy, every request arrives from the proxy's IP and this
-    /// becomes one shared limit for everyone - configure ForwardedHeaders with that proxy's address
-    /// (KnownProxies) first.
+    /// Partitioned on <c>Connection.RemoteIpAddress</c>, never on a raw client-supplied header such as
+    /// X-Forwarded-For (anyone can send one with a fresh value per request). Behind Cloudflare that
+    /// address is set from X-Forwarded-For by ForwardedHeadersRegistration, and only for requests that
+    /// came from a listed Cloudflare network; anything else keeps the connection's own address.
     /// </summary>
     public static class LoginRateLimitRegistration
     {

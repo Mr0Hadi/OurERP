@@ -1,4 +1,4 @@
-using Application.Common.Ledger;
+﻿using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -117,13 +117,17 @@ namespace Application.Features.Supplier.Queries
         /// </summary>
         public static IQueryable<Domain.Entities.Supplier> ApplyFilters(IQueryable<Domain.Entities.Supplier> query, GetSupplierListQuery request)
         {
-            if (!string.IsNullOrEmpty(request.CompanyNameOrContactName))
+            // Every word must match the company, the contact's first or last name, or the phone (frontend-requests 9.12).
+            if (!string.IsNullOrWhiteSpace(request.CompanyNameOrContactName))
             {
-                query = query
-                    .Where(x => 
-                    x.CompanyName.Contains(request.CompanyNameOrContactName) 
-                    || x.FirstName.Contains(request.CompanyNameOrContactName)
-                    || x.LastName.Contains(request.CompanyNameOrContactName));
+                foreach (var word in request.CompanyNameOrContactName.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    query = query.Where(x =>
+                        x.CompanyName.Contains(word)
+                        || (x.FirstName != null && x.FirstName.Contains(word))
+                        || (x.LastName != null && x.LastName.Contains(word))
+                        || x.Phone.Contains(word));
+                }
             }
 
             if (request.Id.HasValue)

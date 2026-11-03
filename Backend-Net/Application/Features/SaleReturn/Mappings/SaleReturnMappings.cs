@@ -1,3 +1,4 @@
+﻿using Application.Common.Contracts.Storage;
 using Application.Features.SaleReturn.Dtos;
 using Common.Extensions;
 using Domain.Entities;
@@ -14,7 +15,7 @@ namespace Application.Features.SaleReturn.Mappings;
 /// </summary>
 public static class SaleReturnMappings
 {
-    public static SaleReturnClaimDto ToDto(this SaleReturnClaim c) => new()
+    public static SaleReturnClaimDto ToDto(this SaleReturnClaim c, IObjectStorageService storage) => new()
     {
         Id = c.Id,
         Scope = c.Scope,
@@ -30,20 +31,20 @@ public static class SaleReturnMappings
         Note = c.Note,
         DecidedQuantity = c.DecidedQuantity,
         RemainingQuantity = c.RemainingQuantity,
-        Resolutions = [.. c.Resolutions.Select(r => r.ToDto())],
+        Resolutions = [.. c.Resolutions.Select(r => r.ToDto(storage))],
     };
 
-    public static SaleReturnResolutionDto ToDto(this SaleReturnResolution r) => new()
+    public static SaleReturnResolutionDto ToDto(this SaleReturnResolution r, IObjectStorageService storage) => new()
     {
         Id = r.Id,
         Quantity = r.Quantity,
         Note = r.Note,
         DecidedAt = r.CreatedAt,
         IsWriteOff = r.IsWriteOff,
-        Effects = [.. r.Effects.Select(e => e.ToDto())],
+        Effects = [.. r.Effects.Select(e => e.ToDto(storage))],
     };
 
-    public static SaleReturnEffectDto ToDto(this SaleReturnEffect e) => new()
+    public static SaleReturnEffectDto ToDto(this SaleReturnEffect e, IObjectStorageService storage) => new()
     {
         Id = e.Id,
         Direction = e.Direction,
@@ -53,6 +54,10 @@ public static class SaleReturnMappings
         RestockedQuantity = e.RestockedQuantity,
         ProductId = e.ProductId,
         ProductName = e.Product?.Name,
+        RequiresUnitTracking = e.Product?.RequiresUnitTracking,
+        Brand = e.Product?.Brand,
+        ImageKey = e.Product?.ImageUrl,
+        ImageUrl = storage.GetFixedUrl(e.Product?.ImageUrl),
         UnitPrice = e.UnitPrice,
         UnitCost = e.UnitCost,
         Amount = e.Amount,

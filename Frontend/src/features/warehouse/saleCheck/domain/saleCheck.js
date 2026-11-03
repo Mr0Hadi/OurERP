@@ -3,8 +3,9 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 
 /**
  * قاعده‌های بررسیِ انبارِ پیش‌فاکتور. انباردار یا همان را تأیید می‌کند، یا تعدادِ ردیف‌ها را
- * (تا حذفِ ردیف) کم می‌کند — با دلیلِ نوشته‌شده — و همان را تأیید می‌کند. هر ردیف دقیقاً
- * به‌اندازه‌ی کسریِ رزروش اسکن می‌خواهد (`CheckSaleWarehouse`، بخش ۱۱ سند).
+ * (تا حذفِ ردیف) کم می‌کند — با دلیلِ نوشته‌شده — و همان را تأیید می‌کند. ردیفِ کالای ردیابی‌دار
+ * دقیقاً به‌اندازه‌ی کسریِ رزروش اسکن می‌خواهد؛ کالای بی‌ردیابی یا کامل اسکن می‌شود یا اصلاً نه —
+ * آن‌وقت سرور قدیمی‌ترین دانه‌های آزاد را رزرو می‌کند (`CheckSaleWarehouse`، بخش ۱۱ سند و ۲۹.۱).
  */
 
 /** علت‌های گزارشِ دانه‌ی معیوب؛ مفقود جدا انتخاب می‌شود. `INSPECTION_PASSED` پذیرفته نیست. */
@@ -30,6 +31,26 @@ export function lineNeed(item, quantities = {}) {
   return isLineChanged(item, quantities) ? quantity : Math.max(0, quantity - (Number(item.reservedQuantity) || 0));
 }
 
+/** کالای بی‌ردیابی: اسکن اختیاری است و بی‌اسکن، سرور خودش رزرو می‌کند. */
+export const scanOptional = (item) => item.requiresUnitTracking === false;
+
+/**
+ * ردیف از نظرِ اسکن آماده است؟ کامل اسکن شده، یا کالای بی‌ردیابیِ بی‌اسکن. اسکنِ نیمه‌کاره‌ی کالای
+ * بی‌ردیابی را سرور «کسری» ثبت می‌کند (بقیه را خودش رزرو نمی‌کند)، پس مانع است.
+ */
+export function lineReady(item, scannedCount, need) {
+  return scannedCount >= need || (scanOptional(item) && scannedCount === 0);
+}
+
+/** چند دانه با این تأیید رزرو می‌شود: اسکن‌شده‌ها، و کلِ نیازِ ردیفِ بی‌ردیابیِ بی‌اسکن. */
+export function reservedOnApproval(items, { scans, quantities }) {
+  return items.reduce((sum, item) => {
+    if (approvedQuantity(item, quantities) === 0) return sum;
+    const scanned = scans[item.id]?.length ?? 0;
+    return sum + (scanOptional(item) && scanned === 0 ? lineNeed(item, quantities) : scanned);
+  }, 0);
+}
+
 /**
  * وضعیتِ فرم و نخستین دلیلی که ثبت را می‌بندد.
  * @param scans      `{ [saleItemId]: string[] }`
@@ -38,7 +59,7 @@ export function lineNeed(item, quantities = {}) {
 export function checkSummary(items, { scans, quantities, issues, reason, canEdit }) {
   const changed = items.filter((item) => isLineChanged(item, quantities));
   const remaining = items.filter((item) => approvedQuantity(item, quantities) > 0);
-  const unscanned = remaining.filter((item) => (scans[item.id]?.length ?? 0) < lineNeed(item, quantities));
+  const unscanned = remaining.filter((item) => !lineReady(item, scans[item.id]?.length ?? 0, lineNeed(item, quantities)));
   const reported = new Set(issues.map((issue) => issue.productUnitBarcode));
   const doubled = items.find((item) => (scans[item.id] || []).some((code) => reported.has(code)));
 
@@ -51,7 +72,9 @@ export function checkSummary(items, { scans, quantities, issues, reason, canEdit
     blockingReason = "دلیلِ تغییر را بنویسید.";
   } else if (unscanned.length > 0) {
     const item = unscanned[0];
-    blockingReason = canEdit
+    blockingReason = scanOptional(item)
+      ? `«${item.productName}»: یا همه‌ی ${formatNumber(lineNeed(item, quantities))} دانه را اسکن کنید، یا اسکن‌ها را بردارید تا انبار خودش رزرو کند.`
+      : canEdit
       ? `«${item.productName}»: ${formatNumber(scans[item.id]?.length ?? 0)} از ${formatNumber(lineNeed(item, quantities))} دانه اسکن شده؛ بقیه را اسکن کنید یا تعداد را کم کنید.`
       : `«${item.productName}»: ${formatNumber(scans[item.id]?.length ?? 0)} از ${formatNumber(lineNeed(item, quantities))} دانه اسکن شده.`;
   }

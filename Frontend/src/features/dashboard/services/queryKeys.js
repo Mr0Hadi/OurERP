@@ -19,4 +19,5 @@ export const reportKeys = {
 export const dashboardKeys = {
   all: ["dashboard"],
   queue: (source, status, params) => [...dashboardKeys.all, "queue", source, status, params ?? null],
+  layout: () => [...dashboardKeys.all, "layout"],
 };

@@ -1,4 +1,5 @@
 ﻿using Application.Common.Contracts.Context;
+using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Dtos;
 using Application.Common.Enums;
@@ -23,10 +24,12 @@ namespace Application.Features.SaleReturn.Queries
     public class GetSaleReturnPendingEffectsQueryHandler : IRequestHandler<GetSaleReturnPendingEffectsQuery, ResponseDto>
     {
         private readonly IWMSDbContext _context;
+        private readonly IObjectStorageService _objectStorageService;
 
-        public GetSaleReturnPendingEffectsQueryHandler(IWMSDbContext context)
+        public GetSaleReturnPendingEffectsQueryHandler(IWMSDbContext context, IObjectStorageService objectStorageService)
         {
             _context = context;
+            _objectStorageService = objectStorageService;
         }
 
         public async Task<ResponseDto> Handle(GetSaleReturnPendingEffectsQuery request, CancellationToken cancellationToken)
@@ -62,6 +65,10 @@ namespace Application.Features.SaleReturn.Queries
                     ProductCode = (x.effect.Product ?? x.claim.Product)?.Code ?? string.Empty,
                     ProductName = (x.effect.Product ?? x.claim.Product)?.Name ?? string.Empty,
                     Unit = (x.effect.Product ?? x.claim.Product)?.Unit.GetDescription() ?? string.Empty,
+                    RequiresUnitTracking = (x.effect.Product ?? x.claim.Product)?.RequiresUnitTracking ?? false,
+                    Brand = (x.effect.Product ?? x.claim.Product)?.Brand,
+                    ImageKey = (x.effect.Product ?? x.claim.Product)?.ImageUrl,
+                    ImageUrl = _objectStorageService.GetFixedUrl((x.effect.Product ?? x.claim.Product)?.ImageUrl),
                     Quantity = x.effect.Quantity,
                     AppliedQuantity = x.effect.AppliedQuantity,
                     RemainingQuantity = x.effect.RemainingQuantity,

@@ -60,6 +60,15 @@ export async function getUserList(params = {}) {
  * توکن) و `GetUserUpdate` (یک کاربر مشخص، مخصوص پر کردن فرم ویرایش).
  * صفحه‌ی مدیریت همیشه دومی را می‌خواهد.
  */
+/**
+ * `GET GetUserOptions` — فهرستِ سبکِ کاربران برای فیلترها `[{ id, fullName, isActive }]`؛ برای هر کاربرِ واردشده،
+ * بی دسترسیِ `UserView`.
+ */
+export async function getUserOptions({ includeInactive = false } = {}) {
+  const { data } = await axiosInstance.get("/User/GetUserOptions", { params: { includeInactive } });
+  return data ?? [];
+}
+
 export async function getUserUpdate(id) {
   const { data } = await axiosInstance.get("/User/GetUserUpdate", {
     params: { id },
@@ -68,10 +77,8 @@ export async function getUserUpdate(id) {
 }
 
 export async function createUser(payload) {
-  // `fisrtName` غلط املایی است ولی همان چیزی است که سرور می‌پذیرد.
-  // اصلاحش اینجا یعنی نام خالی ذخیره شود.
   const { data } = await axiosInstance.post("/User/CreateUser", {
-    fisrtName: payload.fisrtName,
+    firstName: payload.firstName,
     lastName: payload.lastName,
     username: payload.username,
     password: payload.password,

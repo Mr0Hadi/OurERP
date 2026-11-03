@@ -20,12 +20,11 @@ import { cn } from "@/shared/lib/utils";
  * قرارداد اقساطِ فاکتورِ فروشی که هنوز ثبت نشده — شرایط، پیش‌پرداخت (که فاکتور را صادر
  * می‌کند) و پیش‌نمایشِ اقساط. ثبت با دکمه‌ی اصلیِ صفحه است.
  *
- * پیش‌نمایش (`previewInstallmentPlan`) قاعده‌ی سرور را تکرار می‌کند تا مشتری پیش از امضا
- * اقساطش را ببیند؛ عددِ نهایی را سرور از جمعِ واقعیِ فاکتور حساب می‌کند و بعد از ثبت همان
- * نشان داده می‌شود.
+ * پیش‌نمایش را سرور با همان قاعده‌ی قراردادِ واقعی می‌دهد (`PreviewSaleInstallmentPlan`) تا مشتری
+ * پیش از امضا اقساطش را ببیند.
  *
  * @param draft    پیش‌نویسِ قرارداد (`EMPTY_PLAN_DRAFT`)
- * @param preview  خروجیِ `previewInstallmentPlan` یا `null`
+ * @param preview  پیش‌نمایشِ سرور (`useInstallmentPlanPreviewQuery`) یا `null`
  * @param errors   `planDraftErrors` (فقط بعد از اولین تلاشِ ثبت)
  * @param taxUnknown جمعِ فاکتور هنوز مالیاتِ کالاهای تازه را ندارد
  * @param blockedReason قرارداد از این‌جا ثبت‌شدنی نیست (دسترسی، محدودیتِ سرور)؛ فقط پیام
@@ -109,7 +108,7 @@ export default function InstallmentPlanDraftCard({
             ]}
           />
           <p className="text-[11px] leading-5 text-muted-foreground">
-            پیش‌نمایش است؛ مبالغِ نهایی را سرور هنگامِ ثبت از جمعِ فاکتور حساب می‌کند
+            محاسبه‌ی خودِ سرور برای همین قرارداد؛ تا ثبت، چیزی ذخیره نمی‌شود
             {taxUnknown && " (مالیاتِ کالاهای تازه هنوز در این جمع نیست)"}.
           </p>
           {preview.installments.length > 0 && (

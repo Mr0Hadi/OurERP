@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { HandCoins, Plus } from "lucide-react";
+import { HandCoins } from "lucide-react";
 
-import { Button } from "@/shared/components/ui/button";
 import ListPageLayout from "@/shared/components/layout/ListPageLayout";
 import ServerTable from "@/shared/components/table/ServerTable";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
@@ -48,14 +47,7 @@ export default function PartyPaymentsPage() {
       title="دریافت و پرداختِ علی‌الحساب"
       icon={HandCoins}
       description="پولِ بی فاکتور از مشتری یا به تامین‌کننده؛ بعداً می‌شود به فاکتورهای همان شخص تخصیص داد."
-      actions={
-        allows("PartyPaymentCreate") && (
-          <Button size="sm" className="gap-1.5" onClick={() => setFormOpen(true)}>
-            <Plus className="size-4" />
-            ثبتِ تازه
-          </Button>
-        )
-      }
+      create={allows("PartyPaymentCreate") ? { label: "دریافت/پرداختِ جدید", onClick: () => setFormOpen(true) } : undefined}
     >
       <PartyPaymentFilters />
       <ServerTable query={query} listState={listState} table={PartyPaymentTable} />

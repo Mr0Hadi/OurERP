@@ -62,14 +62,13 @@ function sourceLinkOf(entry) {
  * روی آن نیستند.
  */
 /**
- * @param totalBalance   مانده‌ی کل (اولیه‌ی دستی + دفتر) برای نشانِ بالای کارت.
- * @param openingBalance مانده‌ی اولیه‌ی دستی — پیش از شروعِ دفتر؛ جدولِ سرور آن را ندارد.
+ * @param totalBalance مانده‌ی کلِ دفتر (`ledgerBalance`) برای نشانِ بالای کارت؛ بی آن
+ *                     مانده‌ی پایانِ بازه‌ی گردش.
  */
 export default function PartyStatementCard({
   customerId,
   supplierId,
   totalBalance,
-  openingBalance = 0,
 }) {
   const [range, setRange] = useState({ fromDate: "", toDate: "" });
   const { data, isLoading, isError, isFetching } = usePartyStatementQuery({
@@ -135,14 +134,6 @@ export default function PartyStatementCard({
           <div
             className={`space-y-2 transition-opacity ${isFetching ? "opacity-60" : ""}`}
           >
-            {openingBalance !== 0 && (
-              <div className="flex justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">
-                  مانده‌ی اولیه (دستی، پیش از دفتر)
-                </span>
-                <BalanceText value={openingBalance} />
-              </div>
-            )}
             <div className="flex justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
               <span className="text-muted-foreground">
                 مانده‌ی دفتر در ابتدای دوره

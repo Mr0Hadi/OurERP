@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Dtos;
 using Application.Common.Enums;
 using Application.Features.Reorder.Dtos;
@@ -76,6 +76,10 @@ namespace Application.Features.Reorder.Queries
                         .FirstOrDefault(),
                 })
                 .Where(x => x.Stock + x.OnOrder <= x.LowStockThreshold)
+                // Something already on order that brings it up to its target has been dealt with. Without this, a product
+                // with no TargetStock ordered exactly up to its reorder point came back with "1" (frontend-requests 28.1);
+                // one sitting on its reorder point with nothing on order is still suggested.
+                .Where(x => x.OnOrder == 0 || x.Stock + x.OnOrder < (x.TargetStock ?? x.LowStockThreshold))
                 .ToListAsync(cancellationToken);
 
             var suggestions = rows.Select(x =>

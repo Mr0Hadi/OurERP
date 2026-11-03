@@ -13,6 +13,7 @@ import { useScanProductMutation } from "../../services/mutations";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import ProductCodeSearchField from "./ProductCodeSearchField";
 import { useVehiclesQuery } from "@/features/warehouse/vehicles/services/queries";
+import BrandSuggestions from "../BrandSuggestions";
 import CategorySelect from "@/features/warehouse/categories/components/CategorySelect";
 
 // سرور فقط `isLowOnStock` دارد: «کم‌موجود» یعنی موجودی ≤ آستانه‌ی هشدار (ناموجودها هم جزوش‌اند).
@@ -25,7 +26,7 @@ const COMPLETENESS_OPTIONS = [{ value: "true", label: "فقط کالاهای ن�
 
 function PriceRangeInput({ label, value, onChange, placeholder }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 lg:col-span-2">
+    <div className="flex min-w-0 flex-col sm:flex-row sm:items-center gap-2">
       <Label className="whitespace-nowrap font-medium text-foreground">{label}</Label>
       <PriceInput
         placeholder={placeholder}
@@ -105,14 +106,18 @@ export default function ProductFilters() {
         />
       }
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+      {/* دو ردیفِ چهارتایی: با پنج ستون برچسب‌های کنارِ فیلد جا نمی‌شدند و «همه دسته‌ها» دوخطی می‌شد. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {!isMobile && nameSearch}
         <FilterSearchInput
           label="برند"
           placeholder="مثلاً بوش"
           value={brand}
           onChange={(event) => setBrand(event.target.value)}
+          list="brand-filter-suggestions"
+          autoComplete="off"
         />
+        <BrandSuggestions id="brand-filter-suggestions" value={brand} />
         <CategorySelect value={productCategoryId} onSelect={setProductCategoryId} />
         <EntitySelect
           label="خودرو"
@@ -124,15 +129,15 @@ export default function ProductFilters() {
           onSelect={setVehicleId}
           isLoading={isVehiclesLoading}
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto] gap-4 pt-3 border-t border-border">
         <FilterSelect
           label="وضعیت موجودی"
           value={isLowOnStock}
           onChange={setIsLowOnStock}
           options={STOCK_OPTIONS}
         />
-      </div>
-
-      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-6 gap-5 pt-3 border-t border-border">
         <FilterSelect
           label="اطلاعات کالا"
           value={isIncomplete}
@@ -140,19 +145,19 @@ export default function ProductFilters() {
           options={COMPLETENESS_OPTIONS}
         />
         <PriceRangeInput
-          label="حداقل قیمت (ریال)"
+          label="قیمت از (ریال)"
           value={fromPrice}
           onChange={(next) => setPriceRange(next ?? "", toPrice)}
           placeholder="از"
         />
         <PriceRangeInput
-          label="حداکثر قیمت (ریال)"
+          label="قیمت تا (ریال)"
           value={toPrice}
           onChange={(next) => setPriceRange(fromPrice, next ?? "")}
           placeholder="تا"
         />
         {/* در موبایل ریست در پایینِ پنلِ بازشونده است. */}
-        <div className="hidden md:flex items-end xs:col-span-2 lg:col-span-1 lg:justify-end">
+        <div className="hidden md:flex items-end sm:col-span-2 lg:col-span-1 lg:justify-end">
           <Button type="button" variant="outline" onClick={resetFilters} className="w-full px-4">
             حذف همه فیلترها
           </Button>

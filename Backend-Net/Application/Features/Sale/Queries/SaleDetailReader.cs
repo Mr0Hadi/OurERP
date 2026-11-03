@@ -123,6 +123,9 @@ namespace Application.Features.Sale.Queries
                         TaxAmount = y.TaxAmount,
                         TotalAmount = y.TotalAmount,
                         FreeStock = y.Product.Stock,
+                        RequiresUnitTracking = y.Product.RequiresUnitTracking,
+                        Brand = y.Product.Brand,
+                        ImageKey = y.Product.ImageUrl,
                     }).ToList(),
                     Drivers = x.Drivers.Select(d => new SaleDriverDto
                     {
@@ -141,6 +144,11 @@ namespace Application.Features.Sale.Queries
 
             await FillClaimCapsAsync(context, saleReturnCalculationService, sale, cancellationToken);
             await FillPipelineAsync(context, sale, cancellationToken);
+            await FillAllowedActionsAsync(context, sale, cancellationToken);
+
+            // Signed after the read, like every image URL - GetFixedUrl is not translatable to SQL.
+            foreach (var item in sale.Items)
+                item.ImageUrl = objectStorageService.GetFixedUrl(item.ImageKey);
 
             sale.Attachments = await DocumentAttachmentWriter.ReadAsync(context, objectStorageService, DocumentKindEnum.SALE, saleId, cancellationToken);
 
@@ -149,6 +157,33 @@ namespace Application.Features.Sale.Queries
             sale.InstallmentSummary = await SaleInstallmentSummaryReader.ReadForSaleAsync(context, saleId, cancellationToken);
 
             return sale;
+        }
+
+        /// <summary>The can* flags, from the same SaleDocumentRules calls the commands make.</summary>
+        private static async Task FillAllowedActionsAsync(IWMSDbContext context, SaleDto sale, CancellationToken cancellationToken)
+        {
+            var plans = await context.SaleInstallmentPlans.AsNoTracking()
+                .Where(x => x.SaleId == sale.Id && x.IsActive)
+                .Select(x => x.Status)
+                .ToListAsync(cancellationToken);
+
+            // The rules read the sale entity; these are the fields they look at.
+            var facts = new Domain.Entities.Sale
+            {
+                Id = sale.Id,
+                Status = sale.Status,
+                PaymentType = sale.PaymentType,
+                ProformaStage = sale.ProformaStage,
+                ReservationExpiresAt = sale.ReservationExpiresAt,
+                Items = sale.Items.Select(i => new Domain.Entities.SaleItem { Id = i.Id, ShippedQuantity = i.ShippedQuantity }).ToList(),
+            };
+            var now = DateTime.Now;
+
+            sale.CanDelete = SaleDocumentRules.DeleteBlocker(sale.Status, plans.Count > 0) == null;
+            sale.CanCancel = SaleDocumentRules.StatusChangeBlocker(facts, SalesStatusEnum.CANCELLED,
+                plans.Contains(SaleInstallmentPlanStatusEnum.ACTIVE), now) == null;
+            sale.AllowedStatuses = SaleDocumentRules.AllowedStatuses(facts, now);
+            sale.CanCreateReturn = SaleDocumentRules.CreateReturnBlocker(sale.Status) == null;
         }
 
         /// <summary>Titles, the units reserved per line and the warehouse's reports - the proforma pipeline's read side.</summary>
@@ -209,8 +244,27 @@ namespace Application.Features.Sale.Queries
                 .Select(p => new { p.Id, p.Unit })
                 .ToDictionaryAsync(x => x.Id, x => x.Unit, cancellationToken);
 
+            var otherClaims = await context.SaleReturnClaims.AsNoTracking()
+                .Where(c => c.SaleItemId != null && lineIds.Contains(c.SaleItemId.Value) && c.SaleReturn!.IsActive
+                    && c.SaleReturn.Status != ReturnStatusEnum.REJECTED && c.SaleReturn.Status != ReturnStatusEnum.CANCELLED)
+                .OrderBy(c => c.SaleReturnId).ThenBy(c => c.Id)
+                .Select(c => new
+                {
+                    SaleItemId = c.SaleItemId!.Value,
+                    Dto = new Application.Common.Dtos.Returns.OtherReturnClaimDto
+                    {
+                        ReturnId = c.SaleReturnId,
+                        ReturnNumber = c.SaleReturn!.ReturnNumber,
+                        Status = c.SaleReturn.Status,
+                        OffScopeKind = c.OffScopeKind,
+                        Quantity = c.Quantity,
+                    },
+                })
+                .ToListAsync(cancellationToken);
+
             foreach (var item in sale.Items)
             {
+                item.OtherReturnClaims = otherClaims.Where(c => c.SaleItemId == item.Id).Select(c => c.Dto).ToList();
                 item.Unit = units.TryGetValue(item.ProductId, out var unit) ? unit.GetDescription() : string.Empty;
                 item.ClaimableQuantity = calc.GetClaimableQuantity(
                     new Domain.Entities.SaleItem { Id = item.Id, ShippedQuantity = item.ShippedQuantity, SettledQuantity = item.SettledQuantity },

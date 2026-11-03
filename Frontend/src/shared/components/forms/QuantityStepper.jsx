@@ -14,14 +14,18 @@ import { clampQuantity } from "@/shared/lib/quantityUtils";
  * max      - سقف مجاز
  * onChange - (nextValue) => void
  * min      - کف (پیش‌فرض صفر)؛ مثلاً ۱ وقتی ردیفِ انتخاب‌شده بی‌تعداد معنا ندارد
+ * placeholder - اگر داده شود، `value`ِ `null` یعنی «هنوز عددی نیست» (مثلاً کالای شمرده‌نشده در انبارگردانی):
+ *               فیلد خالی می‌ماند و خالی کردنِ فیلد `null` برمی‌گرداند. بی آن، خالی همان صفر است.
  */
-export default function QuantityStepper({ value, max, onChange, size = "md", min = 0 }) {
+export default function QuantityStepper({ value, max = Infinity, onChange, size = "md", min = 0, placeholder }) {
+  const empty = placeholder != null && value == null;
   const current = value || 0;
   const dims = size === "sm" ? "h-7 w-7" : "h-8 w-8";
   const inputWidth = size === "sm" ? "w-12" : "w-14";
 
   const clamp = (next) => Math.max(min, clampQuantity(next, max));
   const handleStep = (delta) => onChange(clamp(current + delta));
+  const handleType = (text) => onChange(placeholder != null && text === "" ? null : clamp(text));
 
   return (
     <div className="flex items-center justify-center gap-1">
@@ -30,7 +34,7 @@ export default function QuantityStepper({ value, max, onChange, size = "md", min
         size="icon"
         variant="outline"
         className={`${dims} shrink-0`}
-        disabled={current <= min}
+        disabled={empty || current <= min}
         onClick={() => handleStep(-1)}
         aria-label="یکی کمتر"
       >
@@ -39,9 +43,10 @@ export default function QuantityStepper({ value, max, onChange, size = "md", min
       <Input
         type="number"
         min={min}
-        max={max}
-        value={current}
-        onChange={(e) => onChange(clamp(e.target.value))}
+        max={Number.isFinite(max) ? max : undefined}
+        value={empty ? "" : current}
+        placeholder={placeholder}
+        onChange={(e) => handleType(e.target.value)}
         aria-label="تعداد"
         className={`${dims.split(" ")[0]} ${inputWidth} text-center text-sm px-1`}
       />

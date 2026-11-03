@@ -47,6 +47,12 @@ export async function fetchInstallmentPlan({ saleId, planId }) {
   return data;
 }
 
+/** پیش‌نمایشِ قرارداد بی ذخیره (`planPreviewRequestOf`) — همان شکلِ قراردادِ ثبت‌شده. */
+export async function previewInstallmentPlan(body) {
+  const { data } = await axiosInstance.post("/SaleInstallment/PreviewSaleInstallmentPlan", body);
+  return data;
+}
+
 /** `GET GetSaleInstallmentPlanList` — `customerId`, `saleId`, `status`, بازه‌ی `nextDueDate`/`createdAt`. */
 export async function fetchInstallmentPlans(params) {
   const { data } = await axiosInstance.get("/SaleInstallment/GetSaleInstallmentPlanList", { params });

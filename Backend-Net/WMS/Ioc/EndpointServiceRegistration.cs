@@ -33,6 +33,7 @@ namespace WMS.Ioc
             services.AddHostedService<SaleReservationExpiryJob>();
             services.Configure<InstallmentOverdueJobOptions>(configuration.GetSection(InstallmentOverdueJobOptions.SectionName));
             services.AddHostedService<InstallmentOverdueJob>();
+            services.AddHostedService<DatabaseWarmUpService>();
 
 
             return services;

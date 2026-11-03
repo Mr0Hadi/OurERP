@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.DataTransfer;
@@ -152,6 +152,9 @@ namespace Application.Features.Supplier.DataTransfer
             {
                 var suppliers = commands.Select(c => CreateSupplierCommandHandler.BuildEntity(c, _mapper, _objectStorageService)).ToList();
                 await _context.Suppliers.AddRangeAsync(suppliers, ct);
+                foreach (var supplier in suppliers)
+                    await Application.Common.Ledger.PartyLedger.OpeningBalanceChangedAsync(_context, null, supplier, 0,
+                        Application.Common.Ledger.PartyLedger.SignedOpeningBalance(supplier.Balance, supplier.BalanceType), supplier.CreatedAt, ct);
                 await _unitOfWork.SaveChangesAsync(ct);
             },
         };

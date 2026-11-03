@@ -5,16 +5,17 @@ import {
   EMPTY_PLAN_DRAFT,
   addMonthsIso,
   planDraftErrors,
-  previewInstallmentPlan,
+  planPreviewRequestOf,
   toApiCreatePlan,
 } from "@/features/sales/installments/domain/installmentPlan";
+import { useInstallmentPlanPreviewQuery } from "@/features/sales/installments/services/queries";
 import { PaymentTypeEnum } from "@/shared/domain/enums/paymentType";
 import { SaleInstallmentPlanStatusEnum } from "@/shared/domain/enums/saleInstallment";
 import { newPosReference } from "@/shared/domain/pos/posSession";
 import { todayIso } from "@/shared/lib/dateUtils";
 import { reportFormProblem } from "@/shared/lib/scrollToSection";
 import { isInPersonProforma, proformaPaymentType } from "../domain/proformaFlow";
-import { useSalePosActions, useSettleProformaMutation } from "../services/mutations";
+import { useIssueOnCreditMutation, useSalePosActions, useSettleProformaMutation } from "../services/mutations";
 
 const newPlanDraft = () => ({ ...EMPTY_PLAN_DRAFT, firstDueDate: addMonthsIso(todayIso(), 1) });
 
@@ -50,6 +51,7 @@ export function useProformaPayment({
 }) {
   const { allows } = usePermission();
   const settle = useSettleProformaMutation(sale);
+  const credit = useIssueOnCreditMutation(sale);
   const posActions = useSalePosActions();
   const [posLocked, setPosLocked] = useState(false);
   const [showPlanErrors, setShowPlanErrors] = useState(false);
@@ -70,16 +72,17 @@ export function useProformaPayment({
   // قراردادِ بی‌پیش‌پرداختی که از قبل روی پیش‌فاکتور است: شیوه قفل است تا ابطالش (صفحه‌ی فروش).
   const existingPlan =
     sale?.installmentSummary?.status === SaleInstallmentPlanStatusEnum.ACTIVE ? sale.installmentSummary : null;
-  // چرا قراردادِ تازه را نمی‌شود ثبت کرد: دسترسی، یا پیش‌فاکتوری که از قراردادِ ابطال‌شده‌ی قبلی پول گرفته
-  // (سرور قراردادِ تازه را با کلِ جمع می‌سازد — `frontend-requests.fa.md` ۱۷.۷).
+  // چرا قراردادِ تازه را نمی‌شود ثبت کرد: دسترسی، یا فروشی که از قبل پرداخت دارد (مثلاً از
+  // قراردادِ ابطال‌شده‌ی قبلی) — سرور از ۲۰۲۶-۱۰-۳۰ قراردادِ تازه را برایش رد می‌کند (۱۷.۷).
   const planBlockedReason = !allows("SaleInstallmentManage")
     ? "ثبتِ قرارداد اقساط دسترسیِ «مدیریت قرارداد اقساطی» می‌خواهد."
     : Number(sale?.paidAmount) > 0
-      ? "از این پیش‌فاکتور قبلاً با قراردادِ اقساطِ دیگری پول گرفته شده و قراردادِ تازه کلِ جمع را دوباره می‌خواهد (محدودیتِ فعلیِ سرور). شیوه‌ی پرداخت را «نقد / نسیه» کنید و مانده را با دریافتِ عادی بگیرید."
+      ? "این فروش از قبل پرداخت دارد و قرارداد اقساطِ تازه نمی‌گیرد. شیوه‌ی پرداخت را «نقد / نسیه» کنید و مانده را با دریافتِ عادی بگیرید."
       : null;
   const canChooseTerms = !existingPlan && (isInstallment || allows("SaleInstallmentManage"));
 
-  const planPreview = isInstallment ? previewInstallmentPlan(total, planDraft) : null;
+  // مبالغ و جدولِ اقساط از سرور (`PreviewSaleInstallmentPlan`).
+  const planPreview = useInstallmentPlanPreviewQuery(isInstallment ? planPreviewRequestOf(sale?.id, planDraft) : null);
   const planErrors = isInstallment
     ? planDraftErrors(planDraft, { payable: planPreview?.totalAmount, withDownPayment: true })
     : {};
@@ -123,6 +126,21 @@ export function useProformaPayment({
       { onSuccess: () => onDone() },
     );
   };
+
+  // فاکتورِ نسیه بی دریافت (`ChangeSaleStatus PROCESSING`): فقط غیراقساطی، و نه وقتی دریافتِ ثبت‌نشده هست
+  // (آن‌وقت همان دکمه‌ی اصلی فاکتور را با دریافت صادر می‌کند).
+  const creditInvoice =
+    !isInstallment && allows("SaleUpdate")
+      ? {
+          blockedReason: payments.hasChanges ? "دریافت‌های ثبت‌نشده را با دکمه‌ی اصلی ثبت کنید یا بردارید." : null,
+          isPending: credit.isPending,
+          run: () =>
+            credit.mutate(
+              { paymentType: proformaPaymentType(false, sale), info: info(), paymentDate: dueDate },
+              { onSuccess: () => onDone() },
+            ),
+        }
+      : null;
 
   const posCommon = {
     onLockChange: setPosLocked,
@@ -195,7 +213,8 @@ export function useProformaPayment({
     canSubmit,
     submitLabel,
     submit,
-    isPending: settle.isPending,
+    creditInvoice,
+    isPending: settle.isPending || credit.isPending,
     posLocked,
   };
 }

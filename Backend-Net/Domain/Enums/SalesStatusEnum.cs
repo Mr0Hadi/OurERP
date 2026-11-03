@@ -1,3 +1,5 @@
+﻿using System.ComponentModel;
+
 namespace Domain.Enums
 {
     public enum SalesStatusEnum
@@ -19,11 +21,18 @@ namespace Domain.Enums
         // from 7 to 6 as a result - safe because the frontend has no expectation for either value
         // and no real data was ever persisted with this enum (still mock-only, see the renumbering
         // note above).
+        // Persian labels for printed documents (InvoiceDocumentBuilder) and exports; the integers are unchanged.
+        [Description("پیش‌فاکتور")]
         PROFORMA,
+        [Description("در حال پردازش")]
         PROCESSING,
+        [Description("ارسال ناقص")]
         PARTIALLY_DELIVERED,
+        [Description("ارسال‌شده")]
         SHIPPED,
+        [Description("تحویل‌شده")]
         DELIVERED,
+        [Description("لغوشده")]
         CANCELLED,
 
         // RETURNED = 6 was removed on 2026-09-27. A sale's status says how far shipping got, never what happened after:

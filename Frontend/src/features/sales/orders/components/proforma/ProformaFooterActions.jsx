@@ -20,7 +20,8 @@ export default function ProformaFooterActions({ sale, disabled, onDeleted }) {
   const releaseMutation = useReleaseReservationMutation();
   const deleteMutation = useRemoveSaleMutation();
   const busy = disabled || releaseMutation.isPending || deleteMutation.isPending;
-  const canRelease = Number(sale.proformaStage) === SaleProformaStageEnum.WAREHOUSE_CHECKED && allows("SaleUpdate");
+  const canRelease =
+    Number(sale.proformaStage) === SaleProformaStageEnum.WAREHOUSE_CHECKED && allows(["SaleUpdate", "SaleWarehouseCheck"]);
 
   return (
     <>
@@ -55,7 +56,7 @@ export default function ProformaFooterActions({ sale, disabled, onDeleted }) {
         open={confirm === "release"}
         onOpenChange={(open) => !open && setConfirm(null)}
         title="آزاد کردن رزرو"
-        description="دانه‌های رزروشده به موجودیِ قابلِ فروش برمی‌گردند و پیش‌فاکتور با همان اقلام به پیش‌نویس برمی‌گردد. برای فروشِ دوباره باید رزرو یا بررسیِ انبار شود."
+        description="دانه‌های رزروشده به موجودیِ قابلِ فروش برمی‌گردند و پیش‌فاکتور با همان اقلام به صفِ بررسیِ انبار برمی‌گردد. برای پرداخت، انبار باید دوباره تأیید کند."
         confirmLabel="آزاد کن"
         pendingLabel="در حال آزادسازی..."
         destructive={false}

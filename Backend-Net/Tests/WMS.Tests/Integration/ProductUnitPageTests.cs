@@ -106,7 +106,7 @@ namespace WMS.Tests.Integration
 
             var onShelf = await List(scope, new GetProductUnitListQuery { BinLocation = "A-03" });
             Assert.Equal(2, onShelf.Count);
-            Assert.All(onShelf, u => Assert.Equal("A-03-2", u.BinLocation));
+            Assert.All(onShelf, u => Assert.Equal("A-3-2", u.BinLocation));
 
             // Scrapping one takes it off the shelf.
             await new ApplyProductUnitActionCommandHandler(scope.Db, scope.ProductUnitService, scope.InventoryCostingService, scope.PurchaseReturnCalculation, scope.UnitOfWork)

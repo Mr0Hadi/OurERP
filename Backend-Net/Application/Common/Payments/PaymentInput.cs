@@ -8,7 +8,7 @@ namespace Application.Common.Payments
     /// <summary>One movement of money, as AddXPayment/EditXPayment receive it.</summary>
     public abstract class PaymentInput : IPosPaymentFields
     {
-        /// <summary>How the money moved: CASH, CREDIT, CHECK or TRANSFER.</summary>
+        /// <summary>How the money moved: CASH, CHECK or TRANSFER.</summary>
         public PaymentTypeEnum Type { get; set; }
         public UInt64 Amount { get; set; }
 
@@ -42,7 +42,7 @@ namespace Application.Common.Payments
             RuleFor(x => x.Amount).GreaterThan(0UL).WithMessage("مبلغ پرداخت باید از صفر بیشتر باشد.");
             RuleFor(x => x.BankAccountId).GreaterThan(0).When(x => x.BankAccountId.HasValue).WithMessage("صندوق/حساب بانکی نامعتبر است.");
             RuleFor(x => x.Type).Must(DocumentPayments.IsRowMethod)
-                .WithMessage("روش پرداخت باید نقدی، نسیه، چک یا انتقال بانکی باشد.");
+                .WithMessage("روش پرداخت باید نقدی، چک یا انتقال بانکی باشد؛ نسیه پرداخت نیست.");
             Include(new PosPaymentFieldsValidator());
             RuleFor(x => x).Must(x => x.CheckDueDate == null && x.CheckBankName == null && x.CheckDrawerName == null)
                 .When(x => x.Type != PaymentTypeEnum.CHECK)

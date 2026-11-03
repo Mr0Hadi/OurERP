@@ -1,5 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
+
 import { listQuery } from "@/shared/services/api/contract";
 import {
   INSTALLMENT_PLAN_SORT_COLUMNS,
@@ -7,6 +9,7 @@ import {
   fetchInstallmentPlan,
   fetchInstallmentPlans,
   fetchInstallments,
+  previewInstallmentPlan,
 } from "./api-v1";
 import { installmentKeys } from "./queryKeys";
 
@@ -47,4 +50,21 @@ export function useInstallmentCountQuery(filters, { enabled = true } = {}) {
     select: (data) => data.total ?? 0,
     enabled,
   });
+}
+
+/**
+ * پیش‌نمایشِ سرورِ قراردادِ در حالِ نوشتن (`planPreviewRequestOf`)، با تأخیرِ تایپ. `null` تا بدنه کامل نیست؛
+ * در فاصله‌ی تغییرها پیش‌نمایشِ قبلی می‌ماند.
+ */
+export function useInstallmentPlanPreviewQuery(body) {
+  // رشته، نه شیء: بدنه هر رندر از نو ساخته می‌شود و تأخیر هیچ‌وقت آرام نمی‌گرفت.
+  const debounced = useDebouncedValue(body ? JSON.stringify(body) : null);
+  const { data } = useQuery({
+    queryKey: installmentKeys.preview(debounced),
+    queryFn: () => previewInstallmentPlan(JSON.parse(debounced)),
+    enabled: Boolean(debounced),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
+  return body ? data ?? null : null;
 }

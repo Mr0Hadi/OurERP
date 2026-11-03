@@ -9,12 +9,10 @@ import { ROUTES } from "@/shared/constants/routes";
 import EmptyState from "@/shared/components/feedback/EmptyState";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
 import { useReorderSuggestionsQuery } from "../services/queries";
 import { useCreatePurchaseDraftsMutation } from "../services/mutations";
 import { useReorderFilterStore } from "../store/reorderFilterStore";
 import { useReorderDraft } from "../hooks/useReorderDraft";
-import { supplierNameOf } from "../domain/reorderList";
 import ReorderFilters from "../components/ReorderFilters";
 import ReorderTable from "../components/ReorderTable";
 import ReorderActionBar from "../components/ReorderActionBar";
@@ -41,8 +39,6 @@ export default function ReorderPage() {
   });
   const query = useReorderSuggestionsQuery(filters, listState.pagination, listState.sorting);
   const draft = useReorderDraft(query.data?.all);
-  // فقط برای نامِ تامین‌کننده‌ای که خریدار برای کالای بی‌تامین‌کننده انتخاب کرد (پنجره‌ی نتیجه).
-  const { suppliers } = useSuppliersOptionsQuery();
   const createMutation = useCreatePurchaseDraftsMutation();
 
   const filtered = Boolean(filters.search || filters.supplierId);
@@ -50,12 +46,11 @@ export default function ReorderPage() {
   const submit = () => {
     const payload = draft.buildPayload();
     if (!payload) return;
-    const rows = query.data?.all ?? [];
     createMutation.mutate(payload, {
       onSuccess: (created) => {
         draft.clear(payload.lines.map((line) => line.productId));
         setResult(
-          created.map((item) => ({ ...item, supplierName: supplierNameOf(item.supplierId, rows, suppliers) })),
+          created.map((item) => ({ ...item, supplierName: draft.supplierNameOf(item.supplierId) })),
         );
       },
     });

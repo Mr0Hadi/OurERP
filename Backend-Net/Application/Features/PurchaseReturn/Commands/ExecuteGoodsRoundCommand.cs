@@ -1,4 +1,4 @@
-using Application.Common.Warehouses;
+﻿using Application.Common.Warehouses;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -273,7 +273,11 @@ namespace Application.Features.PurchaseReturn.Commands
                         product.Stock += healthy;
                         effect.RestockedQuantity = (effect.RestockedQuantity ?? 0) + healthy;
 
-                        // Goods arriving through a return never touch PurchaseItem.ReceivedQuantity.
+                        // Goods arriving through a return never touch PurchaseItem.ReceivedQuantity. Arriving on the claim's line
+                        // (a replacement), they are that line's goods again and can be claimed once more (frontend-requests 9.1).
+                        if (unitLine is int replacedLineId)
+                            purchaseReturn.Purchase!.Items.First(x => x.Id == replacedLineId).ReplacementReceivedQuantity += line.Quantity;
+
                         await _productUnitService.MintAsync(product, healthy,
                             new UnitOrigin(purchaseReturn.PurchaseId, unitLine, unitLine.HasValue ? UnitCustodyReasonEnum.ON_ORDER : null),
                             Movement(ProductUnitMovementReasonEnum.PURCHASE_RETURN_RECEIVED), cancellationToken);

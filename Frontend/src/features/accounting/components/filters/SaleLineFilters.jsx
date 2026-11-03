@@ -1,4 +1,4 @@
-import FilterMultiChoice from "@/shared/components/filters/FilterMultiChoice";
+import FilterMultiSelect from "@/shared/components/filters/FilterMultiSelect";
 import FilterPanel from "@/shared/components/filters/FilterPanel";
 import FilterSearchInput from "@/shared/components/filters/FilterSearchInput";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
@@ -21,15 +21,14 @@ export default function SaleLineFilters() {
       onReset={state.resetFilters}
       dateRowClassName="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-5"
       dateRow={
-        <div className="sm:col-span-2 lg:col-span-4">
-          <FilterMultiChoice
-            label="وضعیتِ فروش"
-            options={STATUS_OPTIONS}
-            value={state.statuses}
-            onChange={state.setStatuses}
-            emptyHint="همه‌ی صادرشده‌ها (بدونِ پیش‌فاکتور و لغوشده)"
-          />
-        </div>
+        // هیچ‌کدام = همه‌ی صادرشده‌ها (بدونِ پیش‌فاکتور و لغوشده).
+        <FilterMultiSelect
+          label="وضعیتِ فروش"
+          options={STATUS_OPTIONS}
+          value={state.statuses}
+          onChange={state.setStatuses}
+          allLabel="همه‌ی صادرشده‌ها"
+        />
       }
       store={useSaleLineFilterStore}
       primary={

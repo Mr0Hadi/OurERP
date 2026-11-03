@@ -53,7 +53,7 @@ namespace WMS.Tests.Integration
 
             await RunAll<CustomerListSortEnum>((s, d) => new GetCustomerListQueryHandler(scope.Db, storage).Handle(new GetCustomerListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SupplierListSortEnum>((s, d) => new GetSupplierListQueryHandler(scope.Db, storage).Handle(new GetSupplierListQuery { SortBy = s, SortDirection = d }, ct));
-            await RunAll<ProductListSortEnum>((s, d) => new GetProductListQueryHandler(scope.Db, storage).Handle(new GetProductListQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<ProductListSortEnum>((s, d) => new GetProductListQueryHandler(scope.Db, storage, scope.ProductCodeService).Handle(new GetProductListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<ProductUnitListSortEnum>((s, d) => new GetProductUnitListQueryHandler(scope.Db, scope.ProductCodeService).Handle(new GetProductUnitListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<ProductCategoryListSortEnum>((s, d) => new GetProductCategoryListQueryHandler(scope.Db).Handle(new GetProductCategoryListQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<VehicleListSortEnum>((s, d) => new GetVehicleListQueryHandler(scope.Db).Handle(new GetVehicleListQuery { SortBy = s, SortDirection = d }, ct));
@@ -84,6 +84,7 @@ namespace WMS.Tests.Integration
             await RunAll<SaleJournalSortEnum>((s, d) => new GetSaleJournalQueryHandler(scope.Db).Handle(new GetSaleJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PurchaseJournalSortEnum>((s, d) => new GetPurchaseJournalQueryHandler(scope.Db).Handle(new GetPurchaseJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<SaleLineJournalSortEnum>((s, d) => new GetSaleLineJournalQueryHandler(scope.Db).Handle(new GetSaleLineJournalQuery { SortBy = s, SortDirection = d }, ct));
+            await RunAll<PurchaseLineJournalSortEnum>((s, d) => new GetPurchaseLineJournalQueryHandler(scope.Db).Handle(new GetPurchaseLineJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<PaymentJournalSortEnum>((s, d) => new GetPaymentJournalQueryHandler(scope.Db).Handle(new GetPaymentJournalQuery { SortBy = s, SortDirection = d }, ct));
             await RunAll<InventoryValuationSortEnum>((s, d) => new GetInventoryValuationQueryHandler(scope.Db).Handle(new GetInventoryValuationQuery { SortBy = s, SortDirection = d }, ct));
             foreach (var side in Enum.GetValues<DocumentSideEnum>())
@@ -102,7 +103,7 @@ namespace WMS.Tests.Integration
             var mid = Seed.Product(category, "متوسط", retailPrice: 500);
             scope.Context.Products.AddRange(cheap, pricey, mid);
             scope.Context.SaveChanges();
-            var handler = new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance);
+            var handler = new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.ProductCodeService);
 
             var asc = await handler.Handle(new GetProductListQuery { SortBy = ProductListSortEnum.RETAIL_PRICE }, CancellationToken.None);
             Assert.Equal(new[] { "ارزان", "متوسط", "گران" }, ItemsOf<ProductListDto>(asc, "ProductList").Select(x => x.Name));
@@ -128,7 +129,7 @@ namespace WMS.Tests.Integration
             Seed.MintUnits(scope.Context, many, 3, ProductUnitStatusEnum.QUARANTINED);
             Seed.MintUnits(scope.Context, few, 1, ProductUnitStatusEnum.QUARANTINED);
 
-            var res = await new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(
+            var res = await new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.ProductCodeService).Handle(
                 new GetProductListQuery { SortBy = ProductListSortEnum.QUARANTINED_COUNT, SortDirection = SortDirectionEnum.DESC }, CancellationToken.None);
 
             Assert.Equal(new[] { 3, 1, 0 }, ItemsOf<ProductListDto>(res, "ProductList").Select(x => x.QuarantinedCount));

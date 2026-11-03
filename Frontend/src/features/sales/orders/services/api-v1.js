@@ -86,8 +86,8 @@ export function fromApiSale(dto) {
     warehouseIssues: dto.warehouseIssues || [],
   };
 
-  // `SaleDto` فیلدِ `updatedAt` ندارد. نسخه باید با هر تغییرِ سرور عوض شود تا فرمِ پیش‌فاکتور از نو
-  // پر شود: `revision` (ویرایش، از جمله تغییرِ انبار)، مرحله و تعدادِ اقلام هم در آن است.
+  // نسخه‌ی سند `updatedAt`ِ سرور است (هر مرحله و پرداخت آن را عوض می‌کند، ۲۴.۲)؛ ترکیبِ زیر فقط برای
+  // سندِ قدیمیِ بی `updatedAt`.
   const version = [
     documentVersion(sale),
     sale.revision,
@@ -154,18 +154,46 @@ export async function approveSaleProforma(saleId, revision) {
 
 /**
  * بررسیِ انبار (همه یا هیچ). `lines`: `[{ saleItemId, productUnitBarcodes }]` — هر ردیف دقیقاً
- * به‌اندازه‌ی کسریِ رزروش. `issues`: `[{ productUnitBarcode, reason, description }]` دانه‌ی
- * معیوب/مفقود (قرنطینه). همه کامل ⇒ `WAREHOUSE_CHECKED`؛ وگرنه کسری ⇒ `DRAFT` و هیچ رزروی.
+ * به‌اندازه‌ی کسریِ رزروش (کالای بی‌ردیابی بی‌بارکد هم: سرور قدیمی‌ترین‌ها را رزرو می‌کند).
+ * `issues`: `[{ productUnitBarcode, reason, description }]` دانه‌ی معیوب/مفقود (قرنطینه).
+ * `adjustments`: `[{ saleItemId, quantity }]` تعدادِ کمترِ ردیف (۰ = حذف)، با `note` الزامی، در همان
+ * تراکنش؛ آن‌وقت هر ردیفِ مانده باید کامل باشد. همه کامل ⇒ `WAREHOUSE_CHECKED`؛ وگرنه کسری ⇒ `DRAFT`.
  * خروجی سندِ کامل.
  */
-export async function checkSaleWarehouse({ saleId, revision, lines = [], issues = [], note = null }) {
+export async function checkSaleWarehouse({ saleId, revision, lines = [], issues = [], adjustments = [], note = null }) {
   const { data } = await axiosInstance.post("/Sale/CheckSaleWarehouse", {
     saleId,
     revision,
     lines,
     issues,
+    adjustments,
     note: note || null,
   });
+  return fromApiSale(data);
+}
+
+/**
+ * فروشِ حضوری، گامِ اول، اتمیک: ثبتِ پیش‌فاکتور + تأییدِ مشتری + رزروِ دانه‌های اسکن‌شده (`isInPerson`).
+ * هر قلم دقیقاً به‌اندازه‌ی تعدادش `productUnitBarcodes` دارد. خروجی سندِ کامل.
+ */
+export async function createInPersonProforma(saleData, { idempotencyKey } = {}) {
+  const { data } = await axiosInstance.post(
+    "/Sale/CreateInPersonProforma",
+    {
+      ...toApiSalePayload(saleData),
+      items: toApiCreateItems(saleData.items).map((item, index) => ({
+        ...item,
+        productUnitBarcodes: saleData.items[index].productUnitBarcodes || [],
+      })),
+    },
+    idempotent(idempotencyKey),
+  );
+  return fromApiSale(data);
+}
+
+/** آزادکردنِ دستیِ رزرو پیش از مهلت: `WAREHOUSE_CHECKED` ⇒ `CUSTOMER_APPROVED`؛ ردیف‌ها دست نمی‌خورند. */
+export async function releaseSaleReservation({ saleId, revision, note }) {
+  const { data } = await axiosInstance.post("/Sale/ReleaseSaleReservation", { saleId, revision, note: note || null });
   return fromApiSale(data);
 }
 
@@ -232,11 +260,15 @@ export async function updateSale(id, updates) {
   return fromApiSale(data);
 }
 
-/** فقط `DELIVERED` (از «ارسال شده») و `CANCELLED` (پیش از هر ارسالی). */
-export async function changeSaleStatus(id, status) {
+/**
+ * `DELIVERED` (از «ارسال شده»)، `CANCELLED` (پیش از هر ارسالی)، و `PROCESSING` روی پیش‌فاکتورِ «آماده‌ی پرداخت»ِ
+ * غیراقساطی با رزروِ معتبر: صدورِ فاکتورِ نسیه بی دریافت. `invoiceDate` فقط با `PROCESSING` (نه بعد از امروز).
+ */
+export async function changeSaleStatus(id, status, { invoiceDate } = {}) {
   const { data } = await axiosInstance.post("/Sale/ChangeSaleStatus", {
     id,
     status,
+    invoiceDate: invoiceDate || undefined,
   });
   return fromApiSale(data);
 }

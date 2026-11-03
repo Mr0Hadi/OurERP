@@ -268,7 +268,7 @@ namespace Application.Features.Purchase.Commands
                 };
             }, cancellationToken);
 
-            res.Message = "کالای مازاد به خرید اضافه شد و وارد موجودی شد.";
+            res.Message = "کالای مازاد به خرید اضافه شد؛ کالا تا بازگشت به موجودی در قرنطینه می‌ماند.";
             res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
             return res;
         }

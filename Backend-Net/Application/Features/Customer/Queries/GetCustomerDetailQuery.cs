@@ -1,5 +1,5 @@
 using Application.Common.Contracts.Context;
-using Application.Common.Ledger;
+using Application.Common.Credit;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
 using Application.Common.Dtos;
@@ -36,7 +36,11 @@ namespace Application.Features.Customer.Queries
 
             var dto = _mapper.Map<CustomerDto>(customer);
             dto.ImageUrl = _objectStorageService.GetFixedUrl(dto.ImageKey);
-            dto.LedgerBalance = await PartyLedger.BalanceAsync(_context, customer.Id, null, cancellationToken);
+            var exposure = await CreditLimitGuard.SavedExposureAsync(_context, customer.Id, cancellationToken);
+            dto.LedgerBalance = exposure.LedgerBalance;
+            dto.UnclearedCheques = exposure.UnclearedCheques;
+            dto.CreditExposure = exposure.Total;
+            dto.CreditAvailable = customer.CreditLimit.HasValue ? customer.CreditLimit.Value - exposure.Total : null;
 
             res.Data = dto;
             res.Message = "اطلاعات مشتری با موفقیت ارسال شد.";

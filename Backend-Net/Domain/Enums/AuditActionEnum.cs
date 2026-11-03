@@ -51,6 +51,9 @@ namespace Domain.Enums
         [Description("ویرایش دسترسی‌های کاربر")]
         UpdateUserPermissions = 26,
 
+        [Description("ذخیره‌ی چیدمان داشبورد")]
+        SaveMyDashboardLayout = 27,
+
         // --- ساختار سازمانی ---
         [Description("ایجاد واحد")]
         CreateDepartment = 40,

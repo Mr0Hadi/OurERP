@@ -1,15 +1,17 @@
 import { createInstallmentPlan } from "@/features/sales/installments/services/api-v1";
 import { SaleProformaEventEnum, SaleProformaStageEnum } from "@/shared/domain/enums/saleProforma";
+import { SaleStatusEnum } from "@/shared/domain/enums/saleStatus";
 import { idempotencyKeyFor } from "@/shared/services/api/contract";
 import { runDocumentChanges } from "@/shared/services/documentChanges";
-import { getErrorMessage } from "@/shared/lib/errorMessage";
-import { IN_PERSON_CHECK_NOTE } from "../domain/proformaFlow";
 import {
   SALE_DOCUMENT_CHANGES_API,
   approveSaleProforma,
+  changeSaleStatus,
   checkSaleWarehouse,
   completeInPersonSale,
+  createInPersonProforma,
   createSale,
+  releaseSaleReservation,
   updateSale,
   updateSaleAttachments,
   updateSalePaymentDate,
@@ -30,27 +32,12 @@ function shortageNote(sale) {
 }
 
 /**
- * بارکدهای اسکن‌شده‌ی فرم (`{ [productId]: string[] }`) → `lines`ِ `CheckSaleWarehouse`، هر ردیف به‌اندازه‌ی
- * کسریِ رزروش. اگر یک کالا در چند ردیف آمده، دانه‌ها به ترتیب بینِ ردیف‌ها پخش می‌شوند.
- */
-function warehouseLinesFrom(sale, scannedBarcodes) {
-  const left = Object.fromEntries(
-    Object.entries(scannedBarcodes).map(([productId, codes]) => [productId, [...codes]]),
-  );
-  return (sale.items || []).map((item) => {
-    const need = (Number(item.quantity) || 0) - (Number(item.reservedQuantity) || 0);
-    const pool = left[item.productId] || [];
-    return { saleItemId: item.id, productUnitBarcodes: pool.splice(0, Math.max(need, 0)) };
-  });
-}
-
-/**
  * شیوه‌ی پرداختِ پیش‌فاکتورِ «آماده‌ی پرداخت» را لحظه‌ی دریافت ثبت می‌کند (نقد/نسیه ⇄ اقساطی). سرور
  * قرارداد را فقط روی فروشِ اقساطی و دریافتِ عادی را فقط روی غیراقساطی می‌پذیرد، و تغییرِ `paymentType`
  * در `UpdateSale` پیش‌فاکتور را به پیش‌نویس می‌برد؛ پس `UpdateSale` (فقط همین فیلد) ← `ApproveSaleProforma`،
  * که چون رزروها مانده‌اند مستقیم «آماده‌ی پرداخت» برمی‌گردد. اگر مهلتِ رزرو گذشته باشد خطا می‌دهد.
- *
- * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴.۴ — تغییرِ شیوه‌ی پرداخت نباید تأییدها را برگرداند.
+ * فقط برای جابه‌جاییِ نقد/نسیه ⇄ اقساطی لازم است؛ نقد ⇄ نسیه را سرور هنگامِ صدور با پرداختِ کامل از
+ * ردیف‌ها می‌نشاند (۲۴.۴).
  *
  * @returns سندِ تازه (یا همان سند اگر شیوه عوض نشده)
  */
@@ -126,99 +113,85 @@ function partiallySaved(error, saleId) {
 /**
  * ثبتِ پیش‌فاکتورِ تازه پس از تأییدِ مشتری (پیش از آن فقط «لیست قیمت‌ها» چاپ می‌شود):
  *  - بی اسکن: `CreateSale` ← (با `send`) `ApproveSaleProforma` — به صفِ انبار.
- *  - فروشِ حضوری (`scannedBarcodes` ناخالی؛ کالا جلوی مشتری است): همان دو قدم ← `CheckSaleWarehouse` با همان
- *    دانه‌ها و `IN_PERSON_CHECK_NOTE`، بی صفِ انبار. دانه‌ها تا مهلتِ تنظیمات رزرو می‌مانند.
- * خطای پس از ثبت `partiallySaved` و `saleId` دارد.
+ *  - فروشِ حضوری (`scannedBarcodes` ناخالی؛ کالا جلوی مشتری است): `CreateInPersonProforma`، اتمیک — ثبت، تأیید و
+ *    رزروِ همان دانه‌ها بی صفِ انبار. دانه‌ها تا مهلتِ تنظیمات رزرو می‌مانند.
+ * خطای پس از ثبت (فقط مسیرِ بی‌اسکن) `partiallySaved` و `saleId` دارد.
  *
  * @param send کاربر `SaleUpdate` دارد (تأییدِ مشتری با همان است)
+ * @param scannedBarcodes `{ [productId]: string[] }`
  * @returns `{ id, stage }`
  */
 export async function createProforma(payload, { send, scannedBarcodes = {} }) {
+  if (Object.keys(scannedBarcodes).length > 0) {
+    const body = {
+      ...payload,
+      items: payload.items.map((item) => ({ ...item, productUnitBarcodes: scannedBarcodes[item.productId] || [] })),
+    };
+    const sale = await createInPersonProforma(body, { idempotencyKey: idempotencyKeyFor(body) });
+    return { id: sale.id, stage: sale.proformaStage };
+  }
   // retry بدون کلید یعنی پیش‌فاکتورِ تکراری.
   const created = await createSale(payload, { idempotencyKey: idempotencyKeyFor(payload) });
-  const inPerson = Object.keys(scannedBarcodes).length > 0;
-  if (!send && !inPerson) return { id: created.id, stage: SaleProformaStageEnum.DRAFT };
+  if (!send) return { id: created.id, stage: SaleProformaStageEnum.DRAFT };
   try {
     const approved = await approveSaleProforma(created.id, 0);
-    if (!inPerson) return { id: created.id, stage: approved.proformaStage };
-    const checked = await checkSaleWarehouse({
-      saleId: created.id,
-      revision: approved.revision,
-      lines: warehouseLinesFrom(approved, scannedBarcodes),
-      note: IN_PERSON_CHECK_NOTE,
-    });
-    if (checked.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
-      throw new Error(`رزروِ دانه‌ها ثبت نشد: ${shortageNote(checked)}`);
-    }
-    return { id: created.id, stage: checked.proformaStage };
+    return { id: created.id, stage: approved.proformaStage };
   } catch (error) {
     throw partiallySaved(error, created.id);
   }
 }
 
 /**
- * تأییدِ انبار، با تغییرِ اختیاریِ اقلام. بی‌تغییر: یک `CheckSaleWarehouse`. با تغییر (تعدادِ کمتر یا حذفِ
- * ردیف، با دلیل): `UpdateSale` (به پیش‌نویس) ← `ApproveSaleProforma` (نسخه‌ی تازه) ← `CheckSaleWarehouse` با
- * دلیل در `note`، که در تاریخچه‌ی پیش‌فاکتور می‌ماند. اگر تأییدِ دوباره مستقیم «آماده‌ی پرداخت» شود (ردیف‌های
- * مانده رزرو بودند)، بررسی لازم نیست و دلیل فقط در رویدادِ «ویرایش» می‌ماند.
- *
- * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴ — تا `CheckSaleWarehouse` تغییرِ تعداد را بپذیرد، زنجیره
- * `SaleUpdate` هم می‌خواهد و اتمیک نیست.
+ * تأییدِ انبار با تغییرِ اختیاریِ اقلام، در یک `CheckSaleWarehouse` (اتمیک): تعدادهای کمتر در `adjustments` و
+ * دلیل در `note` (رویدادِ «انبار تغییر داد»). ردیفِ تغییرکرده رزروش را از دست می‌دهد، پس همه‌اش از نو اسکن
+ * می‌شود؛ بقیه فقط کسریِ رزرو. ردیفِ کالای بی‌ردیابیِ بی‌اسکن را سرور خودش رزرو می‌کند.
  *
  * @param quantities `{ [saleItemId]: number }` فقط ردیف‌های تغییرکرده
  * @param scans      `{ [saleItemId]: string[] }`
  * @returns سندِ کاملِ فروش (`WAREHOUSE_CHECKED`)
  */
 export async function approveAtWarehouse(sale, { quantities = {}, scans, issues = [], reason = "" }) {
-  let base = sale;
-  if (Object.keys(quantities).length > 0) {
-    const items = (sale.items || [])
-      .map((item) => ({ ...item, quantity: quantities[item.id] ?? item.quantity }))
-      .filter((item) => Number(item.quantity) > 0);
-    // همان شرایطِ ذخیره‌شده (مشتری، شیوه‌ی پرداخت، سررسید)؛ فقط تعدادها عوض می‌شوند.
-    const updated = await updateSale(sale.id, { ...sale, items });
-    try {
-      base = await approveSaleProforma(sale.id, updated.revision);
-    } catch (error) {
-      throw new Error(
-        `${getErrorMessage(error, "ثبتِ تأیید انجام نشد")} — اقلامِ پیش‌فاکتور تغییر کرد ولی پیش‌فاکتور به پیش‌نویس برگشت و از صفِ انبار بیرون رفت؛ فروش باید دوباره «ارسال به انبار» بزند.`,
-        { cause: error },
-      );
-    }
-  }
+  const adjustments = Object.entries(quantities).map(([saleItemId, quantity]) => ({
+    saleItemId: Number(saleItemId),
+    quantity: Number(quantity),
+  }));
+  const lines = (sale.items || [])
+    .map((item) => {
+      const changed = quantities[item.id] != null;
+      const quantity = Number(quantities[item.id] ?? item.quantity) || 0;
+      const need = changed ? quantity : Math.max(0, quantity - (Number(item.reservedQuantity) || 0));
+      return { saleItemId: item.id, productUnitBarcodes: (scans[item.id] || []).slice(0, need) };
+    })
+    .filter((line) => line.productUnitBarcodes.length > 0);
 
-  if (base.proformaStage === SaleProformaStageEnum.CUSTOMER_APPROVED) {
-    base = await checkSaleWarehouse({
-      saleId: sale.id,
-      revision: base.revision,
-      lines: (base.items || [])
-        .map((item) => {
-          const need = Math.max(0, Number(item.quantity) - (Number(item.reservedQuantity) || 0));
-          return { saleItemId: item.id, productUnitBarcodes: (scans[item.id] || []).slice(0, need) };
-        })
-        .filter((line) => line.productUnitBarcodes.length > 0),
-      issues,
-      note: reason || null,
-    });
-  } else if (issues.length > 0) {
-    // تأییدِ دوباره مستقیم «آماده‌ی پرداخت» شد؛ بررسی‌ای نمانده که گزارش‌ها همراهش بروند.
-    throw new Error(
-      "پیش‌فاکتور تغییر کرد و تأیید شد، ولی گزارشِ دانه‌های معیوب/مفقود ثبت نشد؛ آن‌ها را از صفحه‌ی «دانه‌ها و برچسب‌ها» قرنطینه کنید.",
-    );
+  const checked = await checkSaleWarehouse({
+    saleId: sale.id,
+    revision: sale.revision,
+    lines,
+    issues,
+    adjustments,
+    note: reason || null,
+  });
+  if (checked.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
+    throw new Error(`تأیید انبار ثبت نشد: ${shortageNote(checked)}`);
   }
+  return checked;
+}
 
-  if (base.proformaStage !== SaleProformaStageEnum.WAREHOUSE_CHECKED) {
-    throw new Error(`تأیید انبار ثبت نشد: ${shortageNote(base)}`);
-  }
-  return base;
+/** آزادکردنِ دستیِ دانه‌های رزروِ یک پیش‌فاکتور پیش از پایانِ مهلت (`ReleaseSaleReservation`). */
+export function releaseReservation(sale) {
+  return releaseSaleReservation({ saleId: sale.id, revision: sale.revision });
 }
 
 /**
- * آزادکردنِ دانه‌های رزروِ یک پیش‌فاکتور پیش از پایانِ مهلت. یک `UpdateSale` همه‌ی ردیف‌ها را حذف و عیناً
- * دوباره اضافه می‌کند — حذفِ ردیف رزروش را آزاد می‌کند — و پیش‌فاکتور با همان اقلام به پیش‌نویس برمی‌گردد.
- *
- * TODO(بکند): `frontend-requests.fa.md` بخش ۲۴.۶ — `ReleaseSaleReservation`.
+ * صدورِ فاکتورِ نسیه بی دریافت روی پیش‌فاکتورِ «آماده‌ی پرداخت»ِ غیراقساطی: تغییرهای بی‌اثر ← شیوه‌ی پرداخت ←
+ * `ChangeSaleStatus { PROCESSING }`. کلِ مبلغ بدهیِ مشتری می‌شود؛ تاریخِ فاکتور همان تاریخِ ذخیره‌شده روی
+ * پیش‌فاکتور است (نه بعد از امروز)، وگرنه امروز. سررسیدِ تازه بعد از صدور.
  */
-export function releaseReservation(sale) {
-  return updateSale(sale.id, { ...sale, items: (sale.items || []).map((item) => ({ ...item, id: 0 })) });
+export async function issueOnCredit(sale, { paymentType, info, paymentDate }) {
+  await ensureProformaPaymentType(sale, paymentType);
+  await saveProformaInfo(sale.id, info);
+  const issued = await changeSaleStatus(sale.id, SaleStatusEnum.PROCESSING);
+  if (paymentDate !== undefined) return updateSalePaymentDate(sale.id, paymentDate);
+  return issued;
 }

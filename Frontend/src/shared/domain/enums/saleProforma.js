@@ -30,6 +30,10 @@ export const SaleProformaEventEnum = Object.freeze({
   WAREHOUSE_SHORTAGE: 3,
   RESET_BY_EDIT: 4,
   RESERVATION_EXPIRED: 5,
+  /** انبار تعدادِ ردیف‌ها را کم کرد و همان را تأیید کرد (`CheckSaleWarehouse.adjustments`)؛ دلیل در `note`. */
+  WAREHOUSE_ADJUSTED: 6,
+  /** رزرو پیش از مهلت دستی آزاد شد (`ReleaseSaleReservation`). */
+  RESERVATION_RELEASED: 7,
 });
 
 export const SALE_PROFORMA_EVENT_TONES = Object.freeze({
@@ -38,6 +42,8 @@ export const SALE_PROFORMA_EVENT_TONES = Object.freeze({
   [SaleProformaEventEnum.WAREHOUSE_SHORTAGE]: "danger",
   [SaleProformaEventEnum.RESET_BY_EDIT]: "neutral",
   [SaleProformaEventEnum.RESERVATION_EXPIRED]: "caution",
+  [SaleProformaEventEnum.WAREHOUSE_ADJUSTED]: "warning",
+  [SaleProformaEventEnum.RESERVATION_RELEASED]: "neutral",
 });
 
 /** `SaleWarehouseIssueResolutionEnum` — تصمیمِ حسابداری روی گزارشِ انبار. */

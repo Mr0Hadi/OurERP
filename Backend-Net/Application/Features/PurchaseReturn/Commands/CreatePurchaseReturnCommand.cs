@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.PurchaseReturn;
 using Application.Common.Contracts.Repositories;
 using Application.Common.Contracts.Storage;
@@ -14,6 +14,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Application.Common.Audit;
+using Application.Common.Documents;
 
 namespace Application.Features.PurchaseReturn.Commands
 {
@@ -89,9 +90,6 @@ namespace Application.Features.PurchaseReturn.Commands
                     .ThenInclude(x => x.Product)
                 .FirstOrDefaultAsync(x => x.Id == request.PurchaseId, cancellationToken) ?? throw new NotFoundCustomException("خرید مورد نظر یافت نشد.");
 
-            if (purchase.Status == PurchaseStatusEnum.CANCELLED)
-                throw new ValidationCustomException("امکان ثبت مرجوعی برای خرید لغوشده وجود ندارد.");
-
             var activeReturns = await _purchaseReturnRepository.GetActiveByPurchaseIdAsync(request.PurchaseId, cancellationToken);
             var purchaseItems = purchase.Items.ToDictionary(x => x.Id);
 
@@ -127,6 +125,12 @@ namespace Application.Features.PurchaseReturn.Commands
                 if (foundCount != offOrderProductIds.Count)
                     throw new ValidationCustomException("کالای انتخاب‌شده برای ادعای خارج از سند یافت نشد.");
             }
+
+            // After the shape checks above, so a claim naming the wrong line still hears about that line.
+            var returnBlocker = PurchaseDocumentRules.CreateReturnBlocker(purchase.Status,
+                await PurchaseDocumentRules.AnythingArrivedAsync(_context, purchase.Id, cancellationToken));
+            if (returnBlocker != null)
+                throw new ValidationCustomException(returnBlocker);
 
             // Only ON_ORDER claims consume a line's claimable quantity. EXCESS goods are by definition
             // beyond what the line received, so they are never counted against it.
@@ -192,12 +196,10 @@ namespace Application.Features.PurchaseReturn.Commands
 
             var now = DateTime.Now;
             var returnDate = request.ReturnDate ?? now;
-            // Deliberately counts soft-deleted returns too, so a deleted return never frees up its number.
-            var returnCount = await _context.PurchaseReturns.CountAsync(cancellationToken);
 
             var purchaseReturn = new Domain.Entities.PurchaseReturn
             {
-                ReturnNumber = Generator.GenerateReturnNumber(returnCount + 1),
+                ReturnNumber = await Application.Common.Documents.DocumentNumbers.NextPurchaseReturnAsync(_context, cancellationToken),
                 PurchaseId = request.PurchaseId,
                 ReturnDate = returnDate,
                 Status = ReturnStatusEnum.OPEN,

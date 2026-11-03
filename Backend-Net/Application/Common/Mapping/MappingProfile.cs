@@ -173,7 +173,6 @@ namespace Application.Common.Mapping
 			CreateMap<User, UserUpdateDto>();
 
 			CreateMap<CreateUserCommand, User>()
-					 .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FisrtName))
 					 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.Now))
 					 .ForMember(dest => dest.PasswordHash, source => source.MapFrom(e => e.Password.ToHashSHA256()))
 					 .ForMember(dest => dest.IsActive, source => source.MapFrom(e => true));

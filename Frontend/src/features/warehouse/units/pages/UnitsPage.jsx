@@ -11,7 +11,7 @@ import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReference
 import { parseBarcode } from "@/shared/domain/barcode/productCode";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { usePermission } from "@/features/auth/hooks/usePermission";
-import { useProductsOptionsQuery } from "@/features/warehouse/products/services/queries";
+import { useProductQuery } from "@/features/warehouse/products/services/queries";
 
 import {
   LABEL_FILTERS,
@@ -132,7 +132,7 @@ export default function UnitsPage() {
   const summaryQuery = useProductUnitSummaryQuery(store.productId);
   const summary = summaryQuery.isError ? null : summaryQuery.data;
 
-  const productOptions = useProductsOptionsQuery();
+  const selectedProduct = useProductQuery(store.productId || null).data;
 
   const units = unitsQuery.data?.items ?? [];
   const totalResults = unitsQuery.data?.total ?? 0;
@@ -295,10 +295,7 @@ export default function UnitsPage() {
       store.custodyReason,
   );
 
-  const products = productOptions.products;
-  const productName = store.productId
-    ? products.find((product) => String(product.id) === String(store.productId))?.name
-    : null;
+  const productName = store.productId && selectedProduct ? selectedProduct.name : null;
   const resultsText = unitsQuery.isLoading ? "در حال بارگذاری…" : `${formatNumber(totalResults)} دانه`;
 
   return (
@@ -320,7 +317,6 @@ export default function UnitsPage() {
                   onScanModeChange={setScanToSelect}
                 />
               }
-              products={products}
             />
 
             {/* سربرگِ نمای جاری: جایگاه، برچسب و شمارِ نتیجه. */}

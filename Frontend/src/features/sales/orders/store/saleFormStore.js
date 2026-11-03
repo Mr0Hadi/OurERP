@@ -9,6 +9,8 @@ const EMPTY_FORM = {
   customerId: "",
   customerName: "",
   invoiceNumber: "",
+  // تاریخِ فاکتور: پیش از صدور روی پیش‌فاکتور ذخیره می‌شود و صدور همان را نگه می‌دارد (خالی = روزِ صدور، ۲۴.۳).
+  invoiceDate: "",
   paymentDate: "",
   description: "",
   items: [],
@@ -33,6 +35,7 @@ function formFromSale(sale) {
     customerId: sale.customerId || "",
     customerName: sale.customerName || "",
     invoiceNumber: sale.invoiceNumber || "",
+    invoiceDate: sale.invoiceDate || "",
     paymentDate: sale.paymentDate || "",
     description: sale.description || "",
     installment,
@@ -90,4 +93,4 @@ export const isSaleCoreChanged = changedBy((form) => [
 export const isSaleDueDateChanged = changedBy((form) => form.paymentDate || "");
 
 /** توضیح — اثری روی چرخه ندارد و هم‌زمان با دریافت ذخیره می‌شود. */
-export const isSaleInfoChanged = changedBy((form) => form.description || "");
+export const isSaleInfoChanged = changedBy((form) => [form.description || "", form.invoiceDate || ""]);

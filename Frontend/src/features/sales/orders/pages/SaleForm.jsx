@@ -130,7 +130,7 @@ export default function SaleForm({ sale }) {
   /** فرم → بدنه‌ی `CreateSale`/`UpdateSale` (بی دریافت‌ها). */
   const buildPayload = () => ({
     customerId: formData.customerId,
-    invoiceDate: sale?.invoiceDate || null,
+    invoiceDate: formData.invoiceDate || null,
     paymentDate: formData.paymentDate || null,
     description: formData.description || "",
     items,
@@ -314,8 +314,9 @@ export default function SaleForm({ sale }) {
             <FormSection name="info">
               <OrderInfoCard
                 kind={showPayment ? "invoice" : "proforma"}
-                // تاریخِ فاکتور را سرور با صدور می‌گذارد؛ سررسید جزوِ شرایطِ پیش‌فاکتور است.
-                showInvoiceDate={false}
+                // تاریخِ فاکتور در گامِ دریافت (اختیاری، نه بعد از امروز): صدور همان را نگه می‌دارد؛ سررسید جزوِ شرایطِ پیش‌فاکتور است.
+                showInvoiceDate={showPayment}
+                invoiceDateOptional
                 showDueDate
                 formData={formData}
                 onFormChange={setFormData}

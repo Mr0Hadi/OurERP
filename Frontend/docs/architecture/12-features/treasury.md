@@ -18,7 +18,7 @@
 ## صندوق
 
 - فهرست: `useProformaQueueQuery(WAREHOUSE_CHECKED)`، فیلترهای مشترکِ `ProformaQueueFilters`/`createProformaQueueFilterStore` و ستون‌های `proformaQueueColumns` از `sales/orders`؛ تازه‌سازی هر ۳۰ ثانیه و دکمه‌ی تازه‌سازیِ خودِ جدول.
-- دریافت: `cashier/pages/CashierPaymentPage.jsx` (`DocumentFormLayout`) — ستونِ پهن `ProformaPaymentSection` با `useProformaPayment` (همان منطقِ فرمِ فروش: شیوه‌ی پرداخت، قرارداد، کارتخوان، تحویلِ حضوری)؛ ستونِ کناری `CashierCustomerCard` (تماس، مانده، سقف و اعتبارِ مانده پس از این فروش؛ با `CustomerView`) و جمع؛ زیرِ هر دو و تمام‌عرض (`below`) `CashierCustomerTabs` — اقلام، گردشِ حساب (`PartyStatementCard`، با `PartyStatementView`) و قراردادهای اقساطِ مشتری (`CustomerInstallmentsCard`)، که فقط با بازشدنِ تب خوانده می‌شوند. پیش‌فاکتوری که دیگر آماده‌ی پرداخت نیست: `ProformaUnavailable`.
+- دریافت: `cashier/pages/CashierPaymentPage.jsx` (`DocumentFormLayout`) — ستونِ پهن `ProformaPaymentSection` با `useProformaPayment` (همان منطقِ فرمِ فروش: شیوه‌ی پرداخت، قرارداد، کارتخوان، تحویلِ حضوری)؛ ستونِ کناری `CashierCustomerCard` (تماس، مانده، سقف — «تعریف نشده»/«فقط نقدی»/مبلغ — و اعتبارِ مانده پس از این فروش از `creditExposure`ِ سرور، با چک‌های وصول‌نشده؛ با `CustomerView`. سرور فراتر از سقف را رد می‌کند، GAP-06) و جمع؛ زیرِ هر دو و تمام‌عرض (`below`) `CashierCustomerTabs` — اقلام، گردشِ حساب (`PartyStatementCard`، با `PartyStatementView`) و قراردادهای اقساطِ مشتری (`CustomerInstallmentsCard`)، که فقط با بازشدنِ تب خوانده می‌شوند. پیش‌فاکتوری که دیگر آماده‌ی پرداخت نیست: `ProformaUnavailable`.
 
 ## حساب‌های نقدی و بانکی (`bankAccounts/`)
 
@@ -40,7 +40,7 @@
 
 ## چک‌ها (`cheques/`)
 
-- فهرستِ `GetCheckList` (هر ردیفِ پرداختِ `CHECK`؛ `id` = شناسه‌ی ردیفِ پرداخت): `ChequeSummary` (جمع‌های `summary`)، `ChequeFilters` (`statuses` چندتایی با `FilterMultiChoice`، پیش‌فرض «در جریان»؛ مرتب‌سازیِ پیش‌فرض سررسید صعودی)، `ChequeTable` با منوی کارها.
+- فهرستِ `GetCheckList` (هر ردیفِ پرداختِ `CHECK`؛ `id` = شناسه‌ی ردیفِ پرداخت): `ChequeSummary` (جمع‌های `summary`)، `ChequeFilters` (`statuses` چندتایی با `FilterMultiSelect` در ردیفِ دوم، پیش‌فرض «در جریان»؛ مرتب‌سازیِ پیش‌فرض سررسید صعودی)، `ChequeTable` با منوی کارها.
 - `ChequeActionDialog` (`{ kind, cheque }`): وصول (حساب الزامی مگر چک حساب داشته باشد یا خرج‌شده باشد)، برگشت (اثرش بسته به `purpose`/علی‌الحساب/خرج‌شده شرح داده می‌شود)، خرج به تامین‌کننده (خرید از `useAllocatableDocumentsQuery`ِ `partyPayments`، یا علی‌الحساب). قواعدِ مجاز بودن در `domain/cheque.js`؛ چکِ پیش‌پرداختِ قرارداد برگشت نمی‌خورد.
 - بعد از هر کار همه‌ی کش‌های پولی باطل می‌شوند (`MONEY_KEYS`).
 - ثبتِ چک در همه‌ی فرم‌های پرداخت: `ChequeFields` (سررسید، بانک، صاحب حساب) در `PaymentMethodEditor`، `InstallmentPaymentFields` و `PartyPaymentFormDialog`؛ بدنه با `toApiChequeFields` (`paymentRows.js`). `PaymentRow` وضعیتِ چک را نشان می‌دهد و چکِ سرنوشت‌دار (`isChequeSettled`) اصلاح/ابطال نمی‌شود.

@@ -11,6 +11,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Application.Common.Audit;
+using Application.Common.Documents;
 
 namespace Application.Features.Purchase.Commands
 {
@@ -52,21 +53,12 @@ namespace Application.Features.Purchase.Commands
             var purchase = await PurchaseItemLines.LoadPurchaseAsync(_context, request.PurchaseItemId, cancellationToken);
             var item = purchase.Items.First(x => x.Id == request.PurchaseItemId);
 
-            if (purchase.Status == PurchaseStatusEnum.CANCELLED)
-                throw new ValidationCustomException("قلمِ خرید لغوشده قابل بستن نیست.");
-
-            // Short close ends a delivery that has started. Before anything arrived there is no delivery to end: the order itself
-            // is still open to change (UpdatePurchase) or to cancel. Without this, closing every line of a PROFORMA/PENDING
-            // purchase made it RECEIVED with nothing received and no invoice number ever required.
-            if (!purchase.Items.Any(i => i.ReceivedQuantity > 0))
-                throw new ValidationCustomException("هنوز هیچ کالایی از این خرید دریافت نشده است؛ به‌جای بستنِ قلم، سفارش را ویرایش یا لغو کنید.");
-
-            if (item.ShortClosedQuantity > 0)
-                throw new ValidationCustomException("این قلم قبلاً بسته شده است.");
+            var blocker = PurchaseDocumentRules.CloseItemBlocker(purchase.Status, purchase.Items.Any(i => i.ReceivedQuantity > 0),
+                item.ShortClosedQuantity, item.StillOwedQuantity);
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
             var missing = item.StillOwedQuantity;
-            if (missing == 0)
-                throw new ValidationCustomException("همه‌ی مقدار این قلم دریافت شده و چیزی برای بستن باقی نمانده است.");
 
             var now = DateTime.Now;
             item.ShortClosedQuantity = missing;

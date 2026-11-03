@@ -6,6 +6,7 @@ import SelectCheckbox from "@/shared/components/forms/SelectCheckbox";
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { formatNumber } from "@/shared/lib/numberFormat";
 import PartySelect from "@/features/partyAccount/components/PartySelect";
+import { getPartyName } from "@/shared/components/filters/filterUtils";
 
 const MAX_QUANTITY = 1_000_000_000;
 
@@ -74,7 +75,12 @@ function buildColumns({ draft, editable }) {
               side="supplier"
               label={null}
               value={line.supplierId}
-              onSelect={(id) => draft.update(s.productId, { supplierId: id === "" ? null : id })}
+              onSelect={(id, party) =>
+                draft.update(s.productId, {
+                  supplierId: id === "" ? null : id,
+                  supplierName: party ? getPartyName(party) : null,
+                })
+              }
             />
           </div>
         );

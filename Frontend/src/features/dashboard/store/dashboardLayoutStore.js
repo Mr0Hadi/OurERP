@@ -13,8 +13,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
  * با دسترسی‌های امروزِ کاربر تطبیق می‌دهد. برای همین ذخیره‌ی یک ویجتِ
  * از دست‌رفته بی‌خطر است.
  *
- * در مرورگر است نه سرور، پس از دستگاهی به دستگاهِ دیگر نمی‌رود
- * (`frontend-requests.fa.md` بخشِ ۶، بندِ اختیاریِ ۶.۳).
+ * نسخه‌ی اصلی روی سرور است (`useDashboardLayout`، بندِ ۶.۳)؛ این‌جا فقط کشِ مرورگر برای نمایشِ فوری
+ * و وقتی سرور در دسترس نیست.
  */
 export const useDashboardLayoutStore = create(
   persist(

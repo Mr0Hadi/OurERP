@@ -1,4 +1,4 @@
-using Application.Common.Contracts.DataTransfer;
+﻿using Application.Common.Contracts.DataTransfer;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,7 +41,8 @@ namespace Application.Common.DataTransfer
     /// <summary>
     /// What a resource exports. <see cref="Query"/> returns an already-filtered, already-projected, deterministically
     /// ordered IQueryable; the core counts it (to enforce the row limit before writing) and then streams it, so a
-    /// large export never holds every entity in memory.
+    /// large export never holds every entity in memory. A report that is computed in memory and is small by nature (a few
+    /// period rows) gives <see cref="Rows"/> instead. Exactly one of the two is set.
     /// </summary>
     public sealed class ExportSpec<TFilter, TRow> : IExportSpec where TFilter : class
     {
@@ -49,7 +50,9 @@ namespace Application.Common.DataTransfer
 
         public required IReadOnlyList<ExportColumn<TRow>> Fields { get; init; }
 
-        public required Func<TFilter, CancellationToken, Task<IQueryable<TRow>>> Query { get; init; }
+        public Func<TFilter, CancellationToken, Task<IQueryable<TRow>>>? Query { get; init; }
+
+        public Func<TFilter, CancellationToken, Task<IReadOnlyList<TRow>>>? Rows { get; init; }
 
         public Type FilterType => typeof(TFilter);
 
@@ -57,16 +60,29 @@ namespace Application.Common.DataTransfer
 
         public async Task<int> CountAsync(object filter, CancellationToken cancellationToken)
         {
-            var query = await Query((TFilter)filter, cancellationToken);
+            if (Rows != null)
+                return (await Rows((TFilter)filter, cancellationToken)).Count;
+
+            var query = await QueryOrThrow()((TFilter)filter, cancellationToken);
             return await query.CountAsync(cancellationToken);
         }
 
         public async IAsyncEnumerable<IReadOnlyList<object?>> ReadRowsAsync(object filter, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            var query = await Query((TFilter)filter, cancellationToken);
+            if (Rows != null)
+            {
+                foreach (var row in await Rows((TFilter)filter, cancellationToken))
+                    yield return Fields.Select(field => DataValues.ToExportValue(field.Value(row))).ToList();
+                yield break;
+            }
+
+            var query = await QueryOrThrow()((TFilter)filter, cancellationToken);
 
             await foreach (var row in query.AsAsyncEnumerable().WithCancellation(cancellationToken))
                 yield return Fields.Select(field => DataValues.ToExportValue(field.Value(row))).ToList();
         }
+
+        private Func<TFilter, CancellationToken, Task<IQueryable<TRow>>> QueryOrThrow() =>
+            Query ?? throw new InvalidOperationException("An export spec needs Query or Rows.");
     }
 }

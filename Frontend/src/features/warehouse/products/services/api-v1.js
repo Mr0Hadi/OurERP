@@ -26,6 +26,12 @@ export async function fetchProducts(params) {
   return normalizeListResponse(data, { itemsKey: "productList" });
 }
 
+/** `GET GetBrandList` — برندهای کالاهای فعال، پرکالاترین اول (حداکثر ۲۰۰): `[{ brand, productCount }]`. */
+export async function fetchBrands(search) {
+  const { data } = await axiosInstance.get("/Product/GetBrandList", { params: { search: search || undefined } });
+  return data ?? [];
+}
+
 export const fetchProductById = async (id) => {
   const { data } = await axiosInstance.get("/Product/GetProductDetail", {
     params: { id },

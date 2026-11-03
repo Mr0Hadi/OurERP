@@ -1,4 +1,4 @@
-using Application.Common.Warehouses;
+﻿using Application.Common.Warehouses;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.InventoryCosting;
 using Application.Common.Contracts.ProductUnit;
@@ -261,6 +261,11 @@ namespace Application.Features.SaleReturn.Commands
                     product.Stock -= line.Quantity;
                     await _productUnitService.ConsumeAsync(product, line.Quantity, unitLine, unitLine.HasValue ? UnitCustodyReasonEnum.ON_ORDER : null, line.ProductUnitBarcodes, movement, cancellationToken);
                     await _inventoryCostingService.RecordReplacementShippedToCustomerAsync(product, line.Quantity, unitLine, now, cancellationToken);
+
+                    // A replacement shipped on the claim's line is in the customer's hands and can be claimed again
+                    // (frontend-requests 9.1).
+                    if (unitLine is int replacedLineId)
+                        saleReturn.Sale!.Items.First(x => x.Id == replacedLineId).ReplacementShippedQuantity += line.Quantity;
                 }
 
                 if (effect.AppliedQuantity >= effect.Quantity)

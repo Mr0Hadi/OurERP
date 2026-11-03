@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, PackageOpen } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import ProductSearchPanel from "@/shared/components/forms/ProductSearchPanel";
@@ -6,8 +6,7 @@ import SelectedItemsTable from "@/shared/components/forms/SelectedItemsTable";
 import SelectedItemsCards from "@/shared/components/forms/SelectedItemsCards";
 import toast from "react-hot-toast";
 import { lineFromProduct } from "@/shared/domain/invoice/lineFromProduct";
-import { useDocumentProducts, useProductDetailLoader } from "@/features/warehouse/products/services/queries";
-import { getErrorMessage } from "@/shared/lib/errorMessage";
+import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { BarcodeReferenceKindEnum } from "@/shared/domain/enums/barcodeReferenceKind";
 import {
   invoiceLineAmounts,
@@ -58,25 +57,6 @@ export default function ProductPicker({
   // برای همین آمده.
   const [isPickerOpen, setIsPickerOpen] = useState(items.length === 0);
 
-  const loadProductDetail = useProductDetailLoader();
-  // آخرین فهرستِ اقلام، برای افزودنی که بعد از رسیدنِ جزئیاتِ کالا انجام می‌شود —
-  // تا تغییرهایی که کاربر در همین فاصله داده گم نشوند.
-  const itemsRef = useRef(items);
-  useEffect(() => {
-    itemsRef.current = items;
-  });
-  // کالاهایی که جزئیاتشان در راه است: کلیکِ دوباره تعداد را زیاد می‌کند، نه قلمِ تکراری.
-  const pendingRef = useRef(new Map());
-  // همان کالاها به‌صورتِ state، برای چرخانِ دکمه‌ی + تا کاربر بداند افزودن در جریان است.
-  const [pendingIds, setPendingIds] = useState([]);
-  const setPending = (productId, on) =>
-    setPendingIds((ids) => (on ? [...ids, productId] : ids.filter((id) => id !== productId)));
-
-  // جزئیات را پیش از کلیک می‌گیرد (hover/لمس)؛ ensureQueryData کش می‌کند، پس اولین افزودن فوری است.
-  const prefetchDetail = (product) => {
-    loadProductDetail(product.id).catch(() => {});
-  };
-
   const addedQuantityOf = (productId) =>
     Number(items.find((item) => item.productId === productId)?.quantity) || 0;
 
@@ -112,40 +92,15 @@ export default function ProductPicker({
       );
       return true;
     }
-    if (pendingRef.current.has(product.id)) {
-      const pending = pendingRef.current.get(product.id);
-      // اسکنرِ پشتِ‌سرِهم پیش از رسیدنِ جزئیات: دانه‌ی دوم هم باید بماند، نه فقط تعداد.
-      if (unitCode && pending.unitCodes.includes(unitCode)) {
-        toast.error("این دانه قبلاً اسکن شده است");
-        return false;
-      }
-      pending.quantity += 1;
-      if (unitCode) pending.unitCodes.push(unitCode);
-      return true;
-    }
-
-    // قلمِ تازه: قیمت، واحد و مالیات فقط در جزئیاتِ کالا هست، نه در ردیفِ لیست.
-    const pending = { quantity: 1, unitCodes: unitCode ? [unitCode] : [] };
-    pendingRef.current.set(product.id, pending);
-    setPending(product.id, true);
-    loadProductDetail(product.id)
-      .catch((error) => {
-        toast.error(getErrorMessage(error, "دریافت اطلاعات کالا انجام نشد."));
-        return product;
-      })
-      .then((detail) => {
-        pendingRef.current.delete(product.id);
-        setPending(product.id, false);
-        const source = { ...product, ...detail };
-        onItemsChange([
-          ...itemsRef.current,
-          lineFromProduct(source, {
-            unitPrice: priceOf(source),
-            quantity: pending.quantity,
-            productUnitBarcodes: pending.unitCodes.length > 0 ? pending.unitCodes : undefined,
-          }),
-        ]);
-      });
+    // ردیفِ فهرستِ کالا (و پاسخِ اسکن) قیمتِ خرید، واحد و مالیات را دارد (۲۰۲۶-۱۰-۳۰، بندِ ۹.۳)؛
+    // قلم بی درخواستِ جزئیات اضافه می‌شود.
+    onItemsChange([
+      ...items,
+      lineFromProduct(product, {
+        unitPrice: priceOf(product),
+        productUnitBarcodes: unitCode ? [unitCode] : undefined,
+      }),
+    ]);
     return true;
   };
 
@@ -230,8 +185,6 @@ export default function ProductPicker({
   const searchPanel = (
     <ProductSearchPanel
       addedQuantityOf={addedQuantityOf}
-      isPending={(productId) => pendingIds.includes(productId)}
-      onPrefetch={prefetchDetail}
       onAdd={handleAdd}
     />
   );

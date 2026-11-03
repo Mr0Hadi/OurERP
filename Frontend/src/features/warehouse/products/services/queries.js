@@ -1,12 +1,13 @@
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { fetchAllPages, listQuery } from "@/shared/services/api/contract";
+import { listQuery } from "@/shared/services/api/contract";
 import { useDebouncedValue } from "@/shared/hooks/useDebouncedValue";
 import { useDebouncedFilters } from "@/shared/hooks/useDebouncedFilters";
 
 import {
   PRODUCT_SORT_COLUMNS,
   fetchProducts,
+  fetchBrands,
   fetchProductById,
 } from "./api-v1";
 import { useProductFilterStore } from "../store/productFilterStore";
@@ -32,10 +33,8 @@ export function useProductsQuery(filters, pagination, sorting, { enabled = true 
 }
 
 /**
- * جزئیاتِ کامل یک کالا، از کش یا سرور — برای افزودنِ قلم به فاکتور.
- *
- * `GetProductList` قیمتِ خرید، واحد و نرخِ مالیات را ندارد (سندِ frontend-requests.fa.md،
- * بندِ ۹.۳)؛ بدونِ این، قلمِ خرید با قیمتِ صفر و جمعِ بی‌مالیات اضافه می‌شد.
+ * جزئیاتِ کامل یک کالا با شناسه، از کش یا سرور — وقتی فقط شناسه در دست است
+ * (اسکنِ بارکد، کالای تازه‌ساخته‌شده از داخلِ فرم).
  */
 export function useProductDetailLoader() {
   const queryClient = useQueryClient();
@@ -57,46 +56,8 @@ export function useProductQuery(id) {
 
 // ─── گزینه‌های انتخاب ───────────────────────────────────────────────────────
 
-const OPTIONS_PAGE_SIZE = 200;
 const OPTIONS_SORTING = { id: "name", desc: false };
 const NO_PRODUCTS = [];
-
-async function fetchAllProductOptions() {
-  const { items } = await fetchAllPages(
-    (page) =>
-      fetchProducts(
-        listQuery({
-          filters: {},
-          pagination: { pageIndex: page - 1, pageSize: OPTIONS_PAGE_SIZE },
-          sorting: OPTIONS_SORTING,
-          sortColumns: PRODUCT_SORT_COLUMNS,
-        }),
-      ),
-    { itemsKey: "items" },
-  );
-  return items;
-}
-
-/**
- * فهرستِ همه‌ی کالاها برای فیلترِ کالا در صفحه‌ی دانه‌ها (مرتب بر اساس نام).
- * انتخابگرِ اقلامِ فاکتور از این استفاده نمی‌کند — `useProductSearchQuery`. سرور در هر درخواست حداکثر ۲۰۰ ردیف می‌دهد، پس صفحه‌به‌صفحه
- * خوانده می‌شود تا جست‌وجوی سمتِ کلاینت کلِ کالاها را ببیند.
- *
- * TODO(بکند): با رشد کاتالوگ، جست‌وجوی سمتِ سرور بهتر است (بندِ ۱۳.۵ سندِ
- * frontend-requests.fa.md).
- *
- * `enabled: false` برای انتخابگرِ تاشو: تا باز نشده، چیزی دانلود نمی‌شود.
- */
-export function useProductsOptionsQuery({ enabled = true } = {}) {
-  const { data, isLoading } = useQuery({
-    queryKey: productKeys.options(),
-    queryFn: fetchAllProductOptions,
-    gcTime: 1000 * 60 * 10,
-    staleTime: 30_000,
-    enabled,
-  });
-  return { products: data ?? NO_PRODUCTS, isLoading };
-}
 
 // ─── جست‌وجوی کالا (انتخابگرِ اقلام) ───────────────────────────────────────
 
@@ -189,12 +150,8 @@ const NO_PRODUCT_MAP = new Map();
  * جزئیاتِ کالاهای یک سند (تصویر، برند، `requiresUnitTracking`) — فقط همان
  * کالاهایی که در سند هستند، هر کدام با کشِ جزئیاتِ خودش.
  *
- * جای `useProductsOptionsQuery` در صفحه‌های انبار: آن فهرست ۲۰۰ کالای اول را
- * می‌گرفت، پس برای کالای ۲۰۱ام «ردیابی‌پذیر» بودن معلوم نمی‌شد — فرمِ ارسال
- * اسکنِ دانه را نمی‌خواست و سرور هنگامِ ثبت رد می‌کرد.
- *
- * TODO(بکند): با `requiresUnitTracking` و تصویر روی اقلامِ خودِ سند (بندِ ۱۵.۱)
- * این درخواست‌ها لازم نیستند.
+ * فقط جایی که سند خودش ندارد: قیمت‌های خرده/عمده برای عوض‌کردنِ حالتِ قیمتِ فروش، و نام/کدِ
+ * قلمِ مرجوعی. ردیابی‌پذیری، تصویر و برند روی خودِ ردیف‌های سند می‌آیند (`warehouse/shared/productInfo.js`).
  *
  * @returns `{ productMap: Map<id, ProductDto>, isLoading }`
  */
@@ -215,4 +172,16 @@ export function useDocumentProducts(productIds) {
       return { productMap, isLoading: results.some((result) => result.isLoading) };
     },
   });
+}
+
+/** پیشنهادِ برند برای فیلدِ متنیِ برند (`BrandSuggestions`)، با تأخیرِ تایپ. */
+export function useBrandOptionsQuery(search) {
+  const debounced = useDebouncedValue((search || "").trim());
+  const { data } = useQuery({
+    queryKey: productKeys.brands(debounced),
+    queryFn: () => fetchBrands(debounced),
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+  });
+  return data ?? [];
 }

@@ -33,8 +33,8 @@ function ReadOnlyValue({ children }) {
  *    عوض می‌شوند (تا دکمه‌ی اصلی ذخیره نمی‌شوند).
  *
  * @param kind/onKindChange «پیش‌فاکتور / فاکتور» (فقط پیش از صدور)
- * @param showInvoiceDate تاریخِ فاکتور پیش از صدور (پیش‌فرض بله). فروش آن را نمی‌خواهد: سرور با صدور
- *   تاریخ می‌گذارد.
+ * @param showInvoiceDate تاریخِ فاکتور پیش از صدور (پیش‌فرض بله). فروش فقط در گامِ دریافت نشانش می‌دهد.
+ * @param invoiceDateOptional تاریخِ فاکتور اختیاری است و خالی یعنی روزِ صدور (فروش)
  * @param showDueDate سررسید حتی روی پیش‌فاکتور (پیش‌فرض فقط فاکتور) — در فروش جزوِ شرایطِ پیش‌فاکتور است.
  * @param status `{ value, options: [{ value, label }], onChange, hint? }` — با یک گزینه (فقط وضعیتِ
  *   فعلی) به‌جای منو فقط‌خواندنی است. `hint` (متن یا عنصر) زیرِ فیلد: قدمِ بعدی.
@@ -46,6 +46,7 @@ export default function OrderInfoCard({
   onKindChange,
   kindNote,
   showInvoiceDate = true,
+  invoiceDateOptional = false,
   showDueDate,
   withNumber = false,
   formData,
@@ -90,7 +91,7 @@ export default function OrderInfoCard({
             </FormField>
           )}
           {invoiceDateVisible && (
-          <FormField size="sm" label="تاریخ فاکتور" required={!issued} htmlFor="invoiceDate" error={errors.invoiceDate}>
+          <FormField size="sm" label="تاریخ فاکتور" required={!issued && !invoiceDateOptional} htmlFor="invoiceDate" error={errors.invoiceDate}>
             {issued ? (
               <ReadOnlyValue>{gregorianToPersian(formData.invoiceDate)}</ReadOnlyValue>
             ) : (
@@ -98,7 +99,7 @@ export default function OrderInfoCard({
                 id="invoiceDate"
                 value={formData.invoiceDate || ""}
                 onChange={(isoDate) => onFormChange({ invoiceDate: isoDate })}
-                placeholder="انتخاب تاریخ"
+                placeholder={invoiceDateOptional ? "روزِ صدور" : "انتخاب تاریخ"}
                 error={Boolean(errors.invoiceDate)}
               />
             )}

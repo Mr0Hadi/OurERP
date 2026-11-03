@@ -2,7 +2,7 @@
 
 import { fetchAllPages, MAX_PAGE_SIZE } from "@/shared/services/api/contract";
 
-import { getUserList, getUserUpdate } from "./api-v1";
+import { getUserList, getUserOptions, getUserUpdate } from "./api-v1";
 import { userKeys } from "./queryKeys";
 
 /** فهرست‌های داخلِ کارت‌ها (اعضای تیم، کاندیداها) صفحه‌بندی ندارند. */
@@ -115,4 +115,13 @@ export function useTeamCandidatesQuery(teamId) {
   );
 
   return { ...query, candidates };
+}
+
+/** گزینه‌های سبکِ کاربر برای فیلترها (`GetUserOptions`)؛ `includeInactive` کارمندانِ رفته را هم می‌آورد. */
+export function useUserOptionsQuery({ includeInactive = false } = {}) {
+  return useQuery({
+    queryKey: userKeys.options(includeInactive),
+    queryFn: () => getUserOptions({ includeInactive }),
+    staleTime: 5 * 60_000,
+  });
 }

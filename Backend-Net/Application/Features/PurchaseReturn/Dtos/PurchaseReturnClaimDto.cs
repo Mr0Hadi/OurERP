@@ -8,6 +8,8 @@ namespace Application.Features.PurchaseReturn.Dtos
         public ReturnClaimScopeEnum Scope { get; set; }
         public ReturnOffScopeKindEnum? OffScopeKind { get; set; }
         public int? PurchaseItemId { get; set; }
+        /// <summary>Same value as PurchaseItemId, under the name the create-return body uses (frontend-requests 7.3).</summary>
+        public int? OrderLineId => PurchaseItemId;
         public int ProductId { get; set; }
         public string ProductCode { get; set; }
         public string ProductName { get; set; }
@@ -18,6 +20,11 @@ namespace Application.Features.PurchaseReturn.Dtos
         public string? Note { get; set; }
         public int DecidedQuantity { get; set; }
         public int RemainingQuantity { get; set; }
+        /// <summary>
+        /// Units of the claim's product free in its quarantine group for a new release, scrap or return-from-quarantine: held,
+        /// minus what other decisions on the purchase's open returns reserve - the number AddClaimResolution checks (14.4).
+        /// </summary>
+        public int FreeQuarantinedQuantity { get; set; }
         public List<PurchaseReturnResolutionDto> Resolutions { get; set; } = new();
     }
 }

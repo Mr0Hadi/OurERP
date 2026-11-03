@@ -1,4 +1,4 @@
-using Application.Common.Ledger;
+﻿using Application.Common.Ledger;
 using Application.Common.Contracts.BankAccounts;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Repositories;
@@ -57,6 +57,12 @@ namespace Application.Features.SaleInstallment.Commands
     {
         public CreateSaleInstallmentPlanCommandValidator()
         {
+            // One movement of money, as on every other payment row (frontend-requests 17.3).
+            RuleFor(x => x.PaymentType).Must(Application.Common.Payments.DocumentPayments.IsRowMethod)
+                .WithMessage("روش پرداخت باید نقدی، چک یا انتقال بانکی باشد.");
+            // A proforma leaves PROFORMA only when money changes hands; a plan without a down payment would leave the sale
+            // with no way to issue its invoice (frontend-requests 17.5, the rule CompleteInPersonSale already has).
+            RuleFor(x => x.DownPaymentAmount).GreaterThan(0UL).WithMessage("پیش‌پرداخت قرارداد اقساطی باید از صفر بیشتر باشد.");
             RuleFor(x => x.SaleId).GreaterThan(0).WithMessage(Validation.RequiredMessage("فروش"));
             RuleFor(x => x.MarkupPercentage).GreaterThanOrEqualTo(0).WithMessage("درصد افزایش نمی‌تواند منفی باشد.");
             // تعداد اقساط سمت سرور به مجموعه‌ی خاصی محدود نیست - فرانت چند گزینه‌ی از پیش
@@ -97,12 +103,17 @@ namespace Application.Features.SaleInstallment.Commands
                 throw new ValidationCustomException("روش پرداخت این فروش اقساطی نیست.");
 
             // The down payment is a customer payment: only once the customer and the warehouse have approved the proforma.
-            if (request.DownPaymentAmount > 0)
-                SaleProformaPipeline.EnsureReadyForPayment(sale);
+            SaleProformaPipeline.EnsureReadyForPayment(sale);
 
             var existingPlan = await _planRepository.GetActiveBySaleIdAsync(sale.Id, cancellationToken);
             if (existingPlan != null)
                 throw new ValidationCustomException("برای این فروش قرارداد اقساطی فعالی ثبت شده است.");
+
+            // A second contract after a cancelled or settled one would bill the whole invoice again and overwrite
+            // Sale.PaidAmount with its own payments only. Money already taken settles the rest through ordinary receipts
+            // (frontend-requests 17.7).
+            if (sale.PaidAmount > 0)
+                throw new ValidationCustomException("این فروش قبلاً پرداخت دارد؛ مانده را با «دریافت از مشتری» ثبت کنید، نه با قرارداد اقساطی تازه.");
 
             var cashAmount = sale.TotalAmount;
             var chargeAmount = InstallmentSchedule.ChargeAmount(cashAmount, request.MarkupPercentage);
@@ -165,7 +176,7 @@ namespace Application.Features.SaleInstallment.Commands
 
             // نهایی‌سازی خروج از پیش‌فاکتور: در فروش اقساطی، وجود پلن فعال + ثبت پیش‌پرداخت
             // جای شرط «پرداخت کامل» را می‌گیرد.
-            if (sale.Status == SalesStatusEnum.PROFORMA && plan.DownPaymentAmount > 0)
+            if (sale.Status == SalesStatusEnum.PROFORMA)
                 await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, request.InvoiceDate, cancellationToken);
 
             // The charge goes on the customer's account together with the invoice; a proforma has neither yet.

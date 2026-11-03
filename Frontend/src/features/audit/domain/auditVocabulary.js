@@ -66,6 +66,19 @@ export const AUDIT_ENTITY_LABELS = Object.freeze({
   SaleReturnEffectObservation: "مشاهده‌ی مرجوعی فروش",
   SaleReturnEffectRound: "دور جابه‌جایی مرجوعی فروش",
   PaymentDetail: "پرداخت",
+  PaymentAllocation: "تخصیص پرداخت",
+  SaleInstallmentReturnCredit: "اعتبار مرجوعیِ قسط",
+  BankAccount: "صندوق/حساب بانکی",
+  BankAccountTransfer: "انتقال بین حساب‌ها",
+  Warehouse: "انبار",
+  StockTransfer: "انتقال بین انبارها",
+  StockTransferUnit: "دانه‌ی انتقال",
+  Stocktake: "انبارگردانی",
+  StocktakeLine: "ردیف انبارگردانی",
+  StocktakeScan: "اسکن انبارگردانی",
+  StocktakeSnapshotUnit: "دانه‌ی ثبت‌شده در انبارگردانی",
+  SystemSetting: "تنظیمات سامانه",
+  DocumentNumberCounter: "شمارنده‌ی شماره‌ی سند",
 });
 
 export const entityLabelOf = (entityType) => AUDIT_ENTITY_LABELS[entityType] ?? entityType;

@@ -22,6 +22,13 @@ namespace Domain.Entities
         public int SettledQuantity { get; set; }
 
         /// <summary>
+        /// Units that arrived on this line through a purchase-return GOODS_IN (a replacement), healthy or damaged. They are this
+        /// line's goods again, so the claim quota adds them back: ReceivedQuantity + this - SettledQuantity - outstanding claims.
+        /// Append-only, written only by the purchase-return goods round.
+        /// </summary>
+        public int ReplacementReceivedQuantity { get; set; }
+
+        /// <summary>
         /// Ordered units the supplier will never deliver, written off the line by ClosePurchaseItemCommand (SAP's "delivery
         /// completed"): Quantity - ReceivedQuantity at the moment of closing, 0 while the line is open. They stop being owed, so
         /// the purchase can reach RECEIVED and anything that still arrives on the line is excess. Nothing about money moves.

@@ -66,4 +66,15 @@ describe("گروهِ عملیات", () => {
     expect(values.length).toBeGreaterThan(50);
     expect(values.filter(([, value]) => actionGroupOf(value).label === "سایر")).toEqual([]);
   });
+
+  const DB_CONTEXT = resolve(import.meta.dirname, "../../../../../Backend-Net/Infrastructure/Persistence/WMSDbContext.cs");
+  const AUDIT_RECORDER = resolve(import.meta.dirname, "../../../../../Backend-Net/Infrastructure/Persistence/Auditing/AuditRecorder.cs");
+  it.skipIf(!existsSync(DB_CONTEXT) || !existsSync(AUDIT_RECORDER))("هر جدولِ ممیزی‌شده‌ی بکند نامِ فارسی دارد", () => {
+    const tables = new Set([...readFileSync(DB_CONTEXT, "utf8").matchAll(/DbSet<(\w+)>/g)].map(([, name]) => name));
+    const recorder = readFileSync(AUDIT_RECORDER, "utf8");
+    const notAudited = recorder.slice(recorder.indexOf("NotAudited"), recorder.indexOf("};", recorder.indexOf("NotAudited")));
+    const skipped = new Set([...notAudited.matchAll(/typeof\((\w+)\)/g)].map(([, name]) => name));
+    expect(tables.size).toBeGreaterThan(40);
+    expect([...tables].filter((name) => !skipped.has(name) && entityLabelOf(name) === name)).toEqual([]);
+  });
 });

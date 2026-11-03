@@ -60,6 +60,8 @@ function ProductDetailForm({ productData }) {
       onSuccess: () => {
         navigate(ROUTES.WAREHOUSE_PRODUCTS);
       },
+      // سرور کالای دارای موجودی/رزرو/قرنطینه یا روی سندِ باز را با دلیلش رد می‌کند (toastِ mutation).
+      onError: () => setShowDeleteDialog(false),
     });
   };
 
@@ -130,7 +132,7 @@ function ProductDetailForm({ productData }) {
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
         title="حذف کالا"
-        description="کالا از فهرست‌ها و انتخاب‌گرها کنار می‌رود و از داخلِ برنامه برنمی‌گردد. سابقه‌ی خرید، فروش و دانه‌هایش پاک نمی‌شود."
+        description="کالا از فهرست‌ها و انتخاب‌گرها کنار می‌رود و از داخلِ برنامه برنمی‌گردد. سابقه‌ی خرید، فروش و دانه‌هایش پاک نمی‌شود. کالایی که موجودی، رزرو، قرنطینه یا سندِ باز دارد حذف نمی‌شود."
         confirmLabel="حذف"
         pendingLabel="در حال حذف..."
         isPending={deleteMutation.isPending}

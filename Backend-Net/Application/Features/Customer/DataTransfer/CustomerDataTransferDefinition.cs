@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.Storage;
 using Application.Common.Contracts.UnitOfWork;
 using Application.Common.DataTransfer;
@@ -52,7 +52,7 @@ namespace Application.Features.Customer.DataTransfer
                         City = x.City,
                         Address = x.Address,
                         PostalCode = x.PostalCode,
-                        RefferalCode = x.RefferalCode,
+                        ReferralCode = x.ReferralCode,
                         CreditLimit = x.CreditLimit,
                         Balance = x.Balance,
                         BalanceType = x.BalanceType,
@@ -70,7 +70,7 @@ namespace Application.Features.Customer.DataTransfer
                 new() { Key = "city", Header = "شهر", Value = r => r.City },
                 new() { Key = "address", Header = "آدرس", Value = r => r.Address },
                 new() { Key = "postalCode", Header = "کد پستی", Value = r => r.PostalCode },
-                new() { Key = "refferalCode", Header = "کد معرف", Value = r => r.RefferalCode },
+                new() { Key = "referralCode", Header = "کد معرف", Value = r => r.ReferralCode },
                 new() { Key = "creditLimit", Header = "سقف اعتبار", Type = DataFieldTypeEnum.Integer, Value = r => r.CreditLimit },
                 new() { Key = "balance", Header = "مانده", Type = DataFieldTypeEnum.Integer, Value = r => r.Balance },
                 new() { Key = "balanceType", Header = "نوع مانده", Type = DataFieldTypeEnum.Enum, Value = r => r.BalanceType },
@@ -94,7 +94,7 @@ namespace Application.Features.Customer.DataTransfer
                 new() { Key = "city", Header = "شهر", Property = nameof(CreateCustomerCommand.City), MaxLength = 100 },
                 new() { Key = "address", Header = "آدرس", Required = true, Property = nameof(CreateCustomerCommand.Address), MaxLength = 500, Aliases = new[] { "Address" } },
                 new() { Key = "postalCode", Header = "کد پستی", AsciiDigits = true, Property = nameof(CreateCustomerCommand.PostalCode), MaxLength = 20 },
-                new() { Key = "refferalCode", Header = "کد معرف", Property = nameof(CreateCustomerCommand.RefferalCode), MaxLength = 50 },
+                new() { Key = "referralCode", Header = "کد معرف", Property = nameof(CreateCustomerCommand.ReferralCode), MaxLength = 50 },
                 new() { Key = "creditLimit", Header = "سقف اعتبار", Type = DataFieldTypeEnum.Integer, MinValue = 0, Property = nameof(CreateCustomerCommand.CreditLimit) },
                 new() { Key = "balance", Header = "مانده", Type = DataFieldTypeEnum.Integer, MinValue = 0, Property = nameof(CreateCustomerCommand.Balance) },
                 new() { Key = "balanceType", Header = "نوع مانده", Type = DataFieldTypeEnum.Enum, EnumType = typeof(BalanceTypeEnum), Property = nameof(CreateCustomerCommand.BalanceType), Hint = "خالی = تسویه شده" },
@@ -133,7 +133,7 @@ namespace Application.Features.Customer.DataTransfer
                 City = row.Text("city"),
                 Address = row.Text("address")!,
                 PostalCode = row.Text("postalCode") ?? string.Empty,
-                RefferalCode = row.Text("refferalCode"),
+                ReferralCode = row.Text("referralCode"),
                 CreditLimit = row.Integer("creditLimit") is { } limit ? (ulong)limit : null,
                 Balance = row.Integer("balance") is { } balance ? (ulong)balance : null,
                 BalanceType = row.Enum<BalanceTypeEnum>("balanceType") ?? BalanceTypeEnum.Balanced,
@@ -143,6 +143,9 @@ namespace Application.Features.Customer.DataTransfer
             {
                 var customers = commands.Select(c => CreateCustomerCommandHandler.BuildEntity(c, _mapper, _objectStorageService)).ToList();
                 await _context.Customers.AddRangeAsync(customers, ct);
+                foreach (var customer in customers)
+                    await Application.Common.Ledger.PartyLedger.OpeningBalanceChangedAsync(_context, customer, null, 0,
+                        Application.Common.Ledger.PartyLedger.SignedOpeningBalance(customer.Balance, customer.BalanceType), customer.CreatedAt, ct);
                 await _unitOfWork.SaveChangesAsync(ct);
             },
         };
@@ -161,7 +164,7 @@ namespace Application.Features.Customer.DataTransfer
         public string? City { get; set; }
         public string Address { get; set; } = string.Empty;
         public string PostalCode { get; set; } = string.Empty;
-        public string? RefferalCode { get; set; }
+        public string? ReferralCode { get; set; }
         public ulong? CreditLimit { get; set; }
         public ulong? Balance { get; set; }
         public BalanceTypeEnum BalanceType { get; set; }

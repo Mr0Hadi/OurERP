@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Features.Accounting.Queries;
 using Domain.Enums;
 using MediatR;
@@ -58,6 +58,13 @@ namespace WMS.Controllers
         [HasPermission(PermissionEnum.AccountingView)]
         [HttpGet("GetSaleLineJournal")]
         public async Task<ActionResult<ResponseDto>> GetSaleLineJournal([FromQuery] GetSaleLineJournalQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.AccountingView)]
+        [HttpGet("GetPurchaseLineJournal")]
+        public async Task<ActionResult<ResponseDto>> GetPurchaseLineJournal([FromQuery] GetPurchaseLineJournalQuery request)
         {
             return await _mediator.Send(request);
         }

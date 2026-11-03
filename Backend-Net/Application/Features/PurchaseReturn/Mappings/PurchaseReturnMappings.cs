@@ -1,4 +1,4 @@
-using Application.Common.Contracts.Storage;
+﻿using Application.Common.Contracts.Storage;
 using Application.Features.PurchaseReturn.Dtos;
 using Common.Extensions;
 using Domain.Entities;
@@ -28,7 +28,7 @@ public static class PurchaseReturnMappings
         UploadedAt = img.CreatedAt,
     };
 
-    public static PurchaseReturnClaimDto ToDto(this PurchaseReturnClaim c) => new()
+    public static PurchaseReturnClaimDto ToDto(this PurchaseReturnClaim c, IObjectStorageService storage) => new()
     {
         Id = c.Id,
         Scope = c.Scope,
@@ -44,20 +44,20 @@ public static class PurchaseReturnMappings
         Note = c.Note,
         DecidedQuantity = c.DecidedQuantity,
         RemainingQuantity = c.RemainingQuantity,
-        Resolutions = [.. c.Resolutions.Select(r => r.ToDto())],
+        Resolutions = [.. c.Resolutions.Select(r => r.ToDto(storage))],
     };
 
-    public static PurchaseReturnResolutionDto ToDto(this PurchaseReturnResolution r) => new()
+    public static PurchaseReturnResolutionDto ToDto(this PurchaseReturnResolution r, IObjectStorageService storage) => new()
     {
         Id = r.Id,
         Quantity = r.Quantity,
         Note = r.Note,
         DecidedAt = r.CreatedAt,
         IsWriteOff = r.IsWriteOff,
-        Effects = [.. r.Effects.Select(e => e.ToDto())],
+        Effects = [.. r.Effects.Select(e => e.ToDto(storage))],
     };
 
-    public static PurchaseReturnEffectDto ToDto(this PurchaseReturnEffect e) => new()
+    public static PurchaseReturnEffectDto ToDto(this PurchaseReturnEffect e, IObjectStorageService storage) => new()
     {
         Id = e.Id,
         Direction = e.Direction,
@@ -68,6 +68,10 @@ public static class PurchaseReturnMappings
         RestockedQuantity = e.RestockedQuantity,
         ProductId = e.ProductId,
         ProductName = e.Product?.Name,
+        RequiresUnitTracking = e.Product?.RequiresUnitTracking,
+        Brand = e.Product?.Brand,
+        ImageKey = e.Product?.ImageUrl,
+        ImageUrl = storage.GetFixedUrl(e.Product?.ImageUrl),
         UnitPrice = e.UnitPrice,
         UnitCost = e.UnitCost,
         Amount = e.Amount,

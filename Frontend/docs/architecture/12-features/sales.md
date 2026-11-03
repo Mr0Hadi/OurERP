@@ -25,7 +25,7 @@
 
 هوک‌ها:
 - `src/features/sales/orders/services/mutations.js` — فقط کش و پیام: `useCreateSaleMutation`، `useApproveSaleProformaMutation`، `useWarehouseApproveMutation`، `useReleaseReservationMutation`، `useSettleProformaMutation`، `useResolveWarehouseIssueMutation`، `useRemoveSaleMutation`، `useSaleChangesSaver`، `useSalePosActions` (کارتخوان؛ کش را تا «بستن»ِ رسید عوض نمی‌کند). invalidation: `invalidateSalesEcosystem` در `src/features/sales/orders/services/sharedInvalidation.js`.
-- `src/features/sales/orders/services/proformaWorkflow.js` — زنجیره‌های سرورِ چرخه‌ی پیش‌فاکتور، بی React و بی کش: `createProforma`، `approveAtWarehouse`، `releaseReservation`، `ensureProformaPaymentType`، `saveProformaInfo`، `recordProformaPlan`، `settleProforma`. `SALE_DOCUMENT_CHANGES_API` (برای `runDocumentChanges`) در `api-v1.js`.
+- `src/features/sales/orders/services/proformaWorkflow.js` — زنجیره‌های سرورِ چرخه‌ی پیش‌فاکتور، بی React و بی کش: `createProforma`، `approveAtWarehouse` (یک `CheckSaleWarehouse` با `adjustments`)، `releaseReservation` (`ReleaseSaleReservation`)، `issueOnCredit` (فاکتورِ نسیه با `ChangeSaleStatus PROCESSING`)، `ensureProformaPaymentType`، `saveProformaInfo`، `recordProformaPlan`، `settleProforma`. `SALE_DOCUMENT_CHANGES_API` (برای `runDocumentChanges`) در `api-v1.js`.
 - `src/features/sales/orders/services/queries.js`: علاوه بر فهرست و جزئیات، `useProformaQueueQuery` (صف‌های انبار و صندوق، تازه‌سازی هر ۳۰ ثانیه)، `useProformaQueueFilters`، `useSaleWarehouseIssuesQuery`.
 - `src/features/sales/returns/services/`: هوک‌ها نام‌های مستعارِ factoryهای مشترک‌اند — `createReturnQueries` (`src/shared/services/returns/createReturnQueries.js`) و `createReturnMutations` (`src/shared/services/returns/createReturnMutations.js`) با `invalidate: invalidateSalesEcosystem`.
 - `src/features/sales/installments/services/`: `useInstallmentsQuery`، `useInstallmentPlansQuery`، `useInstallmentCountQuery`، `usePayInstallmentMutation`، `useSettleInstallmentPlanMutation`، `useWaiveInstallmentPenaltyMutation`، … و کمک‌تابعِ `applyInstallmentPlan`.
@@ -44,7 +44,7 @@
 1. `SaleNewPage` → `SaleForm` با `useSaleFormStore` و `useDocumentFormDraft` ([08](../08-client-state-zustand.md)).
 2. پیش از تأییدِ مشتری چیزی ذخیره نمی‌شود: «لیست قیمت‌ها» در کارتِ سند (`PriceListPrint` + `PriceListDocument`، بی‌مشتری؛ پوسته‌ی `PrintStudio` با کاغذ (A4/A5/Letter/رولِ حرارتی)، ستون‌ها، سربرگ، متنِ پایین و اندازه‌ی متن که با `usePrintSettings("price-list")` می‌مانند؛ روی رول هر قلم دوسطری؛ دکمه از `localPrints`ِ `InvoiceDocumentSection`).
 3. پس از تأیید: `saleFormProblem` ← `useCreateSaleMutation` (`createProforma`): `CreateSale` ← (با `SaleUpdate`) `ApproveSaleProforma` — به صفِ انبار. شکستِ پس از ثبت `partiallySaved` و صفحه پیش‌فاکتور را باز می‌کند.
-4. فروشِ حضوری = دانه‌ی اسکن‌شده در فروشِ تازه (`SaleItemsSection` با `trackUnits`): همان زنجیره ← `CheckSaleWarehouse` با همان دانه‌ها و `IN_PERSON_CHECK_NOTE` (بی صفِ انبار).
+4. فروشِ حضوری = دانه‌ی اسکن‌شده در فروشِ تازه (`SaleItemsSection` با `trackUnits`): یک `CreateInPersonProforma` اتمیک (ثبت، تأیید و رزروِ همان دانه‌ها، بی صفِ انبار)؛ صفحه‌ها حضوری را از `sale.isInPerson` می‌شناسند.
 
 **چرخه‌ی تأییدِ پیش‌فاکتور (بکند ۲۰۲۶-۱۰-۱۶)** — مرحله‌ها در `proformaStage` (`src/shared/domain/enums/saleProforma.js`): پیش‌نویس → «مشتری تأیید کرد؛ ارسال به انبار» → بررسیِ انبار (`warehouse/saleCheck`؛ تأیید، یا کم‌کردنِ اقلام با دلیل و تأیید) → دریافت یا حذف. صفحه **یک دکمه‌ی اصلی** دارد (`proformaAction`)؛ پس از ارسال به انبار مشتری و اقلام فقط‌خواندنی‌اند تا «ویرایش پیش‌فاکتور». `UpdateSale` با تغییرِ مشتری، اقلام، قیمت/تخفیف، `paymentType` یا سررسید تأییدها را برمی‌گرداند؛ تاریخِ فاکتور را سرور با صدور می‌گذارد (`OrderInfoCard` با `showInvoiceDate={false}`).
 
@@ -56,7 +56,7 @@
 
 ## importهای بیرونی
 
-`auth` (`usePermission` در صفحه‌ها)، `customers` (`useCustomersOptionsQuery`، `useCustomerQuery`، `useCustomerSearchQuery`، `customerKeys`)، `warehouse` (`useDocumentProducts`، `UnitsPageLink`، `UNIT_SEGMENTS`، `shippingKeys`، `productKeys`، `productUnitKeys`)، `partyAccount` (`partyDisplayName`)، `dashboard` (`dashboardKeys` در `src/features/sales/installments/services/mutations.js`)؛ `audit` (`AuditHistoryButton` در هدرِ صفحه‌ی جزئیات): `SaleDetailPage` و `SalesReturnDetailPage` با `documentKind` ۲ و ۴.
+`auth` (`usePermission` در صفحه‌ها)، `customers` (`useCustomerQuery`، `useCustomerSearchQuery`، `customerKeys`)، `warehouse` (`useDocumentProducts`، `UnitsPageLink`، `UNIT_SEGMENTS`، `shippingKeys`، `productKeys`، `productUnitKeys`)، `partyAccount` (`partyDisplayName`)، `dashboard` (`dashboardKeys` در `src/features/sales/installments/services/mutations.js`)؛ `audit` (`AuditHistoryButton` در هدرِ صفحه‌ی جزئیات): `SaleDetailPage` و `SalesReturnDetailPage` با `documentKind` ۲ و ۴.
 
 ## نکته‌ها و بدهی
 
@@ -66,5 +66,8 @@
 - کامنتِ `applyInstallmentPlan` می‌گوید عمداً `invalidateSalesEcosystem` نیست، ولی `orders/services/mutations.js` هر دو را پشتِ هم صدا می‌زند.
 - فیلترِ `status`ِ `GetSaleInstallmentList` تک‌مقداری است، پس نمای «همه‌ی پرداخت‌نشده‌ها» (`PENDING` + `OVERDUE`) نیست و پیش‌فرضِ `installmentViews.js` «سررسیدگذشته» است؛ و پیش‌نمایشِ مبلغِ تسویه با تخفیف هم نیست (بندهای ۲۵.۱ و ۲۵.۳ `frontend-requests.fa.md`).
 - `useInstallmentsQuery` و `useInstallmentCountQuery` هر دو کلیدِ `installmentKeys.installmentList(params)` دارند؛ چون `queryFn` یکی است (`fetchInstallments(params)`) و شمارش فقط `select` دارد، اشتراکِ کش بی‌خطر است.
+- **سقفِ اعتبار (GAP-06):** سرور هر صدورِ فاکتور یا قراردادِ اقساطی را که بدهیِ مؤثرِ مشتری (مانده + چک‌های وصول‌نشده) را از
+  `creditLimit` بالاتر ببرد با ۴۰۰ رد می‌کند (پیامِ فارسی + `Data.CreditLimitExceeded`، PascalCase)؛ override ندارد و چیزی ذخیره
+  نمی‌شود. چک در فرم نسیه حساب می‌شود. هشدارِ زنده و دیالوگِ خطا هنوز ساخته نشده‌اند: `FEATURE-GAPS.fa.md` بخشِ GAP-06.
 - فروشِ کاملاً نسیه فعلاً ممکن نیست: بکند فروش را فقط با اولین دریافت به فاکتور تبدیل می‌کند (کامنتِ `SaleForm.jsx`).
 - فروشِ حضوری اتمیک نیست (چهار درخواست)؛ بکند دستورِ یک‌جا ندارد.

@@ -2285,6 +2285,97 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
   full suite 1016/1022 (3 environmental + 3 SQL timeouts). After: 27's SQL-free unit tests pass; 25's 2, 26's 5 and 27's 4 integration
   tests are written and not yet run. Neither migration is applied.
 
+**Frontend requests backlog (2026-10-30, branch `feat/frontend-requests-backlog`).** Everything open in
+`docs/frontend-requests.fa.md` except 4.6 (data), 11/12/17.6 (card reader), 13, 14, and the money decision 9.9. **9.8 decided by the
+user:** VAT goes to the government, so a return claim is valued at the goods' price only, never with tax (the existing behaviour:
+claim `UnitPrice` is the line's untaxed unit price). Provisional - the user may revisit it. API:
+`docs/api-guide.fa.md` section 16, table "2026-10-30".
+
+- **Document numbers (9.10/17.8).** `DocumentNumberCounter` (string key, `LastValue`) + `IWMSDbContext.NextDocumentNumberAsync` - one
+  `MERGE ... WITH (HOLDLOCK) ... OUTPUT` that increments and returns, never through the change tracker (so not audited). Used through
+  `Application/Common/Documents/DocumentNumbers` for sale invoices, both returns, stock transfers and stocktakes; formats unchanged.
+  Unique indexes on `Sales.InvoiceNumber` (filtered `<> ''`) and both `ReturnNumber`s; the columns became `nvarchar(50)`. Inside a caller's
+  transaction a rollback gives the number back; outside one a failed save after the draw leaves a gap - accepted.
+- **Replacement quota (9.1).** `PurchaseItem.ReplacementReceivedQuantity` / `SaleItem.ReplacementShippedQuantity`, bumped only by the
+  goods rounds (purchase GOODS_IN / sale GOODS_OUT of the claim's own product on its line). Claimable = received/shipped + replacement -
+  settled - outstanding, and `GetOpenClaimQuantity` now counts *outstanding* (claim quantity minus completed resolutions), which closes the
+  old gap where a decided-but-pending resolution freed its units.
+- **Credit invoice (9.11).** `ChangeSaleStatus` accepts PROCESSING (+ optional `InvoiceDate`) on a WAREHOUSE_CHECKED, non-installment
+  proforma with a live reservation (`EnsureReadyForPayment`) and calls `SaleInvoiceFinalizer`.
+- **Payments.** `DocumentPayments.IsRowMethod` no longer accepts CREDIT (9.4); installment commands validate `PaymentType` with it
+  (17.3). `CreateSaleInstallmentPlan` requires `DownPaymentAmount > 0` (so always after the warehouse check) and refuses a sale with
+  `PaidAmount > 0` (17.5/17.7). `PreviewSaleInstallmentPlanQuery` (17.2) computes the same plan unsaved from `SaleId` or `Items`.
+- **Party ledger opening balance (21.1).** `PartyLedgerEntryTypeEnum.OPENING_BALANCE = 10`; `PartyLedger.OpeningBalanceChangedAsync`
+  writes the signed difference from Create/Update Customer/Supplier and both imports (handler constructors gained `IWMSDbContext`, last).
+  The migration posts existing typed balances. The typed `Balance`/`BalanceType` fields stay as the input.
+- **Warehouse check (29.1).** A line of a product with `RequiresUnitTracking == false` sent without barcodes is reserved FIFO by serial
+  (`IProductUnitService.ReserveAsync` now takes a count and optional barcodes) or becomes a shortage. FIFO here picks the physical unit
+  only; cost stays the running average (no ledger row at reservation).
+- **Smaller ones:** renames `CreateUserCommand.FirstName`, `Customer.ReferralCode` (column renamed); `OrderLineId` on both claim DTOs;
+  `WMSDbContext.ClearEmptyDates` turns any `DateTime?` equal to `MinValue` into null on save (7.4); `WMS/Serialization/LocalDateTimeJsonConverter`
+  converts incoming UTC body times to local (9.6); `ScanBarcode` uses `ProductUnitProjection` (8); create Customer/Supplier/Category return
+  ids (9.2/15.4); `ProductListDto` price/unit/tax (9.3); product identification fields on receiving info, sale items, pending effects and
+  return effects (9.7/15.1 - the return mappings now take `IObjectStorageService`); `GetBrandList` (15.2); `DeleteProduct` guard (15.5,
+  constructor gained `IWMSDbContext`); word-by-word customer/supplier search incl. phone (9.12); `BinLocations.Normalize` drops leading
+  zeros per numeric segment and the unit-list shelf filter matches whole segments (19); `GET api/Health` + `DatabaseWarmUpService` (20.1);
+  `ForwardedHeadersRegistration` trusts X-Forwarded-For only from `ForwardedHeaders:KnownNetworks` (Cloudflare ranges in appsettings,
+  20.3); `ExportSpec.Rows` for in-memory exports and the `tax-report`/`trade-breakdown`/`purchase-lines` resources, `GetPurchaseLineJournal`
+  (21.2/21.3); `GetUserOptions` (21.4); dashboard layout on `User.DashboardLayout`, not audited (6.3, `AuditActionEnum.SaveMyDashboardLayout = 27`);
+  five return reads open to `*ReturnExecute` (23); reorder skips products already ordered up to target (28.1).
+- **Migration `20261030102630_frontend-requests-backlog`** with data steps (renumber duplicates, seed counters, MinValue dates to NULL,
+  opening-balance rows, shelf normalisation via `STRING_SPLIT(..., 1)` - SQL Server 2022+). Checked from scratch on a throwaway database
+  seeded with duplicates (dropped). **Not applied anywhere.**
+- **Environment note:** `csc` crashed intermittently on this machine ("Internal CLR error 0x80131506"); `dotnet build-server shutdown` and
+  `-p:UseSharedCompilation=false` got builds through. Not a code problem.
+- **20.4 still open:** `WMS/appsettings.json` again carries the remote DB password and JWT keys; left to the user, as before.
+- **Also fixed:** `SalesStatusEnum` had no `[Description]`s, so the 2026-10-24 print document showed `"SHIPPED"`; Persian labels added
+  (its `InvoiceDocumentTests` case had never run before this pass).
+- **Tests:** `Integration/FrontendRequestsBacklogTests.cs` (16), `Unit/ReplacementQuotaTests.cs` (3); two existing tests adjusted to the
+  new rules (PROCESSING is now a valid manual status; the adjustment-refusal test uses a tracked product). **Verified:** build clean, suite
+  1051/1054 - the 3 documented environmental failures (2 LibreOffice `InvoicePdfTests`, the `"***"` object-storage placeholder). This also
+  ran the 10-24 tests left unrun by the SQL hang; they pass.
+
+**Frontend requests 13 and 14: rules the frontend had copied (2026-11-01, branch `claude/dreamy-darwin-b0gk3p`).** Sections 13.1-13.5 and
+14.1-14.6 of `docs/frontend-requests.fa.md`. API: `docs/api-guide.fa.md` section 16, table "2026-11-01". No schema change, no migration.
+
+- **One function per rule, read by the command and by the flag.** `Application/Common/Documents/PurchaseDocumentRules` and `SaleDocumentRules`
+  return the Persian refusal or null for delete, status change (`StatusChangeBlocker` + `AllowedStatuses`), create-return, and (purchase) close /
+  reopen a line. `DeletePurchase`/`DeleteSale`, `ChangePurchaseStatus`/`ChangeSaleStatus`, `Close`/`ReopenPurchaseItem` and both `Create*Return`
+  throw them; `PurchaseDetailReader`/`SaleDetailReader` turn them into `canDelete`/`canCancel`/`allowedStatuses`/`canCreateReturn` (+
+  `items[].canClose/canReopen`). `SaleProformaPipeline.ReadyForPaymentBlocker` is the non-throwing half of `EnsureReadyForPayment`. The readers
+  rebuild the few entity facts the rules read (sale: a throwaway `Sale` with status/stage/reservation/shipped quantities; purchase: payment rows
+  through the same `DocumentPayments.NetPaid`) rather than duplicating the conditions.
+- **Behaviour change:** `CreatePurchaseReturn` now refuses a purchase where nothing arrived (no line `ReceivedQuantity`, no `ProductUnit` with
+  this `PurchaseId`) with its own message - before, such a request failed on a quota with a less useful one. It runs after the claim-shape checks,
+  so a claim naming a wrong line still gets that error. `PurchaseDocumentRules.IsReturnable` is the SQL twin, behind `GetPurchaseList?returnable=true`
+  (sale: `SaleDocumentRules.IsReturnable` = the three shipped statuses, the set `CreateSaleReturn` used to keep privately).
+- **13.2 optimistic concurrency** is the existing `UpdatedAt`, not a rowversion: `UpdatePurchase`/`UpdateSale` take an optional `UpdatedAt`,
+  `DocumentVersion.Ensure` compares to the millisecond (a JS `Date` keeps no more) and throws the new `ConflictCustomException` (409, `data.updatedAt`).
+  Null skips the check, so old clients keep working. `PurchaseDto.UpdatedAt` is new (`SaleDto` had it).
+- **13.4 preview.** `{Purchase,Sale}ResolutionChecks.PrepareAsync` (in the two `AddClaimResolutionCommand.cs` files) holds every check and the
+  expansion `AddClaimResolution` ran before mutating; the command and `PreviewClaimResolutionQuery` (`POST *Return/PreviewResolution`, named
+  *Query so it carries no audit action) both call it. The preview runs the command's validator itself (no validator is registered for the query,
+  so `ValidationBehavior` cannot turn a refusal into a 400), maps FluentValidation paths to `goods[0].quantity`, and catches
+  `ValidationCustomException` from the handler checks as a `field = null` error. Nothing is saved; the tracked graph is discarded with the scope.
+  `ResolutionPreviewDto`/`ResolutionPreview` live in `Application/Common/Dtos/Returns` and `Application/Common/Returns`.
+- **14.4** `PurchaseResolutionChecks.FreeQuarantineAsync` is the quarantine availability the decision check uses, now also behind
+  `claims[].freeQuarantinedQuantity`. **14.3** `ReturnLifecycleRules.ResolutionRemoveBlocker` (both `RemoveClaimResolution`s + `resolutions[].canRemove`)
+  and `CreditNoteBlocker` (`InvoiceDocumentBuilder.SaleReturnCreditNoteAsync` + `canPrintCreditNote`); `lifecycleBlocker` is
+  `GetLifecycleBlocker(CANCEL)`. **14.5** `PendingWarehouseWorkDto.Of` sums PENDING goods effects' remaining quantity, zero once the return is not open.
+- **14.1** `OtherReturnClaimDto` on receiving-info lines/unlisted rows and `SaleItemDto`: claims of live (not deleted, not rejected/cancelled)
+  returns. **14.6** `GetPurchaseReceivingInfo.SuggestedClaims` is built from the same free numbers the response already carries, problem = the most
+  frequent recorded discrepancy; a test feeds it straight back into `CreatePurchaseReturn`.
+- **13.5** `GetProductList.Search`: OR over name words, code, barcode and a scanned code/unit barcode (`IProductCodeService.Parse`, now injected
+  into the handler - tests construct it with `scope.ProductCodeService`); exact matches lead unless `SortBy` is sent (`ProductListDto.IsExactMatch`).
+  The export path calls `ApplyFiltersAsync` without the code service, so there `Search` skips the scanned-unit match. **14.2** `GetSaleList.Search`
+  (`GetPurchaseList.Search` already existed).
+- **Environment note:** built and tested on Linux with the Ubuntu `dotnet-sdk-10.0` package and SQL Server 2022 in Docker. Two local-only edits
+  were needed and are **not committed**: `builder.Services.Configure<IISServerOptions>` in `WMS/Program.cs` does not compile against the Linux
+  ASP.NET ref pack, and the test fixtures' `Server=.;Trusted_Connection` was pointed at `localhost` with SQL auth.
+- **Tests:** `Integration/FrontendRequests13And14Tests.cs` (14); `GetProductListQueryHandler` call sites in four test files gained the code
+  service. **Verified:** build clean, suite 1067/1068 - the one failure is the long-documented `"***"` object-storage placeholder (the two
+  LibreOffice `InvoicePdfTests` pass on this machine). Baseline before the change: 1053/1054, same failure.
+
 **Known gaps / TODOs** (mostly inherited from the initial scaffold):
 - **`POST api/Sale/CreateSale` always returns 400** (confirmed against the running API, 2026-08-11): `CreateSaleCommand.ProductIds` is `List<SaleItem>` — the EF entity — and `SaleItem`'s non-nullable `Product`/`Sale` navigations are treated as required by ASP.NET model validation, so no sane payload binds. Needs a request DTO for line items. `CreatePurchaseCommand`/`UpdateSaleCommand` bind `PurchaseItem`/`SaleItem` the same way and are probably equally broken.
 - ~~`PaymentDetail` uses `Guid Id`/`Guid PurchaseId` while `Purchase.Id` is `int`; EF added a shadow `PurchaseId1` int FK.~~ **Fixed 2026-09-20** - see the installment-sales entry above: both ids are `int`, both relationships are configured explicitly, and the shadow FK is gone.
@@ -2321,6 +2412,22 @@ section 11b (installments), the 2026-10-19 table in section 16; installment deci
   - Test scaffolding note: sales had to be seeded with SQL because **`POST api/Sale/CreateSale` is currently uncallable** — `CreateSaleCommand.ProductIds` is typed `List<SaleItem>`, and that entity's non-nullable `Product`/`Sale` navigations make ASP.NET model validation reject every payload (400 "فرمت داده ورودی صحیح نمی باشد."). Pre-existing, unrelated to the return features; `CreatePurchaseCommand` likely shares it. See the "Known gaps" list above.
 - **Seed data available**: `scripts/seed-mock-data.sql` loads the frontend's mock fixtures (products, customers, suppliers, purchases, sales, and a coherent set of both kinds of return) into a migrated DB. It refuses to run against non-empty tables unless `@ResetExisting = 1`. Validated end-to-end against a throwaway migrated database.
 - **`SalesStatusEnum.RETURNED` is now reachable** (unlike its still-dead `PurchaseStatusEnum.RETURNED` counterpart) — `RecomputeSaleStatus` sets it once every shipped unit of a sale is settled through return decisions.
+
+**Customer credit limit - GAP-06 (2026-11-01, branch `claude/relaxed-einstein-ejm3yf`).** API: `docs/api-guide.fa.md` section 4
+("سقف اعتبار") and the settings table in section 22.
+- `Application/Common/Credit/CreditLimitGuard.EnsureAsync`, called by `WMSDbContext.SaveChangesAsync` on every save (after the
+  payment stamping, before audit capture) - so no command can skip it. Triggered only by a staged customer DEBIT of type
+  `SALE_INVOICE` or `INSTALLMENT_CHARGE`. Exposure = ledger balance + received cheques PENDING/ENDORSED (saved rows, plus the
+  save's staged ledger rows and cheque changes). Refused (`ValidationCustomException`, Data `CreditLimitExceededDto`) when the
+  setting is on, `CreditLimit` is not null, and exposure after > limit AND > before. No override permission, by the user's
+  decision: raise/clear the limit or switch the setting off. Voids, bounces and opening balances are never blocked.
+- `CreditLimit`: null = no limit, 0 = cash only. Migration `20261101133936_credit-limit-zero-to-null` turns every stored 0 into
+  null (the frontend used to send 0 for an empty field). `CustomerDto.CreditLimit` is now nullable; detail adds `CreditExposure`,
+  `UnclearedCheques`, `CreditAvailable` (`CreditLimitGuard.SavedExposureAsync`); `CustomerListDto` gained `CreditLimit`,
+  `CreditExposure`, `CreditAvailable` (page-wide cheque sums via `UnclearedChequesByCustomerAsync`).
+- The refusal body is PascalCase (`Data.CreditLimitExceeded`), as every error body is. Frontend tasks: `Frontend/FEATURE-GAPS.fa.md` GAP-06.
+- Setting `Sale.CreditLimitEnforced` (BOOLEAN, default true, public).
+- Tests: `Integration/CreditLimitTests.cs`.
 
 ## 6b. System settings and feature toggles - the standing rule
 

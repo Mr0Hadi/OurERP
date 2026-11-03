@@ -6,9 +6,8 @@ import { todayIso } from "@/shared/lib/dateUtils";
 
 /**
  * قرارداد اقساطیِ فروش — قواعدِ خالص (بی React، بی شبکه) برای فرمِ ثبت/ویرایش و
- * نمایش. مبالغِ قرارداد را **سرور** حساب می‌کند (`api-guide` بخش ۱۱ب)؛ اینجا فقط
- * پیش‌نمایشِ فرم پیش از ثبت است، مثلِ `invoice/lineMath.js`. بعد از ثبت همه‌جا عددِ سرور
- * نشان داده می‌شود.
+ * نمایش. مبالغِ قرارداد را **سرور** حساب می‌کند (`api-guide` بخش ۱۱ب)، پیش‌نمایشِ پیش از ثبت
+ * هم (`PreviewSaleInstallmentPlan`).
  */
 
 /** روش‌های پرداختِ پیش‌پرداخت و قسط: یک ردیفِ پول (نقدی، انتقال، چک)، نه ترکیبی. */
@@ -62,53 +61,21 @@ const PERCENT_PATTERN = /^\d{1,5}(\.\d{1,4})?$/;
 const validPercent = (value) => PERCENT_PATTERN.test(String(value ?? ""));
 
 /**
- * سودِ اقساط بی خطای ممیزِ شناور: `round(cash × percent / 100)`، نیم به بالا (`decimal`ِ سرور).
- * `cash × 2.5 / 100` با `Number` گاهی `x.4999…` می‌شد و یک ریال کم گرد می‌کرد؛ درصد به
- * عددِ صحیح و توانِ ده شکسته و با `BigInt` دقیق حساب می‌شود. `percent` از `PERCENT_PATTERN`
- * گذشته است.
+ * بدنه‌ی `PreviewSaleInstallmentPlan` برای یک فروشِ ذخیره‌شده، یا `null` تا شرایطِ قرارداد کامل نیست. مبالغ،
+ * سود و جدولِ اقساط را سرور با همان قاعده‌ی قراردادِ واقعی حساب می‌کند (۱۷.۲)؛ فرانت حساب نمی‌کند.
  */
-function installmentCharge(cashAmount, percent) {
-  const [whole, fraction = ""] = String(percent).split(".");
-  const numerator = BigInt(cashAmount) * BigInt(whole + fraction);
-  const denominator = 100n * 10n ** BigInt(fraction.length);
-  return Number((2n * numerator + denominator) / (2n * denominator));
-}
-
-/**
- * پیش‌نمایشِ قرارداد با قاعده‌ی `InstallmentSchedule`ِ سرور: سود = گردِ نیم‌به‌بالای
- * `اصل × درصد / ۱۰۰`؛ هر قسط = تقسیمِ صحیحِ مانده بر تعداد و باقیمانده روی قسطِ آخر؛
- * سررسیدها ماهانه از اولین سررسید. `null` تا ورودی کامل نیست.
- *
- * @param cashAmount جمعِ فاکتور (پیش‌نمایشِ فرم؛ اصلِ قرارداد را سرور از فاکتور می‌خواند)
- */
-export function previewInstallmentPlan(cashAmount, draft) {
-  const cash = Math.round(Number(cashAmount) || 0);
+export function planPreviewRequestOf(saleId, draft) {
   const count = toNumber(draft.installmentCount);
-  const downPayment = Number(draft.downPaymentAmount) || 0;
-  if (cash <= 0 || !validPercent(draft.markupPercentage) || !Number.isInteger(count) || count <= 0) return null;
-
-  const installmentChargeAmount = installmentCharge(cash, draft.markupPercentage);
-  const totalAmount = cash + installmentChargeAmount;
-  const financedAmount = Math.max(0, totalAmount - downPayment);
-  const installmentAmount = Math.floor(financedAmount / count);
-  const installments = draft.firstDueDate
-    ? Array.from({ length: count }, (_, index) => ({
-        number: index + 1,
-        dueDate: addMonthsIso(draft.firstDueDate, index),
-        amount: index === count - 1 ? financedAmount - installmentAmount * (count - 1) : installmentAmount,
-        status: SaleInstallmentStatusEnum.PENDING,
-      }))
-    : [];
-
+  if (!saleId || !validPercent(draft.markupPercentage) || !Number.isInteger(count) || count <= 0 || !draft.firstDueDate) {
+    return null;
+  }
   return {
-    cashAmount: cash,
-    installmentChargeAmount,
-    totalAmount,
-    downPaymentAmount: downPayment,
-    financedAmount,
+    saleId,
+    markupPercentage: Number(draft.markupPercentage),
+    downPaymentAmount: Number(draft.downPaymentAmount) || 0,
     installmentCount: count,
-    installmentAmount,
-    installments,
+    firstDueDate: draft.firstDueDate,
+    latePenaltyPercentage: percentOrNull(draft.latePenaltyPercentage),
   };
 }
 
@@ -117,7 +84,7 @@ export function previewInstallmentPlan(cashAmount, draft) {
  * validatorِ سرور، به‌اضافه‌ی «پیش‌پرداخت بیشتر از صفر» که صدورِ فاکتور به آن بسته است
  * (`withDownPayment`) — بدونِ پیش‌پرداخت فروش در پیش‌فاکتور می‌ماند.
  *
- * @param payable مبلغِ قابل پرداختِ پیش‌نمایش (`previewInstallmentPlan`)؛ فقط در ثبتِ تازه
+ * @param payable مبلغِ قابل پرداختِ پیش‌نمایشِ سرور (`PreviewSaleInstallmentPlan`)؛ فقط در ثبتِ تازه
  */
 export function planDraftErrors(draft, { payable, withDownPayment = false } = {}) {
   const errors = {};
@@ -214,6 +181,25 @@ export function overdueOf(installments = []) {
  * مبلغی که پرداختِ امروزِ یک قسط می‌گیرد: خودِ قسط + جریمه‌ی دیرکردِ امروز (`penaltyDue`، بخشودگی
  * از آن کم شده). همان قاعده‌ی `PaySaleInstallment`؛ عددها از سرورند، اینجا فقط جمع.
  */
+/**
+ * مبلغِ تسویه‌ی کاملِ امروز از جزئیاتِ قرارداد (`frontend-requests` ۲۵.۳): مانده، تخفیفِ سودِ اقساطِ
+ * سررسیدنشده (`earlySettlementDiscountPreview`) و جریمه‌ها؛ جمع همان `settlementAmountToday`ِ سرور است
+ * که `SettleSaleInstallmentPlan` با همان روز می‌گیرد. سروری که این دو را نمی‌فرستد: مانده + جریمه با
+ * `exact: false` (تخفیف هنگامِ ثبت کم می‌شود).
+ */
+export function settlementQuoteOf(plan) {
+  const remaining = Number(plan.remainingAmount) || 0;
+  const penalty = Number(plan.penaltyDueAmount) || 0;
+  if (plan.settlementAmountToday == null) return { remaining, discount: 0, penalty, total: remaining + penalty, exact: false };
+  return {
+    remaining,
+    discount: Number(plan.earlySettlementDiscountPreview) || 0,
+    penalty,
+    total: Number(plan.settlementAmountToday) || 0,
+    exact: true,
+  };
+}
+
 export const installmentPayableToday = (row) => (Number(row.amount) || 0) + (Number(row.penaltyDue) || 0);
 
 /** اقساطی که هنوز پرداخت نشده‌اند (برای تسویه‌ی کامل). */

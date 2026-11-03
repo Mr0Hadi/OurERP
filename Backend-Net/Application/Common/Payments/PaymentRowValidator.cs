@@ -10,7 +10,7 @@ namespace Application.Common.Payments
         {
             RuleFor(x => x.Amount).GreaterThan(0).WithMessage("مبلغ هر پرداخت باید از صفر بیشتر باشد.");
             RuleFor(x => x.Type).Must(DocumentPayments.IsRowMethod)
-                .WithMessage("روش هر پرداخت باید نقدی، نسیه، چک یا انتقال بانکی باشد.");
+                .WithMessage("روش هر پرداخت باید نقدی، چک یا انتقال بانکی باشد؛ نسیه پرداخت نیست.");
             Include(new PosPaymentFieldsValidator());
         }
     }

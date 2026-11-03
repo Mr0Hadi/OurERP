@@ -4,6 +4,16 @@ import { Link } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 
+function CreateLabel({ label }) {
+  return (
+    <>
+      <Plus className="size-4" />
+      <span className="max-md:hidden">{label}</span>
+      <span className="md:hidden">جدید</span>
+    </>
+  );
+}
+
 /**
  * پوسته‌ی صفحه‌های لیست: کارت با عنوان، دکمه‌ی «ایجاد» و محتوا (فیلترها + جدول).
  *
@@ -11,7 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui
  * @param {string} props.title
  * @param {React.ComponentType} [props.icon] آیکنِ کنارِ عنوان
  * @param {React.ReactNode} [props.description] یک خط توضیح زیرِ عنوان
- * @param {{ label: string, to: string }} [props.create] دکمه‌ی ایجادِ رکوردِ جدید
+ * @param {{ label: string, to?: string, onClick?: () => void }} [props.create] دکمه‌ی ایجادِ رکوردِ جدید: `to` برای صفحه‌ی
+ *        ساخت، `onClick` برای دیالوگ (انبارگردانی، علی‌الحساب) — هر دو یک ظاهر دارند
  * @param {React.ReactNode} [props.actions] دکمه‌های اضافه‌ی سرتیتر
  *
  * در موبایل قابِ کارت برداشته می‌شود: کارتِ فیلتر و کارت‌های ردیف داخلِ یک کارتِ دیگر
@@ -32,12 +43,19 @@ export default function ListPageLayout({ title, icon: Icon, description, create,
             <div className="flex items-center gap-2">
               {actions}
               {create && (
-                <Button asChild className="h-9 gap-1.5 rounded-full px-3.5 shadow-sm md:rounded-lg md:px-4">
-                  <Link to={create.to} aria-label={create.label}>
-                    <Plus className="size-4" />
-                    <span className="max-md:hidden">{create.label}</span>
-                    <span className="md:hidden">جدید</span>
-                  </Link>
+                <Button
+                  asChild={Boolean(create.to)}
+                  onClick={create.to ? undefined : create.onClick}
+                  aria-label={create.to ? undefined : create.label}
+                  className="h-9 gap-1.5 rounded-full px-3.5 shadow-sm md:rounded-lg md:px-4"
+                >
+                  {create.to ? (
+                    <Link to={create.to} aria-label={create.label}>
+                      <CreateLabel label={create.label} />
+                    </Link>
+                  ) : (
+                    <CreateLabel label={create.label} />
+                  )}
                 </Button>
               )}
             </div>

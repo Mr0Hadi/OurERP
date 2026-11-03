@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Domain.Entities;
@@ -37,12 +37,13 @@ namespace Infrastructure.Persistence.Auditing
         };
 
         /// <summary>
-        /// Columns left out entirely: session bookkeeping that changes on every login/refresh. Recording it would put a
-        /// secret in the log and an event in the table every few minutes per user.
+        /// Columns left out entirely: session bookkeeping that changes on every login/refresh (recording it would put a
+        /// secret in the log and an event in the table every few minutes per user), and the user's own dashboard layout,
+        /// which is a screen preference, not business data.
         /// </summary>
         private static readonly Dictionary<Type, HashSet<string>> Ignored = new()
         {
-            [typeof(User)] = new() { nameof(User.RefreshToken), nameof(User.ExpireRefreshToken) },
+            [typeof(User)] = new() { nameof(User.RefreshToken), nameof(User.ExpireRefreshToken), nameof(User.DashboardLayout) },
         };
 
         /// <summary>Columns whose change is recorded but whose value never is.</summary>

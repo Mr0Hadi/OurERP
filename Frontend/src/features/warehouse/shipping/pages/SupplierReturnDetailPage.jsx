@@ -9,7 +9,6 @@ import {
   usePurchaseForReturnQuery,
 } from "@/features/purchases/returns/services/queries";
 import { useExecuteGoodsRoundMutation } from "@/features/purchases/returns/services/mutations";
-import { useDocumentProducts } from "@/features/warehouse/products/services/queries";
 import { buildGoodsLines } from "@/shared/domain/returns/resolutions";
 import { EFFECT_DIRECTIONS } from "@/shared/domain/returns/effects";
 import { CLAIM_SCOPES } from "@/shared/domain/returns/scopes";
@@ -24,7 +23,7 @@ import WarehouseFormSkeleton from "@/shared/components/skeletons/WarehouseFormSk
 import { ROUTES, routeWithId } from "@/shared/constants/routes";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { usePageHeader } from "@/shared/hooks/usePageHeader";
-import { trackedLookup, withProductInfo } from "../../shared/productInfo";
+import { documentProductMap, returnEffectsOf, trackedLookup, withProductInfo } from "../../shared/productInfo";
 import WarehouseSubmitBar from "../../shared/WarehouseSubmitBar";
 import NothingPending from "../../shared/NothingPending";
 
@@ -90,9 +89,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
     [purchaseReturn],
   );
 
-  const { productMap, isLoading: productsLoading } = useDocumentProducts(
-    lines.map((line) => line.productId),
-  );
+  const productMap = useMemo(() => documentProductMap(returnEffectsOf(purchaseReturn)), [purchaseReturn]);
   const isTracked = useMemo(() => trackedLookup(productMap), [productMap]);
 
   const { data: receivingInfo } = usePurchaseForReturnQuery(purchaseReturn.purchaseId);
@@ -207,7 +204,7 @@ function SupplierReturnShipmentForm({ purchaseReturn }) {
           <WarehouseSubmitBar
             label={isAllComplete ? "تأیید انجام کامل" : "ثبت این دور"}
             complete={isAllComplete}
-            canSubmit={hasSomethingToRecord && !productsLoading}
+            canSubmit={hasSomethingToRecord}
             blockingReason={blockingReason}
             isBusy={isBusy}
             onSubmit={() => setShowConfirmDialog(true)}

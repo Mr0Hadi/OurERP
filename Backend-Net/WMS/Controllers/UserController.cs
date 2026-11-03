@@ -34,6 +34,24 @@ namespace WMS.Controllers
             return await _mediator.Send(request);
         }
 
+        [HttpGet("GetUserOptions")]
+        public async Task<ActionResult<ResponseDto>> GetUserOptions([FromQuery] GetUserOptionsQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HttpGet("GetMyDashboardLayout")]
+        public async Task<ActionResult<ResponseDto>> GetMyDashboardLayout()
+        {
+            return await _mediator.Send(new GetMyDashboardLayoutQuery());
+        }
+
+        [HttpPut("SaveMyDashboardLayout")]
+        public async Task<ActionResult<ResponseDto>> SaveMyDashboardLayout([FromBody] SaveMyDashboardLayoutCommand request)
+        {
+            return await _mediator.Send(request);
+        }
+
         [HasPermission(PermissionEnum.UserView)]
         [HttpGet("GetUserList")]
         public async Task<ActionResult<ResponseDto>> GetUserList([FromQuery] GetUserListQuery request)

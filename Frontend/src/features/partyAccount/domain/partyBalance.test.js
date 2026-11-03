@@ -1,22 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { BalanceTypeEnum } from "@/shared/domain/enums/balanceType";
 import { fullNameOf, initialsOf } from "@/features/auth/domain/userDisplay";
 import { difference, groupCounts, orderedByCatalogue, sameSet, toNumberSet } from "@/features/permissions/components/permissionSets";
-import { openingBalanceOf, partyBalanceOf } from "./partyBalance";
+import { partyBalanceOf } from "./partyBalance";
 import { partyDisplayName } from "./partyName";
 
 describe("مانده‌ی طرف حساب", () => {
-  it("مانده‌ی اولیه با علامت؛ قدرِ مطلق از سرور", () => {
-    expect(openingBalanceOf({ balance: -500, balanceType: BalanceTypeEnum.DEBTOR })).toBe(500);
-    expect(openingBalanceOf({ balance: "500", balanceType: BalanceTypeEnum.CREDITOR })).toBe(-500);
-    expect(openingBalanceOf({ balance: 500, balanceType: BalanceTypeEnum.BALANCED })).toBe(0);
-    expect(openingBalanceOf(null)).toBe(0);
-  });
-
-  it("مانده‌ی کل = اولیه + گردشِ دفتر (طرفِ قدیمیِ بی‌گردش «تسویه» دیده نمی‌شود)", () => {
-    expect(partyBalanceOf({ balance: 1000, balanceType: BalanceTypeEnum.DEBTOR })).toBe(1000);
-    expect(partyBalanceOf({ balance: 1000, balanceType: BalanceTypeEnum.CREDITOR, ledgerBalance: "1500" })).toBe(500);
-    expect(partyBalanceOf({ ledgerBalance: null })).toBe(0);
+  it("مانده‌ی کل فقط از دفتر؛ مانده‌ی دستی (ردیفِ اول دوره در دفتر) دوباره جمع نمی‌شود", () => {
+    expect(partyBalanceOf({ balance: 1000, balanceType: 1, ledgerBalance: "1500" })).toBe(1500);
+    expect(partyBalanceOf({ balance: 1000, balanceType: 1 })).toBe(0);
+    expect(partyBalanceOf({ ledgerBalance: -200 })).toBe(-200);
+    expect(partyBalanceOf(null)).toBe(0);
   });
 
   it("نامِ نمایشی", () => {

@@ -8,8 +8,9 @@ import {
   installmentPayableToday,
   overdueOf,
   penaltyWaiveErrors,
+  settlementQuoteOf,
   planDraftErrors,
-  previewInstallmentPlan,
+  planPreviewRequestOf,
   toApiCreatePlan,
   toApiInstallmentPayment,
 } from "./installmentPlan";
@@ -26,35 +27,16 @@ describe("addMonthsIso — مثلِ DateTime.AddMonths", () => {
   });
 });
 
-describe("previewInstallmentPlan — قاعده‌ی InstallmentScheduleِ سرور", () => {
-  it("سود، مانده، قسط‌ها و باقیمانده روی قسطِ آخر", () => {
-    const plan = previewInstallmentPlan(1_000_000, draft({
-      markupPercentage: "10", installmentCount: "3", downPaymentAmount: 100_000, firstDueDate: "2026-01-31",
-    }));
-    expect(plan).toMatchObject({
-      cashAmount: 1_000_000, installmentChargeAmount: 100_000, totalAmount: 1_100_000,
-      financedAmount: 1_000_000, installmentAmount: 333_333,
+describe("planPreviewRequestOf — بدنه‌ی پیش‌نمایشِ سرور", () => {
+  it("شرایطِ کامل ⇒ بدنه؛ ناقص ⇒ null", () => {
+    const full = draft({ markupPercentage: "10", installmentCount: "3", downPaymentAmount: 100, firstDueDate: "2026-01-31" });
+    expect(planPreviewRequestOf(7, full)).toEqual({
+      saleId: 7, markupPercentage: 10, downPaymentAmount: 100, installmentCount: 3, firstDueDate: "2026-01-31", latePenaltyPercentage: null,
     });
-    expect(plan.installments.map((i) => [i.dueDate, i.amount])).toEqual([
-      ["2026-01-31", 333_333], ["2026-02-28", 333_333], ["2026-03-31", 333_334],
-    ]);
-    expect(plan.installments.reduce((sum, i) => sum + i.amount, 0)).toBe(plan.financedAmount);
-  });
-
-  it("سود بی خطای ممیزِ شناور: ۳۰۰۰ × ۱٫۱۵٪ = ۳۴٫۵ → ۳۵ (Math.round روی Number ۳۴ می‌داد)", () => {
-    expect(Math.round((3000 * 1.15) / 100)).toBe(34); // همان خطایی که BigInt جلویش را گرفته
-    expect(previewInstallmentPlan(3000, draft({ markupPercentage: "1.15", installmentCount: "1" })).installmentChargeAmount).toBe(35);
-  });
-
-  it("بی سررسید قسط‌ها خالی‌اند؛ ورودیِ ناقص null", () => {
-    expect(previewInstallmentPlan(1000, draft({ markupPercentage: "0", installmentCount: "2" })).installments).toEqual([]);
-    expect(previewInstallmentPlan(0, draft({ markupPercentage: "0", installmentCount: "2" }))).toBe(null);
-    expect(previewInstallmentPlan(1000, draft({ markupPercentage: "1.12345", installmentCount: "2" }))).toBe(null);
-    expect(previewInstallmentPlan(1000, draft({ markupPercentage: "5", installmentCount: "1.5" }))).toBe(null);
-  });
-
-  it("پیش‌پرداختِ بیش از جمع مانده را منفی نمی‌کند", () => {
-    expect(previewInstallmentPlan(1000, draft({ markupPercentage: "0", installmentCount: "2", downPaymentAmount: 5000 })).financedAmount).toBe(0);
+    expect(planPreviewRequestOf(null, full)).toBe(null);
+    expect(planPreviewRequestOf(7, { ...full, firstDueDate: "" })).toBe(null);
+    expect(planPreviewRequestOf(7, { ...full, installmentCount: "1.5" })).toBe(null);
+    expect(planPreviewRequestOf(7, { ...full, markupPercentage: "1.12345" })).toBe(null);
   });
 });
 
@@ -113,5 +95,22 @@ describe("قسط‌ها و جریمه", () => {
     expect(penaltyWaiveErrors({ amount: 10, reason: "  " })).toHaveProperty("reason");
     expect(penaltyWaiveErrors({ amount: 10, reason: "x".repeat(501) })).toHaveProperty("reason");
     expect(penaltyWaiveErrors({ amount: 0, reason: "" })).toEqual({});
+  });
+});
+
+describe("settlementQuoteOf", () => {
+  it("عددِ امروزِ سرور با تخفیف و جریمه", () => {
+    const plan = { remainingAmount: 1_000, penaltyDueAmount: 50, earlySettlementDiscountPreview: 120, settlementAmountToday: 930 };
+    expect(settlementQuoteOf(plan)).toEqual({ remaining: 1_000, discount: 120, penalty: 50, total: 930, exact: true });
+  });
+
+  it("بی پیش‌نمایشِ سرور: مانده + جریمه، تقریبی", () => {
+    expect(settlementQuoteOf({ remainingAmount: 1_000, penaltyDueAmount: 50 })).toEqual({
+      remaining: 1_000,
+      discount: 0,
+      penalty: 50,
+      total: 1_050,
+      exact: false,
+    });
   });
 });

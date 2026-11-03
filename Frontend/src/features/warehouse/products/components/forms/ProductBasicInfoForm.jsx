@@ -13,6 +13,7 @@ import {
 
 import StatusBadge from "@/shared/components/status/StatusBadge";
 import CategoryManager from "./CategoryManager";
+import BrandSuggestions from "../BrandSuggestions";
 import VehicleMultiSelect from "@/features/warehouse/vehicles/components/VehicleMultiSelect";
 import { PRODUCT_UNIT_OPTIONS } from "@/shared/domain/enums/productUnit";
 import OptionSelect from "@/shared/components/forms/OptionSelect";
@@ -57,6 +58,7 @@ export default function ProductBasicInfoForm({
 }) {
   const code = useWatch({ control, name: "code" });
   const barCode = useWatch({ control, name: "barCode" });
+  const brand = useWatch({ control, name: "brand" });
 
   return (
     <Card>
@@ -143,12 +145,15 @@ export default function ProductBasicInfoForm({
         >
           <Input
             id="brand"
+            list="brand-suggestions"
+            autoComplete="off"
             placeholder="مثال: ایساکو"
             {...register("brand", {
               required: isIncomplete ? false : "وارد کردن برند الزامی است",
             })}
             className={errors.brand ? "border-destructive/50" : ""}
           />
+          <BrandSuggestions id="brand-suggestions" value={brand} />
         </FormField>
 
         <FormField

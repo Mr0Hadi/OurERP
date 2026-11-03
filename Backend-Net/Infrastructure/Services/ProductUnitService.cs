@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductCode;
 using Application.Common.Contracts.ProductUnit;
@@ -109,18 +109,35 @@ namespace Infrastructure.Services
             return units;
         }
 
-        public async Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, List<string> barcodes, UnitMovementContext movement, CancellationToken cancellationToken)
+        public async Task<List<Domain.Entities.ProductUnit>> ReserveAsync(Domain.Entities.Product product, int saleItemId, int count, List<string>? barcodes, UnitMovementContext movement, CancellationToken cancellationToken)
         {
-            if (barcodes.Count == 0)
+            if (count <= 0)
                 return new();
 
-            var units = await ResolveScannedAsync(product.Id, barcodes, barcodes.Count,
-                unit => unit.Status == ProductUnitStatusEnum.IN_STOCK,
-                unit => unit.Status == ProductUnitStatusEnum.RESERVED
-                    ? $"بارکد «{unit.Barcode}» برای پیش‌فاکتور دیگری رزرو شده است."
-                    : $"بارکد «{unit.Barcode}» در انبار موجود نیست.",
-                "تعداد بارکدهای اسکن‌شده با تعداد این قلم مطابقت ندارد.",
-                cancellationToken);
+            List<Domain.Entities.ProductUnit> units;
+            if (barcodes is { Count: > 0 })
+            {
+                units = await ResolveScannedAsync(product.Id, barcodes, count,
+                    unit => unit.Status == ProductUnitStatusEnum.IN_STOCK,
+                    unit => unit.Status == ProductUnitStatusEnum.RESERVED
+                        ? $"بارکد «{unit.Barcode}» برای پیش‌فاکتور دیگری رزرو شده است."
+                        : $"بارکد «{unit.Barcode}» در انبار موجود نیست.",
+                    "تعداد بارکدهای اسکن‌شده با تعداد این قلم مطابقت ندارد.",
+                    cancellationToken);
+            }
+            else
+            {
+                units = await SelectUnitsAsync(
+                    x => x.ProductId == product.Id && x.Status == ProductUnitStatusEnum.IN_STOCK,
+                    saved => saved.OrderBy(x => x.SerialNumber),
+                    tracked => tracked.OrderBy(x => x.SerialNumber),
+                    count,
+                    cancellationToken,
+                    movement.WarehouseId);
+
+                if (units.Count < count)
+                    throw new ValidationCustomException($"تعداد کافی از دانه‌های موجود «{product.Name}» در انبار برای رزرو وجود ندارد.");
+            }
 
             foreach (var unit in units)
             {

@@ -28,6 +28,13 @@ namespace WMS.Controllers
         }
 
         [HasPermission(PermissionEnum.ProductView)]
+        [HttpGet("GetBrandList")]
+        public async Task<ActionResult<ResponseDto>> GetBrandList([FromQuery] GetBrandListQuery request)
+        {
+            return await _mediator.Send(request);
+        }
+
+        [HasPermission(PermissionEnum.ProductView)]
         [HttpGet("GetProductDetail")]
         public async Task<ActionResult<ResponseDto>> GetProductDetail([FromQuery] GetProductDetailQuery request)
         {

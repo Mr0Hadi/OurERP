@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from "react";
-import { List, Loader2, Plus, Search, X } from "lucide-react";
+import { List, Plus, Search, X } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { Button } from "@/shared/components/ui/button";
@@ -41,11 +41,9 @@ function stockTone(product) {
  *
  * `onAdd(product, reference?)` قلم را اضافه می‌کند؛ `false` یعنی رد شد (پیامش
  * را خودش داده). `addedQuantityOf(productId)` تعدادِ فعلیِ کالا در فهرست است
- * تا دکمه‌ی + نشان دهد الان چندتاست. `isPending(productId)` یعنی جزئیاتِ کالا
- * هنوز در راه است (دکمه چرخان می‌شود) و `onPrefetch(product)` جزئیات را پیش از
- * کلیک می‌گیرد تا اولین افزودن هم فوری باشد.
+ * تا دکمه‌ی + نشان دهد الان چندتاست.
  */
-export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefetch, onAdd }) {
+export default function ProductSearchPanel({ addedQuantityOf, onAdd }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [browseAll, setBrowseAll] = useState(false);
@@ -210,18 +208,13 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
             )}
             {shown.map((product, index) => {
               const added = addedQuantityOf(product.id);
-              const pending = isPending?.(product.id);
               return (
                 <li
                   key={product.id}
                   id={`${listId}-${index}`}
                   role="option"
                   aria-selected={index === activeIndex}
-                  onMouseEnter={() => {
-                    setActive(index);
-                    onPrefetch?.(product);
-                  }}
-                  onPointerDown={() => onPrefetch?.(product)}
+                  onMouseEnter={() => setActive(index)}
                   onClick={() => add(product)}
                   className={cn(
                     "flex min-h-14 cursor-pointer items-center gap-2.5 px-3 py-2.5 transition-colors active:bg-accent sm:py-2",
@@ -259,7 +252,7 @@ export default function ProductSearchPanel({ addedQuantityOf, isPending, onPrefe
                     )}
                     aria-label={added > 0 ? `یکی دیگر (اکنون ${formatNumber(added)})` : "افزودن"}
                   >
-                    {pending ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+                    <Plus className="size-3.5" />
                     {added > 0 && <span className="tabular-nums">{formatNumber(added)}</span>}
                   </span>
                 </li>

@@ -1,4 +1,4 @@
-using Application.Common.Payments;
+﻿using Application.Common.Payments;
 using Application.Common.Ledger;
 using Application.Common.Contracts.Context;
 using Application.Common.Contracts.ProductUnit;
@@ -15,13 +15,15 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Application.Common.Audit;
+using Application.Common.Documents;
 
 namespace Application.Features.Sale.Commands
 {
     /// <summary>
-    /// The manual status changes a sale allows: DELIVERED once everything ordered has shipped (SHIPPED), and CANCELLED
-    /// while nothing has shipped and no installment plan is active. Every other status is set by the system - PROCESSING by
-    /// the first payment, PARTIALLY_DELIVERED/SHIPPED by shipping, RETURNED by returns. CANCELLED is final.
+    /// The manual status changes a sale allows: PROCESSING on a warehouse-checked proforma, which issues its invoice with
+    /// nothing paid (a credit sale - frontend-requests 9.11); DELIVERED once everything ordered has shipped (SHIPPED); and
+    /// CANCELLED while nothing has shipped and no installment plan is active. Otherwise PROCESSING is set by the first
+    /// payment, and PARTIALLY_DELIVERED/SHIPPED by shipping. CANCELLED is final.
     /// Payments stay on a cancelled sale; money given back to the customer is recorded with AddSalePayment (OUT).
     /// </summary>
     [AuditAction(AuditActionEnum.ChangeSaleStatus)]
@@ -29,6 +31,9 @@ namespace Application.Features.Sale.Commands
     {
         public int Id { get; set; }
         public SalesStatusEnum Status { get; set; }
+
+        /// <summary>Only with PROCESSING: the invoice date to issue with (not after today). Omitted: the proforma's own date, else now.</summary>
+        public DateTime? InvoiceDate { get; set; }
     }
 
     public class ChangeSaleStatusCommandValidator : AbstractValidator<ChangeSaleStatusCommand>
@@ -37,8 +42,11 @@ namespace Application.Features.Sale.Commands
         {
             RuleFor(x => x.Id).GreaterThan(0).WithMessage("فروش نامعتبر است.");
             RuleFor(x => x.Status)
-                .Must(s => s is SalesStatusEnum.DELIVERED or SalesStatusEnum.CANCELLED)
-                .WithMessage("وضعیت فروش را فقط می‌توان به تحویل‌شده یا لغوشده تغییر داد.");
+                .Must(s => s is SalesStatusEnum.PROCESSING or SalesStatusEnum.DELIVERED or SalesStatusEnum.CANCELLED)
+                .WithMessage("وضعیت فروش را فقط می‌توان به صدور فاکتور، تحویل‌شده یا لغوشده تغییر داد.");
+            RuleFor(x => x.InvoiceDate).Must(SaleInvoiceFinalizer.IsValidInvoiceDate).WithMessage(SaleInvoiceFinalizer.InvoiceDateMessage);
+            RuleFor(x => x.InvoiceDate).Null().When(x => x.Status != SalesStatusEnum.PROCESSING)
+                .WithMessage("تاریخ فاکتور فقط هنگام صدور فاکتور فرستاده می‌شود.");
         }
     }
 
@@ -70,23 +78,22 @@ namespace Application.Features.Sale.Commands
                 .FirstOrDefaultAsync(x => x.Id == request.Id && x.IsActive, cancellationToken)
                 ?? throw new NotFoundCustomException("فروش مورد نظر یافت نشد.");
 
-            if (sale.Status == SalesStatusEnum.CANCELLED)
-                throw new ValidationCustomException("فروش لغوشده قابل تغییر وضعیت نیست.");
+            var hasActivePlan = request.Status == SalesStatusEnum.CANCELLED && await _context.SaleInstallmentPlans.AnyAsync(
+                x => x.SaleId == sale.Id && x.IsActive && x.Status == SaleInstallmentPlanStatusEnum.ACTIVE, cancellationToken);
+            var blocker = SaleDocumentRules.StatusChangeBlocker(sale, request.Status, hasActivePlan, DateTime.Now);
+            if (blocker != null)
+                throw new ValidationCustomException(blocker);
 
-            if (request.Status == SalesStatusEnum.DELIVERED)
+            if (request.Status == SalesStatusEnum.PROCESSING)
             {
-                if (sale.Status != SalesStatusEnum.SHIPPED)
-                    throw new ValidationCustomException("فقط فروشی که همه‌ی کالایش ارسال شده تحویل‌شده ثبت می‌شود.");
-            }
-            else
-            {
-                if (sale.Items.Any(i => i.ShippedQuantity > 0))
-                    throw new ValidationCustomException("کالای این فروش ارسال شده و قابل لغو نیست؛ از مسیر مرجوعی اقدام کنید.");
+                await SaleInvoiceFinalizer.FinalizeAsync(_context, sale, request.InvoiceDate, cancellationToken);
+                sale.UpdatedAt = DateTime.Now;
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                var hasActivePlan = await _context.SaleInstallmentPlans.AnyAsync(
-                    x => x.SaleId == sale.Id && x.IsActive && x.Status == SaleInstallmentPlanStatusEnum.ACTIVE, cancellationToken);
-                if (hasActivePlan)
-                    throw new ValidationCustomException("این فروش قرارداد اقساطی فعال دارد؛ ابتدا قرارداد را لغو کنید.");
+                res.Data = await SaleDetailReader.ReadAsync(_context, _objectStorageService, _saleReturnCalculationService, sale.Id, cancellationToken);
+                res.Message = "فاکتور فروش صادر شد.";
+                res.ResponseMessageType = ResponseMessageTypeEnum.Success.ToString();
+                return res;
             }
 
             // Cancelling an issued invoice takes it (and any installment charge) off the customer's account; the payments

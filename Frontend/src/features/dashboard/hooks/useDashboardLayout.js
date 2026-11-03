@@ -1,6 +1,8 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDashboardLayoutStore } from "../store/dashboardLayoutStore";
 import { WIDGETS_BY_ID, resolveLayout } from "../domain/widgetRegistry";
+import { parseLayout, serializeLayout } from "../domain/layoutStorage";
+import { useMyDashboardLayoutQuery, useSaveDashboardLayoutMutation } from "../services/queries";
 
 /**
  * چیدمانِ نهاییِ داشبوردِ این کاربر، به‌همراهِ کارهایی که پنلِ
@@ -9,14 +11,26 @@ import { WIDGETS_BY_ID, resolveLayout } from "../domain/widgetRegistry";
  * هر تغییر بلافاصله ذخیره می‌شود (دکمه‌ی «ذخیره» ندارد): پنل کنارِ خودِ
  * داشبورد باز است و کاربر نتیجه را همان لحظه می‌بیند؛ چیزی برای «لغو»
  * باقی نمی‌ماند که «بازنشانی» پوشش ندهد.
+ *
+ * منبع سرور است (`GetMyDashboardLayout`، با کاربر به هر دستگاهی می‌رود)؛ نسخه‌ی مرورگر فقط تا رسیدنِ پاسخ
+ * و اگر سرور در دسترس نبود. چیدمانی که پیش از این فقط در مرورگر بود، یک‌بار به سرور برده می‌شود.
  */
 export function useDashboardLayout(context) {
   const userId = context.user?.id;
-  const saved = useDashboardLayoutStore((s) =>
+  const local = useDashboardLayoutStore((s) =>
     userId == null ? undefined : s.layouts[userId],
   );
   const saveLayout = useDashboardLayoutStore((s) => s.saveLayout);
   const resetLayout = useDashboardLayoutStore((s) => s.resetLayout);
+  const remote = useMyDashboardLayoutQuery({ enabled: userId != null });
+  const saveRemote = useSaveDashboardLayoutMutation();
+  const { mutate: pushRemote } = saveRemote;
+  const saved = remote.isSuccess ? parseLayout(remote.data) : local;
+
+  // چیدمانِ قدیمیِ مرورگر که سرور هنوز ندارد، یک‌بار.
+  useEffect(() => {
+    if (remote.isSuccess && remote.data == null && local) pushRemote(serializeLayout(local));
+  }, [remote.isSuccess, remote.data, local, pushRemote]);
 
   const layout = useMemo(() => resolveLayout(context, saved), [context, saved]);
 
@@ -28,9 +42,11 @@ export function useDashboardLayout(context) {
 
   const commit = useCallback(
     (next) => {
-      if (userId != null) saveLayout(userId, next);
+      if (userId == null) return;
+      saveLayout(userId, next);
+      pushRemote(serializeLayout(next));
     },
-    [userId, saveLayout],
+    [userId, saveLayout, pushRemote],
   );
 
   const toggle = useCallback(
@@ -61,8 +77,10 @@ export function useDashboardLayout(context) {
   );
 
   const reset = useCallback(() => {
-    if (userId != null) resetLayout(userId);
-  }, [userId, resetLayout]);
+    if (userId == null) return;
+    resetLayout(userId);
+    pushRemote(null);
+  }, [userId, resetLayout, pushRemote]);
 
   return {
     order: layout.order,

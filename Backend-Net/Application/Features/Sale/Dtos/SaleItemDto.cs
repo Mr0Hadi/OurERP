@@ -23,6 +23,13 @@
         public string ProductCode { get; set; } = string.Empty;
         public string Unit { get; set; } = string.Empty;
 
+        // What the warehouse needs to identify the product and know whether every unit must be scanned
+        // (frontend-requests 15.1). ImageUrl is the GetImage URL of ImageKey, as on ProductDto.
+        public bool RequiresUnitTracking { get; set; }
+        public string? Brand { get; set; }
+        public string? ImageKey { get; set; }
+        public string? ImageUrl { get; set; }
+
         /// <summary>
         /// How much of this line a new ON_ORDER claim may still take: shipped - settled - what open claims of other returns
         /// already reserve. The same number CreateSaleReturn enforces (ISaleReturnCalculationService.GetClaimableQuantity).
@@ -34,6 +41,8 @@
         /// with custody EXCESS) minus what open EXCESS claims already reserve. 0 until the warehouse records excess.
         /// </summary>
         public int ClaimableExcessQuantity { get; set; }
+        /// <summary>Claims of this sale's returns on this line, ON_ORDER and EXCESS; rejected/cancelled returns left out (frontend-requests 14.1).</summary>
+        public List<Application.Common.Dtos.Returns.OtherReturnClaimDto> OtherReturnClaims { get; set; } = new();
         public int SaleId { get; set; }
 
         /// <summary>Units the warehouse scanned and reserved for this line (proforma pipeline); shipping takes exactly these.</summary>

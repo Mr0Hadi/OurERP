@@ -10,7 +10,7 @@ namespace Domain.Entities
         public string PhoneNumber { get; set; }
         public string Address { get; set; }
         public string PostalCode { get; set; }
-        public string? RefferalCode { get; set; }
+        public string? ReferralCode { get; set; }
         public UInt64? CreditLimit { get; set; }
         public string? EconomicCode { get; set; }
         public string? NationalId { get; set; }

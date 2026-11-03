@@ -13,7 +13,7 @@ namespace WMS.Tests.Integration
     {
         private static async Task<List<ProductListDto>> Products(TestScope scope, GetProductListQuery query)
         {
-            var res = await new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(query, CancellationToken.None);
+            var res = await new GetProductListQueryHandler(scope.Db, FakeObjectStorage.Instance, scope.ProductCodeService).Handle(query, CancellationToken.None);
             return ((IEnumerable<ProductListDto>)res.Data!.GetType().GetProperty("ProductList")!.GetValue(res.Data)!).ToList();
         }
 

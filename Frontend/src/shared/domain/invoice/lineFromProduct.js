@@ -3,8 +3,8 @@ import { unitLabelOf } from "@/shared/domain/enums/productUnit";
 /**
  * قلمِ تازه‌ی فاکتور از روی کالا — تنها جایی که شکلِ قلم ساخته می‌شود.
  *
- * `product` باید جزئیاتِ کاملِ کالا باشد (`GetProductDetail`)، نه ردیفِ لیست:
- * قیمتِ خرید، واحد و نرخِ مالیات فقط آن‌جاست.
+ * `product` ردیفِ `GetProductList`، پاسخِ اسکن یا جزئیاتِ کالاست؛ هر سه از ۲۰۲۶-۱۰-۳۰
+ * قیمتِ خرید، واحد و نرخِ مالیات را دارند (بندِ ۹.۳).
  *
  * @param {object} product
  * @param {object} options

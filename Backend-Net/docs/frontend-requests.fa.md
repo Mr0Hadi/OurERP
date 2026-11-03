@@ -614,15 +614,15 @@ POST api/Product/SetProductUnitLocation
 
 ### چک‌لیستِ این بخش
 
-- [ ] بند ۱ — ستون‌های چاپ + `MarkProductUnitsPrinted`
-- [ ] بند ۲ — پارامترهای تازه، `Statuses`، سه عضوِ `ProductUnitListSortEnum`، `Take ≤ 200`
-- [ ] بند ۲ — فیلدهای تازه‌ی `ProductUnitDto` + ستون‌های `QuarantinedAt` و سندِ منشأ
-- [ ] بند ۳ — `GetProductUnitSummary`
-- [ ] بند ۴ — `ApplyProductUnitAction` با قواعد، بهای تمام‌شده و ایدمپوتنسی
-- [ ] بند ۵ — `CUSTOMER_RETURN = 4`، `WAREHOUSE_HOLD = 5`، `STOCK_QUARANTINED = 14`، `ActionReason` روی حرکت
+- [x] بند ۱ — ستون‌های چاپ + `MarkProductUnitsPrinted`
+- [x] بند ۲ — پارامترهای تازه، `Statuses`، سه عضوِ `ProductUnitListSortEnum`، `Take ≤ 200`
+- [x] بند ۲ — فیلدهای تازه‌ی `ProductUnitDto` + ستون‌های `QuarantinedAt` و سندِ منشأ
+- [x] بند ۳ — `GetProductUnitSummary`
+- [x] بند ۴ — `ApplyProductUnitAction` با قواعد، بهای تمام‌شده و ایدمپوتنسی
+- [x] بند ۵ — `CUSTOMER_RETURN = 4`، `WAREHOUSE_HOLD = 5`، `STOCK_QUARANTINED = 14`، `ActionReason` روی حرکت
 - [ ] بند ۶ — تشخیص و رفعِ مغایرتِ `Stock` / `IN_STOCK`
-- [ ] بند ۷ — `ProductUnitManage = 172` (بخشِ ۱.۴) و گاردِ `ApplyProductUnitAction`
-- [ ] بند ۸ (اختیاری) — `BinLocation` + `SetProductUnitLocation`
+- [x] بند ۷ — `ProductUnitManage = 172` (بخشِ ۱.۴) و گاردِ `ApplyProductUnitAction`
+- [x] بند ۸ (اختیاری) — `BinLocation` + `SetProductUnitLocation`
 
 ---
 
@@ -665,8 +665,8 @@ POST api/Product/SetProductUnitLocation
 
 ### چک‌لیستِ این بخش
 
-- [ ] بند ۱ — `GetPurchaseReturnPdf`
-- [ ] بند ۲ (اختیاری) — پیوستِ مرجوعی
+- [x] بند ۱ — `GetPurchaseReturnPdf`
+- [x] بند ۲ (اختیاری) — پیوستِ مرجوعی
 
 
 ---
@@ -799,9 +799,9 @@ POST api/Product/SetProductUnitLocation
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۶.۱ — `ReportScopeEnum` + `GET api/Report/GetScopePerformance`، مجوز از نقشِ سازمانی، تست‌ها
-- [ ] ۶.۲ (اختیاری) — فیلترِ تیم/واحد روی دو گزارشِ رتبه‌بندیِ کارمندان
-- [ ] ۶.۳ (اختیاری) — ذخیره‌ی چیدمانِ داشبورد روی سرور
+- [x] ۶.۱ — `ReportScopeEnum` + `GET api/Report/GetScopePerformance`، مجوز از نقشِ سازمانی، تست‌ها
+- [x] ۶.۲ (اختیاری) — فیلترِ تیم/واحد روی دو گزارشِ رتبه‌بندیِ کارمندان
+- [x] ۶.۳ (اختیاری) — ذخیره‌ی چیدمانِ داشبورد روی سرور
 
 ---
 
@@ -845,10 +845,10 @@ payload و پاسخ). فقط سه جا مانده که خودِ بکند برا�
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۷.۱ — `FisrtName` → `FirstName`
-- [ ] ۷.۲ — `RefferalCode` → `ReferralCode`
-- [ ] ۷.۳ — `OrderLineId` در `PurchaseReturnClaimDto` و `SaleReturnClaimDto`
-- [ ] ۷.۴ — `PaymentDate` خالی = `null`، نه `DateTime.MinValue`
+- [x] ۷.۱ — `FisrtName` → `FirstName`
+- [x] ۷.۲ — `RefferalCode` → `ReferralCode`
+- [x] ۷.۳ — `OrderLineId` در `PurchaseReturnClaimDto` و `SaleReturnClaimDto`
+- [x] ۷.۴ — `PaymentDate` خالی = `null`، نه `DateTime.MinValue`
 
 ---
 
@@ -873,7 +873,7 @@ projectionِ فهرست استفاده شود تا سه endpoint یک دانه �
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۸ — `ScanBarcode` دانه را با همان projectionِ `GetProductUnitList` برگرداند
+- [x] ۸ — `ScanBarcode` دانه را با همان projectionِ `GetProductUnitList` برگرداند
 
 ## بخشِ ۹ — یافته‌های تستِ سرتاسری (۲۰۲۶-۰۹-۲۹)
 
@@ -997,18 +997,18 @@ claimableQuantity: 4` — دو دانه‌ی جایگزین هرگز قابلِ 
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۹.۱۰ — شماره‌ی فاکتورِ یکتا (sequence + unique index)
-- [ ] ۹.۱ — سهمیه‌ی ادعا بعد از دریافتِ جایگزین برگردد (خرید و فروش)
-- [ ] ۹.۲ — `CreateCustomer` / `CreateSupplier` → `Data = { id }`
-- [ ] ۹.۳ — `PurchasePrice`، `Unit`، `Tax`، `TaxCategory` در `ProductListDto`
-- [ ] ۹.۴ — ردیفِ پرداختِ `CREDIT` رد شود
-- [ ] ۹.۵ — متنِ پیامِ `AcceptPurchaseExcess`
-- [ ] ۹.۶ — تبدیلِ زمانِ ورودیِ دارای منطقه به وقتِ محلی
-- [ ] ۹.۷ — `SupplementOfPurchaseItemId` و `TotalAmount` در `PurchaseReceivingItemInfoDto`
-- [ ] ۹.۸ — تصمیم: مالیات در ارزشِ ادعا
+- [x] ۹.۱۰ — شماره‌ی فاکتورِ یکتا (sequence + unique index)
+- [x] ۹.۱ — سهمیه‌ی ادعا بعد از دریافتِ جایگزین برگردد (خرید و فروش)
+- [x] ۹.۲ — `CreateCustomer` / `CreateSupplier` → `Data = { id }`
+- [x] ۹.۳ — `PurchasePrice`، `Unit`، `Tax`، `TaxCategory` در `ProductListDto`
+- [x] ۹.۴ — ردیفِ پرداختِ `CREDIT` رد شود
+- [x] ۹.۵ — متنِ پیامِ `AcceptPurchaseExcess`
+- [x] ۹.۶ — تبدیلِ زمانِ ورودیِ دارای منطقه به وقتِ محلی
+- [x] ۹.۷ — `SupplementOfPurchaseItemId` و `TotalAmount` در `PurchaseReceivingItemInfoDto`
+- [x] ۹.۸ — تصمیم: مالیات در ارزشِ ادعا
 - [ ] ۹.۹ — تصمیم: «فروش غیر رسمی» (فیلد در بکند یا کنار گذاشتن)
-- [ ] ۹.۱۱ — `CreateSaleCommand.Status` و نگه‌داشتنِ `InvoiceDate`ِ کاربر
-- [ ] ۹.۱۲ — جست‌وجوی مشتری/تامین‌کننده با نامِ کامل و تلفن
+- [x] ۹.۱۱ — `CreateSaleCommand.Status` و نگه‌داشتنِ `InvoiceDate`ِ کاربر
+- [x] ۹.۱۲ — جست‌وجوی مشتری/تامین‌کننده با نامِ کامل و تلفن
 
 ---
 
@@ -1076,8 +1076,8 @@ migration لازم نیست.
 
 ### چک‌لیستِ این بخش
 
-- [ ] بازبینی و build/test شاخه‌ی `feature/barcode-dash-format`
-- [ ] مرج با `main` و deploy
+- [x] بازبینی و build/test شاخه‌ی `feature/barcode-dash-format`
+- [x] مرج با `main` و deploy
 - [ ] اجرای `EnsureProductCodes` روی سرورِ تست
 - [ ] (اختیاری، بعداً) حذفِ `ProductUnit.BarcodePayload` / `Product.BarCode` و به‌روزکردنِ سندِ طراحی
 
@@ -1434,11 +1434,11 @@ access token و refresh token هر دو در `localStorage` مرورگرند؛ �
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۱۳.۱ — `canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `items[].canClose/canReopen`
-- [ ] ۱۳.۲ — `UpdatedAt`/`RowVersion` و `409` برای ویرایشِ هم‌زمانِ پیش‌فاکتور
-- [ ] ۱۳.۳ — `Returnable = true` روی فهرستِ خرید و فروش
-- [ ] ۱۳.۴ — `PreviewResolution` برای هر دو سمتِ مرجوعی
-- [ ] ۱۳.۵ — `Search` روی `GetProductList` و فیلدهای کاملِ کالا در فهرست
+- [x] ۱۳.۱ — `canDelete`، `canCancel`، `allowedStatuses`، `canCreateReturn`، `items[].canClose/canReopen`
+- [x] ۱۳.۲ — `UpdatedAt`/`RowVersion` و `409` برای ویرایشِ هم‌زمانِ پیش‌فاکتور
+- [x] ۱۳.۳ — `Returnable = true` روی فهرستِ خرید و فروش
+- [x] ۱۳.۴ — `PreviewResolution` برای هر دو سمتِ مرجوعی
+- [x] ۱۳.۵ — `Search` روی `GetProductList` و فیلدهای کاملِ کالا در فهرست
 
 ---
 
@@ -1511,12 +1511,12 @@ access token و refresh token هر دو در `localStorage` مرورگرند؛ �
 
 ### چک‌لیستِ این بخش
 
-- [ ] ۱۴.۱ — `otherReturnClaims` روی اقلامِ `GetPurchaseReceivingInfo` و `GetSaleDetail`
-- [ ] ۱۴.۲ — `Search` (شماره‌ی فاکتور یا نامِ طرف‌حساب) روی `GetPurchaseList`/`GetSaleList`
-- [ ] ۱۴.۳ — `canRemove` روی تصمیم، `lifecycleBlocker` روی مرجوعی، `canPrintCreditNote` روی مرجوعیِ فروش
-- [ ] ۱۴.۴ — `freeQuarantinedQuantity` روی ادعای مرجوعیِ خرید
-- [ ] ۱۴.۵ — `pendingWarehouseWork` روی جزئیاتِ مرجوعی
-- [ ] ۱۴.۶ — `suggestedClaims` روی `GetPurchaseReceivingInfo`
+- [x] ۱۴.۱ — `otherReturnClaims` روی اقلامِ `GetPurchaseReceivingInfo` و `GetSaleDetail`
+- [x] ۱۴.۲ — `Search` (شماره‌ی فاکتور یا نامِ طرف‌حساب) روی `GetPurchaseList`/`GetSaleList`
+- [x] ۱۴.۳ — `canRemove` روی تصمیم، `lifecycleBlocker` روی مرجوعی، `canPrintCreditNote` روی مرجوعیِ فروش
+- [x] ۱۴.۴ — `freeQuarantinedQuantity` روی ادعای مرجوعیِ خرید
+- [x] ۱۴.۵ — `pendingWarehouseWork` روی جزئیاتِ مرجوعی
+- [x] ۱۴.۶ — `suggestedClaims` روی `GetPurchaseReceivingInfo`
 
 ---
 
@@ -2170,6 +2170,80 @@ PDFِ رسمی مثلِ قبل کار می‌کند.
 **تا آن وقت:** فرانت (`features/warehouse/saleCheck`، `lineNeed`/`checkSummary`) همان قاعده‌ی امروزِ سرور را دنبال می‌کند و برای
 همه‌ی ردیف‌ها اسکن می‌خواهد. بعد از اصلاح، برای کالای بدونِ ردیابی فیلدِ اسکن اختیاری می‌شود و ردیف با تأییدِ تعداد کامل حساب می‌شود.
 
+## بخشِ ۳۳ — پیوندِ چکِ علی‌الحساب به خودِ دریافت/پرداخت (۲۰۲۶-۱۱-۰۳، پایین)
+
+در فهرستِ چک‌ها، چکِ روی فاکتور به فاکتورش پیوند دارد، ولی چکِ علی‌الحساب فقط به صفحه‌ی شخص، چون `ChequeDto` شناسه‌ی
+دریافت/پرداختِ علی‌الحساب را ندارد (`IsOnAccount` و `PartyId` هست). **درخواست:** `partyPaymentId` روی `ChequeDto` (فقط وقتی
+`IsOnAccount`)؛ فرانت پیوند را به `/treasury/party-payments/:id` می‌برد (`sourceOf` در `ChequeTable.jsx`).
+
+## بخشِ ۳۴ — بارکدهای اسکن‌شده‌ی هر ردیفِ انبارگردانی (۲۰۲۶-۱۱-۰۳، پایین)
+
+صفحه‌ی شمارش (`StocktakeScanPanel`) برای برداشتنِ اسکنِ اشتباه `RemoveStocktakeScan { barcode }` را صدا می‌زند، ولی `StocktakeLineDto` فقط
+`scannedCount` دارد، نه خودِ بارکدها؛ پس فرانت فقط اسکن‌های همان نشست و `unknownBarcodes` را برای برداشتن نشان می‌دهد و اسکنِ دیروز یا
+کاربرِ دیگر را نمی‌شود پیدا و برداشت. **درخواست:** `scannedBarcodes: string[]` روی هر ردیف (در شمارشِ کور هم، چون موجودیِ سیستم را لو
+نمی‌دهد). فرانت آن‌ها را زیرِ ردیف با دکمه‌ی برداشتن نشان می‌دهد.
+
+## بخشِ ۳۵ — کندیِ `GetStocktakeDetail` و دستورهای انبارگردانی (۲۰۲۶-۱۱-۰۳، **بالا**)
+
+روی سرورِ تست صفحه‌ی انبارگردانی مدام «پاسخ سرور بیش از حد طول کشید» می‌داد. اندازه‌گیری از مرورگر در یک دقیقه:
+`GetStocktakeList` ‏۴۰۶ میلی‌ثانیه، ولی `GetStocktakeDetail?id=1` (فقط **دو** ردیف) بیش از ۶۰ ثانیه بی‌پاسخ ماند؛ `api/Health` همان
+وقت ۱۰ تا ۵۰ ثانیه (یعنی مکثِ کلیِ سرور هم هست، بخشِ ۲۰.۲). همه‌ی دستورهای انبارگردانی (اسکن، شمارش، پایان، تأیید) همین سند را با
+`StocktakeReader.ReadAsync` برمی‌گردانند، پس هر اسکن به همین کندی است. فرانت تا وقتِ رفع سقفِ این درخواست‌ها را ۶۰ ثانیه کرده، اسکن‌ها را
+صف و دسته‌ای می‌فرستد و جزئیات را با هر فوکوس دوباره نمی‌خواند.
+
+**درخواست:** `ReadAsync` را روی سرورِ تست profile کنید (دو بار بارگذاریِ سند، `StocktakeVariance.ComputeAsync`، پرس‌وجوی میانگینِ بها
+روی `InventoryCostLedgerEntries` به‌ازای هر کالا، زیرپرس‌وجوی `CountedLineCount` در `Header`) و قفلِ احتمالیِ تراکنشِ رهاشده روی جدول‌های
+`Stocktake*` را هم ببینید. اگر سنگینی ذاتی است، پاسخِ اسکن/شمارش می‌تواند فقط ردیفِ تغییرکرده و جمع‌ها باشد.
+
+## بخشِ ۳۶ — ثبتِ شمارشِ دستیِ چند ردیف در یک درخواست (۲۰۲۶-۱۱-۰۳، متوسط)
+
+در صفحه‌ی انبارگردانی عددهای شمارشِ دستی دیگر با هر +/− فرستاده نمی‌شوند؛ کاربر چند ردیف را می‌شمارد و یک‌جا «ثبتِ شمارش»
+می‌زند. `CountStocktakeLine` فقط یک ردیف می‌گیرد و هر بار کلِ سند را برمی‌گرداند (که طبقِ بخشِ ۳۵ کند است)، پس فرانت ردیف‌ها را
+یکی‌یکی پشتِ سرِ هم می‌فرستد: برای ۳۰ کالا، ۳۰ درخواست و ۳۰ بار خواندنِ سند.
+
+**درخواست:** `POST api/Stocktake/CountStocktakeLines` با بدنه‌ی `{ stocktakeId, lines: [{ productId, quantity }] }` (`quantity`ِ
+`null` = پاک کردنِ شمارش، مثلِ `CountStocktakeLine`)، همه یا هیچ، با همان قاعده‌ها (فقط در COUNTING، فقط ردیفِ بی‌اسکن) و یک بار
+خواندنِ سند در پاسخ. وقتی آمد، فرانت `useStocktakeCountDrafts` را به آن می‌برد (`TODO(بکند)` در همان فایل).
+
+## پاسخِ بکند به بندهای باز (۲۰۲۶-۱۰-۳۰)
+
+همه‌ی تغییرِ قرارداد در `api-guide.fa.md` بخش ۱۶، جدولِ «۲۰۲۶-۱۰-۳۰». این‌جا فقط کاری که فرانت باید بکند:
+
+- **حذفِ نگاشت‌ها (۷):** `fisrtName` ⇒ `firstName`، `refferalCode` ⇒ `referralCode` (هر دو شکستنی‌اند و هم‌زمان با این نسخه عوض شوند)؛ `orderLineId` روی ادعاها.
+- **درخواست‌های اضافه را بردارید:** `resolveScannedCode` (۸)، `GetProductDetail` برای هر کالای سند (۹.۳، ۱۵.۱)، جست‌وجوی دسته بعد از ساخت (۱۵.۴)، فیلترِ `needsOrder` در پیشنهادِ خرید (۲۸.۱)، پیش‌نمایشِ محلیِ اقساط ⇒ `PreviewSaleInstallmentPlan` (۱۷.۲).
+- **مانده‌ی اشخاص (۲۱.۱):** مانده‌ی دستی حالا ردیفِ `OPENING_BALANCE` در دفتر است؛ جمعِ دستیِ `partyBalanceOf` را بردارید وگرنه دوبار شمرده می‌شود.
+- **صدورِ فاکتورِ نسیه (۹.۱۱):** بعد از تأییدِ انبار، `ChangeSaleStatus { status: PROCESSING, invoiceDate? }`. `CreateSale` همچنان وضعیت نمی‌گیرد (خطِ تأیید).
+- **بررسیِ انبار (۲۹.۱):** برای کالای بی‌ردیابی فیلدِ اسکن اختیاری است؛ `requiresUnitTracking` روی `SaleDto.items[]` آمده.
+- **FIFO در ۲۹.۱** فقط یعنی «کدام دانه‌ی فیزیکی رزرو شود» (کم‌ترین سریال). رزرو ردیفی در دفترِ بها نمی‌نویسد و بهای خروج هنگامِ ارسال همان میانگینِ موزون است؛ FIFO به‌عنوانِ روشِ بهای تمام‌شده (GAP-18) ساخته نشده.
+- **۱۷.۱ منتفی:** با خطِ تأییدِ پیش‌فاکتور، پیش‌پرداخت فقط بعد از تأییدِ انبار پذیرفته می‌شود؛ قرارداد در مرحله‌ی پرداخت ثبت می‌شود.
+- **۹.۸ (تصمیمِ ۲۰۲۶-۱۰-۳۰):** مالیات بر ارزش افزوده مالِ دولت است، نه ما؛ پس ارزشِ ادعای مرجوعی **فقط بهای کالا** است، بدونِ مالیات. سرور همین را
+  دارد (`unitPrice`ِ ادعا = فیِ قلم، بی‌مالیات) و پیش‌فرضِ بازپرداختِ فرانت هم باید بی‌مالیات بماند. ممکن است بعداً بازبینی شود.
+- **باز:** ۹.۹ («فروش غیر رسمی») تصمیمِ مالی است. ۲۰.۲ (Always Running در IIS، `Connect Timeout`) و ۲۰.۴ (اسرارِ `appsettings.json`) کارِ صاحبِ سرورند — برای ping از `GET api/Health` استفاده کنید.
+
+## پاسخِ بکند به بخش‌های ۱۳ و ۱۴ (۲۰۲۶-۱۱-۰۱)
+
+قرارداد در `api-guide.fa.md` بخش ۱۶، جدولِ «۲۰۲۶-۱۱-۰۱». هر پرچم با همان تابعی ساخته می‌شود که دستور هنگامِ اجرا چک می‌کند،
+پس با آمدنش این توابعِ فرانت را بردارید:
+
+- **۱۳.۱:** `canCancelPurchase`، `purchaseStatusTargets`، `RETURNABLE_PURCHASE_STATUSES`، `canClosePurchaseItem`، `canReopenPurchaseItem` ⇒
+  `canDelete`/`canCancel`/`allowedStatuses`/`canCreateReturn` و `items[].canClose`/`canReopen` روی `PurchaseDto`. سمتِ فروش `canCancelSale`،
+  `saleStatusOptions` و `RETURNABLE_SALE_STATUSES` ⇒ همین چهار فیلد روی `SaleDto`. `allowedStatuses` وضعیتِ فعلی و `CANCELLED` را ندارد (لغو `canCancel`
+  است). روی فروش `PROCESSING` یعنی «صدورِ فاکتورِ نسیه» (۹.۱۱) و فقط وقتی می‌آید که پیش‌فاکتور تأییدِ انبار دارد و رزروش معتبر است.
+- **تغییرِ رفتار:** `CreatePurchaseReturn` روی خریدی که هیچ کالایی‌اش نرسیده (نه روی قلم، نه در قرنطینه) حالا پیامِ روشنِ «هنوز هیچ کالایی… دریافت نشده» می‌دهد.
+- **۱۳.۲:** `updatedAt` را از جزئیات بگیرید و با `UpdatePurchase`/`UpdateSale` برگردانید؛ اگر کسِ دیگری سند را عوض کرده باشد **۴۰۹** می‌آید
+  (`data.updatedAt` نسخه‌ی تازه). فیلد اختیاری است؛ نفرستید یعنی بی‌چک. `documentVersion` (اثرِ انگشتِ فرانت) را بردارید.
+- **۱۳.۳ / ۱۴.۲:** انتخابگرِ سندِ مرجوعی: `GetPurchaseList`/`GetSaleList` با `returnable=true&search=…` — جست‌وجو روی شماره‌ی فاکتور یا نامِ طرف‌حساب.
+- **۱۳.۴:** `POST {PurchaseReturn,SaleReturn}/PreviewResolution` با همان بدنه‌ی `AddClaimResolution`. ردها در `errors` می‌آیند (پاسخ ۲۰۰)، نه ۴۰۰. با این،
+  `expandComposition`/`validateComposition`/`resolveSources`/`suggestedMoneyAmount` در `resolutions.js` قابلِ حذف‌اند. منبعِ GOODS_OUT همچنان هنگامِ
+  اجرا اعلام می‌شود؛ پیش‌نمایش آن را حدس نمی‌زند (`source = null`).
+- **۱۳.۵:** `GetProductList?search=` برای انتخابگرِ اقلام و اسکن (نام، کد، بارکدِ کالا، بارکدِ دانه). فیلدهای ۹.۳ و `requiresUnitTracking`، `wholeSalePrice`
+  از قبل روی ردیف بودند. ۲۰۰ ردیفِ یک‌جا را بردارید.
+- **۱۴.۱:** `otherReturnClaims` روی `items[]` و `unlistedItems[]`ِ `GetPurchaseReceivingInfo` و `items[]`ِ `GetSaleDetail` ⇒ `useClaimsInOtherReturns` حذف.
+- **۱۴.۳:** `resolutions[].canRemove`، `lifecycleBlocker` (زیرِ کارت وقتی هیچ دکمه‌ای نیست)، `canPrintCreditNote` روی مرجوعیِ فروش.
+- **۱۴.۴:** `claims[].freeQuarantinedQuantity` روی مرجوعیِ خرید ⇒ `claimQuarantinedQuantity` و درخواستِ اضافه‌ی `GetPurchaseReceivingInfo` حذف.
+- **۱۴.۵:** `pendingWarehouseWork: { goodsIn, goodsOut, quarantineExit }` ⇒ `hasPendingGoodsIn`/`Out`/`QuarantineExit` حذف.
+- **۱۴.۶:** `GetPurchaseReceivingInfo.suggestedClaims` (همان شکلِ `claims[]`ِ `CreatePurchaseReturn`) ⇒ `quarantineClaimsOf`/`dominantProblem` حذف.
+
 ## چک‌لیستِ کل
 
 - [x] ۱.۱ — کد پستیِ اختیاری (مشتری و تامین‌کننده)
@@ -2180,27 +2254,31 @@ PDFِ رسمی مثلِ قبل کار می‌کند.
 - [x] ۳ — بندهای ۵ تا ۱۰ فروش. ۱۰: کالای معیوب به قرنطینه می‌رود و با مرجوعیِ خرید روی قلمِ منشأ عودت/آزاد/اسقاط می‌شود؛ آزادسازی/اسقاطِ بدونِ مرجوعیِ خرید با بند ۴ بخش ۴ می‌آید
 - [ ] ۴ — دانه‌ها و برچسب‌ها: **۱، ۲، ۳، ۴، ۵ و ۷ انجام شد** (۴ با تغییر: رزرو قرنطینه، و قبول مازاد کالا را در قرنطینه نگه می‌دارد — api-guide §۱۶). ۶ (مغایرت موجودی) بررسی شد و در کد مسیری پیدا نشد؛ دسترسی به دیتابیس سرور تست لازم است. ۸ (قفسه) انجام شد: قفسه برای هر دانه، متنِ آزادِ یکدست‌شده، `SetProductUnitLocation`
 - [x] ۵ — `GetPurchaseReturnPdf` و پیوستِ مرجوعی (دسترسیِ PDF `InvoicePrint` است، مثلِ بقیه‌ی `Invoice/*`)
-- [ ] ۶ — `GetScopePerformance` و فیلترِ تیم/واحد **انجام شد**؛ ۶.۳ (ذخیره‌ی چیدمان) انجام نشد
-- [ ] ۷ — یکدست‌کردنِ نام‌ها (`FirstName`، `ReferralCode`، `OrderLineId`) و تاریخِ خالیِ `MinValue`
-- [ ] ۸ — دانه‌ی کامل در پاسخِ `ScanBarcode`
-- [ ] ۹ — یافته‌های تستِ سرتاسری (۹.۱ تا ۹.۱۲)
+- [x] ۶ — `GetScopePerformance` و فیلترِ تیم/واحد؛ ۶.۳ ذخیره‌ی چیدمان (`GetMyDashboardLayout`/`SaveMyDashboardLayout`، ۲۰۲۶-۱۰-۳۰)
+- [x] ۷ — یکدست‌کردنِ نام‌ها (`FirstName`، `ReferralCode`، `OrderLineId`) و تاریخِ خالیِ `MinValue` (۲۰۲۶-۱۰-۳۰)
+- [x] ۸ — دانه‌ی کامل در پاسخِ `ScanBarcode` (۲۰۲۶-۱۰-۳۰)
+- [ ] ۹ — یافته‌های تستِ سرتاسری: ۹.۱–۹.۸، ۹.۱۰–۹.۱۲ انجام شد (۲۰۲۶-۱۰-۳۰)؛ ۹.۹ («فروش غیر رسمی») تصمیمِ باز
 - [x] ۱۰ — کدِ کالا و بارکدِ دانه با خط‌تیره (در `main`)
 - [ ] ۱۱ — پرداخت با کارتخوان (دسترسی/فهرستِ دستگاه، فیلدهای تراکنش، فروشِ حضوری با دریافتِ ناقص؛ جزئیات در بخشِ ۱۱)
 - [ ] ۱۲ — امنیت و پیش‌نیازهای مجوزِ کارتخوان (۱۲.۱ تا ۱۲.۷)
-- [ ] ۱۳ — منطقِ تکراری در فرانت که باید از سرور بیاید (۱۳.۱ تا ۱۳.۵)
-- [ ] ۱۴ — مرجوعی‌ها: منطقِ تکراری و درخواست‌های اضافه (۱۴.۱ تا ۱۴.۶)
-- [ ] ۱۵ — انبار و کالا (۱۵.۱ تا ۱۵.۵)
+- [x] ۱۳ — منطقِ تکراری در فرانت که باید از سرور بیاید (۱۳.۱ تا ۱۳.۵) (۲۰۲۶-۱۱-۰۱)
+- [x] ۱۴ — مرجوعی‌ها: منطقِ تکراری و درخواست‌های اضافه (۱۴.۱ تا ۱۴.۶) (۲۰۲۶-۱۱-۰۱)
+- [x] ۱۵ — انبار و کالا (۱۵.۱ تا ۱۵.۵؛ ۱۵.۳ از قبل انجام شده بود) (۲۰۲۶-۱۰-۳۰)
 - [x] ۱۶ — ورود و خروجِ اطلاعات با CSV/Excel (در `main`؛ api-guide بخشِ ۱۹)
-- [ ] ۱۷ — فروشِ اقساطی (۱۷.۱ تا ۱۷.۸)
+- [ ] ۱۷ — فروشِ اقساطی: ۱۷.۲، ۱۷.۳، ۱۷.۵، ۱۷.۷، ۱۷.۸ انجام شد (۲۰۲۶-۱۰-۳۰)؛ ۱۷.۴ با بخش ۲۵؛ ۱۷.۱ با خطِ تأییدِ پیش‌فاکتور منتفی؛ ۱۷.۶ (کارتخوان) باز
 - [x] ۱۸ — یادداشت/توضیحاتِ کالا (`Product.Description`)
-- [ ] ۱۹ — جست‌وجوی دانه‌ها بر اساس قفسه (`Search` و فیلترِ `BinLocation`)
-- [ ] ۲۰ — لاگینِ سرد، IPِ واقعیِ کلاینت پشتِ Cloudflare و اسرارِ commit‌شده (۲۰.۱ تا ۲۰.۴)
-- [ ] ۲۱ — حسابداری: مانده‌ی اولیه‌ی دستی در مانده‌ها (۲۱.۱)، خروجیِ مالیات و تفکیک (۲۱.۲)، ریزِ اقلامِ خرید (۲۱.۳)، فهرستِ سبکِ کاربران (۲۱.۴)
+- [x] ۱۹ — جست‌وجوی دانه‌ها بر اساس قفسه (`Search` و فیلترِ بخش‌به‌بخشِ `BinLocation`) (۲۰۲۶-۱۰-۳۰)
+- [ ] ۲۰ — ۲۰.۱ (`api/Health` + گرم‌کردنِ دیتابیس) و ۲۰.۳ (Cloudflare) انجام شد (۲۰۲۶-۱۰-۳۰)؛ ۲۰.۲ (تنظیمِ IIS/رشته‌ی اتصال) و ۲۰.۴ (اسرار) کارِ میزبان/مالکِ سرور است
+- [x] ۲۱ — حسابداری: مانده‌ی اولیه‌ی دستی در دفتر (۲۱.۱)، خروجیِ مالیات و تفکیک (۲۱.۲)، ریزِ اقلامِ خرید (۲۱.۳)، `GetUserOptions` (۲۱.۴) (۲۰۲۶-۱۰-۳۰)
 - [x] ۲۲ — دریافت/پرداختِ مستقل از فاکتور (۲۲.۱)، حسابِ بانک/صندوق (۲۲.۲)، چرخه‌ی چک (۲۲.۳) — api-guide بخش‌های ۲۳ و ۲۴
-- [ ] ۲۳ — خواندنِ مرجوعی برای انبار با `PurchaseReturnExecute`/`SaleReturnExecute` (پنج endpoint)
+- [x] ۲۳ — خواندنِ مرجوعی برای انبار با `PurchaseReturnExecute`/`SaleReturnExecute` (پنج endpoint، any-of) (۲۰۲۶-۱۰-۳۰)
 - [x] ۲۴ — تغییرِ اقلام در `CheckSaleWarehouse` (`adjustments` + `note`، اتمیک، با `SaleWarehouseCheck`)؛ `updatedAt` در `SaleDto` (۲۴.۲)؛ تاریخِ فاکتور هنگامِ صدور (۲۴.۳، اولویتِ بالا)؛ `paymentType` هنگامِ صدور (۲۴.۴)؛ پرچمِ حضوری (۲۴.۵)؛ آزادکردنِ دستیِ رزرو (۲۴.۶)
 - [x] ۲۵ — اقساط: فیلترِ چندوضعیتیِ `GetSaleInstallmentList` (۲۵.۱)، جریمه روی ردیفِ فهرست (۲۵.۲)، پیش‌نمایشِ مبلغِ تسویه (۲۵.۳)
 - [x] ۲۶ — صندوق و بانک: حساب روی پولِ مرجوعی‌ها (۲۶.۱)، `voidedAt` روی `ChequeDto` (۲۶.۲)
 - [x] ۲۷ — داده‌ی سندهای چاپی به‌صورت JSON: `GetSaleInvoiceDocument`، `GetSaleReturnCreditNoteDocument`، `GetPurchaseReturnDocument` (۲۷.۱، ۲۷.۲)
-- [ ] ۲۸ — پیشنهادِ خرید: کالای پوشش‌داده‌شده تا هدف دوباره پیشنهاد نشود (۲۸.۱)
-- [ ] ۲۹ — بررسیِ انبار: کالای بدونِ ردیابیِ دانه‌ای بی‌اسکن، رزروِ FIFO سمتِ سرور (۲۹.۱)
+- [x] ۲۸ — پیشنهادِ خرید: کالای پوشش‌داده‌شده تا هدف دوباره پیشنهاد نشود (۲۸.۱) (۲۰۲۶-۱۰-۳۰)
+- [x] ۲۹ — بررسیِ انبار: کالای بدونِ ردیابیِ دانه‌ای بی‌اسکن، رزروِ FIFO سمتِ سرور (۲۹.۱) (۲۰۲۶-۱۰-۳۰)
+- [ ] ۳۳ — `partyPaymentId` روی `ChequeDto` برای پیوندِ چکِ علی‌الحساب (پایین)
+- [ ] ۳۴ — `scannedBarcodes` روی ردیفِ انبارگردانی برای برداشتنِ اسکنِ قدیمی (پایین)
+- [ ] ۳۵ — کندیِ `GetStocktakeDetail` و دستورهای انبارگردانی (بالا)
+- [ ] ۳۶ — ثبتِ شمارشِ دستیِ چند ردیف در یک درخواست، `CountStocktakeLines` (متوسط)

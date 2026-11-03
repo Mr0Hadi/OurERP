@@ -3,7 +3,7 @@ import { BookOpenText, CalendarClock, Package } from "lucide-react";
 import { usePermission } from "@/features/auth/hooks/usePermission";
 import { useCustomerQuery } from "@/features/customers/services/queries";
 import PartyStatementCard from "@/features/partyAccount/components/PartyStatementCard";
-import { openingBalanceOf, partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
+import { partyBalanceOf } from "@/features/partyAccount/domain/partyBalance";
 import CustomerInstallmentsCard from "@/features/sales/installments/components/CustomerInstallmentsCard";
 import OrderItemsReadOnly from "@/shared/components/forms/OrderItemsReadOnly";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -51,7 +51,6 @@ export default function CashierCustomerTabs({ sale }) {
           <PartyStatementCard
             customerId={sale.customerId}
             totalBalance={customer ? partyBalanceOf(customer) : undefined}
-            openingBalance={customer ? openingBalanceOf(customer) : 0}
           />
         </TabsContent>
       )}

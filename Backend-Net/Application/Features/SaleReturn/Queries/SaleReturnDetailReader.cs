@@ -1,9 +1,10 @@
-using Application.Common.Contracts.Context;
+﻿using Application.Common.Contracts.Context;
 using Application.Common.Contracts.SaleReturn;
 using Application.Common.Contracts.Storage;
 using Application.Common.Documents;
 using Application.Common.Enums;
 using Application.Common.Queries;
+using Application.Common.Returns;
 using Application.Features.SaleReturn.Dtos;
 using Application.Features.SaleReturn.Mappings;
 using Common.Exceptions;
@@ -55,7 +56,10 @@ public static class SaleReturnDetailReader
 
         var totalAmount = checked((ulong)saleReturn.Claims.Sum(c => checked((long)c.Quantity * (long)c.UnitPrice)));
 
-        return new SaleReturnDetailDto
+        var isTerminal = calc.IsTerminal(saleReturn.Status);
+        var effects = saleReturn.Claims.SelectMany(c => c.Resolutions).SelectMany(r => r.Effects).ToList();
+
+        var dto = new SaleReturnDetailDto
         {
             Id = saleReturn.Id,
             ReturnNumber = saleReturn.ReturnNumber,
@@ -79,9 +83,21 @@ public static class SaleReturnDetailReader
             CanCancel = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.CANCEL),
             CanReject = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.REJECT),
             CanReopen = calc.CanPerform(saleReturn, ReturnLifecycleActionEnum.REOPEN),
-            Claims = [.. saleReturn.Claims.Select(c => c.ToDto())],
+            LifecycleBlocker = calc.GetLifecycleBlocker(saleReturn, ReturnLifecycleActionEnum.CANCEL),
+            PendingWarehouseWork = Application.Common.Dtos.Returns.PendingWarehouseWorkDto.Of(
+                saleReturn.Status is Domain.Enums.ReturnStatusEnum.OPEN or Domain.Enums.ReturnStatusEnum.IN_PROGRESS,
+                effects.Select(e => (e.Direction, e.Status, e.RemainingQuantity))),
+            CanPrintCreditNote = ReturnLifecycleRules.CreditNoteBlocker(effects.Select(e => e.Direction)) == null,
+            Claims = [.. saleReturn.Claims.Select(c => c.ToDto(storage))],
             Attachments = attachments,
             QuarantinedQuantity = quarantinedQuantity,
         };
+
+        foreach (var (claimDto, claim) in dto.Claims.Zip(saleReturn.Claims))
+            foreach (var (resolutionDto, resolution) in claimDto.Resolutions.Zip(claim.Resolutions))
+                resolutionDto.CanRemove = ReturnLifecycleRules.ResolutionRemoveBlocker(saleReturn.Status, isTerminal,
+                    resolution.Effects.Select(e => (e.Direction, e.AppliedQuantity))) == null;
+
+        return dto;
     }
 }

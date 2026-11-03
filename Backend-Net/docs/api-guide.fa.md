@@ -727,6 +727,37 @@ Authorization: Bearer {accessToken}
 
 کنترلر: `api/Customer` — نیاز به Authorize. CRUD استاندارد.
 
+### سقف اعتبار (GAP-06، از ۲۰۲۶-۱۱-۰۱)
+
+`creditLimit` روی مشتری: **`null` = بدون سقف**، **`0` = فقط فروش نقدی**، عدد = سقف بدهی به ریال. در Create/Update همین فیلد
+فرستاده می‌شود (خالی ⇒ `null`). مهاجرت `credit-limit-zero-to-null` همه‌ی صفرهای قبلی را `null` کرد، چون تا امروز فرانت به‌جای
+خالی صفر می‌فرستاد و صفر یعنی «بی‌سقف» خوانده می‌شد.
+
+**بدهی مؤثر (exposure)** = مانده‌ی دفتر حساب مشتری + چک‌های دریافتیِ وصول‌نشده (`PENDING` یا `ENDORSED`). اقساط آینده و
+پرداخت‌نشده در خود مانده هستند (فاکتور اقساطی با کل مبلغ و سود اقساط بدهکار می‌شود و فقط قسط‌های پرداخت‌شده بستانکار).
+
+**قاعده:** هر ذخیره‌ای که فاکتور فروش صادر کند یا سود اقساط اضافه کند (`AddSalePayment`، `ChangeSaleStatus`،
+`CreateSaleInstallmentPlan`، تخصیص علی‌الحساب، فروش حضوری و ...) رد می‌شود اگر تنظیم `Sale.CreditLimitEnforced` روشن باشد،
+مشتری سقف داشته باشد، و بدهی مؤثر پس از آن **بیشتر از سقف و بیشتر از قبل** شود. پس مشتریِ بالای سقف هنوز می‌تواند کامل نقد
+(نقد/کارت/انتقال — چک نقد حساب نمی‌شود) بخرد. **راه دور زدن (override) وجود ندارد:** سقف را بالا ببرید، خالی کنید یا تنظیم را
+خاموش کنید. این بررسی در `WMSDbContext.SaveChangesAsync` است، پس هیچ endpointی آن را جا نمی‌اندازد. ابطال پرداخت، برگشت چک و
+مانده‌ی اول دوره اصلاحِ واقعیت‌اند و رد نمی‌شوند.
+
+**پاسخ رد:** ۴۰۰ با پیام فارسیِ کامل (سقف، بدهی فعلی، افزایش، مازاد). بدنه‌ی خطا را `ExceptionHandlingMiddleware` با
+`System.Text.Json` بدونِ camelCase می‌نویسد، پس **کلیدها PascalCase‌اند** (مثلِ همه‌ی پاسخ‌های خطا):
+```json
+{ "Message": "این فروش از سقف اعتبار «علی رضایی» بیشتر است. ...", "ResponseMessageType": "Danger",
+  "Data": { "CreditLimitExceeded": true, "CustomerId": 7, "CustomerName": "علی رضایی", "CreditLimit": 5000,
+            "CurrentExposure": 0, "UnclearedCheques": 0, "AddedAmount": 8000, "Exposure": 8000, "Excess": 3000 } }
+```
+هیچ چیزی از آن درخواست ذخیره نمی‌شود (پیش‌فاکتور پیش‌فاکتور می‌ماند).
+
+`GetCustomerList` هم روی هر ردیف `creditLimit`، `creditExposure` و `creditAvailable` دارد (چک‌های وصول‌نشده‌ی کلِ صفحه با یک
+پرس‌وجو)، برای نشانِ «بالای سقف» در فهرست.
+
+`GetCustomerDetail` حالا `creditLimit` را nullable می‌فرستد (قبلاً `null` را `0` نشان می‌داد) و `creditExposure`،
+`unclearedCheques` و `creditAvailable` (= سقف − بدهی مؤثر، منفی یعنی بالای سقف، `null` بی‌سقف) دارد.
+
 ### `GET api/Customer/GetCustomerList`
 
 **پارامترهای Query:** `page`, `take`, `id` (فیلتر روی شناسه‌ی دقیق), `fullName` (جستجو در نام یا نام‌خانوادگی), `minBalance`, `maxBalance`, `balanceType` (✅ از قبل پیاده‌سازی شده بود، فقط اینجا مستند نشده بود — `BalanceTypeEnum?`, بخش ۱۵).
@@ -3403,6 +3434,7 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 | 7 | برگشت (REVERSAL) — `reversalOfEntryId` ردیف اصلی را نشان می‌دهد |
 | 8 | بستن قلم خرید با کسری (PURCHASE_SHORT_CLOSE) |
 | 9 | جریمه‌ی دیرکرد قسط (LATE_PENALTY) — از ۲۰۲۶-۱۰-۱۹؛ بدهکار، همراه پرداخت همان قسط |
+| 10 | مانده‌ی اول دوره (OPENING_BALANCE) — از ۲۰۲۶-۱۰-۳۰؛ مانده‌ی دستیِ مشتری/تامین‌کننده (بدهکار برای `Debtor`، بستانکار برای `Creditor`)؛ ویرایشِ بعدی تفاوت را با همین نوع می‌نویسد |
 
 ### `PaymentSourceEnum` (منبع پرداخت کارتخوان — روی `paymentDetails[]`، از ۲۰۲۶-۱۰-۰۵)
 | مقدار | معنی |
@@ -3723,6 +3755,77 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 ## 16. نکات و محدودیت‌های شناخته‌شده
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
+
+### تغییرات قرارداد — ۲۰۲۶-۱۱-۰۱ (درخواست‌های فرانت: بخش‌های ۱۳ و ۱۴ — قاعده‌هایی که فرانت از سرور کپی کرده بود)
+
+همه‌ی پرچم‌ها با **همان تابعی** ساخته می‌شوند که دستورِ مربوط هنگامِ اجرا چک می‌کند (`PurchaseDocumentRules`، `SaleDocumentRules`،
+`ReturnLifecycleRules`، `PurchaseResolutionChecks`/`SaleResolutionChecks`)، پس دکمه‌ای که سرور رد کند نشان داده نمی‌شود. هیچ‌کدام شکستنی نیست.
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `PurchaseDto` (جزئیات و پاسخِ همه‌ی نوشتن‌های خرید) | — | `updatedAt`، `canDelete`، `canCancel`، `allowedStatuses: int[]` (مقصدهای `ChangePurchaseStatus` غیر از وضعیتِ فعلی و `CANCELLED`)، `canCreateReturn` |
+| `PurchaseDto.items[]` | — | `canClose`، `canReopen` |
+| `SaleDto` (جزئیات و پاسخِ نوشتن‌ها) | — | `canDelete`، `canCancel`، `allowedStatuses: int[]` (`PROCESSING` برای صدورِ نسیه‌ی پیش‌فاکتورِ تأییدشده با رزروِ معتبر، `DELIVERED` بعد از `SHIPPED`)، `canCreateReturn` |
+| `CreatePurchaseReturn` | خریدی که هیچ کالایی‌اش نرسیده بود با خطای سقف رد می‌شد | ۴۰۰ «هنوز هیچ کالایی از این خرید دریافت نشده…» — همان قاعده‌ی `canCreateReturn` (لغو نشده، و چیزی رسیده: روی قلم یا دانه‌ای از این خرید در قرنطینه) |
+| `UpdatePurchase`، `UpdateSale` | آخرین ذخیره برنده بود | فیلدِ اختیاریِ **`updatedAt`** (همانی که جزئیات داده). اگر سند در این فاصله عوض شده باشد **۴۰۹** با `data.updatedAt` (نسخه‌ی فعلی). مقایسه تا میلی‌ثانیه. نفرستید = بی‌چک (رفتارِ قبلی) |
+| `GetPurchaseList`، `GetSaleList` | — | `returnable=true`: فقط سندهایی که `CreatePurchaseReturn`/`CreateSaleReturn` می‌پذیرد |
+| `GetSaleList` | `invoiceNumber` و `customerName` با «و» | به‌علاوه‌ی `search`: شماره‌ی فاکتور **یا** نامِ کاملِ مشتری (`GetPurchaseList.search` از قبل همین کار را روی شماره یا نامِ تامین‌کننده می‌کرد) |
+| `GetProductList` | `name`/`code`/`barCode` جدا و با «و» | به‌علاوه‌ی `search`: با «یا» روی نام (هر کلمه، فارسی یا انگلیسی)، کد، بارکدِ کالا و بارکدِ دانه/کدِ اسکن‌شده (مثلِ `ScanBarcode` نرمال می‌شود). بی `sortBy`، تطبیقِ دقیق اول می‌آید؛ ردیف‌ها `isExactMatch` دارند |
+| `POST api/PurchaseReturn/PreviewResolution`، `POST api/SaleReturn/PreviewResolution` | — | تازه (دسترسیِ `*ReturnDecide`): همان بدنه‌ی `AddClaimResolution`، بی‌ذخیره ⇒ `{ isValid, errors: [{ field, message }], effects: [{ direction, quantity, source, productId, unitPrice, amount, method, status }], suggestedMoneyAmount }`. ردِ validator با `field` (`goods[0].quantity`)، ردِ handler (سقفِ قرنطینه، باقیمانده‌ی ادعا، …) با `field = null`. رد جزوِ پاسخ است، نه ۴۰۰؛ ادعای ناموجود ۴۰۴. `suggestedMoneyAmount` = مقدار × قیمتِ ادعا (فقط پیشنهاد) |
+| `GetPurchaseReceivingInfo` → `items[]` و `unlistedItems[]`، `SaleDto.items[]` | — | `otherReturnClaims: [{ returnId, returnNumber, status, offScopeKind, quantity }]`: ادعاهای مرجوعی‌های این سند روی همین قلم (روی `unlistedItems` ادعاهای `UNLISTED` همان کالا). مرجوعیِ ردشده/لغوشده نمی‌آید؛ مرجوعیِ فعلی را خودتان کنار بگذارید |
+| `GetPurchaseReceivingInfo` | — | `suggestedClaims` به شکلِ `claims[]`ِ `CreatePurchaseReturn`: قرنطینه‌ی آزادِ هر قلم (حداکثر `claimableQuantity`)، مازادِ آزاد، و کالای خارج از سفارشِ آزاد (`unitPrice = 0`). نوعِ مشکل پرتکرارترین مشکلی است که انبار ثبت کرده، وگرنه `DEFECTIVE`/`OVER_SHIPPED`/`UNLISTED_ITEM` |
+| `resolutions[]` در جزئیاتِ هر دو مرجوعی | — | `canRemove` (قاعده‌ی `RemoveClaimResolution`: مرجوعیِ پایان‌یافته نیست و هیچ اثرِ کالایی جابه‌جا نشده) |
+| جزئیاتِ هر دو مرجوعی | — | `lifecycleBlocker: string \| null` — دلیلِ ردِ «لغو» (همان متنِ خطای `Cancel*Return`)؛ `pendingWarehouseWork: { goodsIn, goodsOut, quarantineExit }` — باقیمانده‌ی اثرهای کالاییِ `PENDING` (آزادسازی + اسقاط در `quarantineExit`، فقط خرید)؛ وقتی مرجوعی باز نیست همه صفر |
+| جزئیاتِ مرجوعیِ فروش | — | `canPrintCreditNote`: اثرِ `MONEY_OUT` دارد (شرطِ `GetSaleReturnCreditNotePdf`/`Document`) |
+| `claims[]` جزئیاتِ مرجوعیِ خرید | — | `freeQuarantinedQuantity`: دانه‌های آزادِ قرنطینه‌ی همین ادعا برای آزادسازی/اسقاط/عودت از قرنطینه — همان عددی که `AddClaimResolution` چک می‌کند |
+
+### تغییرات قرارداد — ۲۰۲۶-۱۰-۳۰ (بقیه‌ی درخواست‌های فرانت: بخش‌های ۶.۳، ۷، ۸، ۹، ۱۵، ۱۷، ۱۹، ۲۰، ۲۱، ۲۳، ۲۸، ۲۹)
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `CreateUser` | `fisrtName` | **`firstName`** (شکستنی) |
+| `CreateCustomer`/`UpdateCustomer`/`CustomerDto`، ورود/خروجِ مشتری | `refferalCode` | **`referralCode`** (شکستنی؛ ستون هم تغییر نام داد) |
+| `claims[]` در جزئیاتِ هر دو مرجوعی | فقط `purchaseItemId`/`saleItemId` | به‌علاوه‌ی `orderLineId` (همان مقدار) |
+| همه‌ی تاریخ‌های اختیاری | `0001-01-01` ممکن بود ذخیره شود | هنگامِ ذخیره `null` می‌شود؛ ردیف‌های موجود هم در migration اصلاح شد |
+| زمان‌های ورودی با `Z` | ساعتِ UTC همان‌طور ذخیره می‌شد | به وقتِ محلیِ سرور تبدیل می‌شود (offset صریح از قبل تبدیل می‌شد) |
+| `ScanBarcode` → `data.unit` | چند فیلد خالی (`purchaseId`، `custodyReason`، `createdAt`، …) | همان شکلِ کاملِ `GetProductUnitList` |
+| `CreateCustomer`، `CreateSupplier` | `data` خالی | `data = { id }` |
+| `CreateProductCategory` | `data` خالی | `data = { id, name }` |
+| `ProductListDto` | — | `purchasePrice`، `unit`، `tax`، `taxCategory` |
+| ردیفِ پرداخت با `type = CREDIT` (۱) | پذیرفته و «پرداخت‌شده» حساب می‌شد | **۴۰۰** در همه‌ی دستورهای پرداخت، دریافت/پرداختِ مستقل و اقساط. ردیف‌های قبلی دست نخوردند |
+| پیامِ `AcceptPurchaseExcess` | «… وارد موجودی شد» | «… کالا تا بازگشت به موجودی در قرنطینه می‌ماند» |
+| `GetPurchaseReceivingInfo` → `items[]` | — | `supplementOfPurchaseItemId`، `totalAmount`، `requiresUnitTracking`، `brand`، `imageKey`، `imageUrl` (این چهار تا روی `unlistedItems[]` هم) |
+| `SaleItemDto`، `pendingEffects[]` هر دو سمت، `effects[]` جزئیاتِ هر دو مرجوعی | — | `requiresUnitTracking`، `brand`، `imageKey`، `imageUrl` |
+| شماره‌ی فاکتورِ فروش، مرجوعی‌ها، حواله و انبارگردانی | «تعدادِ ردیف + ۱» (تکراری می‌شد) | شمارنده‌ی قفل‌دار (`DocumentNumberCounters`) + unique index؛ قالب همان `INV-سال-0001`. تکراری‌های موجود در migration شماره‌ی تازه گرفتند (کمترین `Id` شماره‌اش را نگه داشت) |
+| سهمیه‌ی ادعا (`claimableQuantity`) | جایگزینِ رسیده/ارسال‌شده حساب نمی‌شد؛ تصمیمِ ثبت‌شده با اثرِ معلق آزاد حساب می‌شد | `دریافت/ارسال + جایگزین − تسویه − ادعاهای باز (تسویه‌نشده)` |
+| `ChangeSaleStatus` | فقط `DELIVERED`/`CANCELLED` | به‌علاوه‌ی **`PROCESSING`** با `invoiceDate` اختیاری: صدورِ فاکتورِ نسیه بی‌پرداخت، فقط برای پیش‌فاکتورِ `WAREHOUSE_CHECKED` با رزروِ معتبر و غیراقساطی |
+| `GetCustomerList.fullName`، `GetSupplierList.companyNameOrContactName` | یک عبارت روی نام یا نام خانوادگی | هر کلمه جدا (AND) روی نام، نام خانوادگی و **تلفن** (تامین‌کننده: شرکت، نامِ مسئول، تلفن) |
+| `GET api/Product/GetBrandList?search=` | — | تازه: `[{ brand, productCount }]` برای کالاهای فعال (`ProductView`) |
+| `DeleteProduct` | همیشه حذف می‌شد | ۴۰۰ وقتی موجودی/رزرو/قرنطینه/در راه دارد یا روی خرید، فروش یا مرجوعیِ باز است |
+| `CreateSaleInstallmentPlan` | پیش‌پرداختِ ۰ پذیرفته می‌شد؛ قراردادِ دوم کلِ فاکتور را دوباره بدهکار می‌کرد | `downPaymentAmount > 0` الزامی (و فقط بعد از `WAREHOUSE_CHECKED`)؛ فروشی که پرداخت دارد قراردادِ تازه نمی‌گیرد (مانده با «دریافت از مشتری») |
+| `paymentType` در `CreateSaleInstallmentPlan`، `PaySaleInstallment`، `SettleSaleInstallmentPlan` | هر مقداری | فقط `CASH`/`CHECK`/`TRANSFER` |
+| `POST api/SaleInstallment/PreviewSaleInstallmentPlan` | — | تازه: یکی از `saleId` یا `items` + شرایطِ قرارداد ⇒ همان `SaleInstallmentPlanDto` بی‌ذخیره (`SaleCreate` یا `SaleInstallmentManage`) |
+| `GetProductUnitList` | `search` قفسه را نمی‌دید؛ فیلترِ `binLocation` «شروع‌با» بود | `search` روی قفسه هم می‌گردد؛ `binLocation` بخش‌به‌بخش: `A-5` یعنی `A-5` و `A-5-…`، نه `A-50` |
+| ذخیره‌ی قفسه (`SetProductUnitLocation`) | `A-05` همان‌طور | صفرِ چپِ بخش‌های عددی حذف می‌شود (`A-05-2` ⇒ `A-5-2`)؛ مقادیرِ موجود در migration یکدست شد |
+| `GET api/Health` | — | تازه، بی‌احراز هویت: `200 {status:"ok"}` یا `503` وقتی دیتابیس در دسترس نیست. برای ping جلوگیری از خوابیدنِ app pool |
+| IPِ کلاینت پشتِ Cloudflare | IPِ لبه‌ی Cloudflare | `X-Forwarded-For` فقط از بازه‌های Cloudflare (`ForwardedHeaders:KnownNetworks` در appsettings) |
+| مانده‌ی دستیِ مشتری/تامین‌کننده | بیرون از دفتر | ردیفِ `OPENING_BALANCE = 10` در دفتر؛ ویرایشِ مانده تفاوت را می‌نویسد. پس `ledgerBalance` و `GetPartyStatement` آن را دارند و **فرانت دیگر نباید مانده‌ی دستی را جمع بزند** |
+| خروجی‌های حسابداری | — | `tax-report` (دوره‌ها + ردیفِ جمع)، `trade-breakdown` (بدونِ درصدِ سهم)، `purchase-lines` |
+| `GET api/Accounting/GetPurchaseLineJournal` | — | تازه: قرینه‌ی `GetSaleLineJournal` (`supplierId`، `productId`، `productCategoryId`، `taxCategory`، بازه، `summary`) |
+| `GET api/User/GetUserOptions?includeInactive=` | — | تازه، برای هر کاربرِ واردشده: `[{ id, fullName, isActive }]` |
+| `GET api/User/GetMyDashboardLayout`، `PUT api/User/SaveMyDashboardLayout` | — | تازه: رشته‌ی JSONِ چیدمان (حداکثر ۴۰۰۰ نویسه)، فقط برای خودِ کاربر |
+| `GetPurchaseReturnDetail`، `GetPurchaseReceivingInfo`، `GetPurchaseReturnPendingEffects` | `PurchaseReturnView` | `PurchaseReturnView` **یا** `PurchaseReturnExecute` |
+| `GetSaleReturnDetail`، `GetSaleReturnPendingEffects` | `SaleReturnView` | `SaleReturnView` **یا** `SaleReturnExecute` |
+| `GetReorderSuggestionList` | کالایی که تا نقطه‌ی سفارش سفارش داده شده بود دوباره با «۱» می‌آمد | کالایی که سفارشِ در راه دارد و با آن به هدف (`targetStock ?? reorderPoint`) رسیده برنمی‌گردد |
+| `CheckSaleWarehouse` | همه‌ی ردیف‌ها اسکنِ کامل می‌خواستند | ردیفِ کالای **بدون** `requiresUnitTracking` می‌تواند بی‌بارکد بیاید: سرور قدیمی‌ترین دانه‌های آزاد (FIFO بر اساس سریال) را رزرو می‌کند، یا اگر کم بود «کسری» ثبت می‌شود. این FIFO فقط انتخابِ دانه است؛ بهای تمام‌شده همان میانگینِ موزون می‌ماند |
+| `AuditActionEnum` | — | `27 SaveMyDashboardLayout` |
+
+**ساخته نشد (عمداً):** ۱۷.۱ (`installmentPlan` روی `CreateSale`): با خطِ تأییدِ پیش‌فاکتور، قرارداد با پیش‌پرداخت فقط بعد از تأییدِ انبار ممکن است، پس
+روی `CreateSale` جایی ندارد؛ قرارداد در مرحله‌ی پرداخت (یا `CompleteInPersonSale`) ثبت می‌شود و `PreviewSaleInstallmentPlan` شرایط را از قبل نشان می‌دهد.
+۹.۸ تصمیم گرفته شد: ارزشِ ادعای مرجوعی فقط بهای کالاست، **بدونِ مالیات بر ارزش افزوده** (همان رفتارِ فعلی؛ ممکن است بعداً بازبینی شود). ۹.۹ منتظرِ پاسخ است. بخش‌های ۱۱، ۱۲ (کارتخوان)، ۱۳، ۱۴ و ۴.۶ در این دور نبودند.
+
+Migration: `20261030102630_frontend-requests-backlog`. ساخته شده، **اعمال نشده**؛ روی پایگاه‌داده‌ی آزمایشیِ تازه از صفر و با داده‌ی تکراری بررسی شد.
+بندِ یکدست‌کردنِ قفسه از `STRING_SPLIT(..., 1)` استفاده می‌کند و SQL Server 2022 یا بالاتر می‌خواهد.
 
 ### تغییرات قرارداد — ۲۰۲۶-۱۰-۲۴ (بخش ۲۴ درخواست‌های فرانت: انبار و صدورِ فاکتور)
 
@@ -4975,6 +5078,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | گروه | کلید | نوع | پیش‌فرض | حدود | معنی |
 |---|---|---|---|---|---|
 | ۱ فروش | `Sale.ReservationMinutes` | INTEGER | `10` | `0`–`10080` دقیقه | مهلت رزرو کالای پیش‌فاکتور پس از تأیید انبار (بخش ۱۱)؛ `0` = بدون انقضا؛ فقط روی رزروهای بعدی اثر دارد |
+| ۱ فروش ★ | `Sale.CreditLimitEnforced` | BOOLEAN | `true` | — | اعمال سقف اعتبار مشتری (بخش ۴، «سقف اعتبار»)؛ خاموش ⇒ سقف فقط نمایشی است |
 | ۲ دریافت و پرداخت | `Payment.RequireBankAccount` | BOOLEAN | `false` | — | روشن ⇒ هر دریافت/پرداخت تازه باید صندوق یا حساب بانکی داشته باشد (بخش ۲۳)؛ ردیف نسیه (`CREDIT`) و چک دریافتی معاف‌اند |
 | ۳ اقساط | `Installment.OverdueGraceDays` | INTEGER | `0` | `0`–`60` روز | چند روز پس از سررسید، قسط دیرکرد حساب می‌شود |
 | ۳ اقساط | `Installment.EarlySettlementDiscountPercentage` | INTEGER | `100` | `0`–`100` درصد | چه درصدی از سود اقساطِ قسط‌های هنوز سررسیدنشده در تسویه‌ی زودهنگام بخشیده شود |

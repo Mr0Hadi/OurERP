@@ -13,7 +13,8 @@ import { changeDraft } from "../domain/saleCheck";
  * @param form خروجیِ `useSaleCheckForm`
  */
 export default function SaleCheckApprovalCard({ form }) {
-  const { changed, quantities, reason, setReason, scannedCount, needTotal } = form;
+  const { changed, quantities, reason, setReason, scannedCount, needTotal, reserveTotal } = form;
+  const autoReserved = reserveTotal - scannedCount;
   const draft = changeDraft(changed, quantities);
 
   return (
@@ -24,6 +25,11 @@ export default function SaleCheckApprovalCard({ form }) {
         <span className="font-semibold tabular-nums">{formatNumber(needTotal)}</span>
         <span className="text-muted-foreground"> دانه اسکن شده</span>
       </p>
+      {autoReserved > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {formatNumber(autoReserved)} دانه‌ی کالای بی‌ردیابی را سرور خودش (قدیمی‌ترین‌ها) رزرو می‌کند.
+        </p>
+      )}
       {changed.length > 0 && (
         <>
           <Notice tone="caution">

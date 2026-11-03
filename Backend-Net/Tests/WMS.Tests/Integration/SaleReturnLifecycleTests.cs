@@ -478,7 +478,7 @@ namespace WMS.Tests.Integration
                 Composition = new EffectCompositionDto { Quantity = 5, GoodsIn = new() { new GoodsEffectDto { Quantity = 5, UnitPrice = 1500 } }, MoneyOut = new MoneyEffectDto { PaidAt = DateTime.Now, Method = ReturnPaymentMethodEnum.CASH, Amount = 7500 } },
             }, CancellationToken.None);
 
-            var handler = new GetSaleReturnPendingEffectsQueryHandler(scope.Db);
+            var handler = new GetSaleReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance);
             var res = await handler.Handle(new GetSaleReturnPendingEffectsQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
 
             var list = ((System.Collections.Generic.IEnumerable<PendingEffectDto>)res.Data!.GetType().GetProperty("PendingEffects")!.GetValue(res.Data)!).ToList();
@@ -647,7 +647,7 @@ namespace WMS.Tests.Integration
 
             await NewReject(scope).Handle(new RejectSaleReturnCommand { Id = returnId }, CancellationToken.None);
 
-            var pendingRes = await new GetSaleReturnPendingEffectsQueryHandler(scope.Db).Handle(new GetSaleReturnPendingEffectsQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
+            var pendingRes = await new GetSaleReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(new GetSaleReturnPendingEffectsQuery { SaleId = scenario.Sale.Id }, CancellationToken.None);
             var pending = (System.Collections.Generic.IEnumerable<PendingEffectDto>)pendingRes.Data!.GetType().GetProperty("PendingEffects")!.GetValue(pendingRes.Data)!;
             Assert.Empty(pending);
 

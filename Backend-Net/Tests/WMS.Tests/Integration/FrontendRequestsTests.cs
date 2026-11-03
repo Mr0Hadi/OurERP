@@ -1,4 +1,4 @@
-using Application.Common.Dtos;
+﻿using Application.Common.Dtos;
 using Application.Common.Dtos.Returns;
 using Application.Features.Purchase.Commands;
 using Application.Features.Purchase.Dtos;
@@ -171,7 +171,7 @@ namespace WMS.Tests.Integration
                     Composition = new EffectCompositionDto { Quantity = 3, GoodsIn = new() { new GoodsEffectDto { Quantity = 3 } } },
                 }, CancellationToken.None);
 
-            var res = await new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db).Handle(new GetPurchaseReturnPendingEffectsQuery(), CancellationToken.None);
+            var res = await new GetPurchaseReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(new GetPurchaseReturnPendingEffectsQuery(), CancellationToken.None);
             var row = Read<Application.Features.PurchaseReturn.Dtos.PendingEffectDto>(res, "PendingEffects").Single();
 
             Assert.Equal(returnId, row.PurchaseReturnId);
@@ -213,7 +213,7 @@ namespace WMS.Tests.Integration
                     Composition = new EffectCompositionDto { Quantity = 2, GoodsOut = new() { new GoodsEffectDto { Quantity = 2 } } },
                 }, CancellationToken.None);
 
-            var res = await new SRQ.GetSaleReturnPendingEffectsQueryHandler(scope.Db).Handle(new SRQ.GetSaleReturnPendingEffectsQuery(), CancellationToken.None);
+            var res = await new SRQ.GetSaleReturnPendingEffectsQueryHandler(scope.Db, FakeObjectStorage.Instance).Handle(new SRQ.GetSaleReturnPendingEffectsQuery(), CancellationToken.None);
             var row = Read<Application.Features.SaleReturn.Dtos.PendingEffectDto>(res, "PendingEffects").Single();
 
             Assert.Equal(scenario.Sale.Id, row.SaleId);

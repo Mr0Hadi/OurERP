@@ -122,7 +122,7 @@ flowchart TD
   - `src/features/organization/` → `departments/`، `teams/` (+ `components/`، `hooks/` مشترکِ دو زیرماژول)
   - `src/features/purchases/` → `orders/`، `returns/`
   - `src/features/sales/` → `orders/`، `returns/`، `installments/`
-  - `src/features/warehouse/` → `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، و `shared/` (فایل‌های تخت، مثل `QueueTable.jsx`، `useQueueRows.js`؛ مشترک بینِ receiving و shipping)
+  - `src/features/warehouse/` → `products/`، `categories/`، `units/`، `vehicles/`، `receiving/`، `shipping/`، `saleCheck/`، `stocktake/`، و `shared/` (فایل‌های تخت، مثل `QueueTable.jsx`، `useQueueRows.js`؛ مشترک بینِ receiving و shipping)
   - `src/features/accounting/` چیدمانِ استاندارد دارد به‌علاوه‌ی زیرماژولِ `activity/`.
 - نام‌گذاری: کامپوننت `PascalCase.jsx`، هوک `useX.js`، store `<x>Store.js` با export `use<X>Store`، factory `create<X>.js`.
 

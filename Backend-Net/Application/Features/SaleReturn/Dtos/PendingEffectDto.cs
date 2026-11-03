@@ -1,4 +1,4 @@
-using Domain.Enums;
+﻿using Domain.Enums;
 
 namespace Application.Features.SaleReturn.Dtos
 {
@@ -19,6 +19,13 @@ namespace Application.Features.SaleReturn.Dtos
         public string ProductCode { get; set; }
         public string ProductName { get; set; }
         public string Unit { get; set; }
+
+        // What the warehouse needs to identify the product and know whether every unit must be scanned
+        // (frontend-requests 15.1). ImageUrl is the GetImage URL of ImageKey, as on ProductDto.
+        public bool RequiresUnitTracking { get; set; }
+        public string? Brand { get; set; }
+        public string? ImageKey { get; set; }
+        public string? ImageUrl { get; set; }
         public int Quantity { get; set; }
         public int AppliedQuantity { get; set; }
         public int RemainingQuantity { get; set; }

@@ -4,13 +4,13 @@ import { ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
-import EntitySelect from "@/shared/components/filters/EntitySelect";
 import FilterCollapse from "@/shared/components/filters/FilterCollapse";
 import FilterSelect from "@/shared/components/filters/FilterSelect";
 import PersianDatePicker from "@/shared/components/ui/persian-date-picker";
 import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
-import { useSuppliersOptionsQuery } from "@/features/suppliers/services/queries";
-import { useCustomersOptionsQuery } from "@/features/customers/services/queries";
+import { useSupplierQuery } from "@/features/suppliers/services/queries";
+import { useCustomerQuery } from "@/features/customers/services/queries";
+import ProductSelect from "@/features/warehouse/products/components/ProductSelect";
 
 import { UNIT_SEGMENTS } from "../domain/unitVocabulary";
 import UnitActiveFilters from "./UnitActiveFilters";
@@ -36,15 +36,13 @@ function Field({ label, children, className = "" }) {
  * حساب، تاریخ، سریال، قفسه، علتِ قرنطینه) پشتِ «فیلترهای بیشتر»؛ وقتی بسته است، فیلترهای فعالش به شکلِ برچسبِ
  * قابلِ حذف زیرِ ردیف دیده می‌شوند تا کاربر بداند چرا فهرست کوتاه شده.
  *
- * فهرستِ تامین‌کننده‌ها و مشتری‌ها (هر کدام تا ۲۰۰ ردیف) فقط وقتی گرفته می‌شود که
- * پنل باز است یا برچسبِ فیلترِ فعال نامشان را لازم دارد — نه با هر بازشدنِ صفحه.
+ * انتخابگرهای کالا و طرفِ حساب با جست‌وجوی سرورند؛ برچسبِ فیلترِ فعال نامِ طرف را از
+ * جزئیاتِ همان یک طرف می‌خواند، نه از فهرستِ کامل.
  */
-export default function UnitFilterBar({ store, search, products }) {
+export default function UnitFilterBar({ store, search }) {
   const [showMore, setShowMore] = useState(false);
-  const supplierOptions = useSuppliersOptionsQuery({ enabled: showMore || Boolean(store.supplierId) });
-  const customerOptions = useCustomersOptionsQuery({ enabled: showMore || Boolean(store.customerId) });
-  const suppliers = supplierOptions.suppliers;
-  const customers = customerOptions.customers;
+  const supplier = useSupplierQuery(store.supplierId || null).data;
+  const customer = useCustomerQuery(store.customerId || null).data;
   const isQuarantine = store.segment === UNIT_SEGMENTS.QUARANTINE;
 
   const advancedActive = [
@@ -70,15 +68,7 @@ export default function UnitFilterBar({ store, search, products }) {
 
         {/* برچسبِ داخلیِ EntitySelect در این ردیف جا نمی‌شود. */}
         <div className="min-w-0 flex-1 [&_label]:sr-only">
-          <EntitySelect
-            label="کالا"
-            placeholder="همه‌ی کالاها"
-            emptyText="کالایی یافت نشد"
-            items={products}
-            value={store.productId}
-            onSelect={(id) => store.setProductId(id)}
-            renderMeta={(product) => product.code}
-          />
+          <ProductSelect value={store.productId} onSelect={(id) => store.setProductId(id)} />
         </div>
 
         <div className="ms-auto flex h-11 shrink-0 items-center gap-1 lg:ms-0">
@@ -182,8 +172,8 @@ export default function UnitFilterBar({ store, search, products }) {
 
       <UnitActiveFilters
         store={store}
-        suppliers={suppliers}
-        customers={customers}
+        supplier={supplier}
+        customer={customer}
         linksOnly={showMore}
       />
     </div>

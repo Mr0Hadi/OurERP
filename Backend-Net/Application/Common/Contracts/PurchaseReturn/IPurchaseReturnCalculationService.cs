@@ -53,16 +53,16 @@ namespace Application.Common.Contracts.PurchaseReturn
         ReturnStatusEnum RecomputeReturnStatus(Domain.Entities.PurchaseReturn purchaseReturn);
 
         /// <summary>
-        /// How much of a purchase item's on-order claimed quantity is currently claimed but not
-        /// yet resolved, summed across every active (non-terminal) return for that purchase item.
+        /// How much of a purchase item's on-order claimed quantity is claimed and not yet settled
+        /// (undecided, or decided with an effect still pending), summed across every active (non-terminal) return for that purchase item.
         /// Off-order claims (Scope == OFF_ORDER) never consume a line's quota.
         /// </summary>
         int GetOpenClaimQuantity(int purchaseItemId, List<Domain.Entities.PurchaseReturn> activeReturns);
 
         /// <summary>
         /// How much of a purchase item's received quantity is still eligible for a brand-new
-        /// on-order claim: received minus what's already been settled, minus whatever is
-        /// currently claimed-but-undecided across active returns.
+        /// on-order claim: received plus replacements received on the line, minus what's already
+        /// been settled, minus whatever active returns still hold (GetOpenClaimQuantity).
         /// </summary>
         int GetClaimableQuantity(Domain.Entities.PurchaseItem item, List<Domain.Entities.PurchaseReturn> activeReturns);
 

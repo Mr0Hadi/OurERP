@@ -5,10 +5,9 @@ import { UNIT_CUSTODY_REASON_LABELS } from "@/shared/domain/enums/unitStatus";
 import { UNIT_SEGMENTS, formatDate } from "../domain/unitVocabulary";
 import { formatDigits } from "@/shared/lib/numberFormat";
 
-const findName = (items, id, getName = getPartyName) => {
-  const item = items.find((candidate) => String(candidate.id) === String(id));
-  return item ? getName(item) : `#${formatDigits(id)}`;
-};
+/** نامِ طرف از جزئیاتش؛ تا نرسیده، شناسه. */
+const partyName = (party, id) =>
+  party && String(party.id) === String(id) ? getPartyName(party) : `#${formatDigits(id)}`;
 
 function Chip({ children, onRemove }) {
   return (
@@ -31,7 +30,7 @@ function Chip({ children, onRemove }) {
  * حذف — کاربر همیشه می‌بیند چرا فهرست کوتاه شده. پیوند از خرید/فروش هم
  * اینجاست. `linksOnly` وقتی پنلِ فیلترها باز است و بقیه همان‌جا دیده می‌شوند.
  */
-export default function UnitActiveFilters({ store, suppliers, customers, linksOnly = false }) {
+export default function UnitActiveFilters({ store, supplier, customer, linksOnly = false }) {
   const range = (from, to, format = formatDigits) => `${from ? format(from) : "…"} تا ${to ? format(to) : "…"}`;
 
   const chips = [
@@ -49,12 +48,12 @@ export default function UnitActiveFilters({ store, suppliers, customers, linksOn
     },
     store.supplierId && {
       key: "supplier",
-      label: `تامین‌کننده: ${findName(suppliers, store.supplierId)}`,
+      label: `تامین‌کننده: ${partyName(supplier, store.supplierId)}`,
       clear: () => store.setSupplierId(""),
     },
     store.customerId && {
       key: "customer",
-      label: `مشتری: ${findName(customers, store.customerId)}`,
+      label: `مشتری: ${partyName(customer, store.customerId)}`,
       clear: () => store.setCustomerId(""),
     },
     store.segment === UNIT_SEGMENTS.QUARANTINE &&

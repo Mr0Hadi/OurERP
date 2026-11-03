@@ -23,6 +23,9 @@
 </ListPageLayout>
 ```
 
+دکمه‌ی ساخت همیشه `create` است تا همه‌ی صفحه‌ها یک ظاهر داشته باشند (در موبایل گرد با «جدید»): `{ label, to }` برای صفحه‌ی ساخت،
+`{ label, onClick }` برای دیالوگ (انبارگردانی، علی‌الحساب)؛ بی‌دسترسی `undefined`. دکمه‌ی «جزئیاتِ» ردیف `detailsColumn` است، نه لینک روی نام/شماره.
+
 ```mermaid
 flowchart LR
   ST["ServerTable<br/>query + listState"] -->|isError| QE[QueryErrorState]
@@ -75,13 +78,14 @@ flowchart LR
 | `FilterPanel` / `ResponsiveFilters` | پوسته‌ی فیلترها؛ موبایل: `primary`/`secondary` همیشه‌پیدا + پنلِ بازشونده با شمارِ فیلترِ فعال (`store`) | ۱۷ |
 | `FilterSearchInput` | جست‌وجوی متنی | ۱۵ |
 | `FilterSelect` | انتخابِ تکیِ کم‌گزینه با ردیفِ «همه» (روی `OptionSelect`) | ۱۸ |
-| `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند | ۱۲ |
+| `EntitySelect` | انتخابِ **یک** موجودیت با جست‌وجو (گزینه‌ی زیاد)؛ عمداً تک‌انتخابی چون endpointها یک شناسه می‌گیرند. حالتِ جست‌وجوی سرور: `onSearchChange` (متن به والد، `items` همان نتیجه)، `onOpenChange` (تا بسته است نگیرد)، `selected` (گزینه‌ی انتخاب‌شده‌ای که در نتیجه نیست) | ۱۲ |
 | `DateRangeToolbar` | بازه‌ی تاریخ با میان‌برها (گزارش‌ها) | ۸ |
-| `FilterDateInput`، `FilterMultiChoice`، `FilterSwitch` | تاریخ، چندگزینه، سوییچ | ۴–۶ |
+| `FilterDateInput`، `FilterSwitch` | تاریخ، سوییچ | ۴–۶ |
+| `FilterMultiSelect` | چندانتخابی در قالبِ یک فیلدِ بازشونده با چک‌باکس (`statuses`، `types`، `entryTypes`)، داخلِ ردیفِ `FilterPanel` کنارِ بقیه؛ «همه» وقتی هیچ‌کدام (`allLabel`). فیلترها دکمه‌ی کنارِ هم ندارند؛ دکمه‌ها (`StatusChoice`) فقط برای عوض‌کردنِ نما (اقساط، تفکیکِ خرید/فروش) | ۶ |
 | `FilterCollapse` | پنلِ بازشونده‌ی فیلترها با انیمیشنِ ارتفاع (`Collapsible`ِ Radix، محتوای بسته unmount)؛ `overflow-hidden` فقط حینِ انیمیشن، چون تقویمِ `PersianDatePicker` داخلِ پنل باز می‌شود. پنلِ فیلترِ بازشونده‌ی تازه همین را بگیرد، نه `{open && …}` | `ResponsiveFilters`، `UnitFilterBar` |
 | `filterUtils.js` | `getPartyName` (برچسبِ پیش‌فرضِ `EntitySelect`) | — |
 
-انتخابگرهای موجودیتِ هر فیچر روی `EntitySelect` و خودشان فهرست را می‌گیرند؛ صفحه فهرست را برای فیلتر واکشی و پاس نمی‌دهد: `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`، `side="customer"|"supplier"`، ۲۰ مصرف)، `CategorySelect` (`src/features/warehouse/categories/components/CategorySelect.jsx`، ۷)، `UserFilterSelect` (`src/features/employees/components/UserFilterSelect.jsx`). `label={null}` برای فرمی که برچسبِ خودش را دارد. فایلِ `shared/` که انتخابگرِ طرف‌حساب لازم دارد (`ReturnFilters`) آن را از صفحه می‌گیرد (`partySelect`)، نه با importِ تازه از features.
+انتخابگرهای موجودیتِ هر فیچر روی `EntitySelect` و خودشان فهرست را می‌گیرند؛ صفحه فهرست را برای فیلتر واکشی و پاس نمی‌دهد: `PartySelect` (`src/features/partyAccount/components/PartySelect.jsx`، `side="customer"|"supplier"`، ۲۰ مصرف)، جست‌وجوی سرور)، `ProductSelect` (`src/features/warehouse/products/components/ProductSelect.jsx`، جست‌وجوی سرور)، `CategorySelect` (`src/features/warehouse/categories/components/CategorySelect.jsx`، ۷)، `UserFilterSelect` (`src/features/employees/components/UserFilterSelect.jsx`). `label={null}` برای فرمی که برچسبِ خودش را دارد. فایلِ `shared/` که انتخابگرِ طرف‌حساب لازم دارد (`ReturnFilters`) آن را از صفحه می‌گیرد (`partySelect`)، نه با importِ تازه از features.
 
 ### `feedback/`
 
@@ -128,7 +132,7 @@ flowchart LR
 | `SectionCard` | کارتِ بخشِ صفحه‌ی سند (هدرِ ساده + `action`) | ۸ |
 | `DocumentFormLayout` (`main`/`payments`/`aside`، و `below` تمام‌عرض) + `FormSection`، `OrderSummaryCard` | چیدمانِ دوستونیِ فرمِ خرید/فروش؛ کلِ صفحه یک `<form>`؛ prop‌ِ `payments` در موبایل بین «سند فاکتور» و کارتِ جمع و ثبت می‌نشیند | ۴ |
 | `StatusChoice` | انتخابِ وضعیت به‌صورتِ دکمه | ۷ |
-| `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد (`min` اختیاری)، مبلغ به حروف | ۵–۷ |
+| `ProductThumb`، `QuantityStepper`، `AmountInWords` | تصویرِ کالا، +/− تعداد (`min` و `max` اختیاری؛ با `placeholder`، `null` یعنی «هنوز عددی نیست» — شمارشِ انبارگردانی)، مبلغ به حروف | ۵–۷ |
 | `SelectCheckbox` | چک‌باکسِ انتخابِ ردیف با ناحیه‌ی لمسِ بزرگ (`indeterminate`)؛ دانه‌ها و پیشنهادِ خرید | ۲ |
 | `OrderInfoCard`، `OrderItemsReadOnly`، `OrderLogisticsSection`، `TransporterSection`، `PartySection` | بخش‌های سندِ خرید/فروش (`OrderInfoCard`: `showInvoiceDate`/`showDueDate` برای فروش، که تاریخِ فاکتور را سرور می‌گذارد و سررسید جزوِ پیش‌فاکتور است) | ۲–۴ |
 | `ProductSearchPanel`، `PartyPickerCard`، `SelectedItemsCards`، `SelectedItemsTable`، `MixedPaymentList` | انتخابِ کالا/طرف‌حساب در فرمِ سند | ۱–۳ |
