@@ -181,6 +181,25 @@ export function overdueOf(installments = []) {
  * مبلغی که پرداختِ امروزِ یک قسط می‌گیرد: خودِ قسط + جریمه‌ی دیرکردِ امروز (`penaltyDue`، بخشودگی
  * از آن کم شده). همان قاعده‌ی `PaySaleInstallment`؛ عددها از سرورند، اینجا فقط جمع.
  */
+/**
+ * مبلغِ تسویه‌ی کاملِ امروز از جزئیاتِ قرارداد (`frontend-requests` ۲۵.۳): مانده، تخفیفِ سودِ اقساطِ
+ * سررسیدنشده (`earlySettlementDiscountPreview`) و جریمه‌ها؛ جمع همان `settlementAmountToday`ِ سرور است
+ * که `SettleSaleInstallmentPlan` با همان روز می‌گیرد. سروری که این دو را نمی‌فرستد: مانده + جریمه با
+ * `exact: false` (تخفیف هنگامِ ثبت کم می‌شود).
+ */
+export function settlementQuoteOf(plan) {
+  const remaining = Number(plan.remainingAmount) || 0;
+  const penalty = Number(plan.penaltyDueAmount) || 0;
+  if (plan.settlementAmountToday == null) return { remaining, discount: 0, penalty, total: remaining + penalty, exact: false };
+  return {
+    remaining,
+    discount: Number(plan.earlySettlementDiscountPreview) || 0,
+    penalty,
+    total: Number(plan.settlementAmountToday) || 0,
+    exact: true,
+  };
+}
+
 export const installmentPayableToday = (row) => (Number(row.amount) || 0) + (Number(row.penaltyDue) || 0);
 
 /** اقساطی که هنوز پرداخت نشده‌اند (برای تسویه‌ی کامل). */

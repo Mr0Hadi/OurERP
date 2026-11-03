@@ -14,23 +14,21 @@ import InstallmentPaymentFields from "./InstallmentPaymentFields";
 import { InstallmentStatusBadge } from "./InstallmentStatusBadge";
 import { useInstallmentPlanQuery } from "../services/queries";
 import { usePayInstallmentMutation, useSettleInstallmentPlanMutation } from "../services/mutations";
-import { EMPTY_INSTALLMENT_PAYMENT, installmentPayableToday, unpaidInstallments } from "../domain/installmentPlan";
-import { gregorianToPersian } from "@/shared/lib/dateUtils";
+import { EMPTY_INSTALLMENT_PAYMENT, installmentPayableToday, settlementQuoteOf, unpaidInstallments } from "../domain/installmentPlan";
+import { gregorianToPersian, todayIso } from "@/shared/lib/dateUtils";
 import { formatDigits, formatNumber, formatRial } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import DialogActions from "@/shared/components/feedback/DialogActions";
 import { InfoList, InfoRow } from "@/shared/components/data/InfoList";
 
 /**
- * ردیف‌های مبلغ: پرداختِ قسط = قسط + جریمه‌ی امروز (`penaltyDue`)؛ تسویه = مانده + جریمه‌ی اقساطِ
- * دیرشده (`penaltyDueAmount`). تخفیفِ تسویه‌ی زودهنگام را سرور هنگامِ ثبت کم می‌کند و پیش از آن
- * عددش در دست نیست (`frontend-requests.fa.md` بند ۲۵.۳)، پس جمعِ تسویه «حداکثر» است.
+ * ردیف‌های مبلغ: پرداختِ قسط = قسط + جریمه‌ی امروز (`penaltyDue`)؛ تسویه = مانده − تخفیفِ
+ * زودهنگام + جریمه‌ها، همان عددِ امروزِ سرور (`settlementQuoteOf`).
  */
 function amountRows({ isSettle, plan, row }) {
   if (isSettle) {
-    const remaining = Number(plan.remainingAmount) || 0;
-    const penalty = Number(plan.penaltyDueAmount) || 0;
-    return { base: ["مانده‌ی قرارداد", remaining], penalty, total: remaining + penalty };
+    const quote = settlementQuoteOf(plan);
+    return { base: ["مانده‌ی قرارداد", quote.remaining], discount: quote.discount, penalty: quote.penalty, total: quote.total, exact: quote.exact };
   }
   const penalty = Number(row.penaltyDue) || 0;
   return { base: ["مبلغ قسط", Number(row.amount) || 0], penalty, days: Number(row.daysLate) || 0, total: installmentPayableToday(row) };
@@ -103,12 +101,21 @@ function PaymentBody({ target, pay, settle, onClose, onDone }) {
         ) : (
           <>
             <InfoRow valueClassName="font-medium" label={amounts.base[0]}>{formatNumber(amounts.base[1])}</InfoRow>
+            {amounts.discount > 0 && (
+              <InfoRow valueClassName="font-medium" label="تخفیفِ تسویه‌ی زودهنگام" className={toneText("success")}>
+                {`\u200E−${formatNumber(amounts.discount)}`}
+              </InfoRow>
+            )}
             {amounts.penalty > 0 && (
               <InfoRow valueClassName="font-medium" label={amounts.days > 0 ? `جریمه‌ی دیرکرد (${formatNumber(amounts.days)} روز)` : "جریمه‌ی دیرکرد"} className={toneText("danger")}>
                 {formatNumber(amounts.penalty)}
               </InfoRow>
             )}
-            <InfoRow total label={isSettle ? "حداکثرِ مبلغِ دریافت" : "مبلغ دریافت"} value={formatRial(amounts.total)} />
+            <InfoRow
+              total
+              label={isSettle && !amounts.exact ? "حداکثرِ مبلغِ دریافت" : "مبلغ دریافت"}
+              value={formatRial(amounts.total)}
+            />
           </>
         )}
       </InfoList>
@@ -116,9 +123,15 @@ function PaymentBody({ target, pay, settle, onClose, onDone }) {
       {planQuery.isError && (
         <QueryErrorState error={planQuery.error} onRetry={() => planQuery.refetch()} />
       )}
-      {isSettle && ready && (
+      {isSettle && ready && !amounts.exact && (
         <Notice tone="info">
           سودِ اقساطی که هنوز سررسیدشان نرسیده، به اندازه‌ی تنظیمِ «تخفیفِ تسویه‌ی زودهنگام»، هنگامِ ثبت کم می‌شود؛ مبلغِ نهایی بعد از ثبت در قرارداد دیده می‌شود.
+        </Notice>
+      )}
+      {/* پیش‌نمایشِ سرور برای امروز است؛ با تاریخِ دیگر تخفیف و جریمه از نو حساب می‌شوند. */}
+      {isSettle && ready && amounts.exact && payment.paidAt && !payment.paidAt.startsWith(todayIso()) && (
+        <Notice tone="warning">
+          مبلغ برای امروز حساب شده؛ با این تاریخ، تخفیف و جریمه هنگامِ ثبت از نو حساب می‌شوند.
         </Notice>
       )}
 

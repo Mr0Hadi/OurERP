@@ -8,6 +8,7 @@ import {
   installmentPayableToday,
   overdueOf,
   penaltyWaiveErrors,
+  settlementQuoteOf,
   planDraftErrors,
   planPreviewRequestOf,
   toApiCreatePlan,
@@ -94,5 +95,22 @@ describe("قسط‌ها و جریمه", () => {
     expect(penaltyWaiveErrors({ amount: 10, reason: "  " })).toHaveProperty("reason");
     expect(penaltyWaiveErrors({ amount: 10, reason: "x".repeat(501) })).toHaveProperty("reason");
     expect(penaltyWaiveErrors({ amount: 0, reason: "" })).toEqual({});
+  });
+});
+
+describe("settlementQuoteOf", () => {
+  it("عددِ امروزِ سرور با تخفیف و جریمه", () => {
+    const plan = { remainingAmount: 1_000, penaltyDueAmount: 50, earlySettlementDiscountPreview: 120, settlementAmountToday: 930 };
+    expect(settlementQuoteOf(plan)).toEqual({ remaining: 1_000, discount: 120, penalty: 50, total: 930, exact: true });
+  });
+
+  it("بی پیش‌نمایشِ سرور: مانده + جریمه، تقریبی", () => {
+    expect(settlementQuoteOf({ remainingAmount: 1_000, penaltyDueAmount: 50 })).toEqual({
+      remaining: 1_000,
+      discount: 0,
+      penalty: 50,
+      total: 1_050,
+      exact: false,
+    });
   });
 });
