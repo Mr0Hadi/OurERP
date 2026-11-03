@@ -31,7 +31,13 @@ function useStocktakeMutation({ mutationFn, success, failure, affectsStock = fal
       }
       if (success) toast.success(success);
     },
-    onError: (error) => toast.error(getErrorMessage(error, failure)),
+    onError: (error, variables) => {
+      toast.error(getErrorMessage(error, failure));
+      // درخواستی که در مرورگر timeout خورد ممکن است روی سرور انجام شده باشد؛ سند از نو خوانده می‌شود تا صفحه
+      // همان را نشان دهد که روی سرور است. `variables` برای گذارها خودِ شناسه است و برای بقیه `{ stocktakeId }`.
+      const id = typeof variables === "object" ? variables?.stocktakeId : variables;
+      if (id != null) queryClient.invalidateQueries({ queryKey: stocktakeKeys.detail(id) });
+    },
   });
 }
 

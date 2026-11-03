@@ -105,7 +105,7 @@ function LineRow({ line, stocktakeId, blind, canCount }) {
           )}
         </dl>
       </div>
-      {!blind && (missing.length > 0 || unexpected.length > 0 || line.relocatedCount > 0) && (
+      {!blind && (missing.length > 0 || unexpected.length > 0 || line.relocatedCount > 0 || line.appliedMissing != null) && (
         <div className="space-y-1 text-xs">
           {missing.length > 0 && <Barcodes label="مفقود (اسقاط می‌شود)" barcodes={missing} />}
           {line.relocatedCount > 0 && (
@@ -145,7 +145,10 @@ function Barcodes({ label, barcodes }) {
   );
 }
 
-/** عددِ دستی؛ با Enter یا ترکِ فیلد ثبت می‌شود و خالی کردنش شمارش را پاک می‌کند. */
+/**
+ * عددِ دستی؛ با Enter یا ترکِ فیلد ثبت می‌شود و خالی کردنش شمارش را پاک می‌کند. ثبت فقط از `onBlur` است و Enter فیلد را
+ * blur می‌کند — وگرنه Enter یک بار ثبت می‌کرد و blurِ بعدی (یا غیرفعال‌شدنِ فیلد حینِ درخواست) بارِ دوم.
+ */
 function ManualCountInput({ line, stocktakeId }) {
   const count = useCountStocktakeLineMutation();
   const [value, setValue] = useState(line.manualCount == null ? "" : String(line.manualCount));
@@ -168,13 +171,13 @@ function ManualCountInput({ line, stocktakeId }) {
         step={1}
         dir="ltr"
         value={value}
-        disabled={count.isPending}
+        readOnly={count.isPending}
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            commit();
+            e.currentTarget.blur();
           }
         }}
         placeholder="—"

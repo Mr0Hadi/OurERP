@@ -80,7 +80,7 @@ function FormBody({ onClose, onSaved }) {
             <CategorySelect
               value={draft.productCategoryId}
               onSelect={(productCategoryId) => patch({ productCategoryId })}
-              placeholder="همه‌ی دسته‌ها"
+              placeholder="بدونِ دسته (فقط برند)"
             />
             <FormField label="برند" htmlFor="stocktake-brand">
               <Input
