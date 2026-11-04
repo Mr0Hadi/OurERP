@@ -171,7 +171,7 @@ function MixedRows({ rows, payable, onChange, onAdd, onRemove }) {
                   onChange={(type) => onChange(row.id, { type })}
                   numeric
                   aria-label={`روشِ تکه‌ی ${formatNumber(index + 1)}`}
-                  className="h-9! w-full"
+                  className="h-9 w-full"
                   options={ROW_TYPE_OPTIONS}
                 />
                 <Button

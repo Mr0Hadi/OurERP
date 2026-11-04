@@ -24,7 +24,7 @@ function IdInput({ label, placeholder, value, onChange }) {
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(normalizePersianDigits(event.target.value).replace(/\D/g, ""))}
-        className="flex-1 text-left"
+        className="text-left sm:flex-1"
       />
     </div>
   );

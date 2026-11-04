@@ -14,7 +14,7 @@ export default function FilterSearchInput({
       <Label className="whitespace-nowrap font-medium text-foreground text-sm">
         {label}
       </Label>
-      <div className="relative flex-1">
+      <div className="relative sm:flex-1">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <Input
           placeholder={placeholder}

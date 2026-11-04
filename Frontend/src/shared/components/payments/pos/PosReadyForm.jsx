@@ -59,7 +59,7 @@ export default function PosReadyForm({ retry, amount, blockedReason, hint, prepa
           disabled={noTerminal}
           placeholder={noTerminal ? "دستگاهی تعریف نشده" : "دستگاه را انتخاب کنید"}
           aria-label="دستگاه کارتخوان"
-          className="h-9! w-full"
+          className="h-9 w-full"
           options={items.map((item) => ({ value: item.id, label: item.name }))}
         />
       </div>

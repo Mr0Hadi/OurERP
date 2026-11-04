@@ -32,7 +32,7 @@ function PriceRangeInput({ label, value, onChange, placeholder }) {
         placeholder={placeholder}
         value={value === "" ? null : Number(value)}
         onValueChange={onChange}
-        className="flex-1"
+        className="sm:flex-1"
       />
     </div>
   );

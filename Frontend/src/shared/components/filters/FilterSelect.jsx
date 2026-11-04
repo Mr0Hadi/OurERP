@@ -26,7 +26,7 @@ export default function FilterSelect({
         numeric={numeric}
         boolean={boolean}
         emptyLabel={allLabel}
-        className="flex-1 w-full"
+        className="w-full sm:flex-1"
       />
     </div>
   );

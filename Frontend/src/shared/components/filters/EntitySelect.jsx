@@ -121,7 +121,8 @@ export default function EntitySelect({
         <PopoverAnchor asChild>
           <div
             ref={fieldRef}
-            className="flex h-8 min-w-0 flex-1 items-center bg-transparent rounded-lg border border-input px-3 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
+            data-slot="entity-select-trigger"
+            className="flex h-8 w-full min-w-0 sm:flex-1 items-center bg-transparent rounded-lg border border-input px-3 text-sm cursor-pointer hover:border-ring transition-colors dark:bg-input/30 dark:hover:bg-input/50"
             onClick={() => setIsOpen(!isOpen)}
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">

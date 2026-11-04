@@ -126,7 +126,7 @@ export default function OrderInfoCard({
                   value={String(status.value)}
                   onValueChange={(next) => status.onChange(Number(next))}
                 >
-                  <SelectTrigger className="h-9! w-full">
+                  <SelectTrigger className="h-9 w-full">
                     <SelectValue>{statusLabel}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>

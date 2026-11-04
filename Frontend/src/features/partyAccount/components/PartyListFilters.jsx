@@ -44,7 +44,7 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
             placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1"
+            className="sm:flex-1"
           />
         </Field>
       }
@@ -57,7 +57,7 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
             // فقط رقم — سرور `id` را عددی می‌خواهد؛ غیرِ آن بایند نمی‌شود و فیلتر بی‌صدا نادیده گرفته می‌شود.
             onChange={(e) => setId(e.target.value.replace(/[^0-9]/g, ""))}
             inputMode="numeric"
-            className="flex-1"
+            className="sm:flex-1"
           />
         </Field>
       </div>
@@ -68,7 +68,7 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
             placeholder="از"
             value={toPriceValue(minBalance)}
             onValueChange={(next) => setBalanceRange(next ?? "", maxBalance)}
-            className="flex-1"
+            className="sm:flex-1"
           />
         </Field>
         <Field label="حداکثر مانده (ریال)">
@@ -76,7 +76,7 @@ export default function PartyListFilters({ useStore, searchKey, searchPlaceholde
             placeholder="تا"
             value={toPriceValue(maxBalance)}
             onValueChange={(next) => setBalanceRange(minBalance, next ?? "")}
-            className="flex-1"
+            className="sm:flex-1"
           />
         </Field>
 

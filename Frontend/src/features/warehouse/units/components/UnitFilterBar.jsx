@@ -72,7 +72,7 @@ export default function UnitFilterBar({ store, search }) {
         <div className="min-w-0 basis-full flex-1">{search}</div>
 
         {/* برچسبِ داخلیِ EntitySelect در این ردیف جا نمی‌شود. */}
-        <div className="min-w-0 flex-1 [&_label]:sr-only">
+        <div className="min-w-0 flex-1 [&_label]:sr-only [&_[data-slot=entity-select-trigger]]:h-10">
           <ProductSelect value={store.productId} onSelect={(id) => store.setProductId(id)} />
         </div>
 

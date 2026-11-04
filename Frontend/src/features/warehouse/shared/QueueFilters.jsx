@@ -50,7 +50,7 @@ export default function QueueFilters({ useStore, party, statusOptions, searchPla
           value={store.status}
           onChange={(value) => store.setStatus(parseQueueFilter(value))}
           options={statusOptions}
-          className="flex-1 w-full"
+          className="w-full sm:flex-1"
         />
       </div>
     </FilterPanel>

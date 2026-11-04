@@ -63,7 +63,7 @@ export function ResponsiveFilters({ primary, secondary, store, onReset, children
 
       <div className="flex items-center gap-2">
         {besideToggle && (
-          <div className="min-w-0 flex-1 [&_input]:h-10 [&_input]:rounded-xl [&_label]:sr-only">
+          <div className="min-w-0 flex-1 [&_input]:h-10 [&_input]:rounded-xl [&_[data-slot=entity-select-trigger]]:h-10 [&_label]:sr-only">
             {besideToggle}
           </div>
         )}
