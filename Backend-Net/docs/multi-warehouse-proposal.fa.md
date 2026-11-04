@@ -1,371 +1,374 @@
-# مشخصاتِ اجرا: چندانبارِ کامل
+# مشخصاتِ پیاده‌سازی: چندانبارِ کامل (GAP-08، مرحله‌ی دوم)
 
-> **وضعیت (۲۰۲۶-۱۱-۰۴): آماده برای اجرا، پس از تأییدِ تیمِ بکند.** این سند را می‌شود مستقیم به Claude Code داد.
+> **وضعیت:** آماده‌ی پیاده‌سازی (۲۰۲۶-۱۱-۰۴، فرانت؛ بندِ §۳۹ِ `frontend-requests.fa.md`). جایگزینِ §۳۷ و §۳۸ هم هست.
 >
-> تصمیم‌های کسب‌وکار (بخشِ ۱) قطعی‌اند. چند تصمیمِ فنی که در گفت‌وگو باز مانده بود، در بخشِ ۲ با **پیش‌فرضِ طرح** بسته شده‌اند.
-> اگر تیمِ بکند با یکی مخالف است، پیش از اجرا همان بند را در این سند عوض کند؛ بقیه‌ی سند به آن وابسته است.
->
-> پیش‌زمینه: GAP-08 (`api-guide.fa.md` بخشِ ۲۵) و درخواست‌های §۳۷ و §۳۸ در `frontend-requests.fa.md`، که هر دو در این سند حل می‌شوند.
+> **روشِ کار با Claude Code:**
+> - فاز به فاز (بخش‌های ۳ و ۴)؛ هر فاز یک شاخه، با تست‌ها و به‌روزرسانیِ مستندها.
+> - همه‌ی قواعدِ `Backend-Net/CLAUDE.md` برقرار است، مخصوصاً ۶b (سوییچ داده را عوض یا پاک نمی‌کند و داده همیشه مدلِ «روشن» است) و §۷.
+> - بندهایی که «تصمیمِ فنیِ پیشنهادی» دارند را اگر تیمِ بکند قبول ندارد، **پیش از ساخت** بگوید.
+> - هر جا این سند ساکت است، الگوی موجودِ کد ملاک است (مثلاً `SaleWarehouseIssue` برای رسیدگیِ حسابداری، `ReceivePurchase` برای سربرگِ راننده).
 
-## ۰. قواعدِ کار برای اجراکننده (Claude Code)
+## ۰. خلاصه و قواعدِ ثابت
 
-- **قراردادهای `Backend-Net/CLAUDE.md` همه برقرارند:**
-  - یک فایل برای دستور، اعتبارسنج و هندلر.
-  - خواندن مستقیم از `IWMSDbContext` و نوشتن با repository/UnitOfWork.
-  - همه‌چیز async با `CancellationToken`.
-  - استثناهای سفارشی.
-  - فهرستِ صفحه‌ای با `SortBy` و `ThenSortBy(Id)`، و یک case در `ListSortingTests`.
-  - `[AuditAction]` روی هر دستور و `[HasPermission]` روی هر اکشن (آزمون‌های پوشش باید سبز بمانند).
-- **قاعده‌ی ۶b:**
-  - داده همیشه مدلِ «روشن» است. سوییچِ `Warehouse.MultiWarehouseEnabled` فقط ورودیِ تازه را محدود می‌کند و داده را عوض نمی‌کند.
-  - با سوییچِ خاموش هر فیلدِ انبار انبارِ پیش‌فرض است.
-- **`ProductUnitService` تنها نویسنده‌ی وضعیت و انبارِ دانه است.** هر جابه‌جایی یک `ProductUnitMovement` با `WarehouseId` دارد.
-- **عددِ audit:** دستورهای تازه از `820` به بعد (`800`–`819` گرفته شده‌اند).
-- **عددهای enum ذخیره می‌شوند و قراردادِ فرانت‌اند.** فقط به ته اضافه کنید و هیچ عددی را دوباره استفاده نکنید. عددهای پیشنهادیِ این
-  سند از کدِ فعلی بررسی شده‌اند و آزادند.
-- **Migration:**
-  - ساخته شود ولی اعمال نشود (کاربر خودش اعمال می‌کند).
-  - هر migration داده‌های قبلی را با انبارِ پیش‌فرض (`Id = 1` یا `IsDefault`) پر کند.
-- **مستندات:** `api-guide.fa.md` (بخشِ ۲۵ و یک جدولِ تازه در بخشِ ۱۶ برای هر مرحله) و بخشِ «Current state»ِ `CLAUDE.md`.
-- **تست‌ها:** هر مرحله تست‌های یکپارچه‌ی خودش را دارد (بخشِ ۸). شمارِ شکست‌های محیطیِ مستندشده نباید بیشتر شود.
+- **انبار صفتِ سند است.** خرید، فروش و هر دو مرجوعی یک `WarehouseId` دارند و همه‌ی مراحلِ آن سند (رزرو، ارسال، دریافت، دورِ کالا) پیش‌فرض
+  از همان انبار کار می‌کنند. پارامترِ `warehouseId`ِ دستورها فقط جایگزینِ همان یک دور است.
+- **هر دانه همیشه در یک انبار است**؛ موجودیِ هر انبار از شمردنِ دانه‌ها می‌آید. `Product.Stock` همچنان جمعِ موجودیِ آزادِ همه‌ی انبارهاست.
+- **بهای تمام‌شده یکی است** (یک میانگین برای همه‌ی انبارها). حواله ردیفِ دفترِ بها نمی‌سازد، مگر زیان (گم‌شدن) یا رفتن به قرنطینه.
+- **انبار فقط مکانِ فیزیکیِ کالاست.** فیلدِ فروش یا حسابداری (صندوق، شماره‌ی فاکتور، قیمت) روی `Warehouse` نرود، تا «شعبه» بعداً بالای
+  انبار اضافه شود (بخشِ ۶).
+- **اصلاحِ دستی همیشه ممکن است**، ولی با دسترسیِ جدا، علت و ثبت در تاریخچه. هیچ ردیفی پاک یا بی‌صدا بازنویسی نمی‌شود.
+- **سوییچِ `Warehouse.MultiWarehouseEnabled` خاموش:**
+  - همه‌ی `WarehouseId`های تازه انبارِ پیش‌فرض‌اند و ورودیِ انبار نادیده گرفته می‌شود (مثلِ امروز، `WarehouseScope`).
+  - حواله‌ی تازه، تعدیل در انبارِ غیرپیش‌فرض و آستانه‌ی هر انبار پذیرفته نمی‌شود.
+  - کارِ نیمه‌تمام (حواله‌ی در راه، مغایرتِ باز) همیشه تمام‌کردنی است.
 
-## ۱. تصمیم‌های کسب‌وکار (قطعی)
+## ۱. تصمیم‌ها
 
-| موضوع | تصمیم |
-|---|---|
-| انبارِ مرجوعی‌ها | در همان انبارهای معمولی. کالای خراب در همان انبار «قرنطینه» است (وضعیتِ دانه، نه انبارِ جدا). |
-| موجودی و آستانه | برای **هر انبار** موجودی و آستانه‌ی هشدار لازم است. |
-| فروش و خرید | محدود نمی‌شوند. همه موجودیِ همه‌ی انبارها را می‌بینند. فروش از انبارِ دیگر مجاز است (انبارِ تحویلِ پیش‌فاکتور همان انبار، یا اول حواله). |
-| انبارِ کاربر | هر کاربر یک انبارِ پیش‌فرض دارد. تعریفِ «انباردار» برای هر انبار لازم نیست. |
-| محدودیتِ انباردار | تنظیمی که پیش‌فرضش «فقط پیش‌فرض و فیلتر» است (اجرایش در مرحله‌ی ۴). |
-| شروعِ حواله | هر دو: مبدأ ارسال می‌کند، یا مقصد درخواستِ کالا می‌دهد که یک پیش‌نویس است و مبدأ ارسالش می‌کند. |
-| کالای گم‌شده در راه | تصمیم با **حسابداری** است، مثلِ «مشکلاتِ انبار»ِ پیش‌فاکتور. انباردارِ مقصد فقط کسری را ثبت می‌کند. |
-| اصلاحِ دستی (قاعده‌ی کلی) | هر اشتباه راهِ اصلاحِ دستی دارد، محدود به دسترسی، با علت، و ثبت در ممیزی. ردیفی پاک یا بی‌صدا بازنویسی نمی‌شود. |
-| ویرایشِ دستیِ موجودی | مجاز است، ولی **برای هر انبار جدا** و با دسترسیِ جدا و علتِ الزامی. |
-| موجودیِ اول | هنگامِ ساختِ کالا با انتخابِ انبار. |
-| بهای تمام‌شده | یک میانگین برای همه‌ی انبارها. ارزشِ هر انبار = تعدادِ دانه‌ها × میانگین. `InventoryCostLedgerEntry` انبار نمی‌گیرد. |
-| شعبه | در آینده یک موجودیتِ جدا **بالای** انبار است. پس فیلدِ فروش یا حسابداری (صندوق، شماره‌ی فاکتور، قیمت) روی `Warehouse` نگذارید. |
-
-## ۲. تصمیم‌های فنی (پیش‌فرضِ طرح؛ تیمِ بکند می‌تواند پیش از اجرا عوض کند)
-
-1. **حواله مستقل از محموله است.** دستورهای حواله جدا ساخته می‌شوند و `ReceiveShipment`/`DispatchShipment` آن‌ها را، مثلِ
-   خرید و مرجوعی، از طریقِ `IMediator` در یک تراکنش صدا می‌زنند (بخشِ ۵.۴).
-2. **انبار صفتِ سند است:** روی خرید، فروش و هر دو مرجوعی. پارامترِ `warehouseId`ِ دستورهای عملیات می‌ماند، ولی فقط برای استثنا
-   (بخشِ ۴.۲).
-3. **حواله چند دورِ ارسال و چند دورِ دریافت دارد.**
-4. **آستانه‌ی هر انبار در جدولِ جدای `ProductWarehouseSetting` است.** فیلدهای خودِ کالا آستانه‌ی **کل** می‌مانند.
-5. **قفسه** (`ProductUnit.BinLocation`) همین حالا هم روی دانه است و دانه انبار دارد. پس قفسه عملاً زیرمجموعه‌ی انبار است. جدولِ قفسه
-   (GAP-09) خارج از این کار است.
-
-## ۳. مرحله‌ها
-
-| مرحله | محتوا | این سند |
+| موضوع | تصمیم | از طرفِ |
 |---|---|---|
-| ۱ | اطلاعاتِ انبار (§۳۸)، انبار روی سندها (§۳۷)، انبارِ پیش‌فرضِ کاربر، تعدیلِ دستیِ موجودیِ هر انبار، موجودیِ اول با انبار، آستانه‌ی هر انبار، ارزشِ موجودیِ هر انبار، گسترشِ قواعدِ غیرفعال‌سازی | **اجرا** |
-| ۲ | حواله‌ی کامل: پیش‌نویس و درخواست، دورهای ارسال و دریافت با راننده و اسکن و خرابی و کسری، کسری به حسابداری، جابه‌جاییِ مستقیم، حواله در محموله | **اجرا** |
-| ۳ | پیشنهادِ تأمینِ هر انبار (حواله یا خرید)، گزارشِ گردشِ کالا در انبار، ستونِ موجودیِ هر انبار در خروجیِ کالا | **اجرا** |
-| ۴ | تنظیمِ محدودیتِ انباردار و `UserWarehouse`، جدولِ قفسه‌ها (GAP-09)، هشدارِ کم‌شدنِ موجودی (با GAP-15) | بعداً، سندِ جدا |
-| ۵ | شعبه بالای انبار | بعداً، سندِ جدا |
+| محدودیتِ کاربر به انبارهای خودش | تنظیمِ `Warehouse.RestrictUsersToAssigned`، پیش‌فرض خاموش (فقط پیش‌فرض و فیلتر). فاز ۴. | کسب‌وکار |
+| کالای گم‌شده در راه | انباردارِ مقصد فقط کسری را گزارش می‌کند؛ تصمیم (زیان / برگشت به مبدأ / پیدا شد) با **حسابداری**، مثلِ `SaleWarehouseIssue`. | کسب‌وکار |
+| شروعِ حواله | هر دو: مبدأ می‌سازد و ارسال می‌کند، یا مقصد «درخواستِ کالا» (پیش‌نویس) می‌دهد و مبدأ ارسالش می‌کند. | کسب‌وکار |
+| انبارِ مرجوعی | انبارِ جدا لازم نیست؛ مرجوعی در انبارهای معمولی، کالای خراب در قرنطینه‌ی همان انبار. | کسب‌وکار |
+| موجودی و آستانه | برای هر انبار موجودی و آستانه‌ی هشدار جدا. | کسب‌وکار |
+| ویرایشِ دستیِ موجودی | مجاز، ولی **برای هر انبار** (فقط دانه‌های همان انبار)، با دسترسیِ جدا و علتِ الزامی. | کسب‌وکار |
+| موجودیِ اولِ کالا | با انتخابِ انبار. | کسب‌وکار |
+| بهای تمام‌شده | یک میانگین برای همه‌ی انبارها؛ ارزشِ هر انبار = تعداد × میانگین. | کسب‌وکار |
+| فروش و خرید | محدود نمی‌شوند؛ همه موجودیِ همه‌ی انبارها را می‌بینند. فروش از انبارِ دیگر با انتخابِ انبارِ پیش‌فاکتور. | کسب‌وکار |
+| حواله در محموله | دورِ ارسال و دورِ دریافتِ حواله هر کدام یک دستورِ مستقل‌اند و `DispatchShipment`/`ReceiveShipment` هم آن‌ها را مثلِ دورهای مرجوعی در خودشان می‌پذیرند. | تصمیمِ فنیِ پیشنهادی |
+| تعدادِ دورها | **یک دورِ ارسال** (می‌شود کمتر از درخواست فرستاد؛ باقی می‌افتد) و **چند دورِ دریافت**. | تصمیمِ فنیِ پیشنهادی |
+| صفِ ورودی/خروجیِ هر انبار | endpointِ تازه نه؛ فهرست‌های موجود فیلترِ `warehouseId` می‌گیرند. | تصمیمِ فنیِ پیشنهادی |
+| نوعِ انبار، شعبه، قفسه‌ی هر انبار، بهای هر انبار | بیرون از این کار (بخشِ ۶). | — |
 
-## ۴. مرحله‌ی ۱ — پایه
+## ۲. وضعیتِ امروز (کدِ موجود)
 
-### ۴.۱ اطلاعاتِ انبار (§۳۸)
+- **`Warehouse`:** `Code`، `Name`، `Address`، `Description`، `IsDefault`، `IsActive`. دستورها در `Application/Features/Warehousing/`.
+- **`ProductUnit.WarehouseId`** همیشه پر است. `ProductUnitService` با `UnitMovementContext.WarehouseId` و `WarehouseScope.ResolveAsync`
+  انبار را می‌گیرد.
+- **`warehouseId`ِ اختیاری روی** `ReceivePurchase`، `ShipSale`، هر دو `ExecuteGoodsRound` و `CreateStocktake`؛ روی `CheckSaleWarehouse` نیست.
+- **حواله‌ی امروز:**
+  - `CreateStockTransfer` همان لحظه دانه‌ها را `IN_TRANSIT` می‌کند.
+  - `ReceiveStockTransfer` همه را یک‌جا تحویل می‌دهد و `CancelStockTransfer` همه را برمی‌گرداند.
+  - `StockTransferStatusEnum`: `IN_TRANSIT=1، RECEIVED=2، CANCELLED=3`. جدول‌ها `StockTransfer` و `StockTransferUnit`.
+- **ویرایشِ موجودی:**
+  - `UpdateProduct.Stock` ← `ReconcileStockAsync`: افزایش در انبارِ پیش‌فرض ساخته می‌شود و کاهش از هر انباری.
+  - دفترِ بها با `RecordManualAdjustmentIn/OutAsync`.
+  - `CreateProduct.Stock` همیشه در انبارِ پیش‌فرض.
+- **هیچ‌کدام انبار ندارند:** `InventoryCostLedgerEntry`، `GetInventoryValuation`، `GetProductList` (`stock`، `isLowOnStock`) و `GetReorderSuggestionList`.
+- **عددهای آزاد** (هرگز عددِ موجودی را عوض نکنید؛ فقط اضافه):
 
-- **فیلدهای تازه روی `Warehouse`، `WarehouseInput` و `WarehouseDto` (همه اختیاری):**
-  - `Province`، `City`، `PostalCode`، `Latitude`، `Longitude`، `PhoneNumber`: همان نام‌ها و قواعدِ `Customer`/`Supplier`.
-  - `ManagerUserId` (FK به `Users`، `Restrict`) و `ManagerName` در DTO.
-- **کد:**
-  - `Code` اختیاری شود. خالی ⇒ سرور `W{n}` می‌سازد: کوچک‌ترین `n ≥ 1` که کدِ هیچ انباری (فعال یا غیرفعال) نیست.
-  - کدِ دستی مثلِ امروز (یکتا، با حروفِ بزرگ).
+  | enum | اعدادِ آزاد |
+  |---|---|
+  | `PermissionEnum` | ۱۸۰ تا ۱۸۹ (گروهِ انبار)، ۲۶۶ به بعد (گروهِ حسابداری) |
+  | `AuditActionEnum` | ۸۲۰ به بعد |
+  | `ProductUnitMovementReasonEnum` | ۲۲ به بعد |
+  | `InventoryCostEventTypeEnum` | ۲۵ به بعد |
+  | `UnitCustodyReasonEnum` | ۶ به بعد |
+  | `StockTransferStatusEnum` | ۴ به بعد |
+  | `ImageFolderEnum` | ۵ به بعد |
 
-### ۴.۲ انبار روی سندها (§۳۷)
+## ۳. فاز ۱ — انبار روی سند و کاربر، اطلاعاتِ انبار، تعدیلِ موجودی
 
-- **ستون‌ها:** `WarehouseId` (int، NOT NULL، FK `Restrict`) روی `Purchase`، `Sale`، `PurchaseReturn` و `SaleReturn`.
-  - **Backfill:** خرید و فروش با انبارِ پیش‌فرض. مرجوعی با انبارِ سندِ اصلیش.
-  - DTOهای فهرست و جزئیات `warehouseId` و `warehouseName` بگیرند.
-  - هر چهار فهرست فیلترِ `warehouseId` بگیرند.
-- **قاعده‌ی تعیین:** `ResolveDocumentWarehouseAsync(requested, userId)`:
-  - با سوییچِ خاموش ⇒ همیشه انبارِ پیش‌فرض.
-  - با سوییچِ روشن:
-    - انبارِ فرستاده‌شده، به شرطی که فعال باشد؛
-    - وگرنه `User.DefaultWarehouseId` (بخشِ ۴.۳)؛
-    - وگرنه انبارِ پیش‌فرض.
-  - یک‌جا تعریف شود، کنارِ `WarehouseScope`.
-- **خرید:**
-  - `CreatePurchase`/`UpdatePurchase` فیلدِ `WarehouseId` می‌گیرند. فقط تا وقتی پیش‌نویس (`PROFORMA`) است عوض می‌شود.
-  - `ReceivePurchase`: انبار از سند می‌آید. `request.WarehouseId` اگر فرستاده شد و با سند فرق داشت، استثنای همین دور است (مثلاً
-    کامیون به انبارِ دیگر رفت) و در حرکتِ دانه‌ها ثبت می‌شود.
-- **فروش:**
-  - `CreateSale`/`UpdateSale`/`CreateInPersonProforma` فیلدِ `WarehouseId` می‌گیرند.
-  - عوض کردنِ انبارِ پیش‌فاکتورِ رزروشده همه‌ی رزروها را آزاد می‌کند و پیش‌فاکتور را به `DRAFT` برمی‌گرداند؛ همان رفتارِ تغییرِ کالا
-    (`SaleProformaPipeline`).
-  - `CheckSaleWarehouse` **فقط از `Sale.WarehouseId`** رزرو می‌کند، چه FIFO چه با بارکد. بارکدِ دانه‌ای که در انبارِ دیگری است با
-    پیامِ روشن رد می‌شود: «این دانه در انبارِ X است».
-  - `ShipSale`: دانه‌های رزروشده همان‌هایی‌اند که رزرو شدند. برداشتِ آزاد (مازاد، فروشِ قدیمیِ بی‌رزرو) از `Sale.WarehouseId` است،
-    مگر `request.WarehouseId` آمده باشد.
-- **مرجوعی‌ها:**
-  - `CreateSaleReturn`/`CreatePurchaseReturn` فیلدِ `WarehouseId` می‌گیرند؛ پیش‌فرض انبارِ سندِ اصلی است.
-  - `ExecuteGoodsRound` (هر دو): پیش‌فرض انبارِ مرجوعی است و `request.WarehouseId` استثنای همین دور.
+### ۳.۱ اطلاعاتِ انبار (§۳۸)
 
-### ۴.۳ انبارِ پیش‌فرضِ کاربر
+- **`Warehouse`:** همه nullable، با همان نام و اعتبارسنجیِ `Customer`/`Supplier`:
+  - `Province`، `City`
+  - `PostalCode` (۱۰ رقم)
+  - `Latitude`، `Longitude` (`decimal?`)
+  - `PhoneNumber`، با همان قاعده‌ی `PhoneNumber`ِ تأمین‌کننده (موبایل یا ثابت)
+  - `ManagerUserId` (FK به `User`، `Restrict`)
+- **ورودی و خروجی:** همین‌ها در `WarehouseInput` (Create/Update) و `WarehouseDto`، به‌علاوه‌ی `ManagerName`.
+- **کد:** `Code` در Create اختیاری می‌شود. خالی ⇒ سرور `W{n}` می‌سازد: کوچک‌ترین n ≥ ۱ که کدِ هیچ انباری (فعال یا غیرفعال) نیست.
+  یکتایی همان‌جا تضمین می‌شود. کدِ دستی مثلِ امروز (بزرگ، یکتا، حداکثر ۳۰).
 
-- **داده:** `User.DefaultWarehouseId` (nullable، FK `Restrict`).
-  - `UpdateUser` و `CreateUser` آن را می‌گیرند.
-  - `UserInfoDto` و `UserListDto` فیلدهای `defaultWarehouseId` و `defaultWarehouseName` را دارند.
-- **`PUT api/User/SetMyDefaultWarehouse`** `{ warehouseId | null }`:
-  - برای هر کاربرِ واردشده (در فهرستِ `AuthenticatedOnly`ِ آزمونِ پوشش).
-  - مثلِ `SaveMyDashboardLayout`؛ فرانت «انبارِ فعال»ِ سرتیتر را با آن نگه می‌دارد.
+### ۳.۲ انبارِ هر کاربر
 
-### ۴.۴ تعدیلِ دستیِ موجودیِ هر انبار
+- **`User.DefaultWarehouseId`** (`int?`، FK `Restrict`):
+  - در `CreateUser`/`UpdateUser` اختیاری؛ باید انبارِ فعال باشد.
+  - در DTOهای کاربر (`UserInfoDto`، `UserListDto`، `UserUpdateDto`) هم بیاید، به‌علاوه‌ی `DefaultWarehouseName`.
+- **`GET api/Warehouse/GetMyWarehouses`** (فقط واردشده؛ در فهرستِ `AuthenticatedOnly`ِ تستِ پوشش):
+  - `{ defaultWarehouseId, warehouses: [ردیفِ GetWarehouseList] }`
+  - در این فاز `warehouses` همه‌ی انبارهای فعال است؛ در فاز ۴ با `UserWarehouse` محدود می‌شود.
+  - `defaultWarehouseId` = انبارِ پیش‌فرضِ کاربر، وگرنه انبارِ پیش‌فرضِ سیستم.
+- **پیش‌فرضِ سندهای تازه** (بخشِ ۳.۳): `warehouseId`ِ فرستاده، وگرنه انبارِ پیش‌فرضِ کاربر، وگرنه انبارِ پیش‌فرضِ سیستم. با سوییچِ خاموش همیشه
+  انبارِ پیش‌فرضِ سیستم. یک helper برای این، کنارِ `WarehouseScope`.
 
-- **دسترسیِ تازه:** `StockAdjust = 180` (گروهِ `Warehouse`): «تعدیلِ دستیِ موجودیِ انبار».
-- **`StockAdjustmentReasonEnum`:** `ENTRY_ERROR = 1` (خطای ورود)، `OPENING_BALANCE = 2` (موجودیِ اول)، `COUNT_CORRECTION = 3` (اصلاحِ شمارش)،
-  `OTHER = 9`؛ با `[Description]`ِ فارسی.
-- **`POST api/Warehouse/AdjustWarehouseStock`** (`StockAdjust`، audit `820`):
-  ```json
-  { "productId": 87, "warehouseId": 2, "newQuantity": 12, "reason": 1, "note": "سه عدد اشتباه وارد شده بود",
-    "productUnitBarcodes": null }
-  ```
-  - `newQuantity` تعدادِ تازه‌ی **روی قفسه** (`IN_STOCK`) در همین انبار است. `note` برای `OTHER` الزامی است.
-  - **افزایش:** دانه در همین انبار ساخته می‌شود. ردیفِ دفتر `MANUAL_ADJUSTMENT_IN` است به `UnitCostOrAverageAsync`.
-  - **کاهش:** دانه‌ها فقط از قفسه‌ی همین انبار اسقاط می‌شوند: با بارکد اگر آمده باشد، وگرنه تازه‌ترین‌ها؛ همان رفتارِ امروزِ
-    `ReconcileStockAsync`. ردیفِ دفتر `MANUAL_ADJUSTMENT_OUT` به میانگین. برای کالای `RequiresUnitTracking` بارکد الزامی است.
-  - حرکتِ دانه با `MANUAL_ADJUSTMENT` و `Note` = علت و توضیح. `Product.Stock` هم‌زمان به‌روز می‌شود.
-  - **پاسخ:** همان شکلِ `GetProductWarehouseStock` برای این کالا.
-- **`UpdateProduct.Stock`:**
-  - با سوییچِ روشن تغییرِ این عدد ۴۰۰ می‌گیرد، با پیام «موجودی را از جدولِ موجودی در انبارها تعدیل کنید». عددِ برابر نادیده گرفته
-    می‌شود.
-  - با سوییچِ خاموش تغییر از طریقِ همان منطقِ `AdjustWarehouseStock` روی انبارِ پیش‌فرض اجرا می‌شود و `StockAdjust` می‌خواهد. علت
-    `ENTRY_ERROR` است.
-  - `ReconcileStockAsync`ِ کور به انبار دیگر از هیچ‌جا صدا زده نشود.
+### ۳.۳ انبار روی سند
 
-### ۴.۵ موجودیِ اول با انبار
-
-`CreateProduct.WarehouseId` (اختیاری، با `ResolveDocumentWarehouseAsync`). دانه‌های `Stock` در همان انبار ساخته می‌شوند و
-`OPENING_BALANCE` می‌گیرند. همان برای ورودِ کالا از فایل (`DataTransfer`، اگر ستونِ موجودی دارد).
-
-### ۴.۶ آستانه‌ی هر انبار
-
-- **جدولِ `ProductWarehouseSetting`:** `ProductId`، `WarehouseId` (کلیدِ ترکیبی، FKها `Cascade` از کالا و `Restrict` از انبار)،
-  `LowStockThreshold` (int)، `TargetStock` (int?)، `UpdatedAt`.
-- **`PUT api/Warehouse/SetProductWarehouseSettings`** (`ProductUpdate`، audit `825`):
-  `{ productId, items: [{ warehouseId, lowStockThreshold, targetStock }] }`.
-  - جایگزینیِ کامل برای همان کالا. ردیفی که نیامده حذف می‌شود.
-  - `TargetStock` اگر هست باید ≥ `LowStockThreshold` باشد.
-- **`GetProductWarehouseStock`** هر ردیف را با این‌ها برگرداند:
-  - `lowStockThreshold`، `targetStock` و `isLow` (`inStock <= lowStockThreshold`، فقط اگر آستانه تعریف شده باشد).
-  - برای **همه‌ی انبارهای فعال**، حتی بی‌دانه، تا فرانت آستانه را برای انبارِ خالی هم بگذارد.
-- **`GetProductList`:**
-  - `warehouseId` اختیاری: `stock` و وضعیتِ کم/تمام برای همان انبار حساب شود (شمارِ `IN_STOCK`ِ آن انبار و آستانه‌ی همان انبار).
-  - فیلترِ موجودِ `IsLowOnStock` با `warehouseId` روی موجودی و آستانه‌ی همان انبار اعمال شود.
-
-### ۴.۷ ارزشِ موجودیِ هر انبار
-
-`GetInventoryValuation` پارامترِ `warehouseId` اختیاری بگیرد و هر ردیف `byWarehouse: [{ warehouseId, warehouseName, quantity, value }]`
-داشته باشد. `quantity` = `IN_STOCK` + `RESERVED` + `QUARANTINED`ِ آن انبار، و `value` = `quantity` × میانگینِ کالا. دانه‌ی «در راه» جدا
-می‌ماند، مثلِ امروز.
-
-### ۴.۸ غیرفعال‌سازیِ انبار
-
-قواعدِ `DeleteWarehouse` گسترش پیدا کند. رد شود اگر:
-- خرید یا فروشِ باز روی این انبار هست (خریدی که کاملاً دریافت نشده، یا فروشی که کاملاً ارسال نشده و لغو نشده)؛
-- مرجوعیِ باز روی این انبار هست؛
-- حواله‌ی `DRAFT` از یا به این انبار هست.
-
-با غیرفعال‌شدن، `User.DefaultWarehouseId`هایی که به این انبار اشاره می‌کنند `null` شوند و ردیف‌های `ProductWarehouseSetting` این انبار
-بمانند (قاعده‌ی ۶b: پاک نکن).
-
-## ۵. مرحله‌ی ۲ — حواله‌ی کامل
-
-### ۵.۱ مدل
-
-- **`StockTransferStatusEnum`** (به ته اضافه می‌شود): `DRAFT = 4`، `PARTIALLY_RECEIVED = 5`، `CLOSED_WITH_DISCREPANCY = 6`. عددهای ۱ تا ۳
-  همان می‌مانند.
-- **`StockTransfer` فیلدهای تازه:**
-  - `RequestedByWarehouseId` (مقصد اگر مقصد ساخته، وگرنه `null`)
-  - `IsDirect` (bool)
-  - `ExpectedArrivalAt` (DateTime?)
-  - `CreatedByUserId`
-  - `DispatchedAt` nullable شود (پیش‌نویس هنوز ارسال نشده).
-- **`StockTransferLine`** (تازه): `StockTransferId`، `ProductId`، `RequestedQuantity`، `DispatchedQuantity`، `ReceivedQuantity`، `DamagedQuantity`،
-  `MissingQuantity`، `LostQuantity`، `ReturnedToSourceQuantity`.
-  - همه شمارنده‌های تجمعی‌اند.
-  - `InTransit = Dispatched − Received − Damaged − Lost − ReturnedToSource` در `[NotMapped]` حساب می‌شود.
-- **`StockTransferRound`** (تازه، append-only):
-  - `StockTransferId`، `Kind` (`StockTransferRoundKindEnum`: `DISPATCH = 1`، `RECEIPT = 2`)، `OccurredAt`، `UserId`.
-  - `DriverFullName`، `DriverPhoneNumber`، `VehiclePlate`، `PartyName` (تحویل‌دهنده یا تحویل‌گیرنده)، `Note`.
-  - عکس‌ها با `DocumentAttachment`ِ `DocumentKindEnum.STOCK_TRANSFER = 5` و `DocumentId` = شناسه‌ی حواله.
-- **`StockTransferUnit`** (موجود): هر دانه‌ی ارسال‌شده یک ردیف دارد. ستونِ `Outcome` اضافه شود (`StockTransferUnitOutcomeEnum`:
-  `IN_TRANSIT = 1`، `RECEIVED = 2`، `DAMAGED = 3`، `LOST = 4`، `RETURNED_TO_SOURCE = 5`) به‌اضافه‌ی `RoundId`ِ دورِ دریافتش.
-- **`StockTransferShortage`** (تازه، مثلِ `SaleWarehouseIssue`): کسریِ گزارش‌شده که تصمیمش با حسابداری است.
-  - `StockTransferId`، `ProductId`، `Quantity`، `ReportedAt`، `ReportedByUserId`، `Note`.
-  - `Resolution` (`StockTransferShortageResolutionEnum`: `LOST = 1`، `RETURNED_TO_SOURCE = 2`، `FOUND = 3`)، `ResolvedAt`، `ResolvedByUserId`،
-    `ResolutionNote`.
-- **علت و رویدادهای تازه:**
-  - `UnitCustodyReasonEnum.TRANSIT_DAMAGE = 6`
-  - `ProductUnitMovementReasonEnum`: `STOCK_TRANSFER_DAMAGED = 22`، `STOCK_TRANSFER_LOST = 23`، `STOCK_TRANSFER_RETURNED = 24`،
-    `STOCK_ADJUSTED = 25` (اگر برای ۴.۴ از `MANUAL_ADJUSTMENT` جدا شود؛ پیش‌فرض: همان `MANUAL_ADJUSTMENT`)
-  - `InventoryCostEventTypeEnum.STOCK_TRANSFER_LOST = 25`: خروج به میانگین، مثلِ `STOCK_SCRAPPED`، و در گزارشِ فروش زیرِ `ScrapLoss`.
-  - خرابی در راه همان `STOCK_QUARANTINED`ِ امروز است، با `QuarantineCost` = میانگین.
-- **Migration:**
-  - حواله‌های موجود به این شکل پر می‌شوند: برای هر کالا یک ردیف از `StockTransferUnit`ها (requested = dispatched = شمارِ دانه‌ها).
-  - حواله‌ی `RECEIVED` ⇒ `ReceivedQuantity` = همان.
-  - حواله‌ی `CANCELLED` ⇒ `ReturnedToSourceQuantity` = همان.
-  - `Outcome` دانه‌ها هم مطابقِ همین.
-
-### ۵.۲ چرخه و دستورها
-
-همه زیرِ `api/Warehouse`. هر دستور سندِ کاملِ حواله را برمی‌گرداند (`StockTransferReader`) و ایدمپوتنت است.
-
-| دستور | دسترسی | audit | قاعده |
+| سند | فیلد | ساخت و ویرایش | اثر |
 |---|---|---|---|
-| `CreateStockTransfer` | `StockTransferManage` یا `StockTransferRequest = 181` | ۸۰۸ (موجود) | **تغییرِ رفتار:** یک `DRAFT` می‌سازد: `fromWarehouseId`، `toWarehouseId`، `lines: [{ productId, quantity }]`، `description`، `expectedArrivalAt`، `isDirect`. کسی که فقط `StockTransferRequest` دارد ساخته‌اش را «درخواستِ مقصد» ثبت می‌کند (`RequestedByWarehouseId = toWarehouseId`). برای سازگاری: اگر `dispatch` (همان شکلِ بدنه‌ی `DispatchStockTransfer` بی `id`) هم آمد، در همان تراکنش ارسال می‌شود. اگر `isDirect` و `dispatch` با هم آمدند، دریافت هم انجام می‌شود (بخشِ ۵.۳). فقط با سوییچِ روشن. |
-| `UpdateStockTransfer` | `StockTransferManage` | ۸۲۴ | فقط `DRAFT`: ردیف‌ها، مقصد، توضیح و تاریخِ پیش‌بینی. |
-| `DispatchStockTransfer` | `StockTransferManage` | ۸۲۱ | `DRAFT` یا `IN_TRANSIT`. بدنه: `{ id, warehouseId?, driverFullName, driverPhoneNumber, vehiclePlate, partyName, note, occurredAt, images[], lines: [{ productId, quantity, productUnitBarcodes }] }`. از قفسه‌ی مبدأ (بارکد، یا FIFO برای کالای بی‌ردیابی) برداشته می‌شود. `Dispatched` ≤ `Requested` نیست، بیشتر هم مجاز است. دانه‌ها `IN_TRANSIT` می‌شوند و `Product.Stock` کم می‌شود. فقط با سوییچِ روشن. |
-| `ReceiveStockTransferRound` | `StockTransferManage` یا `StockTransferReceive = 182` | ۸۲۲ | `IN_TRANSIT` یا `PARTIALLY_RECEIVED`. بدنه: `{ id, driverFullName, …, lines: [{ productId, arrivedQuantity, productUnitBarcodes, defects: [{ quantity, problem, note, productUnitBarcodes }], missingQuantity, missingNote }] }`. توضیحِ کامل زیرِ جدول. **مستقل از سوییچ** (قاعده‌ی ۶b: کارِ نیمه‌کاره گیر نمی‌کند). |
-| `ReceiveStockTransfer` (موجود) | همان | ۸۰۹ (موجود) | میان‌بُر می‌ماند: «همه‌ی در راه سالم رسید»، یعنی یک `ReceiveStockTransferRound` بی سربرگ. |
-| `CancelStockTransfer` (موجود) | `StockTransferManage` | ۸۱۰ (موجود) | `DRAFT` ⇒ بی‌اثر. `IN_TRANSIT` بی هیچ دریافتی ⇒ همه‌ی دانه‌ها به قفسه‌ی مبدأ، مثلِ امروز. بعد از اولین دورِ دریافت ۴۰۰: باید کسری‌ها حل شوند. |
-| `ResolveStockTransferShortage` | `StockTransferShortageResolve = 183` (حسابداری) | ۸۲۳ | `{ shortageId, resolution, note }`. `LOST` ⇒ دانه‌ها `SCRAPPED`، حرکتِ `STOCK_TRANSFER_LOST` و ردیفِ دفترِ `STOCK_TRANSFER_LOST`. `RETURNED_TO_SOURCE` ⇒ `IN_STOCK` در مبدأ و حرکتِ `STOCK_TRANSFER_RETURNED`. `FOUND` ⇒ کسری بسته می‌شود و دانه‌ها `IN_TRANSIT` می‌مانند تا با دورِ دریافتِ بعدی برسند. وقتی چیزی در راه نماند، وضعیت `RECEIVED` می‌شود (اگر کسریِ `LOST` یا `RETURNED` داشته، `CLOSED_WITH_DISCREPANCY`). |
-| `GetStockTransferShortageList` | `StockTransferShortageResolve` یا `AccountingView` | — | صفحه‌ای؛ فیلترِ وضعیت، انبار و تاریخ؛ در `ListSortingTests`. |
+| `Purchase` | `WarehouseId` (انبارِ مقصد)، `int` غیرِ null | `CreatePurchase`/`UpdatePurchase`: `warehouseId` اختیاری (پیش‌فرضِ ۳.۲). فقط تا وقتی سند ویرایش‌پذیر است (PROFORMA). | `ReceivePurchase` بی `warehouseId` در همین انبار دریافت می‌کند؛ پارامتر برای همان دور جایگزین است. |
+| `Sale` | `WarehouseId` (انبارِ تحویل) | `CreateSale`/`UpdateSale`/`CreateInPersonProforma`: `warehouseId` اختیاری. فقط در PROFORMA. | ببینید ۳.۴. |
+| `SaleReturn` | `WarehouseId` | `CreateSaleReturn`: اختیاری، پیش‌فرض `Sale.WarehouseId`. | `ExecuteGoodsRound` بی `warehouseId` از همین انبار. پارامتر برای دریافتِ مرجوعی در شعبه‌ی دیگر. |
+| `PurchaseReturn` | `WarehouseId` | `CreatePurchaseReturn`: اختیاری، پیش‌فرض `Purchase.WarehouseId`. | همان. خروج از قفسه یا قرنطینه‌ی همین انبار. |
 
-**جزئیاتِ `ReceiveStockTransferRound`:**
-- `arrivedQuantity` (همه‌ی رسیده، سالم و خراب) + `missingQuantity` ≤ در راهِ همان کالا.
-- **بارکدها:** برای کالای `RequiresUnitTracking` الزامی‌اند، به تعدادِ `arrivedQuantity`، و باید دانه‌های **همین حواله** باشند. برای کالای
-  بی‌ردیابی FIFO از دانه‌های در راهِ همین حواله.
-- **سالم‌ها:** `IN_STOCK` در مقصد.
-- **خراب‌ها (`defects`):** `QUARANTINED` در مقصد با `TRANSIT_DAMAGE` و `QuarantineCost` = میانگین. `problem` از `ObservedProblems` است.
-- **`missingQuantity > 0`:**
-  - یک `StockTransferShortage` ساخته می‌شود و دانه‌ها `IN_TRANSIT` می‌مانند.
-  - این کسری، مثلِ «مشکلاتِ انبار»ِ پیش‌فاکتور، به حسابداری می‌رود.
-- **وضعیتِ حواله:**
-  - چیزی در راه نمانده و کسریِ باز نیست ⇒ `RECEIVED`.
-  - کسریِ بازی هست ⇒ `PARTIALLY_RECEIVED` تا حلِ کسری.
-  - بخشی هنوز در راه است ⇒ `PARTIALLY_RECEIVED`.
+- **DTOها:** `warehouseId` و `warehouseName` روی جزئیات و فهرستِ هر چهار.
+- **فیلتر:** `warehouseId` روی `GetPurchaseList`، `GetSaleList`، فهرستِ هر دو مرجوعی و هر دو `Get…PendingEffects`، تا صفِ هر انبار ساخته شود.
+- **انبارِ غیرفعال:** روی سندِ تازه پذیرفته نمی‌شود. سندِ قدیمیِ آن انبار خواندنی و تمام‌کردنی می‌ماند (۶b).
+- **migration:** همه‌ی سندهای موجود ⇒ انبارِ پیش‌فرض (`Warehouses.IsDefault = 1`).
 
-### ۵.۳ جابه‌جاییِ مستقیم
+### ۳.۴ پیش‌فاکتور و ارسال از انبارِ سند (§۳۷)
 
-برای انبارهای کنارِ هم. `IsDirect = true` یعنی ارسال و دریافت در یک تراکنش، بی سربرگِ راننده و بی صفِ دریافت.
-- با `CreateStockTransfer` + `dispatch` (یا `DispatchStockTransfer` روی پیش‌نویسِ `isDirect`) همه‌ی دانه‌های ارسالی بلافاصله در مقصد
-  `IN_STOCK` می‌شوند.
-- حرکت‌ها همان دو حرکتِ ارسال و دریافت‌اند، تا گزارشِ گردش یکی بماند.
+- **`CheckSaleWarehouse`:** رزروِ FIFO (کالای بی‌اسکن) فقط از دانه‌های `IN_STOCK`ِ `Sale.WarehouseId`. بارکدِ اسکن‌شده‌ای که در انبارِ دیگر است
+  با این پیام رد شود: «دانه‌ی … در انبارِ X است، نه انبارِ این پیش‌فاکتور». کسری مثلِ امروز.
+- **`CreateInPersonProforma`:** همین قاعده.
+- **تغییرِ `Sale.WarehouseId` در `UpdateSale`:** هم‌ردیفِ «تغییرِ کالا یا تعداد» است: همه‌ی رزروها آزاد می‌شوند و مرحله به `DRAFT` برمی‌گردد
+  (`SaleProformaPipeline`).
+- **`ShipSale`:** دانه‌های رزروشده مثلِ امروز همان‌هایی‌اند که رزرو شدند. برداشتِ بی‌رزرو (مازاد، فروشِ قدیمی) از `Sale.WarehouseId`، مگر
+  پارامتر چیز دیگری بگوید.
 
-### ۵.۴ حواله در محموله
+### ۳.۵ تعدیلِ دستیِ موجودی برای هر انبار
 
-- `DispatchShipmentCommand.StockTransferDispatches: List<DispatchStockTransferCommand>`
-- `ReceiveShipmentCommand.StockTransferReceipts: List<ReceiveStockTransferRoundCommand>`
+- **`POST api/Warehouse/AdjustWarehouseStock`**، دسترسیِ تازه‌ی **`StockAdjust = 182`**:
 
-مثلِ بخش‌های دیگرِ محموله، از طریقِ `IMediator` و در همان `ExecuteInTransactionAsync`. اعتبارسنجِ «دست‌کم یک بخش» این‌ها را هم
-بشمارد. پاسخِ محموله `stockTransfers` (سندهای حواله) هم بدهد.
+  ```json
+  { "productId": 87, "warehouseId": 2, "quantity": 5, "reason": 1, "note": "اشتباهِ ورودِ اول" }
+  ```
 
-### ۵.۵ فهرست‌ها و صف‌ها
+  - `quantity` = تعدادِ **تازه‌ی** دانه‌های `IN_STOCK`ِ این کالا در این انبار (≥ ۰)، نه اختلاف.
+  - `StockAdjustmentReasonEnum` (تازه): `DATA_ENTRY_ERROR = 1`، `OPENING_BALANCE = 2`، `COUNT_CORRECTION = 3`، `OTHER = 9`.
+  - `note`: برای `OTHER` الزامی؛ حداکثر ۵۰۰.
+  - **افزایش:** دانه در همین انبار ساخته می‌شود؛ دفترِ بها `RecordManualAdjustmentInAsync` به قیمتِ خرید (مثلِ امروزِ `UpdateProduct`).
+  - **کاهش:** تازه‌ترین دانه‌های `IN_STOCK`ِ **همین انبار** اسقاط می‌شوند؛ `RecordManualAdjustmentOutAsync`. دانه‌ی رزرو، قرنطینه یا
+    در راه دست نمی‌خورد. اگر کم است، ۴۰۰ با عددِ موجود.
+  - **حرکتِ دانه:** `MANUAL_ADJUSTMENT` (۲) با `Note` = عنوانِ علت + توضیح.
+  - `Product.Stock` همان‌قدر جابه‌جا می‌شود. ردیفِ ممیزی با عددِ قبل و بعد (خودکار).
+  - **پاسخ:** همان شکلِ `GetProductWarehouseStock` برای این کالا.
+  - با سوییچِ خاموش فقط انبارِ پیش‌فرض پذیرفته است.
+- **`UpdateProduct.Stock`:**
+  - **سوییچِ روشن:** اگر با موجودیِ فعلی فرق دارد ⇒ ۴۰۰: «موجودیِ هر انبار را از «تعدیلِ موجودی» عوض کنید».
+  - **سوییچِ خاموش:** مثلِ امروز (انبارِ پیش‌فرض)، ولی تغییرِ `Stock` حالا **`StockAdjust`** هم می‌خواهد (چک در handler، چون `ProductUpdate`
+    برای بقیه‌ی فیلدها کافی است).
+- **`CreateProduct`:** `warehouseId` اختیاری برای `Stock`ِ اول (پیش‌فرضِ ۳.۲). حرکتِ دانه `OPENING_BALANCE` (۱) مثلِ امروز.
 
-- `GetStockTransferList`:
-  - `statuses` شاملِ وضعیت‌های تازه.
-  - `warehouseId` (مبدأ **یا** مقصد)، `requestedOnly` (فقط درخواست‌های مقصد)، `hasOpenShortage`.
-  - ردیف‌ها `requestedQuantity`، `dispatchedQuantity`، `receivedQuantity`، `inTransitQuantity`، `expectedArrivalAt` و `isOverdue`
-    (`IN_TRANSIT` و گذشته از `expectedArrivalAt`) را دارند.
-- **صف‌ها:** دستورِ جدای صف لازم نیست؛ فرانت صف‌ها را از فهرست‌های موجود با فیلترِ `warehouseId` می‌سازد:
-  - **ورودیِ انبار:** حواله‌های `IN_TRANSIT`/`PARTIALLY_RECEIVED` با `toWarehouseId`.
-  - **خروجیِ انبار:** حواله‌های `DRAFT` با `fromWarehouseId`.
-- `GetStockTransferDetail` ردیف‌ها (با شمارنده‌ها)، دورها (با سربرگ و عکس)، کسری‌ها و دانه‌ها (با `Outcome`) را برگرداند. همین داده
-  برای برگه‌ی چاپیِ حواله در استودیوی چاپِ فرانت کافی است.
+### ۳.۶ آستانه و هدفِ هر انبار
 
-### ۵.۶ دسترسی‌ها (گروهِ `Warehouse`)
+- **جدولِ `ProductWarehouseSetting`:**
+  - ستون‌ها: `ProductId` (Cascade)، `WarehouseId` (Restrict)، `LowStockThreshold int`، `TargetStock int?`، `UpdatedAt`، `UpdatedByUserId`.
+  - کلید `(ProductId, WarehouseId)`؛ ردیف‌نداشتن = تعریف‌نشده.
+  - `Product.LowStockThreshold`/`TargetStock` آستانه‌ی **کل** می‌مانند.
+- **`PUT api/Warehouse/SetProductWarehouseSettings`** (دسترسیِ `ProductUpdate`):
+  - بدنه: `{ productId, settings: [{ warehouseId, lowStockThreshold, targetStock }] }`، جایگزینیِ کامل برای این کالا.
+  - با سوییچِ خاموش ۴۰۰.
+- **`GetProductWarehouseStock`:** هر ردیف `lowStockThreshold`، `targetStock` و `isLow` (`inStock <= lowStockThreshold`) بگیرد. **همه‌ی انبارهای فعال**
+  بیایند، حتی بی دانه، تا ستونِ آستانه برای همه پرشدنی باشد.
+- **`GetProductList` و خروجیِ داده‌ی کالا** — `warehouseId` اختیاری. با آن:
+  - `stock` = دانه‌های `IN_STOCK`ِ آن انبار.
+  - `lowStockThreshold` از جدولِ بالا (نبود ⇒ `null`).
+  - `isLowOnStock` با همان (نبودِ آستانه ⇒ «کم نیست»).
+  - مرتب‌سازیِ `STOCK` روی همان عدد.
+  - بی `warehouseId` مثلِ امروز.
 
-| عدد | نام | توضیح |
+### ۳.۷ ارزشِ موجودی
+
+- **`GetInventoryValuation`:** `warehouseId` اختیاری.
+  - **با آن:** تعداد = دانه‌های `IN_STOCK + RESERVED + QUARANTINED`ِ آن انبار (همان دسته‌بندیِ امروزِ گزارش)، ارزش = تعداد × میانگینِ کالا.
+  - **بی آن:** مثلِ امروز.
+  - دانه‌ی `IN_TRANSIT` مالِ هیچ انباری نیست و فقط در گزارشِ کل می‌آید.
+
+### ۳.۸ تست‌ها و مستندهای فاز ۱
+
+- **تست‌ها:**
+  - پیش‌فرضِ انبار در سندها (فرستاده / کاربر / سیستم / سوییچِ خاموش).
+  - رزروِ FIFO فقط از انبارِ پیش‌فاکتور و ردِ بارکدِ انبارِ دیگر.
+  - تغییرِ انبارِ پیش‌فاکتور ⇒ آزادشدنِ رزرو.
+  - دریافتِ خرید و دورِ مرجوعی بی پارامتر در انبارِ سند، با پارامتر در انبارِ دیگر.
+  - تعدیلِ افزایش/کاهش فقط در همان انبار، کاهشِ بیش از موجود ۴۰۰، دانه‌ی رزرو دست‌نخورده.
+  - ۴۰۰ِ `UpdateProduct.Stock` با سوییچِ روشن، و نیاز به `StockAdjust` با سوییچِ خاموش.
+  - کدِ خودکارِ `W{n}`.
+  - `GetProductList` با `warehouseId`، `isLow` در `GetProductWarehouseStock`، و ارزشِ موجودیِ یک انبار.
+  - یک موردِ `ListSortingTests` برای `GetProductList` با `warehouseId`.
+- **مستندها:**
+  - `api-guide.fa.md`: بخش‌های ۲۵، ۳، ۹، ۱۱، ۱۰/۱۲، ۲۰ و ۱۵ (enumِ تازه)، و جدولِ تغییراتِ شکننده‌ی ۱۶.
+  - `CLAUDE.md` (Current state).
+  - زیرِ §۳۷، §۳۸ و §۳۹ِ `frontend-requests.fa.md` بنویسید چه ساخته شد.
+
+## ۴. فاز ۲ — حواله‌ی کامل
+
+### ۴.۱ وضعیت‌ها (`StockTransferStatusEnum`؛ فقط اضافه)
+
+| مقدار | نام | معنا |
 |---|---|---|
-| ۱۸۱ | `StockTransferRequest` | ساختِ درخواستِ کالا (پیش‌نویسِ مقصد) |
-| ۱۸۲ | `StockTransferReceive` | ثبتِ دورِ دریافتِ حواله (انباردارِ مقصد) |
-| ۱۸۳ | `StockTransferShortageResolve` | تصمیم برای کسریِ حواله (حسابداری) |
+| 4 | `DRAFT` | پیش‌نویس یا درخواستِ کالا؛ ردیف‌ها «درخواستی»اند و دانه‌ای جابه‌جا نشده. |
+| 1 | `IN_TRANSIT` | ارسال شده و هنوز هیچ دانه‌ای در مقصد تحویل نشده. |
+| 5 | `PARTIALLY_RECEIVED` | بخشی تحویل شده یا مغایرتِ حل‌نشده دارد. |
+| 2 | `RECEIVED` | همه‌ی دانه‌ها در مقصد (سالم یا قرنطینه). |
+| 6 | `CLOSED_WITH_DISCREPANCY` | چیزی در راه نمانده، ولی دست‌کم یک مغایرت (گم‌شده یا برگشته به مبدأ) داشته. |
+| 3 | `CANCELLED` | لغو، پیش از هر تحویلی. |
 
-`GetStockTransferList`/`Detail` هر کدام از `StockTransferView`، `StockTransferManage`، `StockTransferRequest` و `StockTransferReceive`
-را بپذیرند.
+### ۴.۲ مدل
 
-## ۶. مرحله‌ی ۳ — تأمین و گزارش
+- **`StockTransfer`** (موجود): به‌علاوه‌ی
+  - `IsDirect bool`
+  - `ExpectedArrivalAt DateTime?`
+  - `RequestedByUserId int?`
+  - `UpdatedAt`
+  - `DispatchedAt` nullable می‌شود (پیش‌نویس هنوز ارسال نشده).
+- **`StockTransferLine`** (تازه): `StockTransferId`، `ProductId`، `RequestedQuantity`. ردیفِ پیش‌نویس. پس از ارسال، `RequestedQuantity` همان
+  درخواست می‌ماند و عددهای ارسال و دریافت از دانه‌ها شمرده می‌شوند.
+- **`StockTransferRound`** (تازه): یک دورِ ارسال یا دریافت با سربرگِ خودش:
+  - `StockTransferId`، `Kind` (`DISPATCH = 1`، `RECEIPT = 2`)، `OccurredAt`
+  - `DriverFullName`، `DriverPhoneNumber`، `VehiclePlate`
+  - `PartyName` (تحویل‌دهنده در ارسال، تحویل‌گیرنده در دریافت)، `PartyPhoneNumber`
+  - `Note`، `RecordedByUserId`، `RecordedAt`
+  - نام‌ها و اعتبارسنجی مثلِ سربرگِ `ReceivePurchase`/`ExecuteGoodsRound`.
+- **`StockTransferRoundImage`** (تازه): `StockTransferRoundId`، `ObjectKey`، `FileName?`، `Note?`، `UploadedAt`. مثلِ
+  `PurchaseReceivingImage`، با `ImageFolderEnum.TRANSFER = 5`.
+- **`StockTransferUnit`** (موجود): به‌علاوه‌ی
+  - `DispatchRoundId`، `ReceiptRoundId?`
+  - `State` (`StockTransferUnitStateEnum` تازه): `IN_TRANSIT = 1`، `RECEIVED = 2`، `RECEIVED_DAMAGED = 3`، `MISSING = 4`، `LOST = 5`، `RETURNED = 6`
+- **`StockTransferDiscrepancy`** (تازه، الگوی `SaleWarehouseIssue`):
+  - `StockTransferId`، `ProductUnitId`، `ProductId`
+  - `ReportedByUserId`، `ReportedAt`، `Note`
+  - `Resolution?` (`StockTransferDiscrepancyResolutionEnum`: `LOST = 1`، `RETURN_TO_SOURCE = 2`، `FOUND_AT_DESTINATION = 3`)
+  - `ResolutionNote?`، `ResolvedByUserId?`، `ResolvedAt?`
+- **`UnitCustodyReasonEnum.TRANSIT_DAMAGE = 6`:** خرابیِ رسیده با حواله. `ApplyProductUnitAction` (آزادسازی و اسقاط) آن را مثلِ
+  `WAREHOUSE_HOLD` بپذیرد. در کامنتِ enum بیاید که خوانندگانش کیستند.
+- **حرکتِ دانه (`ProductUnitMovementReasonEnum`):** `STOCK_TRANSFER_DAMAGED = 22`، `STOCK_TRANSFER_LOST = 23`، `STOCK_TRANSFER_RETURNED = 24`.
+- **دفترِ بها (`InventoryCostEventTypeEnum`):** `TRANSIT_LOSS = 25`. خروج از استخر به میانگین؛ گزارشِ فروش آن را مثلِ `STOCK_SCRAPPED`
+  در `ScrapLoss` بشمرد. خرابیِ رسیده همان رفتارِ `STOCK_QUARANTINED = 24` را دارد: از استخر به بیرونِ استخر به میانگین، و
+  `QuarantineCost` = میانگین.
 
-### ۶.۱ پیشنهادِ تأمینِ هر انبار
+### ۴.۳ دسترسی‌ها (تازه)
 
-- **`GetReorderSuggestionList`** پارامترِ `warehouseId` می‌گیرد. با آن، آستانه و هدف از `ProductWarehouseSetting`ِ همان انبار می‌آید
-  و «موقعیت» = موجودیِ آن انبار + در راه به آن انبار + خریدهای باز با همین انبار.
-- **هر ردیف `source` (`ReorderSourceEnum`: `PURCHASE = 1`، `TRANSFER = 2`) دارد:**
-  - `TRANSFER` اگر انبارِ دیگری مازادِ کافی دارد. مازاد = موجودی − آستانه‌ی خودش؛ برای انبارِ بی‌آستانه = کلِ موجودی. انبار با
-    بیشترین مازاد انتخاب می‌شود.
-  - ردیفِ `TRANSFER` فیلدهای `sourceWarehouseId`، `sourceWarehouseName` و `availableInSource` را دارد.
-  - وگرنه `PURCHASE`، مثلِ امروز.
-- **`POST api/Reorder/CreateTransferDraftsFromReorder`** (`StockTransferManage` یا `StockTransferRequest`، audit `827`):
-  `{ warehouseId, lines: [{ productId, quantity, sourceWarehouseId }] }`. برای هر انبارِ مبدأ یک `DRAFT` می‌سازد.
-- **`CreatePurchaseDraftsFromReorder`** موجود `warehouseId` بگیرد و روی پیش‌نویس‌های خرید بنشاند.
+| عدد | نام | برای |
+|---|---|---|
+| 180 | `StockTransferRequest` | ساخت و ویرایش و حذفِ **پیش‌نویس** (درخواستِ کالا) |
+| 181 | `StockTransferReceive` | دورِ دریافت، گزارشِ کسری |
+| 266 | `StockTransferDiscrepancyResolve` (گروهِ حسابداری) | رسیدگی به مغایرت‌ها |
 
-### ۶.۲ گزارشِ گردشِ کالا در انبار (کاردکس)
+- `StockTransferManage` (۱۷۵) می‌ماند برای ارسال، جابه‌جاییِ مستقیم و لغو.
+- **خواندنِ فهرست و جزئیات:** هر کدام از `StockTransferView`، `StockTransferManage`، `StockTransferRequest`، `StockTransferReceive`.
+- **فهرستِ مغایرت‌ها:** `AccountingView` یا `StockTransferDiscrepancyResolve`.
+- **audit:** هر دستورِ تازه عضوِ خودش در `AuditActionEnum` از ۸۲۰ به بعد (تستِ پوشش اجبار می‌کند). `AdjustWarehouseStock` و
+  `SetProductWarehouseSettings`ِ فاز ۱ هم همین‌طور.
 
-**`GET api/Warehouse/GetStockMovementReport`** (`ProductUnitView` یا `AccountingView`):
-- **پارامترها:** `productId`، `warehouseId` (اختیاری)، `fromDate`، `toDate`، `page`/`take`.
-- **منبع:** `ProductUnitMovement`.
-- **خروجی:**
-  - `openingQuantity`
-  - ردیف‌ها: تاریخ، نوعِ حرکت (`reason`)، سند (`documentKind`/`documentId`/`documentNumber`)، `inQuantity`، `outQuantity`،
-    `balance`
-  - `closingQuantity`
-- **تعریفِ ورود و خروج:** هر حرکتی که دانه را به «در اختیار و روی قفسه یا قرنطینه‌ی این انبار» می‌آورد ورود است و برعکس خروج.
-  حواله برای مبدأ خروج و برای مقصد ورود است.
-- **مرتب‌سازی:** تاریخ، صعودی.
+### ۴.۴ دستورها
 
-### ۶.۳ خروجیِ کالا
+همه در `api/Warehouse`. پاسخِ همه‌ی دستورهای حواله سندِ کاملِ `GetStockTransferDetail` است (بخشِ ۴.۵). فقط حذف `{ id }` برمی‌گرداند.
 
-در `DataTransfer`ِ `products` برای هر انبارِ فعال یک ستونِ «موجودی — {نامِ انبار}» بیاید. چون ستون‌ها پویا‌اند، اگر `ExportSpec` آن را
-پشتیبانی نمی‌کند، یک ستونِ متنیِ «موجودی در انبارها» به شکلِ `MAIN: 3، T2: 7` کافی است.
+| دستور | از وضعیت | کار |
+|---|---|---|
+| `CreateStockTransfer` | — | `{ fromWarehouseId, toWarehouseId, description, expectedArrivalAt, isDirect, lines: [{ productId, quantity, productUnitBarcodes }] }`. بی `isDirect` ⇒ **`DRAFT`** با `RequestedQuantity` (بارکد نادیده). `isDirect: true` ⇒ بخشِ ۴.۶. با سوییچِ خاموش ۴۰۰. |
+| `UpdateStockTransfer` | `DRAFT` | همان بدنه با `id`؛ جایگزینیِ کامل. `UpdatedAt` برای همزمانی، مثلِ `DocumentVersion`ِ خرید و فروش. |
+| `DeleteStockTransfer` | `DRAFT` | پاک‌کردنِ واقعیِ پیش‌نویس (هنوز اثری ندارد). |
+| `DispatchStockTransfer` | `DRAFT` | `{ stockTransferId, occurredAt, driverFullName, driverPhoneNumber, vehiclePlate, partyName, partyPhoneNumber, note, images, expectedArrivalAt, lines: [{ productId, quantity, productUnitBarcodes }] }`. هر `quantity` بین ۱ و `RequestedQuantity`؛ کالای بیرون از درخواست ۴۰۰. باقی‌مانده می‌افتد. دانه‌ها از `IN_STOCK`ِ مبدأ (بارکد یا FIFO؛ برای `RequiresUnitTracking` بارکد الزامی) ⇒ `IN_TRANSIT`، ردیفِ `StockTransferUnit` با `DispatchRoundId`، حرکتِ `STOCK_TRANSFER_DISPATCHED`. وضعیت ⇒ `IN_TRANSIT`. |
+| `ReceiveStockTransferRound` | `IN_TRANSIT`، `PARTIALLY_RECEIVED` | `{ stockTransferId, occurredAt, سربرگِ دریافت, images, lines: [{ productId, arrivedQuantity, productUnitBarcodes, defects: [{ quantity, problem, note, productUnitBarcodes }] }] }`. `arrivedQuantity` ≤ در راهِ این کالا در این حواله و شاملِ خراب‌هاست. بارکدها باید در راهِ **همین حواله** باشند (برای `RequiresUnitTracking` الزامی؛ وگرنه FIFO از در راهِ همین حواله). سالم ⇒ `IN_STOCK` در مقصد (`STOCK_TRANSFER_RECEIVED`). خراب ⇒ `QUARANTINED` در مقصد، `TRANSIT_DAMAGE`، `STOCK_TRANSFER_DAMAGED`، دفترِ بها مثلِ `STOCK_QUARANTINED`. `problem` از `ObservedProblems`. وضعیت از ۴.۷. |
+| `ReceiveStockTransfer` (موجود) | `IN_TRANSIT`، `PARTIALLY_RECEIVED` | میان‌بُر: یک دورِ دریافتِ همه‌ی در راه‌ها، سالم و بی سربرگ. قرارداد عوض نمی‌شود. |
+| `ReportStockTransferShortage` | `IN_TRANSIT`، `PARTIALLY_RECEIVED` | `{ stockTransferId, note }` (یادداشت الزامی). هر دانه‌ی هنوز در راه ⇒ یک `StockTransferDiscrepancy` و `State = MISSING`. دانه `IN_TRANSIT` می‌ماند تا حسابداری تصمیم بگیرد. وضعیت ⇒ `PARTIALLY_RECEIVED`. |
+| `ResolveStockTransferDiscrepancy` | — | `{ discrepancyIds: [], resolution, note }`، همه یا هیچ. `LOST` ⇒ دانه `SCRAPPED`، `STOCK_TRANSFER_LOST`، دفترِ بها `TRANSIT_LOSS`. `RETURN_TO_SOURCE` ⇒ `IN_STOCK` در مبدأ، `STOCK_TRANSFER_RETURNED`. `FOUND_AT_DESTINATION` ⇒ `IN_STOCK` در مقصد، `STOCK_TRANSFER_RECEIVED`. مغایرتِ رسیدگی‌شده دوباره رسیدگی نمی‌شود. وضعیت از ۴.۷. |
+| `CancelStockTransfer` (موجود) | `DRAFT`، `IN_TRANSIT` | `DRAFT` ⇒ `CANCELLED`. `IN_TRANSIT` (هیچ دانه‌ای تحویل نشده) ⇒ همه به `IN_STOCK`ِ مبدأ، مثلِ امروز. پس از اولین دورِ دریافت ۴۰۰: «کسری را گزارش کنید». |
+| `GetStockTransferDiscrepancyList` | — | صفحه‌ای؛ فیلترِ `resolved` (bool)، `warehouseId` (مبدأ یا مقصد)، `fromDate`/`toDate`. ردیف با شماره‌ی حواله، کالا، بارکد، مبدأ، مقصد، گزارش‌دهنده، یادداشت، تصمیم و ارزش (میانگین). |
 
-## ۷. آنچه در این کار **نیست**
+- **در محموله:**
+  - `DispatchShipment` آرایه‌ی `stockTransferDispatches` (بدنه‌ی `DispatchStockTransfer`) و `ReceiveShipment` آرایه‌ی `stockTransferReceipts`
+    (بدنه‌ی `ReceiveStockTransferRound`) را می‌پذیرند و از راهِ `IMediator` در همان تراکنش می‌فرستند، مثلِ دورهای مرجوعی.
+  - حداقلِ «دست‌کم یک بخش» حواله را هم بشمرد.
+  - پاسخِ محموله `stockTransfers: [...]` هم بگیرد.
+- **انبار و محدودیت:** مبدأ و مقصد فعال و متفاوت باشند (برای ساخت و ارسال). دریافت و رسیدگی برای انبارِ غیرفعال‌شده هم ممکن است (۶b).
 
-- **محدودیتِ انباردار به انبارهای خودش** (تنظیم و `UserWarehouse`): مرحله‌ی ۴.
-- **جدولِ قفسه‌ها** (GAP-09)، **هشدارِ کم‌شدنِ موجودی** (GAP-15) و **شعبه**: هر کدام بعداً.
-- **بهای جدا برای هر انبار:** نه (بخشِ ۱).
-- **هزینه‌ی حملِ حواله:** با GAP-12 (هزینه‌های جانبی)؛ فعلاً یک هزینه‌ی عادی است.
-- **اصلاحِ دستی در بخش‌های دیگر** (سندهای صادرشده، پرداخت‌ها، دفترِ اشخاص): قاعده‌ی کلیِ بخشِ ۱ در سندِ جدایی بررسی می‌شود. تیمِ بکند
-  فهرستِ جاهایی را که امروز راهِ اصلاح ندارند بدهد.
+### ۴.۵ `GetStockTransferDetail` و فهرست
 
-## ۸. تست‌ها (حداقل)
+- **سند:** فیلدهای امروز، به‌علاوه‌ی
+  - `isDirect`، `expectedArrivalAt`
+  - `isOverdue` (در راه و `expectedArrivalAt < now`)
+  - `requestedByUserId/Name`، `updatedAt`
+- **`lines[]`:** `productId`، `productCode`، `productName`، `requiresUnitTracking`، `requestedQuantity`، `dispatchedQuantity`، `receivedQuantity`،
+  `damagedQuantity`، `inTransitQuantity`، `missingQuantity`، `lostQuantity`، `returnedQuantity`، و `units: [{ productUnitId, barcode, state }]`.
+  جایگزینِ `products[]`ِ امروز.
+- **`rounds[]`:** `kind`، `occurredAt`، سربرگ، `images: [{ objectKey, url, fileName, note }]`، `recordedByName`.
+- **`discrepancies[]`:** شکلِ ردیفِ `GetStockTransferDiscrepancyList`.
+- **پرچم‌ها** (یک قاعده برای دستور و پرچم، الگوی `PurchaseDocumentRules`): `canEdit`، `canDelete`، `canDispatch`، `canReceive`،
+  `canReportShortage`، `canCancel`.
+- **فهرست:** `statuses` با مقدارهای تازه. فیلترِ تازه‌ی `warehouseId` (مبدأ **یا** مقصد) و `isOverdue`. ردیف `isOverdue` و `isDirect` می‌گیرد.
 
-**مرحله‌ی ۱:**
-- انبارِ سند از کاربر و پیش‌فرض.
-- عوض کردنِ انبارِ پیش‌فاکتورِ رزروشده رزروها را آزاد می‌کند.
-- `CheckSaleWarehouse` فقط از انبارِ سند رزرو می‌کند و بارکدِ انبارِ دیگر را رد می‌کند.
-- `ShipSale` با رزرو و بی‌رزرو.
-- `ReceivePurchase` با انبارِ سند و با استثنا.
-- `AdjustWarehouseStock` افزایش و کاهش فقط در همان انبار، و نیازِ بارکد برای کالای ردیابی‌دار.
-- `UpdateProduct.Stock` با سوییچِ روشن ۴۰۰ و با سوییچِ خاموش روی انبارِ پیش‌فرض.
-- موجودیِ اول با انبار.
-- آستانه‌ی هر انبار و `GetProductList` با `warehouseId`.
-- ارزشِ موجودیِ هر انبار.
-- قواعدِ غیرفعال‌سازی.
-- کدِ خودکار.
+### ۴.۶ جابه‌جاییِ مستقیم (`isDirect: true`)
 
-**مرحله‌ی ۲:**
-- پیش‌نویس، ویرایش و لغو.
-- درخواستِ مقصد.
-- دو دورِ ارسال.
-- دریافتِ جزئی با خرابی و کسری.
-- هر سه تصمیمِ کسری و ردیفِ دفترِ گم‌شده.
-- جابه‌جاییِ مستقیم.
-- حواله داخلِ `ReceiveShipment`/`DispatchShipment` و برگشتِ همه‌چیز با یک خطا.
-- دریافت با سوییچِ خاموش.
-- backfillِ migration.
-- انبارگردانیِ هم‌زمان با حواله: دانه‌ی ارسالی «مفقود» نمی‌شود و دانه‌ی رسیده «ناخواسته» گزارش می‌شود.
+برای انبارهای کنارِ هم: `CreateStockTransfer` در یک تراکنش می‌سازد، یک دورِ ارسال و یک دورِ دریافتِ سالم ثبت می‌کند (بی سربرگ) و وضعیت ⇒
+`RECEIVED`. همان قواعدِ دانه و بارکدِ `DispatchStockTransfer`. فقط `StockTransferManage`.
 
-**مرحله‌ی ۳:**
-- پیشنهادِ حواله در برابرِ خرید.
-- ساختِ پیش‌نویس‌ها.
-- کاردکس با حواله، فروش و تعدیل.
-- ستونِ خروجی.
+### ۴.۷ قاعده‌ی وضعیت (یک تابع، مثلِ `RecomputePurchaseStatus`)
 
-## ۹. سمتِ فرانت (کارِ ما، پس از هر مرحله)
+| اگر | وضعیت |
+|---|---|
+| ارسال نشده | `DRAFT` یا `CANCELLED` (دستی) |
+| ارسال شده و هیچ دانه‌ای `RECEIVED`، `RECEIVED_DAMAGED` یا با مغایرت نیست | `IN_TRANSIT` |
+| دانه‌ای `IN_TRANSIT` مانده، یا مغایرتِ رسیدگی‌نشده هست | `PARTIALLY_RECEIVED` |
+| هیچ‌کدام از بالا، و دست‌کم یک دانه `LOST` یا `RETURNED` | `CLOSED_WITH_DISCREPANCY` |
+| وگرنه | `RECEIVED` |
 
-- **«انبارِ فعال» در سرتیتر:** با `SetMyDefaultWarehouse`. پیش‌فرضِ همه‌ی فرم‌ها و فیلترِ همه‌ی صف‌هاست.
-- **انتخابِ انبار هنگامِ ساختِ سند:** خرید، پیش‌فاکتور و مرجوعی. حذفِ انتخابگرِ جدا از صفحه‌ی ارسال، چون از سند می‌آید.
-- **جدولِ «موجودی در انبارها» در جزئیاتِ کالا:** با آستانه، هدف و دکمه‌ی تعدیل.
-- **قطعه‌های مشترکِ جابه‌جایی** (`MovementHeader`، `MovementLineCard`) و صف‌های ورودی و خروجیِ هر انبار.
-- **صفحه‌های تازه‌ی حواله:**
-  - پیش‌نویس و درخواست، ارسال، دریافت با اسکن و خرابی و کسری.
-  - صفحه‌ی کسری‌ها برای حسابداری.
-  - برگه‌ی چاپیِ حواله.
-- **پیشنهادِ تأمینِ هر انبار، کاردکس، و فرمِ نشانیِ کاملِ انبار** (`PartyAddressForm`).
+`ReceivedAt`/`ReceivedByUserId` هنگامِ رسیدن به `RECEIVED` یا `CLOSED_WITH_DISCREPANCY` پر می‌شوند.
+
+### ۴.۸ migrationِ حواله‌های موجود
+
+- **ردیف‌ها:** برای هر حواله، `StockTransferLine` از روی دانه‌هایش (`RequestedQuantity` = تعداد).
+- **دور:** یک دورِ `DISPATCH` با `OccurredAt = DispatchedAt` و همه‌ی دانه‌ها روی آن.
+- **حواله‌های `RECEIVED`:** یک دورِ `RECEIPT` با `OccurredAt = ReceivedAt`؛ دانه‌ها `State = RECEIVED`.
+- **حواله‌های `IN_TRANSIT`:** دانه‌ها `State = IN_TRANSIT`.
+- **حواله‌های `CANCELLED`:** دانه‌ها `State = RETURNED`.
+- `DispatchedAt` برای همه می‌ماند.
+
+### ۴.۹ تست‌های فاز ۲
+
+- **چرخه:** پیش‌نویس ⇒ ارسالِ کمتر از درخواست ⇒ دو دورِ دریافت (یکی با خرابی) ⇒ `RECEIVED`. موجودیِ هر انبار و `Product.Stock` در هر قدم.
+- **کسری:** ⇒ مغایرت ⇒ هر سه نوعِ رسیدگی و حرکتِ دانه. `TRANSIT_LOSS` در دفترِ بها و در `ScrapLoss`ِ گزارشِ فروش.
+  ⇒ `CLOSED_WITH_DISCREPANCY`.
+- **ردهای دریافت:** بارکدِ حواله‌ی دیگر یا دانه‌ی غیرِ در راه، `arrivedQuantity` بیش از در راه، و کالای `RequiresUnitTracking` بی بارکد.
+- **لغو:** پس از دریافتِ جزئی رد شود، و لغوِ `IN_TRANSIT` همه را برگرداند.
+- **مستقیم:** یک قدم.
+- **محموله:** خرید + حواله در یک `ReceiveShipment`، و rollbackِ همه با خطای یک بخش.
+- **انبارگردانی:** هم‌زمان با حواله (ارسال در حینِ شمارش «مفقود» نیست؛ رسیده «ناخواسته» است).
+- **قرنطینه:** `ApplyProductUnitAction` روی `TRANSIT_DAMAGE`.
+- **پرچم‌ها:** `can*` در هر وضعیت.
+- **دیگر:** `ListSortingTests` برای فهرستِ مغایرت‌ها، و تستِ پوششِ دسترسی و audit.
+
+مستندها: بخشِ ۲۵ِ `api-guide.fa.md` بازنویسی شود، به‌علاوه‌ی ۱۵ (enumها) و جدولِ ۱۶. `CLAUDE.md` و `frontend-requests.fa.md` هم مثلِ فاز ۱.
+
+## ۵. فاز ۴ — بعدی (فاز ۳ کارِ فرانت است)
+
+1. **پیشنهادِ تأمینِ هر انبار** — `GetReorderSuggestionList` با `warehouseId`:
+   - برای هر کالای `isLow` در آن انبار، مقدارِ لازم = `TargetStock ?? LowStockThreshold` منهای (موجودیِ انبار + در راه به این انبار + پیش‌نویس‌های
+     حواله به این انبار).
+   - **منبع:** اگر انبارِ دیگری مازاد بر آستانه‌ی خودش دارد، `{ kind: TRANSFER, fromWarehouseId, quantity }`؛ وگرنه `{ kind: PURCHASE, supplierId }`
+     مثلِ امروز.
+   - **`CreateStockTransferDraftsFromReorder`:** یک پیش‌نویسِ حواله برای هر انبارِ مبدأ، در یک تراکنش. همتای
+     `CreatePurchaseDraftsFromReorder` که آن هم `warehouseId` می‌گیرد و روی خرید می‌گذارد.
+2. **محدودیتِ کاربر:**
+   - جدولِ `UserWarehouse` (کاربر ↔ انبار)، از صفحه‌ی کاربر، دسترسیِ `UserUpdate`.
+   - تنظیمِ `Warehouse.RestrictUsersToAssigned` (BOOLEAN، پیش‌فرض false، public، گروهِ `WAREHOUSE`). وقتی روشن است:
+     - `GetMyWarehouses` فقط انبارهای کاربر را می‌دهد.
+     - هر دستوری که انبار می‌گیرد یا از سند می‌خواند، اگر انبار از آنِ کاربر نیست ۴۰۳ می‌دهد (یک helper، کنارِ `WarehouseScope`).
+     - استثنا: دسترسیِ `WarehouseManage`.
+   - کاربرِ بی‌ردیف = همه‌ی انبارها.
+3. **گزارشِ گردشِ کالا در انبار (کاردکس)** — `GET api/Warehouse/GetStockMovementReport`:
+   - پارامترها: `warehouseId?`، `productId?`، `fromDate`، `toDate`.
+   - خروجی: مانده‌ی اول، ردیف‌های ورود و خروج از `ProductUnitMovement` (دلیل، سند، تعداد) و مانده‌ی آخر. صفحه‌ای با جمعِ کل.
+4. **غیرفعال‌کردنِ انبار:** علاوه بر امروز، رد شود اگر سندِ بازی (خرید یا فروشِ تحویل‌نشده، مرجوعیِ باز، پیش‌نویسِ حواله، مغایرتِ
+   رسیدگی‌نشده) روی آن است. `User.DefaultWarehouseId` و `ProductWarehouseSetting`های آن انبار پاک شوند (در همان تراکنش، با ممیزی).
+5. **خروجیِ داده:** ستونِ موجودیِ هر انبارِ فعال در خروجیِ `products`.
+
+## ۶. بیرون از این کار (عمداً)
+
+- **شعبه:** `Branch` بالای `Warehouse`، با صندوق، کارتخوان، کاربر و شماره‌گذاری. فقط قاعده‌ی «انبار = مکانِ فیزیکی» (بخشِ ۰) رعایت شود.
+- **قفسه به‌عنوانِ موجودیت** (GAP-09). `ProductUnit.BinLocation` مثلِ امروز می‌ماند و چون دانه انبار دارد، قفسه عملاً مالِ همان انبار است.
+- **بهای جدا برای هر انبار.**
+- **هزینه‌ی حملِ حواله** روی بهای کالا (با GAP-12).
+- **فهرستِ کلیِ «اصلاحِ دستی»** برای بخش‌های دیگر (سندِ صادرشده، پرداخت، دفترِ اشخاص): جدا بررسی می‌شود. تیمِ بکند فهرستِ جاهایی که امروز
+  راهِ اصلاح ندارند را بدهد.
+- **نوعِ انبار** (اصلی، شعبه، فروشگاه): تا نیازی واقعی نباشد ساخته نشود.
+
+## ۷. تغییراتِ شکننده برای فرانت (برای جدولِ ۱۶ِ `api-guide`)
+
+- `StockTransferDto.products[]` ⇒ `lines[]`. `dispatchedAt` nullable. وضعیت‌های تازه.
+- `CreateStockTransfer` بی `isDirect` پیش‌نویس می‌سازد، نه ارسال. فرانت باید `DispatchStockTransfer` را صدا بزند.
+- `UpdateProduct` با سوییچِ روشن و `stock`ِ متفاوت ۴۰۰ می‌دهد. با سوییچِ خاموش تغییرِ `stock` دسترسیِ `StockAdjust` می‌خواهد.
+- `CheckSaleWarehouse` بارکدِ انبارِ دیگر را رد می‌کند.
+- `GetProductWarehouseStock` همه‌ی انبارهای فعال را برمی‌گرداند، حتی بی دانه.
+
+## ۸. پرسش‌های غیرمسدودکننده
+
+این‌ها جلوی ساخت را نمی‌گیرند و پاسخِ پیش‌فرضشان در متن آمده؛ اگر تیم نظرِ دیگری دارد، پیش از فازِ مربوط بگوید:
+
+1. **تعدیلِ افزایشی** با قیمتِ خرید (مثلِ امروز) یا میانگین؟ *پیش‌فرض: قیمتِ خرید، برای هم‌خوانی با `UpdateProduct`ِ امروز.*
+2. **یک دورِ ارسال** کافی است، یا ارسالِ چندمرحله‌ای (مثلاً با دو کامیون) هم لازم است؟ *پیش‌فرض: یک دور؛ برای دو کامیون دو حواله.*
+3. **`ExpectedArrivalAt`:** فقط اطلاع است، یا بعداً اعلانِ دیرکرد (GAP-15) هم می‌خواهد؟ *پیش‌فرض: فقط پرچمِ `isOverdue`.*
