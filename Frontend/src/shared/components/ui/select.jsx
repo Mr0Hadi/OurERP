@@ -56,8 +56,10 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  // popper: فهرست زیرِ trigger باز می‌شود. item-aligned فهرست را روی خودِ trigger می‌گذاشت و
+  // روی موبایل یا نزدیکِ لبه‌ی صفحه بریده/جابه‌جا دیده می‌شد.
+  position = "popper",
+  align = "start",
   ...props
 }) {
   return (
