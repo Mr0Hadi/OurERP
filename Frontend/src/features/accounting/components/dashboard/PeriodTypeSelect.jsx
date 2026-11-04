@@ -14,7 +14,7 @@ export default function PeriodTypeSelect({ value, onChange, label = "دوره" }
       numeric
       aria-label={label}
       prefix={<span className="text-xs text-muted-foreground">{label}:</span>}
-      className="h-9 min-w-28 flex-1 sm:w-32 sm:flex-none"
+      className="w-full min-w-28 sm:w-32"
     />
   );
 }

@@ -51,7 +51,6 @@ function EmployeeList({ selectedId, className }) {
       searchPlaceholder="جست‌وجوی نام کارمند..."
       filters={
         <OptionSelect
-          size="sm"
           value={departmentId}
           onChange={setDepartmentId}
           numeric

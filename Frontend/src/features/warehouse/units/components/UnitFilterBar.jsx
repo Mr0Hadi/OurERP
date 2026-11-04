@@ -139,7 +139,6 @@ export default function UnitFilterBar({ store, search }) {
               disabled={!store.productId}
               value={store.fromSerial}
               onChange={(event) => store.setFromSerial(event.target.value)}
-              className="h-9"
             />
             <Input
               type="number"
@@ -149,7 +148,6 @@ export default function UnitFilterBar({ store, search }) {
               disabled={!store.productId}
               value={store.toSerial}
               onChange={(event) => store.setToSerial(event.target.value)}
-              className="h-9"
             />
           </div>
         </Field>
@@ -159,7 +157,7 @@ export default function UnitFilterBar({ store, search }) {
             dir="ltr"
             value={store.binLocation}
             onChange={(event) => store.setBinLocation(event.target.value)}
-            className="h-9 font-mono"
+            className="font-mono"
           />
         </Field>
         {manyWarehouses && (

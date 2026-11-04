@@ -39,7 +39,7 @@ export default function WarehouseSelect({
       placeholder="انتخابِ انبار"
       emptyLabel={emptyLabel && <span className="text-muted-foreground">{emptyLabel}</span>}
       emptyValue={null}
-      className={cn("h-9 w-full", className)}
+      className={cn("w-full", className)}
       aria-label={ariaLabel ?? "انبار"}
       options={warehouses.map((warehouse) => ({
         value: warehouse.id,

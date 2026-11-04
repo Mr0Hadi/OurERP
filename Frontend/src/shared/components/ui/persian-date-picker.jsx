@@ -47,7 +47,7 @@ export default function PersianDatePicker({
           placeholder={placeholder}
           disabled
           className={cn(
-            "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 pl-9 text-sm shadow-xs",
+            "flex h-8 w-full rounded-lg border border-input bg-transparent px-3 py-1 pl-9 text-sm shadow-xs",
             "placeholder:text-muted-foreground opacity-50 cursor-not-allowed",
             className
           )}
@@ -93,7 +93,7 @@ export default function PersianDatePicker({
             placeholder={placeholder}
             disabled={disabled}
             className={cn(
-              "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 pl-9 text-sm shadow-xs cursor-pointer",
+              "flex h-8 w-full rounded-lg border border-input bg-transparent px-3 py-1 pl-9 text-sm shadow-xs cursor-pointer",
               "outline-none transition-colors placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               "disabled:cursor-not-allowed disabled:opacity-50",

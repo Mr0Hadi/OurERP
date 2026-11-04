@@ -24,6 +24,8 @@ function PriceField({ name, label, control, error, required }) {
       required={required}
       error={error}
       rules={{ validate: (raw) => !required || Number(raw) > 0 || "قیمت باید بیشتر از صفر باشد" }}
+      // هم‌قدِ بقیه‌ی فیلدهای فرمِ کالا؛ پیش‌فرضِ `h-10` برای فرمِ طرف‌حساب است.
+      inputClassName="h-8"
     />
   );
 }

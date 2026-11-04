@@ -116,7 +116,7 @@ export default function MasterListPane({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="h-9 pr-8"
+              className="pr-8"
             />
           </div>
           {refresh && <RefreshButton query={refresh} />}
