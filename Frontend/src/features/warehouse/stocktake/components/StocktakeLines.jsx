@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Save, X } from "lucide-react";
+import { Save, Undo2, X } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -14,6 +14,7 @@ import { formatNumber } from "@/shared/lib/numberFormat";
 import { toneText } from "@/shared/lib/tone";
 import { cn } from "@/shared/lib/utils";
 import { LINE_FILTER, acceptsManualCount, lineFilterCounts, visibleLines } from "../domain/stocktake";
+import { useRemoveStocktakeScanMutation } from "../services/mutations";
 
 /** ردیف‌های هر صفحه؛ دامنه‌ی یک دسته ممکن است صدها کالا باشد. */
 const PAGE = 50;
@@ -30,8 +31,8 @@ const differenceTone = (value) => toneText(value > 0 ? "success" : value < 0 ? "
 /**
  * ردیف‌های انبارگردانی: هر کالای دامنه با شیوه‌ی شمارش، تعدادِ شمرده‌شده و — وقتی شمارش کور نیست — موجودیِ سیستم،
  * مغایرت و ارزشِ ریالیِ آن. دسکتاپ جدول، موبایل کارت. در شمارش، کالای بی‌اسکن عددِ دستی می‌گیرد؛ عددها تا زدنِ
- * «ثبت» در صفحه می‌مانند (`counts` از `useStocktakeCountDrafts`). پس از پایانِ شمارش بارکدهای مفقود/ناخواسته و
- * نتیجه‌ی اعمال زیرِ هر ردیف می‌آیند.
+ * «ثبت» در صفحه می‌مانند (`counts` از `useStocktakeCountDrafts`). در شمارش، بارکدهای اسکن‌شده‌ی هر کالا با «برداشتن»
+ * زیرِ ردیف می‌آیند؛ پس از پایانِ شمارش بارکدهای مفقود/ناخواسته و نتیجه‌ی اعمال.
  */
 export default function StocktakeLines({ stocktake, canCount, counts }) {
   const isMobile = useIsMobile();
@@ -50,6 +51,13 @@ export default function StocktakeLines({ stocktake, canCount, counts }) {
   ];
   const lines = visibleLines(allLines, { search, filter });
   const page = lines.slice(0, shown);
+  const removeScan = useRemoveStocktakeScanMutation();
+  const scans = canCount
+    ? {
+        onRemove: (barcode) => removeScan.mutate({ stocktakeId: stocktake.id, barcode }),
+        pending: removeScan.isPending,
+      }
+    : null;
 
   return (
     <SectionCard title={`کالاها (${formatNumber(stocktake.lineCount)})`}>
@@ -78,11 +86,11 @@ export default function StocktakeLines({ stocktake, canCount, counts }) {
       ) : isMobile ? (
         <ul className="space-y-2">
           {page.map((line) => (
-            <LineCard key={line.id} line={line} counts={canCount ? counts : null} blind={blind} />
+            <LineCard key={line.id} line={line} counts={canCount ? counts : null} blind={blind} scans={scans} />
           ))}
         </ul>
       ) : (
-        <LinesTable lines={page} counts={canCount ? counts : null} blind={blind} />
+        <LinesTable lines={page} counts={canCount ? counts : null} blind={blind} scans={scans} />
       )}
 
       {lines.length > shown && (
@@ -96,7 +104,7 @@ export default function StocktakeLines({ stocktake, canCount, counts }) {
   );
 }
 
-function LinesTable({ lines, counts, blind }) {
+function LinesTable({ lines, counts, blind, scans }) {
   const columns = blind ? 3 : 6;
   return (
     <div className="overflow-hidden rounded-lg border">
@@ -113,7 +121,7 @@ function LinesTable({ lines, counts, blind }) {
         </TableHeader>
         <TableBody>
           {lines.map((line) => {
-            const details = !blind && lineDetails(line);
+            const details = lineDetails(line, { blind, scans });
             return [
               <TableRow
                 key={line.id}
@@ -155,8 +163,8 @@ function LinesTable({ lines, counts, blind }) {
   );
 }
 
-function LineCard({ line, counts, blind }) {
-  const details = !blind && lineDetails(line);
+function LineCard({ line, counts, blind, scans }) {
+  const details = lineDetails(line, { blind, scans });
   const changed = counts?.changedIds.has(line.productId);
   return (
     <li className={cn("space-y-3 rounded-xl border border-border bg-card p-3", changed && "border-warning/60 bg-warning/5")}>
@@ -239,16 +247,24 @@ function CountedCell({ line, counts, size = "md" }) {
   return <span className="tabular-nums">{formatNumber(line.countedQuantity)}</span>;
 }
 
-/** بارکدهای مفقود/ناخواسته، جابه‌جاشده‌ها و نتیجه‌ی اعمال؛ `null` وقتی چیزی برای گفتن نیست. */
-function lineDetails(line) {
-  const missing = line.missingBarcodes ?? [];
-  const unexpected = line.unexpectedBarcodes ?? [];
-  const applied = line.appliedMissing != null;
-  if (!missing.length && !unexpected.length && !(line.relocatedCount > 0) && !applied) return null;
+/**
+ * بارکدهای اسکن‌شده (فقط در شمارش، با «برداشتن»)، مفقود/ناخواسته، جابه‌جاشده‌ها و نتیجه‌ی اعمال؛ `null` وقتی چیزی
+ * برای گفتن نیست. در شمارشِ کور فقط اسکن‌ها می‌آیند — بقیه از سرور نمی‌آید.
+ *
+ * @param scans `{ onRemove, pending }` وقتی برداشتنِ اسکن مجاز است، وگرنه `null`
+ */
+function lineDetails(line, { blind, scans }) {
+  const scanned = scans ? (line.scannedBarcodes ?? []) : [];
+  const missing = blind ? [] : (line.missingBarcodes ?? []);
+  const unexpected = blind ? [] : (line.unexpectedBarcodes ?? []);
+  const relocated = !blind && line.relocatedCount > 0;
+  const applied = !blind && line.appliedMissing != null;
+  if (!scanned.length && !missing.length && !unexpected.length && !relocated && !applied) return null;
   return (
     <div className="space-y-1 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+      {scanned.length > 0 && <ScannedBarcodes barcodes={scanned} onRemove={scans.onRemove} pending={scans.pending} />}
       {missing.length > 0 && <Barcodes label="مفقود (اسقاط می‌شود)" barcodes={missing} />}
-      {line.relocatedCount > 0 && (
+      {relocated && (
         <p className="text-muted-foreground">
           {formatNumber(line.relocatedCount)} دانه از انبارِ دیگر این‌جا پیدا شد؛ فقط انبارش عوض می‌شود.
         </p>
@@ -273,6 +289,46 @@ function Barcodes({ label, barcodes }) {
         </span>
       ))}
     </p>
+  );
+}
+
+/** بارکدهای پیش از این‌که باز شوند جمع‌اند؛ کالای پرتعداد صدها دانه دارد. */
+const SCANNED_PREVIEW = 6;
+
+/** همه‌ی اسکن‌های این کالا در این انبارگردانی (هر کاربر، هر روز)، هر کدام با «برداشتن» (`RemoveStocktakeScan`). */
+function ScannedBarcodes({ barcodes, onRemove, pending }) {
+  const [open, setOpen] = useState(false);
+  const shown = open ? barcodes : barcodes.slice(0, SCANNED_PREVIEW);
+  return (
+    <div className="space-y-1">
+      <p className="text-muted-foreground">اسکن‌شده ({formatNumber(barcodes.length)}):</p>
+      <ul className="flex flex-wrap gap-1">
+        {shown.map((barcode) => (
+          <li key={barcode} className="flex items-center gap-0.5 rounded bg-background ps-1">
+            <span className="font-mono" dir="ltr">
+              {barcode}
+            </span>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="size-6"
+              disabled={pending}
+              aria-label={`برداشتنِ اسکنِ ${barcode}`}
+              title="برداشتنِ اسکن"
+              onClick={() => onRemove(barcode)}
+            >
+              <Undo2 className="size-3" />
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {barcodes.length > SCANNED_PREVIEW && (
+        <Button type="button" variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setOpen((value) => !value)}>
+          {open ? "بستن" : `نمایشِ ${formatNumber(barcodes.length - SCANNED_PREVIEW)} اسکنِ دیگر`}
+        </Button>
+      )}
+    </div>
   );
 }
 

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Ban, CheckCheck, ClipboardCheck, RotateCcw } from "lucide-react";
+import { Ban, CheckCheck, ClipboardCheck, Printer, RotateCcw } from "lucide-react";
 
 import { Button } from "@/shared/components/ui/button";
+import PageHeaderActions from "@/shared/components/layout/PageHeaderActions";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import SectionCard from "@/shared/components/forms/SectionCard";
 import StatusBadge from "@/shared/components/status/StatusBadge";
@@ -26,6 +27,7 @@ import { useStocktakeCountDrafts } from "../hooks/useStocktakeCountDrafts";
 import StocktakeScopeText from "../components/StocktakeScopeText";
 import StocktakeScanPanel from "../components/StocktakeScanPanel";
 import StocktakeLines from "../components/StocktakeLines";
+import StocktakeCountSheetPrint from "../components/StocktakeCountSheetPrint";
 
 function Field({ label, children }) {
   return (
@@ -102,6 +104,7 @@ export default function StocktakeDetailPage() {
 function StocktakeView({ stocktake }) {
   const { allows } = usePermission();
   const [confirm, setConfirm] = useState(null);
+  const [printing, setPrinting] = useState(false);
   const counts = useStocktakeCountDrafts(stocktake);
   const blocker = useUnsavedChangesGuard(counts.pending > 0);
 
@@ -124,6 +127,19 @@ function StocktakeView({ stocktake }) {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4">
+      <PageHeaderActions>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5"
+          onClick={() => setPrinting(true)}
+          aria-label="چاپِ برگه‌ی شمارش"
+        >
+          <Printer className="size-4" />
+          <span className="max-sm:hidden">برگه‌ی شمارش</span>
+        </Button>
+      </PageHeaderActions>
       <AuditHistoryButton entityType="Stocktake" entityKey={stocktake.id} title={`انبارگردانی ${stocktake.number}`} />
 
       <SectionCard
@@ -225,6 +241,7 @@ function StocktakeView({ stocktake }) {
         }}
       />
       <UnsavedChangesDialog blocker={blocker} />
+      {printing && <StocktakeCountSheetPrint stocktake={stocktake} onClose={() => setPrinting(false)} />}
     </div>
   );
 }

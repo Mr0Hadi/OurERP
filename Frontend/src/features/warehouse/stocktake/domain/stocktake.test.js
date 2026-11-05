@@ -3,7 +3,11 @@ import { StocktakeCountModeEnum, StocktakeStatusEnum } from "@/shared/domain/enu
 import {
   LINE_FILTER,
   STOCKTAKE_SCOPE,
+  COUNT_SHEET_SORT,
   acceptsManualCount,
+  chunk,
+  countSheetLines,
+  countSheetShowsSystem,
   emptyStocktakeDraft,
   lineFilterCounts,
   pendingCounts,
@@ -128,5 +132,38 @@ describe("pendingCounts", () => {
 
   it("drops lines that became scan-counted", () => {
     expect(pendingCounts(lines, { 3: 2 })).toEqual([]);
+  });
+});
+
+describe("برگه‌ی شمارش", () => {
+  const sheet = [
+    { id: 1, productName: "لنت", productCode: "14050608-10", countMode: StocktakeCountModeEnum.SCAN },
+    { id: 2, productName: "اویل", productCode: "14050608-9", countMode: StocktakeCountModeEnum.NONE },
+    { id: 3, productName: "بلبرینگ", productCode: "14050608-2", countMode: StocktakeCountModeEnum.NONE },
+  ];
+  const ids = (rows) => rows.map((row) => row.id);
+
+  it("keeps the page order by default and sorts by name or numeric code", () => {
+    expect(ids(countSheetLines(sheet))).toEqual([1, 2, 3]);
+    expect(ids(countSheetLines(sheet, { sort: COUNT_SHEET_SORT.NAME }))).toEqual([2, 3, 1]);
+    expect(ids(countSheetLines(sheet, { sort: COUNT_SHEET_SORT.CODE }))).toEqual([3, 2, 1]);
+    expect(ids(sheet)).toEqual([1, 2, 3]);
+  });
+
+  it("can print only uncounted products", () => {
+    expect(ids(countSheetLines(sheet, { onlyUncounted: true }))).toEqual([2, 3]);
+  });
+
+  it("never shows the system quantity on a blind count", () => {
+    expect(countSheetShowsSystem({ isBlind: false }, { showSystemQuantity: true })).toBe(true);
+    expect(countSheetShowsSystem({ isBlind: true }, { showSystemQuantity: true })).toBe(false);
+    expect(countSheetShowsSystem({ isBlind: false }, { showSystemQuantity: false })).toBe(false);
+  });
+});
+
+describe("chunk", () => {
+  it("splits in order with a short last part", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 500)).toEqual([]);
   });
 });
