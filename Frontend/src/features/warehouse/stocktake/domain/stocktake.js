@@ -141,6 +141,40 @@ export function pendingCounts(lines, drafts) {
     .map((line) => ({ productId: line.productId, quantity: drafts[line.productId] }));
 }
 
+/** `list` در تکه‌های حداکثر `size`تایی، به همان ترتیب. */
+export function chunk(list, size) {
+  const parts = [];
+  for (let start = 0; start < list.length; start += size) parts.push(list.slice(start, start + size));
+  return parts;
+}
+
+/** ترتیبِ ردیف‌های برگه‌ی شمارش. */
+export const COUNT_SHEET_SORT = Object.freeze({
+  LINE: "line",
+  NAME: "name",
+  CODE: "code",
+});
+
+export const COUNT_SHEET_SORT_LABELS = Object.freeze({
+  [COUNT_SHEET_SORT.LINE]: "مثلِ صفحه",
+  [COUNT_SHEET_SORT.NAME]: "نامِ کالا",
+  [COUNT_SHEET_SORT.CODE]: "کدِ کالا",
+});
+
+/**
+ * ردیف‌های برگه‌ی شمارش: همه، یا فقط شمرده‌نشده‌ها (برای دورِ دوم)، به ترتیبِ خواسته. `systemQuantity` در شمارشِ کور از سرور
+ * نمی‌آید؛ برگه هم آن ستون را نشان نمی‌دهد (`countSheetShowsSystem`).
+ */
+export function countSheetLines(lines, { onlyUncounted = false, sort = COUNT_SHEET_SORT.LINE } = {}) {
+  const rows = onlyUncounted ? visibleLines(lines, { filter: LINE_FILTER.UNCOUNTED }) : [...lines];
+  if (sort === COUNT_SHEET_SORT.NAME) rows.sort((a, b) => a.productName.localeCompare(b.productName, "fa"));
+  if (sort === COUNT_SHEET_SORT.CODE) rows.sort((a, b) => a.productCode.localeCompare(b.productCode, "en", { numeric: true }));
+  return rows;
+}
+
+/** ستونِ «موجودیِ سیستم» فقط وقتی شمارش کور نیست و کاربر خواسته. */
+export const countSheetShowsSystem = (stocktake, settings) => !stocktake.isBlind && Boolean(settings.showSystemQuantity);
+
 /**
  * دامنه‌ی یک انبارگردانی در یک خط («دسته‌ی لنت · برندِ بوش»). سرور نامِ دسته را نمی‌فرستد؛ `categoryName` از
  * فهرستِ دسته‌ها می‌آید. بی دسته/برند/قفسه یعنی کالاهای انتخابی.

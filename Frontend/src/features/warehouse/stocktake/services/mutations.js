@@ -7,7 +7,7 @@ import { productKeys } from "@/features/warehouse/products/services/queryKeys";
 import { productUnitKeys } from "@/features/warehouse/units/services/queryKeys";
 import {
   changeStocktakeStatus,
-  countStocktakeLine,
+  countStocktakeLines,
   createStocktake,
   removeStocktakeScan,
   scanStocktakeUnits,
@@ -56,8 +56,8 @@ export const useScanStocktakeMutation = () =>
 export const useRemoveStocktakeScanMutation = () =>
   useStocktakeMutation({ mutationFn: removeStocktakeScan, success: "اسکن برداشته شد", failure: "برداشتنِ اسکن انجام نشد" });
 
-export const useCountStocktakeLineMutation = () =>
-  useStocktakeMutation({ mutationFn: countStocktakeLine, failure: "ثبتِ شمارش انجام نشد" });
+export const useCountStocktakeLinesMutation = () =>
+  useStocktakeMutation({ mutationFn: countStocktakeLines, success: "شمارش ثبت شد", failure: "ثبتِ شمارش انجام نشد" });
 
 const TRANSITIONS = {
   SubmitStocktake: { success: "شمارش تمام شد؛ مغایرت‌ها آماده‌ی بازبینی است", failure: "پایانِ شمارش انجام نشد" },

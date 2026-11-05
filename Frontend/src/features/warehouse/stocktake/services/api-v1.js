@@ -54,6 +54,14 @@ export async function countStocktakeLine({ stocktakeId, productId, quantity }) {
 }
 
 /**
+ * `POST CountStocktakeLines` — چند شمارشِ دستی با هم (حداکثر ۵۰۰، هر کالا یک بار)؛ همه یا هیچ. `lines`: `{ productId, quantity }`.
+ */
+export async function countStocktakeLines({ stocktakeId, lines }) {
+  const { data } = await axiosInstance.post("/Stocktake/CountStocktakeLines", { stocktakeId, lines }, TIMEOUT);
+  return data;
+}
+
+/**
  * گذارِ وضعیت: `SubmitStocktake` (پایانِ شمارش)، `ReopenStocktake`، `ApproveStocktake` (اعمالِ مغایرت)، `CancelStocktake`.
  * همه `{ id }`.
  */
