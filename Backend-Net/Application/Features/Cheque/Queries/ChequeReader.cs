@@ -41,6 +41,7 @@ namespace Application.Features.Cheque.Queries
             PurchaseId = x.PurchaseId,
             InvoiceNumber = x.Sale != null ? x.Sale.InvoiceNumber : x.Purchase != null ? x.Purchase.InvoiceNumber : null,
             IsOnAccount = x.SaleId == null && x.PurchaseId == null,
+            PartyPaymentId = x.SaleId == null && x.PurchaseId == null ? x.Id : null,
             BankAccountId = x.BankAccountId,
             BankAccountTitle = x.BankAccount != null ? x.BankAccount.Title : null,
             EndorsedFromPaymentDetailId = x.EndorsedFromPaymentDetailId,

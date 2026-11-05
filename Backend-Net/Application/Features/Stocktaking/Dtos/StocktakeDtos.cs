@@ -53,6 +53,12 @@ namespace Application.Features.Stocktaking.Dtos
 
         public int? SystemQuantity { get; set; }
         public int ScannedCount { get; set; }
+
+        /// <summary>
+        /// Every unit barcode scanned for this product in this session (by anyone, any day), so a wrong scan can be taken back with
+        /// RemoveStocktakeScan. Sent while blind too: it only repeats what the counters scanned.
+        /// </summary>
+        public List<string> ScannedBarcodes { get; set; } = new();
         public int? ManualCount { get; set; }
         public Application.Features.Stocktaking.StocktakeCountModeEnum CountMode { get; set; }
         public int? CountedQuantity { get; set; }

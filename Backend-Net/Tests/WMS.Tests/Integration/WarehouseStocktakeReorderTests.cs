@@ -10,6 +10,7 @@ using Application.Features.Setting.Queries;
 using Application.Features.Stocktaking;
 using Application.Features.Stocktaking.Commands;
 using Application.Features.Stocktaking.Dtos;
+using Application.Features.Stocktaking.Queries;
 using Application.Features.Warehousing.Commands;
 using Application.Features.Warehousing.Dtos;
 using Application.Features.Warehousing.Queries;
@@ -225,6 +226,63 @@ namespace WMS.Tests.Integration
             using var verify = db.NewContext();
             Assert.Equal(1, verify.ProductUnits.Single(u => u.Barcode == barcodes[1]).WarehouseId);
             Assert.Equal(2, verify.Products.Single(p => p.Id == product.Id).Stock);
+        }
+
+        [Fact]
+        public async Task Stocktake_ListsEveryScannedBarcode_EvenWhileBlind_SoAnOldScanCanBeTakenBack()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var mediator = Mediator(scope);
+            var (product, barcodes) = await StockAsync(scope, 3);
+            var stocktake = await StocktakeAsync(mediator, product.Id);
+
+            await mediator.Send(new ScanStocktakeUnitsCommand { StocktakeId = stocktake.Id, Barcodes = new() { barcodes[0], barcodes[1] } }, TestContext.Current.CancellationToken);
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new GetStocktakeDetailQuery { Id = stocktake.Id }, TestContext.Current.CancellationToken)).Data);
+            Assert.True(stocktake.IsBlind);
+            Assert.Equal(new[] { barcodes[0], barcodes[1] }, stocktake.Lines.Single().ScannedBarcodes.OrderBy(b => b));
+
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new RemoveStocktakeScanCommand { StocktakeId = stocktake.Id, Barcode = barcodes[0] }, TestContext.Current.CancellationToken)).Data);
+            Assert.Equal(new[] { barcodes[1] }, stocktake.Lines.Single().ScannedBarcodes);
+            Assert.Equal(1, stocktake.Lines.Single().ScannedCount);
+        }
+
+        [Fact]
+        public async Task CountStocktakeLines_CountsSeveralProductsAtOnce_AndRefusesTheWholeBatch_ForOneBadProduct()
+        {
+            using var db = new TestDatabase();
+            using var scope = db.NewScope();
+            var mediator = Mediator(scope);
+            await SetAsync(mediator, SystemSettingCatalog.StocktakeBlindCount, "false");
+            var (first, _) = await StockAsync(scope, 2);
+            var (second, _) = await StockAsync(scope, 3);
+            var stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new CreateStocktakeCommand { Title = "شمارش", ProductIds = new() { first.Id, second.Id } })).Data);
+
+            await Assert.ThrowsAsync<NotFoundCustomException>(() => mediator.Send(new CountStocktakeLinesCommand
+            {
+                StocktakeId = stocktake.Id,
+                Lines = new() { new() { ProductId = first.Id, Quantity = 5 }, new() { ProductId = 999_999, Quantity = 1 } },
+            }, TestContext.Current.CancellationToken));
+            using (var verify = db.NewContext())
+                Assert.All(verify.StocktakeLines.Where(l => l.StocktakeId == stocktake.Id), l => Assert.Null(l.ManualCount));
+
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new CountStocktakeLinesCommand
+            {
+                StocktakeId = stocktake.Id,
+                Lines = new() { new() { ProductId = first.Id, Quantity = 1 }, new() { ProductId = second.Id, Quantity = 4 } },
+            }, TestContext.Current.CancellationToken)).Data);
+            Assert.Equal(-1, stocktake.Lines.Single(l => l.ProductId == first.Id).Difference);
+            Assert.Equal(1, stocktake.Lines.Single(l => l.ProductId == second.Id).Difference);
+            Assert.Equal(2, stocktake.CountedLineCount);
+
+            // Null clears a count, as with CountStocktakeLine.
+            stocktake = Assert.IsType<StocktakeDto>((await mediator.Send(new CountStocktakeLinesCommand
+            {
+                StocktakeId = stocktake.Id,
+                Lines = new() { new() { ProductId = first.Id, Quantity = null } },
+            }, TestContext.Current.CancellationToken)).Data);
+            Assert.Equal(StocktakeCountModeEnum.NONE, stocktake.Lines.Single(l => l.ProductId == first.Id).CountMode);
+            Assert.Equal(1, stocktake.CountedLineCount);
         }
 
         [Fact]

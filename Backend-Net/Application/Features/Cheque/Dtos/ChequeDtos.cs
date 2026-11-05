@@ -41,6 +41,12 @@ namespace Application.Features.Cheque.Dtos
         public string? InvoiceNumber { get; set; }
         public bool IsOnAccount { get; set; }
 
+        /// <summary>
+        /// On-account cheques only: the on-account payment this cheque is (what GetPartyPaymentDetail takes - the same row as
+        /// <see cref="Id"/>). Null for a cheque on an invoice.
+        /// </summary>
+        public int? PartyPaymentId { get; set; }
+
         /// <summary>The account it was cashed into/out of (or is drawn on, for an issued cheque).</summary>
         public int? BankAccountId { get; set; }
         public string? BankAccountTitle { get; set; }

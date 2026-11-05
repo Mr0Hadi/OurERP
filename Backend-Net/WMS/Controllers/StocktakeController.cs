@@ -46,6 +46,10 @@ namespace WMS.Controllers
         public async Task<ActionResult<ResponseDto>> CountStocktakeLine([FromBody] CountStocktakeLineCommand request) => await _mediator.Send(request);
 
         [HasPermission(PermissionEnum.StocktakeCount)]
+        [HttpPost("CountStocktakeLines")]
+        public async Task<ActionResult<ResponseDto>> CountStocktakeLines([FromBody] CountStocktakeLinesCommand request) => await _mediator.Send(request);
+
+        [HasPermission(PermissionEnum.StocktakeCount)]
         [HttpPost("SubmitStocktake")]
         public async Task<ActionResult<ResponseDto>> SubmitStocktake([FromBody] SubmitStocktakeCommand request) => await _mediator.Send(request);
 

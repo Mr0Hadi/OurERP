@@ -111,6 +111,11 @@ namespace WMS.Tests.Integration
                 Allocations = new() { new() { SaleId = scenario.Sale.Id, Amount = 3_000 } },
             }, TestContext.Current.CancellationToken)).Data);
 
+            // An on-account cheque links to the on-account payment it is (frontend-requests 33).
+            var cheque = await ChequeReader.ReadAsync(scope.Context, payment.Id, CancellationToken.None);
+            Assert.True(cheque.IsOnAccount);
+            Assert.Equal(payment.Id, cheque.PartyPaymentId);
+
             await mediator.Send(new BounceCheckCommand { PaymentDetailId = payment.Id }, TestContext.Current.CancellationToken);
 
             using var verify = db.NewContext();
