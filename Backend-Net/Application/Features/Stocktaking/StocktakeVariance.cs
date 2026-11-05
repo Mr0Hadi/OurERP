@@ -42,21 +42,36 @@ namespace Application.Features.Stocktaking
 
             /// <summary>Manual mode only: units to take off (negative) or mint (positive).</summary>
             public int ManualAdjustment { get; init; }
+
+            /// <summary>Barcode of every unit in the three id lists (shared by all lines of one computation).</summary>
+            public IReadOnlyDictionary<int, string> UnitBarcodes { get; init; } = new Dictionary<int, string>();
         }
+
+        private sealed record UnitState(int Id, int ProductId, ProductUnitStatusEnum Status, int WarehouseId, string Barcode);
 
         public static async Task<List<LineResult>> ComputeAsync(IWMSDbContext context, Stocktake stocktake, CancellationToken cancellationToken)
         {
-            var snapshot = await context.StocktakeSnapshotUnits.AsNoTracking()
-                .Where(x => x.StocktakeId == stocktake.Id)
-                .Select(x => new { x.ProductUnitId, x.ProductId })
+            // The snapshot can hold thousands of units: join it to the units in SQL instead of sending its ids back as a parameter.
+            var snapshot = await (
+                from s in context.StocktakeSnapshotUnits.AsNoTracking()
+                where s.StocktakeId == stocktake.Id
+                join u in context.ProductUnits.AsNoTracking() on s.ProductUnitId equals u.Id
+                select new { s.ProductId, Unit = new UnitState(u.Id, u.ProductId, u.Status, u.WarehouseId, u.Barcode) })
                 .ToListAsync(cancellationToken);
-            var scannedUnitIds = stocktake.Scans.Where(s => s.ProductUnitId.HasValue).Select(s => s.ProductUnitId!.Value).Distinct().ToList();
+            var current = snapshot.Select(x => x.Unit).DistinctBy(u => u.Id).ToDictionary(u => u.Id);
 
-            var relevantIds = snapshot.Select(x => x.ProductUnitId).Concat(scannedUnitIds).Distinct().ToList();
-            var current = await context.ProductUnits.AsNoTracking()
-                .Where(x => relevantIds.Contains(x.Id))
-                .Select(x => new { x.Id, x.ProductId, x.Status, x.WarehouseId })
-                .ToDictionaryAsync(x => x.Id, cancellationToken);
+            var scannedUnitIds = stocktake.Scans.Where(s => s.ProductUnitId.HasValue).Select(s => s.ProductUnitId!.Value).Distinct().ToList();
+            var scannedOutside = scannedUnitIds.Where(id => !current.ContainsKey(id)).ToList();
+            if (scannedOutside.Count > 0)
+            {
+                var extra = await context.ProductUnits.AsNoTracking()
+                    .Where(x => scannedOutside.Contains(x.Id))
+                    .Select(x => new UnitState(x.Id, x.ProductId, x.Status, x.WarehouseId, x.Barcode))
+                    .ToListAsync(cancellationToken);
+                foreach (var unit in extra)
+                    current[unit.Id] = unit;
+            }
+            var barcodes = current.ToDictionary(x => x.Key, x => x.Value.Barcode);
 
             var scannedByProduct = scannedUnitIds.Where(current.ContainsKey).GroupBy(id => current[id].ProductId).ToDictionary(g => g.Key, g => g.ToList());
 
@@ -73,11 +88,12 @@ namespace Application.Features.Stocktaking
                         Counted = scanned.Count,
                         Difference = scanned.Count - line.SystemQuantity,
                         MissingUnitIds = snapshot
-                            .Where(s => s.ProductId == line.ProductId && !scannedSet.Contains(s.ProductUnitId))
-                            .Where(s => current.TryGetValue(s.ProductUnitId, out var u) && u.Status == ProductUnitStatusEnum.IN_STOCK && u.WarehouseId == stocktake.WarehouseId)
-                            .Select(s => s.ProductUnitId).ToList(),
+                            .Where(s => s.ProductId == line.ProductId && !scannedSet.Contains(s.Unit.Id))
+                            .Where(s => s.Unit.Status == ProductUnitStatusEnum.IN_STOCK && s.Unit.WarehouseId == stocktake.WarehouseId)
+                            .Select(s => s.Unit.Id).ToList(),
                         RelocatedUnitIds = scanned.Where(id => current[id].Status == ProductUnitStatusEnum.IN_STOCK && current[id].WarehouseId != stocktake.WarehouseId).ToList(),
                         UnexpectedUnitIds = scanned.Where(id => current[id].Status != ProductUnitStatusEnum.IN_STOCK).ToList(),
+                        UnitBarcodes = barcodes,
                     });
                 }
                 else if (line.ManualCount.HasValue)
@@ -90,11 +106,12 @@ namespace Application.Features.Stocktaking
                         Counted = line.ManualCount,
                         Difference = difference,
                         ManualAdjustment = difference,
+                        UnitBarcodes = barcodes,
                     });
                 }
                 else
                 {
-                    results.Add(new LineResult { Line = line, Mode = StocktakeCountModeEnum.NONE });
+                    results.Add(new LineResult { Line = line, Mode = StocktakeCountModeEnum.NONE, UnitBarcodes = barcodes });
                 }
             }
             return results;

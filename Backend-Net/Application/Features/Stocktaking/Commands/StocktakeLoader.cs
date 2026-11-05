@@ -13,6 +13,7 @@ namespace Application.Features.Stocktaking.Commands
             var stocktake = await context.Stocktakes
                 .Include(x => x.Lines)
                 .Include(x => x.Scans)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
                 ?? throw new NotFoundCustomException("انبارگردانی مورد نظر یافت نشد.");
             if (!allowed.Contains(stocktake.Status))
@@ -24,6 +25,14 @@ namespace Application.Features.Stocktaking.Commands
                     _ => "این انبارگردانی لغو شده است.",
                 });
             return stocktake;
+        }
+
+        /// <summary>A typed count (null clears it), stamped with who typed it and when.</summary>
+        public static void SetManualCount(Domain.Entities.StocktakeLine line, int? quantity, int? userId, DateTime now)
+        {
+            line.ManualCount = quantity;
+            line.ManualCountedAt = quantity.HasValue ? now : null;
+            line.ManualCountedByUserId = quantity.HasValue ? userId : null;
         }
 
         /// <summary>The product's line, added with a zero system quantity when the product was not in scope (found unexpectedly).</summary>

@@ -35,23 +35,31 @@ namespace Application.Features.Stocktaking.Queries
             CountedLineCount = x.Lines.Count(l => l.ManualCount != null || x.Scans.Any(s => s.ProductId == l.ProductId)),
         };
 
+        /// <summary>The same header, run in memory over a session already loaded with its warehouse, lines and scans.</summary>
+        private static readonly Func<Domain.Entities.Stocktake, StocktakeDto> HeaderOf = Header.Compile();
+
         public static async Task<StocktakeDto> ReadAsync(IWMSDbContext context, int id, CancellationToken cancellationToken)
         {
-            var dto = await context.Stocktakes.AsNoTracking().Where(x => x.Id == id).Select(Header).FirstOrDefaultAsync(cancellationToken)
+            // One load of the session (split, so lines x scans is not multiplied into one result set).
+            var stocktake = await context.Stocktakes.AsNoTracking()
+                .Include(x => x.Warehouse)
+                .Include(x => x.Lines).ThenInclude(l => l.Product)
+                .Include(x => x.Scans)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
                 ?? throw new NotFoundCustomException("انبارگردانی مورد نظر یافت نشد.");
+
+            var dto = HeaderOf(stocktake);
             dto.StatusTitle = dto.Status.GetDescription();
             dto.IsBlind = dto.Status == StocktakeStatusEnum.COUNTING
                 && await SystemSettingValues.GetBooleanAsync(context, SystemSettingCatalog.StocktakeBlindCount, cancellationToken);
 
-            var stocktake = await context.Stocktakes.AsNoTracking()
-                .Include(x => x.Lines).ThenInclude(l => l.Product)
-                .Include(x => x.Scans)
-                .FirstAsync(x => x.Id == id, cancellationToken);
             var results = await StocktakeVariance.ComputeAsync(context, stocktake, cancellationToken);
 
-            var productIds = stocktake.Lines.Select(l => l.ProductId).ToList();
-            var averages = await context.Products.AsNoTracking()
-                .Where(p => productIds.Contains(p.Id))
+            // The average cost only prices a difference: not read while blind, and only for the lines that differ.
+            var pricedIds = dto.IsBlind ? new List<int>() : results.Where(r => r.Difference is not null and not 0).Select(r => r.Line.ProductId).ToList();
+            var averages = pricedIds.Count == 0 ? new Dictionary<int, decimal>() : await context.Products.AsNoTracking()
+                .Where(p => pricedIds.Contains(p.Id))
                 .Select(p => new
                 {
                     p.Id,
@@ -59,10 +67,9 @@ namespace Application.Features.Stocktaking.Queries
                 })
                 .ToDictionaryAsync(x => x.Id, x => x.Average, cancellationToken);
 
-            var barcodeIds = results.SelectMany(r => r.MissingUnitIds.Concat(r.UnexpectedUnitIds)).ToList();
-            var barcodes = await context.ProductUnits.AsNoTracking().Where(x => barcodeIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Barcode, cancellationToken);
-            var scannedCounts = stocktake.Scans.Where(s => s.ProductUnitId.HasValue && s.ProductId.HasValue)
-                .GroupBy(s => s.ProductId!.Value).ToDictionary(g => g.Key, g => g.Select(s => s.ProductUnitId).Distinct().Count());
+            var scannedBarcodes = stocktake.Scans.Where(s => s.ProductUnitId.HasValue && s.ProductId.HasValue)
+                .GroupBy(s => s.ProductId!.Value)
+                .ToDictionary(g => g.Key, g => g.DistinctBy(s => s.ProductUnitId).OrderBy(s => s.ScannedAt).Select(s => s.Barcode).ToList());
 
             dto.Lines = results.OrderBy(r => r.Line.Product.Name).Select(r =>
             {
@@ -75,7 +82,8 @@ namespace Application.Features.Stocktaking.Queries
                     ProductCode = r.Line.Product.Code,
                     ProductName = r.Line.Product.Name,
                     SystemQuantity = blind ? null : r.Line.SystemQuantity,
-                    ScannedCount = scannedCounts.TryGetValue(r.Line.ProductId, out var c) ? c : 0,
+                    ScannedCount = scannedBarcodes.TryGetValue(r.Line.ProductId, out var scanned) ? scanned.Count : 0,
+                    ScannedBarcodes = scanned ?? new(),
                     ManualCount = r.Line.ManualCount,
                     CountMode = r.Mode,
                     CountedQuantity = r.Counted,
@@ -83,8 +91,8 @@ namespace Application.Features.Stocktaking.Queries
                     MissingCount = blind || r.Mode != StocktakeCountModeEnum.SCAN ? null : r.MissingUnitIds.Count,
                     RelocatedCount = blind || r.Mode != StocktakeCountModeEnum.SCAN ? null : r.RelocatedUnitIds.Count,
                     UnexpectedCount = r.Mode != StocktakeCountModeEnum.SCAN ? null : r.UnexpectedUnitIds.Count,
-                    MissingBarcodes = blind ? new() : r.MissingUnitIds.Select(u => barcodes[u]).ToList(),
-                    UnexpectedBarcodes = r.UnexpectedUnitIds.Select(u => barcodes[u]).ToList(),
+                    MissingBarcodes = blind ? new() : r.MissingUnitIds.Select(u => r.UnitBarcodes[u]).ToList(),
+                    UnexpectedBarcodes = r.UnexpectedUnitIds.Select(u => r.UnitBarcodes[u]).ToList(),
                     DifferenceValue = difference.HasValue ? difference.Value * averages.GetValueOrDefault(r.Line.ProductId) : null,
                     AppliedMissing = r.Line.AppliedMissing,
                     AppliedFound = r.Line.AppliedFound,

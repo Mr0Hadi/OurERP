@@ -56,9 +56,7 @@ namespace Application.Features.Stocktaking.Commands
                 throw new NotFoundCustomException("کالای مورد نظر یافت نشد.");
 
             var line = StocktakeLoader.EnsureLine(stocktake, request.ProductId);
-            line.ManualCount = request.Quantity;
-            line.ManualCountedAt = request.Quantity.HasValue ? DateTime.Now : null;
-            line.ManualCountedByUserId = request.Quantity.HasValue && int.TryParse(_userContextService.GetUserId(), out var id) ? id : null;
+            StocktakeLoader.SetManualCount(line, request.Quantity, int.TryParse(_userContextService.GetUserId(), out var id) ? id : null, DateTime.Now);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             res.Data = await StocktakeReader.ReadAsync(_context, stocktake.Id, cancellationToken);

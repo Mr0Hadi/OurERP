@@ -2429,6 +2429,21 @@ claim `UnitPrice` is the line's untaxed unit price). Provisional - the user may 
 - Setting `Sale.CreditLimitEnforced` (BOOLEAN, default true, public).
 - Tests: `Integration/CreditLimitTests.cs`.
 
+**Frontend requests 33-36 (2026-11-05, branch `feat/stocktake-and-cheque-requests`).** API: `docs/api-guide.fa.md` section 16,
+table "2026-11-05". No schema change, no migration.
+- `ChequeDto.PartyPaymentId` = the row's own id for an on-account cheque (an on-account payment is that PaymentDetail), else null.
+- `StocktakeLineDto.ScannedBarcodes` (every scan of the product in the session, blind too); `ScannedCount` is its length.
+- `CountStocktakeLinesCommand` (`POST api/Stocktake/CountStocktakeLines`, audit 820): `CountStocktakeLine` for up to 500 products,
+  all or nothing; both share `StocktakeLoader.SetManualCount`.
+- **`StocktakeReader.ReadAsync` loads the session once** (`AsSplitQuery`, header from the compiled `Header` expression run in memory)
+  - keep `Header` translatable *and* in-memory safe. `StocktakeLoader.LoadAsync` is split too (lines x scans multiplied before).
+  `StocktakeVariance.ComputeAsync` joins the snapshot to `ProductUnits` in SQL instead of sending its ids, and carries the barcodes
+  (`LineResult.UnitBarcodes`); the reader reads average costs only for lines with a difference and never while blind. The 60-second
+  `GetStocktakeDetail` on the test server was mostly the server itself (`api/Health` slow at the same time, see section 20.2).
+- **Built, not tested**: no SQL Server was reachable (local service stopped, the remote login cannot create databases, the Docker
+  image would not download). Run `WarehouseStocktakeReorderTests`, `ChequeTests`, `AuditActionCoverageTests`,
+  `EndpointPermissionCoverageTests` and the full suite before trusting it.
+
 ## 6b. System settings and feature toggles - the standing rule
 
 Agreed with the user 2026-10-19; applies to every setting and every feature switch added from now on.

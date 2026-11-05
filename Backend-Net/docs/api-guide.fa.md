@@ -669,7 +669,7 @@ Authorization: Bearer {accessToken}
 | | `Create/Update/DeleteWarehouse` | `WarehouseManage` |
 | | `GetStockTransferList/Detail` / `Create,Receive,CancelStockTransfer` | `StockTransferView` یا `StockTransferManage` / `StockTransferManage` |
 | انبارگردانی | `Stocktake/GetStocktakeList/Detail` | `StocktakeView` یا `StocktakeCount` یا `StocktakeApprove` |
-| | `CreateStocktake`، `ScanStocktakeUnits`، `RemoveStocktakeScan`، `CountStocktakeLine`، `SubmitStocktake` | `StocktakeCount` |
+| | `CreateStocktake`، `ScanStocktakeUnits`، `RemoveStocktakeScan`، `CountStocktakeLine`، `CountStocktakeLines`، `SubmitStocktake` | `StocktakeCount` |
 | | `ReopenStocktake`، `ApproveStocktake`، `CancelStocktake` | `StocktakeApprove` |
 | پیشنهاد خرید | `Reorder/GetReorderSuggestionList` / `CreatePurchaseDraftsFromReorder` | `ReorderSuggestionView` / `PurchaseCreate` |
 | تنظیمات | `Setting/GetFeatureFlags` | بدون دسترسی خاص (هر کاربر واردشده) |
@@ -3756,6 +3756,17 @@ SaleReturn (یک درخواست مرجوعی مشتری)
 
 این نکات برای جلوگیری از سردرگمی هنگام توسعه فرانت مهم هستند:
 
+### تغییرات قرارداد — ۲۰۲۶-۱۱-۰۵ (درخواست‌های فرانت: بخش‌های ۳۳ تا ۳۶)
+
+هیچ‌کدام شکستنی نیست.
+
+| کجا | قبل | بعد |
+|---|---|---|
+| `ChequeDto` (`GetCheckList` و پاسخِ دستورهای چک) | — | `partyPaymentId`: برای چکِ علی‌الحساب شناسه‌ی همان دریافت/پرداختِ علی‌الحساب (ورودیِ `GetPartyPaymentDetail`)، برای چکِ روی فاکتور `null` |
+| `lines[]`ِ انبارگردانی (جزئیات و پاسخِ همه‌ی دستورهای انبارگردانی) | فقط `scannedCount` | به‌علاوه‌ی `scannedBarcodes: string[]`: همه‌ی بارکدهای اسکن‌شده‌ی این کالا در این انبارگردانی (همه‌ی کاربرها و روزها، به ترتیبِ اسکن)، در شمارشِ کور هم |
+| `POST api/Stocktake/CountStocktakeLines` | — | تازه (`StocktakeCount`): `{ stocktakeId, lines: [{ productId, quantity }] }`، حداکثر ۵۰۰ ردیف، هر کالا یک بار. همان قاعده‌های `CountStocktakeLine` برای هر ردیف (`null` پاک می‌کند، اسکن بر عددِ دستی مقدم است، فقط در `COUNTING`)، همه یا هیچ، و پاسخ یک بار سندِ کامل |
+| `GetStocktakeDetail` و دستورهای انبارگردانی | سند دو بار خوانده می‌شد و ردیف‌ها × اسکن‌ها در یک پرس‌وجو ضرب می‌شدند | یک بار خواندن (پرس‌وجوی جدا برای ردیف‌ها و اسکن‌ها)، عکسِ قفسه در SQL به دانه‌ها join می‌شود، میانگینِ بها فقط برای ردیفِ دارای اختلاف و نه در شمارشِ کور. شکلِ پاسخ عوض نشده |
+
 ### تغییرات قرارداد — ۲۰۲۶-۱۱-۰۱ (درخواست‌های فرانت: بخش‌های ۱۳ و ۱۴ — قاعده‌هایی که فرانت از سرور کپی کرده بود)
 
 همه‌ی پرچم‌ها با **همان تابعی** ساخته می‌شوند که دستورِ مربوط هنگامِ اجرا چک می‌کند (`PurchaseDocumentRules`، `SaleDocumentRules`،
@@ -5037,6 +5048,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
 | 817 | `ApproveStocktake` | تأیید انبارگردانی |
 | 818 | `CancelStocktake` | لغو انبارگردانی |
 | 819 | `CreatePurchaseDraftsFromReorder` | ساخت پیش‌فاکتور خرید از پیشنهاد خرید |
+| 820 | `CountStocktakeLines` | ثبت شمارش دستی چند ردیف انبارگردانی |
 | 900 | `ChargePos` | پرداخت با کارت‌خوان |
 | 901 | `CreatePosTerminal` | ایجاد کارت‌خوان |
 | 902 | `UpdatePosTerminal` | ویرایش کارت‌خوان |
@@ -5376,7 +5388,7 @@ migration (فقط داده، بدونِ تغییرِ جدول) ردیف‌های
     { "id": 51, "direction": 1, "amount": 3000000, "checkNumber": "889900", "checkDueDate": "2026-10-29T00:00:00",
       "checkBankName": "صادرات", "checkDrawerName": "علی رضایی", "status": 1, "statusTitle": "در جریان", "statusChangedAt": "...",
       "statusNote": null, "daysToDue": 10, "paidAt": "...", "purpose": 0, "isCustomer": true, "partyId": 1, "partyName": "علی رضایی",
-      "saleId": 200, "purchaseId": null, "invoiceNumber": "INV-1405-0012", "isOnAccount": false,
+      "saleId": 200, "purchaseId": null, "invoiceNumber": "INV-1405-0012", "isOnAccount": false, "partyPaymentId": null,
       "bankAccountId": null, "bankAccountTitle": null, "endorsedFromPaymentDetailId": null, "endorsedToPaymentDetailId": null,
       "description": null }
   ],
@@ -5549,6 +5561,7 @@ migration می‌سازد و همه‌ی دانه‌های موجود در آن 
 | `ScanStocktakeUnits` | `{ "stocktakeId": 3, "barcodes": ["...", "..."] }` (دسته‌ای از اسکنر) |
 | `RemoveStocktakeScan` | `{ "stocktakeId": 3, "barcode": "..." }` |
 | `CountStocktakeLine` | `{ "stocktakeId": 3, "productId": 12, "quantity": 40 }` |
+| `CountStocktakeLines` | `{ "stocktakeId": 3, "lines": [ { "productId": 12, "quantity": 40 }, { "productId": 13, "quantity": null } ] }` (چند ردیف، همه یا هیچ؛ از ۲۰۲۶-۱۱-۰۵) |
 | `SubmitStocktake`، `ReopenStocktake`، `ApproveStocktake`، `CancelStocktake` | `{ "id": 3 }` |
 
 همه‌ی این کامندها (و `GetStocktakeDetail?id=3`) سند کامل را برمی‌گردانند:
@@ -5558,11 +5571,13 @@ migration می‌سازد و همه‌ی دانه‌های موجود در آن 
   "createdAt": "...", "createdByUserId": 3, "submittedAt": "...", "approvedAt": null, "approvedByUserId": null, "cancelledAt": null,
   "lineCount": 25, "countedLineCount": 24, "isBlind": false,
   "lines": [ { "id": 1, "productId": 12, "productCode": "...", "productName": "...", "systemQuantity": 10, "scannedCount": 9,
+               "scannedBarcodes": ["..."],
                "manualCount": null, "countMode": 1, "countedQuantity": 9, "difference": -1, "missingCount": 1, "relocatedCount": 0,
                "unexpectedCount": 0, "missingBarcodes": ["..."], "unexpectedBarcodes": [], "differenceValue": -700000,
                "appliedMissing": null, "appliedFound": null } ],
   "unknownBarcodes": [], "totalMissing": 1, "totalSurplus": 0, "totalDifferenceValue": -700000 }
 ```
+`scannedBarcodes` همه‌ی اسکن‌های این کالا در این انبارگردانی است (در شمارشِ کور هم)، برای برداشتنِ اسکنِ اشتباه با `RemoveStocktakeScan`.
 `differenceValue` = اختلاف × میانگین بهای فعلی کالا. `appliedMissing`/`appliedFound` پس از تأیید پر می‌شوند.
 
 ### `GET api/Stocktake/GetStocktakeList`

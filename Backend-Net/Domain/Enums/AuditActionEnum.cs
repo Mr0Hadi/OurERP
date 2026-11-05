@@ -381,6 +381,9 @@ namespace Domain.Enums
         [Description("ساخت پیش‌فاکتور خرید از پیشنهاد خرید")]
         CreatePurchaseDraftsFromReorder = 819,
 
+        [Description("ثبت شمارش دستی چند ردیف انبارگردانی")]
+        CountStocktakeLines = 820,
+
         // --- کارت‌خوان ---
         [Description("پرداخت با کارت‌خوان")]
         ChargePos = 900,
